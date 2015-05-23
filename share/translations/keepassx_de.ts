@@ -17,8 +17,8 @@
         <translation>Auto-Type - KeePassX</translation>
     </message>
     <message>
-        <source>Couldn&apos;t find an entry that matches the window title.</source>
-        <translation>Konnte dem Fenstertitel keinen passenden Eintrag zuordnen.</translation>
+        <source>Couldn&apos;t find an entry that matches the window title:</source>
+        <translation>Konnte keinen Eintrag finden, welcher mit dem Fenstertitel übereinstimmt:</translation>
     </message>
 </context>
 <context>
@@ -138,7 +138,7 @@
     </message>
     <message>
         <source>Can&apos;t open key file</source>
-        <translation>Schlüsseldatein kann nicht geöffnet werden</translation>
+        <translation>Schlüsseldatei kann nicht geöffnet werden</translation>
     </message>
     <message>
         <source>All files</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Max. history items:</source>
-        <translation>Max Einträge im Verlauf:</translation>
+        <translation>Max. Einträge im Verlauf:</translation>
     </message>
     <message>
         <source>Max. history size:</source>
@@ -740,6 +740,17 @@ Save changes?</source>
     </message>
 </context>
 <context>
+    <name>Main</name>
+    <message>
+        <source>Fatal error while testing the cryptographic functions.</source>
+        <translation>Fataler Fehler beim Testen der kryptografischen Funktionen.</translation>
+    </message>
+    <message>
+        <source>KeePassX - Error</source>
+        <translation>KeePassX - Fehler</translation>
+    </message>
+</context>
+<context>
     <name>MainWindow</name>
     <message>
         <source>Database</source>
@@ -896,6 +907,10 @@ Save changes?</source>
     <message>
         <source>read-only</source>
         <translation>Nur Lesezugriff</translation>
+    </message>
+    <message>
+        <source>Toggle window</source>
+        <translation>Fenster zeigen/verstecken</translation>
     </message>
 </context>
 <context>
@@ -1104,6 +1119,18 @@ Save changes?</source>
     <message>
         <source>Use entry title to match windows for global auto-type</source>
         <translation>Verwende den Eintragstitel für entsprechende Fenster für den globale Auto-Typ</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Sprache</translation>
+    </message>
+    <message>
+        <source>Show a system tray icon</source>
+        <translation>Taskleistensymbol anzeigen</translation>
+    </message>
+    <message>
+        <source>Hide window to system tray when minimized</source>
+        <translation>Fenster verstecken wenn minimiert</translation>
     </message>
 </context>
 <context>
