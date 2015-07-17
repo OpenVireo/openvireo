@@ -18,8 +18,8 @@ GNU General Public License (GPL) versione 2 o, a tua scelta, della versione 3.</
         <translation>Auto-Type - KeePassX</translation>
     </message>
     <message>
-        <source>Couldn&apos;t find an entry that matches the window title.</source>
-        <translation>Impossibile trovare una voce che corrisponda al titolo della finestra</translation>
+        <source>Couldn&apos;t find an entry that matches the window title:</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -109,6 +109,15 @@ GNU General Public License (GPL) versione 2 o, a tua scelta, della versione 3.</
     <message>
         <source>Different passwords supplied.</source>
         <translation>Sono state fornite password differenti.</translation>
+    </message>
+    <message>
+        <source>Failed to set key file</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Failed to set %1 as the Key file:
+%2</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -271,6 +280,31 @@ Salvare le modifiche?</translation>
         <source>locked</source>
         <translation>bloccato</translation>
     </message>
+    <message>
+        <source>The database you are trying to open is locked by another instance of KeePassX.
+Do you want to open it anyway? Alternatively the database is opened read-only.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Lock database</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Can't lock the database as you are currently editing it.
+Please press cancel to finish your changes or discard them.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>This database has never been saved.
+You can save the database or stop locking it.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>This database has been modified.
+Do you want to save the database before locking it?
+Otherwise your changes are lost.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>DatabaseWidget</name>
@@ -313,6 +347,14 @@ Salvare le modifiche?</translation>
     <message>
         <source>Current group</source>
         <translation>Gruppo corrente</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Unable to calculate master key</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -425,6 +467,10 @@ Salvare le modifiche?</translation>
     <message>
         <source>Save</source>
         <translation>Salvare</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -577,6 +623,14 @@ Salvare le modifiche?</translation>
         <source>Auto-type</source>
         <translation>Auto-Type</translation>
     </message>
+    <message>
+        <source>Use default auto-type sequence of parent group</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Set default auto-type sequence</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>EditWidgetIcons</name>
@@ -725,6 +779,10 @@ Salvare le modifiche?</translation>
         <source>Root</source>
         <translation>Root (KeePass1Reader)</translation>
     </message>
+    <message>
+        <source>Unable to calculate master key</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>KeePass2Reader</name>
@@ -739,6 +797,21 @@ Salvare le modifiche?</translation>
     <message>
         <source>Wrong key or database file is corrupt.</source>
         <translation>Password errata o database corrotto.</translation>
+    </message>
+    <message>
+        <source>Unable to calculate master key</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>Main</name>
+    <message>
+        <source>Fatal error while testing the cryptographic functions.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>KeePassX - Error</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -766,10 +839,6 @@ Salvare le modifiche?</translation>
     <message>
         <source>Groups</source>
         <translation>Gruppi</translation>
-    </message>
-    <message>
-        <source>Extras</source>
-        <translation>Extra</translation>
     </message>
     <message>
         <source>View</source>
@@ -898,6 +967,14 @@ Salvare le modifiche?</translation>
     <message>
         <source>read-only</source>
         <translation>sola lettura</translation>
+    </message>
+    <message>
+        <source>Toggle window</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Tools</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -1080,10 +1157,6 @@ Salvare le modifiche?</translation>
         <translation>Aprire precedente database all&apos;avvio</translation>
     </message>
     <message>
-        <source>Mark as modified on expanded state changes</source>
-        <translation>Marcare come modificata quando la voce viene espansa</translation>
-    </message>
-    <message>
         <source>Automatically save on exit</source>
         <translation>Salvare automaticamente all&apos;uscita</translation>
     </message>
@@ -1106,6 +1179,22 @@ Salvare le modifiche?</translation>
     <message>
         <source>Use entry title to match windows for global auto-type</source>
         <translation>Utilizzare il titolo della voce per abbinare la finestra per auto-type globale</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Show a system tray icon</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Hide window to system tray when minimized</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Remember last key files</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -1136,14 +1225,6 @@ Salvare le modifiche?</translation>
     <message>
         <source>Unlock database</source>
         <translation>Sbloccare database</translation>
-    </message>
-    <message>
-        <source>Error</source>
-        <translation>Errore</translation>
-    </message>
-    <message>
-        <source>Wrong key.</source>
-        <translation>Password errata.</translation>
     </message>
 </context>
 <context>
