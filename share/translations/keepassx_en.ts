@@ -15,6 +15,10 @@
         <source>Revision</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Using:</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>AutoType</name>
@@ -831,6 +835,13 @@ Do you want to save it anyway?</source>
     </message>
     <message>
         <source>Unable to calculate master key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The selected file is an old KeePass 1 database (.kdb).
+
+You can import it by clicking on Database &gt; &apos;Import KeePass 1 database&apos;.
+This is a one-way migration. You won&apos;t be able to open the imported database with the old KeePassX 0.4 version.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
