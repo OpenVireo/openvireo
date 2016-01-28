@@ -33,6 +33,7 @@ private Q_SLOTS:
     void testAttachments();
     void testNonAsciiPasswords();
     void testDeviceFailure();
+    void testRepair();
     void cleanupTestCase();
 
 private:
