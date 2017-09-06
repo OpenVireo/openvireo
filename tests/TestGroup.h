@@ -39,6 +39,7 @@ private slots:
     void testFindGroupByPath();
     void testPrint();
     void testLocate();
+    void testAddEntryWithPath();
 };
 
 #endif // KEEPASSX_TESTGROUP_H
