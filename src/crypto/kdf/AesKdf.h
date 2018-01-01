@@ -26,25 +26,15 @@ public:
     AesKdf();
 
     bool transform(const QByteArray& raw, QByteArray& result) const override;
-    void randomizeTransformSalt() override;
     QSharedPointer<Kdf> clone() const override;
-
-    quint64 rounds() const override;
-    QByteArray seed() const override;
-
-    bool setRounds(quint64 rounds) override;
-    bool setSeed(const QByteArray& seed) override;
 
 protected:
     int benchmarkImpl(int msec) const override;
 
 private:
-    quint64 m_rounds;
-    QByteArray m_seed;
-
     static bool transformKeyRaw(const QByteArray& key,
                                 const QByteArray& seed,
-                                quint64 rounds,
+                                int rounds,
                                 QByteArray* result) Q_REQUIRED_RESULT;
 };
 
