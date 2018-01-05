@@ -25,6 +25,8 @@ class AesKdf: public Kdf
 public:
     AesKdf();
 
+    bool processParameters(const QVariantMap& p) override;
+    QVariantMap writeParameters() override;
     bool transform(const QByteArray& raw, QByteArray& result) const override;
     QSharedPointer<Kdf> clone() const override;
 
