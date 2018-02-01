@@ -29,6 +29,8 @@ class TestOpenSSHKey : public QObject
 private slots:
     void initTestCase();
     void testParse();
+    void testParseDSA();
+    void testParseRSA();
     void testDecryptAES256CBC();
     void testDecryptAES256CTR();
 };
