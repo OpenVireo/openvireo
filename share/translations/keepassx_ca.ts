@@ -18,10 +18,6 @@
         <translation>KeepassXC es distribueix sota els termes de la Llicència Pública General GNU (GPL) versió 2 o (segons la vostra opció) versió 3.</translation>
     </message>
     <message>
-        <source>Project Maintainers:</source>
-        <translation>Mantenidors del projecte:</translation>
-    </message>
-    <message>
         <source>Contributors</source>
         <translation>Contribuïdors</translation>
     </message>
@@ -70,6 +66,19 @@ Nucli: %3 %4</translation>
     <message>
         <source>Enabled extensions:</source>
         <translation>Extensions habilitades:</translation>
+    </message>
+    <message>
+        <source>Project Maintainers:</source>
+        <translation>Mantenidors del projecte:</translation>
+    </message>
+    <message>
+        <source>Special thanks from the KeePassXC team go to debfx for creating the original KeePassX.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Build Type: %1
+</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -151,6 +160,25 @@ Seleccioneu si voleu permetre l&apos;accés.</translation>
     </message>
 </context>
 <context>
+    <name>AutoTypeMatchModel</name>
+    <message>
+        <source>Group</source>
+        <translation>Grup</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>Títol</translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation>Nom d&apos;usuari</translation>
+    </message>
+    <message>
+        <source>Sequence</source>
+        <translation>Seqüència</translation>
+    </message>
+</context>
+<context>
     <name>AutoTypeSelectDialog</name>
     <message>
         <source>Auto-Type - KeePassXC</source>
@@ -210,19 +238,19 @@ Seleccioneu si voleu permetre l&apos;accés.</translation>
     </message>
     <message>
         <source>&amp;Google Chrome</source>
-        <translation type="unfinished"/>
+        <translation>&amp;Google Chrome</translation>
     </message>
     <message>
         <source>&amp;Firefox</source>
-        <translation type="unfinished"/>
+        <translation>&amp;Firefox</translation>
     </message>
     <message>
         <source>&amp;Chromium</source>
-        <translation type="unfinished"/>
+        <translation>&amp;Chromium</translation>
     </message>
     <message>
         <source>&amp;Vivaldi</source>
-        <translation type="unfinished"/>
+        <translation>&amp;Vivaldi</translation>
     </message>
     <message>
         <source>Show a &amp;notification when credentials are requested</source>
@@ -770,7 +798,7 @@ You can now save it.</source>
     </message>
     <message>
         <source>Encryption</source>
-        <translation type="unfinished"/>
+        <translation>Encriptatge</translation>
     </message>
     <message>
         <source>Number of rounds too high</source>
@@ -789,7 +817,7 @@ If you keep this number, your database may take hours or days (or even longer) t
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished"/>
+        <translation>Cancel·lar</translation>
     </message>
     <message>
         <source>Number of rounds too low</source>
@@ -810,12 +838,22 @@ If you keep this number, your database may be too easy to crack!</source>
         <source>Failed to transform key with new KDF parameters; KDF unchanged.</source>
         <translation type="unfinished"/>
     </message>
+    <message numerus="yes">
+        <source> MiB</source>
+        <comment>Abbreviation for Mebibytes (KDF settings)</comment>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform></translation>
+    </message>
+    <message numerus="yes">
+        <source> thread(s)</source>
+        <comment>Threads for parallel execution (KDF settings)</comment>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform></translation>
+    </message>
 </context>
 <context>
     <name>DatabaseSettingsWidgetEncryption</name>
     <message>
         <source>Encryption Algorithm:</source>
-        <translation type="unfinished"/>
+        <translation>Algorisme de d’encriptatge:</translation>
     </message>
     <message>
         <source>AES:  256 Bit   (default)</source>
@@ -842,15 +880,7 @@ If you keep this number, your database may be too easy to crack!</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source> MB</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
         <source>Parallelism:</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <source> thread</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -891,6 +921,14 @@ If you keep this number, your database may be too easy to crack!</source>
     <message>
         <source>Use recycle bin</source>
         <translation>Utilitza la paperera</translation>
+    </message>
+    <message>
+        <source>Additional Database Settings</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Enable &amp;compression (recommended)</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -1014,6 +1052,15 @@ Otherwise your changes are lost.</source>
 Voleu desar la base de dades abans de tancar-la?
 En cas contrari, es perderan els canvis.</translation>
     </message>
+    <message>
+        <source>Disable safe saves?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+Disable safe saves and try again?</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>DatabaseWidget</name>
@@ -1126,6 +1173,10 @@ Do you want to merge your changes?</source>
         <source>Are you sure you want to permanently delete everything from your recycle bin?</source>
         <translation>Esteu segur que voleu suprimir permanentment tot el contingut de la paperera?</translation>
     </message>
+    <message>
+        <source>Entry updated successfully.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>DetailsWidget</name>
@@ -1151,7 +1202,7 @@ Do you want to merge your changes?</source>
     </message>
     <message>
         <source>Expiration</source>
-        <translation type="unfinished"/>
+        <translation>Venciment</translation>
     </message>
     <message>
         <source>Username</source>
@@ -1163,11 +1214,11 @@ Do you want to merge your changes?</source>
     </message>
     <message>
         <source>Searching</source>
-        <translation type="unfinished"/>
+        <translation>S&apos;està cercant</translation>
     </message>
     <message>
         <source>Attributes</source>
-        <translation type="unfinished"/>
+        <translation>Atributs</translation>
     </message>
     <message>
         <source>Attachments</source>
@@ -1203,11 +1254,11 @@ Do you want to merge your changes?</source>
     </message>
     <message>
         <source>Disabled</source>
-        <translation type="unfinished"/>
+        <translation>Inhabilitat</translation>
     </message>
     <message>
         <source>Enabled</source>
-        <translation type="unfinished"/>
+        <translation>Habilitat</translation>
     </message>
 </context>
 <context>
@@ -1238,7 +1289,7 @@ Do you want to merge your changes?</source>
     </message>
     <message>
         <source>SSH Agent</source>
-        <translation type="unfinished"/>
+        <translation>Agent SSH</translation>
     </message>
     <message>
         <source>n/a</source>
@@ -1246,7 +1297,7 @@ Do you want to merge your changes?</source>
     </message>
     <message>
         <source>(encrypted)</source>
-        <translation type="unfinished"/>
+        <translation>(encriptat)</translation>
     </message>
     <message>
         <source>Select private key</source>
@@ -1312,6 +1363,18 @@ Do you want to merge your changes?</source>
         <source>1 year</source>
         <translation>1 any</translation>
     </message>
+    <message>
+        <source>Apply generated password?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Do you want to apply the generated password to this entry?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Entry updated successfully.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>EditEntryWidgetAdvanced</name>
@@ -1342,6 +1405,14 @@ Do you want to merge your changes?</source>
     <message>
         <source>Attachments</source>
         <translation>Fitxers adjunts</translation>
+    </message>
+    <message>
+        <source>Foreground Color:</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Background Color:</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -1375,12 +1446,8 @@ Do you want to merge your changes?</source>
         <translation>Títol de la finestra:</translation>
     </message>
     <message>
-        <source>Use default se&amp;quence</source>
-        <translation>Utilitza la se&amp;qüència per defecte a la compleció automàtica </translation>
-    </message>
-    <message>
-        <source>Set custo&amp;m sequence:</source>
-        <translation>Estableix una seqüència personalitzada per a la compleció automàtica :</translation>
+        <source>Use a specific sequence for this association:</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -1660,6 +1727,31 @@ Do you want to merge your changes?</source>
         <source>Uuid:</source>
         <translation>UUID:</translation>
     </message>
+    <message>
+        <source>Plugin Data</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Suprimiu</translation>
+    </message>
+    <message>
+        <source>Delete plugin data?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Do you really want to delete the selected plugin data?
+This may cause the affected plugins to malfunction.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>Entry</name>
@@ -1801,6 +1893,65 @@ Do you want to merge your changes?</source>
         <source>URL</source>
         <translation>URL</translation>
     </message>
+    <message>
+        <source>Never</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>Contrasenya</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>Notes</translation>
+    </message>
+    <message>
+        <source>Expires</source>
+        <translation>Expira</translation>
+    </message>
+    <message>
+        <source>Created</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Accessed</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Attachments</source>
+        <translation>Fitxers adjunts</translation>
+    </message>
+</context>
+<context>
+    <name>EntryView</name>
+    <message>
+        <source>Customize View</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Hide Usernames</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Hide Passwords</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Fit to window</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Fit to contents</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Reset to defaults</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>Group</name>
@@ -1869,6 +2020,10 @@ Do you want to merge your changes?</source>
     <message>
         <source>Ensure that the password contains characters from every group</source>
         <translation>Assegurar-se que la contrasenya conté caràcters de cada grup</translation>
+    </message>
+    <message>
+        <source>Extended ASCII</source>
+        <translation>ASCII estès</translation>
     </message>
 </context>
 <context>
@@ -2681,6 +2836,12 @@ Es tracta d&apos;una migració unidireccional. No obrir la base de dades importa
         <source>Please touch the button on your YubiKey!</source>
         <translation>Per favor, toqueu el botó en el seu YubiKey!</translation>
     </message>
+    <message>
+        <source>WARNING: You are using an unstable build of KeePassXC!
+There is a high risk of corruption, maintain a backup of your databases.
+This version is not meant for production use.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>OpenSSHKey</name>
@@ -2690,10 +2851,6 @@ Es tracta d&apos;una migració unidireccional. No obrir la base de dades importa
     </message>
     <message>
         <source>PEM boundary mismatch</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <source>This is not an OpenSSH key, only modern keys are supported</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -2725,10 +2882,6 @@ Es tracta d&apos;una migració unidireccional. No obrir la base de dades importa
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>Unknown cipher: </source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
         <source>Trying to run KDF without cipher</source>
         <translation type="unfinished"/>
     </message>
@@ -2741,19 +2894,11 @@ Es tracta d&apos;una migració unidireccional. No obrir la base de dades importa
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>Unknown KDF: </source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
         <source>Decryption failed, wrong passphrase?</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <source>Unexpected EOF while reading public key</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <source>Unknown key type: </source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -2774,6 +2919,26 @@ Es tracta d&apos;una migració unidireccional. No obrir la base de dades importa
     </message>
     <message>
         <source>Unexpected EOF when writing private key</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Unsupported key type: %1</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Unknown cipher: %1</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Cipher IV is too short for MD5 kdf</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Unknown KDF: %1</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Unknown key type: %1</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -3364,6 +3529,51 @@ Available commands:
     </message>
     <message>
         <source>SSH Agent</source>
+        <translation>Agent SSH</translation>
+    </message>
+    <message>
+        <source>Generate a new random diceware passphrase.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Word count for the diceware passphrase.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>count</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Wordlist for the diceware generator.
+[Default: EFF English]</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Generate a new random password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Length of the generated password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Use lowercase characters in the generated password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Use uppercase characters in the generated password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Use numbers in the generated password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Use special characters in the generated password.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Use extended ASCII in the generated password.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -3637,6 +3847,30 @@ Per favor, desbloqueu  la base de dades seleccionada o escolliu-ne una altra.</t
         <comment>Milliseconds</comment>
         <translation> ms</translation>
     </message>
+    <message>
+        <source>Startup</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>File Management</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Safely save database files (may be incompatible with Dropbox, etc)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Backup database file before saving</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Entry Management</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>General</source>
+        <translation>General</translation>
+    </message>
 </context>
 <context>
     <name>SettingsWidgetSecurity</name>
@@ -3692,6 +3926,10 @@ Per favor, desbloqueu  la base de dades seleccionada o escolliu-ne una altra.</t
     <message>
         <source>Use Google as fallback for downloading website icons</source>
         <translation>Utilitzeu Google com a alternativa per a descarregar icones de llocs web</translation>
+    </message>
+    <message>
+        <source>Re-lock previously locked database after performing Auto-Type</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -3775,10 +4013,6 @@ Per favor, desbloqueu  la base de dades seleccionada o escolliu-ne una altra.</t
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Welcome to KeePassXC</source>
-        <translation>Benvingut a KeePassXC</translation>
-    </message>
-    <message>
         <source>Start storing your passwords securely in a KeePassXC database</source>
         <translation>Comenceu a emmagatzemar les vostres contrasenyes de manera segura en una base de dades KeePassXC</translation>
     </message>
@@ -3801,6 +4035,10 @@ Per favor, desbloqueu  la base de dades seleccionada o escolliu-ne una altra.</t
     <message>
         <source>Recent databases</source>
         <translation>Bases de dades obertes recentment</translation>
+    </message>
+    <message>
+        <source>Welcome to KeePassXC %1</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
