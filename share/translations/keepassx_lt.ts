@@ -445,7 +445,7 @@ Prašome atrakinti pasirinktą duomenų bazę arba pasirinkti kitą, kuri būtų
     </message>
     <message numerus="yes">
         <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
-        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
     </message>
     <message>
         <source>Removing stored permissions…</source>
@@ -461,7 +461,7 @@ Prašome atrakinti pasirinktą duomenų bazę arba pasirinkti kitą, kuri būtų
     </message>
     <message numerus="yes">
         <source>Successfully removed permissions from %n entry(s).</source>
-        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
     </message>
     <message>
         <source>KeePassXC: No entry with permissions found!</source>
@@ -687,15 +687,15 @@ Please consider generating a new key file.</source>
     <name>CsvParserModel</name>
     <message numerus="yes">
         <source>%n byte(s), </source>
-        <translation><numerusform>%n baitas, </numerusform><numerusform>%n baitai, </numerusform><numerusform>%n baitų, </numerusform></translation>
+        <translation><numerusform>%n baitas, </numerusform><numerusform>%n baitai, </numerusform><numerusform>%n baitų, </numerusform><numerusform>%n baitų, </numerusform></translation>
     </message>
     <message numerus="yes">
         <source>%n row(s), </source>
-        <translation><numerusform>%n eilutė, </numerusform><numerusform>%n eilutės, </numerusform><numerusform>%n eilučių, </numerusform></translation>
+        <translation><numerusform>%n eilutė, </numerusform><numerusform>%n eilutės, </numerusform><numerusform>%n eilučių, </numerusform><numerusform>%n eilučių, </numerusform></translation>
     </message>
     <message numerus="yes">
         <source>%n column(s)</source>
-        <translation><numerusform>%n stulpelis</numerusform><numerusform>%n stulpeliai</numerusform><numerusform>%n stulpelių</numerusform></translation>
+        <translation><numerusform>%n stulpelis</numerusform><numerusform>%n stulpeliai</numerusform><numerusform>%n stulpelių</numerusform><numerusform>%n stulpelių</numerusform></translation>
     </message>
 </context>
 <context>
@@ -848,12 +848,12 @@ If you keep this number, your database may be too easy to crack!</source>
     <message numerus="yes">
         <source> MiB</source>
         <comment>Abbreviation for Mebibytes (KDF settings)</comment>
-        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
     </message>
     <message numerus="yes">
         <source> thread(s)</source>
         <comment>Threads for parallel execution (KDF settings)</comment>
-        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
     </message>
 </context>
 <context>
@@ -1109,7 +1109,7 @@ Disable safe saves and try again?</source>
     </message>
     <message numerus="yes">
         <source>Do you really want to move %n entry(s) to the recycle bin?</source>
-        <translation><numerusform>Ar tikrai norite perkelti %n įrašą į šiukšlinę?</numerusform><numerusform>Ar tikrai norite perkelti %n įrašus į šiukšlinę?</numerusform><numerusform>Ar tikrai norite perkelti %n įrašų į šiukšlinę?</numerusform></translation>
+        <translation><numerusform>Ar tikrai norite perkelti %n įrašą į šiukšlinę?</numerusform><numerusform>Ar tikrai norite perkelti %n įrašus į šiukšlinę?</numerusform><numerusform>Ar tikrai norite perkelti %n įrašų į šiukšlinę?</numerusform><numerusform>Ar tikrai norite perkelti %n įrašų į šiukšlinę?</numerusform></translation>
     </message>
     <message>
         <source>Execute command?</source>
@@ -1357,11 +1357,11 @@ Ar norite sulieti savo pakeitimus?</translation>
     </message>
     <message numerus="yes">
         <source>%n week(s)</source>
-        <translation><numerusform>%n savaitė</numerusform><numerusform>%n savaitės</numerusform><numerusform>%n savaičių</numerusform></translation>
+        <translation><numerusform>%n savaitė</numerusform><numerusform>%n savaitės</numerusform><numerusform>%n savaičių</numerusform><numerusform>%n savaičių</numerusform></translation>
     </message>
     <message numerus="yes">
         <source>%n month(s)</source>
-        <translation><numerusform>%n mėnesis</numerusform><numerusform>%n mėnesiai</numerusform><numerusform>%n mėnesių</numerusform></translation>
+        <translation><numerusform>%n mėnesis</numerusform><numerusform>%n mėnesiai</numerusform><numerusform>%n mėnesių</numerusform><numerusform>%n mėnesių</numerusform></translation>
     </message>
     <message>
         <source>1 year</source>
@@ -1412,11 +1412,11 @@ Ar norite sulieti savo pakeitimus?</translation>
     </message>
     <message>
         <source>Foreground Color:</source>
-        <translation type="unfinished"/>
+        <translation>Priekinio plano spalva:</translation>
     </message>
     <message>
         <source>Background Color:</source>
-        <translation type="unfinished"/>
+        <translation>Fono spalva:</translation>
     </message>
 </context>
 <context>
@@ -1750,11 +1750,11 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message>
         <source>Key</source>
-        <translation type="unfinished"/>
+        <translation>Raktas</translation>
     </message>
     <message>
         <source>Value</source>
-        <translation type="unfinished"/>
+        <translation>Reikšmė</translation>
     </message>
 </context>
 <context>
@@ -1804,7 +1804,7 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message numerus="yes">
         <source>Are you sure you want to remove %n attachment(s)?</source>
-        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
+        <translation type="unfinished"><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform><numerusform></numerusform></translation>
     </message>
     <message>
         <source>Confirm Remove</source>
@@ -1822,7 +1822,7 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message>
         <source>Are you sure you want to overwrite the existing file &quot;%1&quot; with the attachment?</source>
-        <translation type="unfinished"/>
+        <translation>Ar tikrai norite perrašyti failą &quot;%1&quot; priedu?</translation>
     </message>
     <message>
         <source>Confirm overwrite</source>
@@ -1963,7 +1963,7 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message>
         <source>Attachments (icon)</source>
-        <translation type="unfinished"/>
+        <translation>Priedai (piktograma)</translation>
     </message>
 </context>
 <context>
@@ -2108,7 +2108,7 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message>
         <source>Invalid header field length</source>
-        <translation type="unfinished"/>
+        <translation>Neteisingas antraštės lauko ilgis</translation>
     </message>
     <message>
         <source>Invalid header data length</source>
@@ -2132,7 +2132,7 @@ This may cause the affected plugins to malfunction.</source>
     </message>
     <message>
         <source>Invalid inner header field length</source>
-        <translation type="unfinished"/>
+        <translation>Neteisingas vidinės antraštės lauko ilgis</translation>
     </message>
     <message>
         <source>Invalid inner header binary size</source>
@@ -2381,7 +2381,7 @@ Tai yra vienakryptis perkėlimas. Jūs negalėsite atverti importuotos duomenų 
     </message>
     <message>
         <source>Invalid date time value</source>
-        <translation type="unfinished"/>
+        <translation>Neteisinga datos laiko reikšmė</translation>
     </message>
     <message>
         <source>Invalid color value</source>
@@ -2393,7 +2393,7 @@ Tai yra vienakryptis perkėlimas. Jūs negalėsite atverti importuotos duomenų 
     </message>
     <message>
         <source>Invalid number value</source>
-        <translation type="unfinished"/>
+        <translation>Neteisinga skaitmeninė reikšmė</translation>
     </message>
     <message>
         <source>Invalid uuid value</source>
@@ -2437,7 +2437,7 @@ Tai yra vienakryptis perkėlimas. Jūs negalėsite atverti importuotos duomenų 
     <message>
         <source>Unable to read encryption IV</source>
         <comment>IV = Initialization Vector for symmetric cipher</comment>
-        <translation type="unfinished"/>
+        <translation>Nepavyko perskaityti šifravimo IV</translation>
     </message>
     <message>
         <source>Invalid number of groups</source>
@@ -2565,7 +2565,7 @@ Tai yra vienakryptis perkėlimas. Jūs negalėsite atverti importuotos duomenų 
     </message>
     <message>
         <source>Invalid entry field type</source>
-        <translation type="unfinished"/>
+        <translation>Neteisingas įrašo lauko tipas</translation>
     </message>
 </context>
 <context>
@@ -3702,7 +3702,7 @@ Prašome atrakinti pasirinktą duomenų bazę arba pasirinkti kitą, kuri būtų
     </message>
     <message numerus="yes">
         <source>Successfully removed %n encryption-key(s) from KeePassX/Http Settings.</source>
-        <translation><numerusform>%n šifravimo raktas sėkmingai pašalintas iš KeePassX/Http nustatymų.</numerusform><numerusform>%n šifravimo raktai sėkmingai pašalinti iš KeePassX/Http nustatymų.</numerusform><numerusform>%n šifravimo raktų sėkmingai pašalinta iš KeePassX/Http nustatymų.</numerusform></translation>
+        <translation><numerusform>%n šifravimo raktas sėkmingai pašalintas iš KeePassX/Http nustatymų.</numerusform><numerusform>%n šifravimo raktai sėkmingai pašalinti iš KeePassX/Http nustatymų.</numerusform><numerusform>%n šifravimo raktų sėkmingai pašalinta iš KeePassX/Http nustatymų.</numerusform><numerusform>%n šifravimo raktų sėkmingai pašalinta iš KeePassX/Http nustatymų.</numerusform></translation>
     </message>
     <message>
         <source>KeePassXC: No keys found</source>
@@ -3734,7 +3734,7 @@ Prašome atrakinti pasirinktą duomenų bazę arba pasirinkti kitą, kuri būtų
     </message>
     <message numerus="yes">
         <source>Successfully removed permissions from %n entries.</source>
-        <translation><numerusform>Leidimai sėkmingai pašalinti iš %n įrašo.</numerusform><numerusform>Leidimai sėkmingai pašalinti iš %n įrašų.</numerusform><numerusform>Leidimai sėkmingai pašalinti iš %n įrašų.</numerusform></translation>
+        <translation><numerusform>Leidimai sėkmingai pašalinti iš %n įrašo.</numerusform><numerusform>Leidimai sėkmingai pašalinti iš %n įrašų.</numerusform><numerusform>Leidimai sėkmingai pašalinti iš %n įrašų.</numerusform><numerusform>Leidimai sėkmingai pašalinti iš %n įrašų.</numerusform></translation>
     </message>
     <message>
         <source>KeePassXC: No entry with permissions found!</source>
