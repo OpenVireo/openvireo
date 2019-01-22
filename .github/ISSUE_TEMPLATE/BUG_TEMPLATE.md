@@ -1,7 +1,12 @@
 ---
-title: 'Bug report'
+name: 
+about: 
+title: Bug report
 labels: bug
+assignees: 
+
 ---
+
 [TIP]:  # ( Provide a general summary of the issue in the title above ^^ )
 [TIP]:  # ( DO NOT include screenshots of your actual database! )
 

@@ -1,7 +1,12 @@
 ---
-title: 'Feature Request'
-labels: 'new feature'
+name: 
+about: 
+title: Feature Request
+labels: new feature
+assignees: 
+
 ---
+
 [TIP]:  # ( Provide a general summary of the feature in the title above ^^ )
 [TIP]:  # ( DO NOT include screenshots of your actual database! )
 
