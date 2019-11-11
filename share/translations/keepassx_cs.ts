@@ -444,6 +444,14 @@
         <source>This Auto-Type command contains arguments which are repeated very often. Do you really want to proceed?</source>
         <translation>Tento příkaz automatického vyplňování obsahuje argumenty, které se velmi často opakují. Opravdu chcete pokračovat?</translation>
     </message>
+    <message>
+        <source>Permission Required</source>
+        <translation>Jsou zapotřebí oprávnění</translation>
+    </message>
+    <message>
+        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
+        <translation>KeePassXC vyžaduje oprávnění ke Zpřístupnění, aby mohlo být prováděno automatické vyplňování na úrovni položky. Pokud jste toto oprávnění už udělili, může být třeba ještě KeePassXC restartovat.</translation>
+    </message>
 </context>
 <context>
     <name>AutoTypeAssociationsModel</name>
@@ -488,6 +496,17 @@
     <message>
         <source>Copy &amp;password</source>
         <translation>Zko&amp;pírovat heslo</translation>
+    </message>
+</context>
+<context>
+    <name>AutoTypePlatformMac</name>
+    <message>
+        <source>Permission Required</source>
+        <translation>Jsou zapotřebí oprávnění</translation>
+    </message>
+    <message>
+        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
+        <translation>KeePassXC vyžaduje oprávnění ke Zpřístupnění a „Nahrávání obrazovky“, aby mohlo být prováděno globální automatické vyplňování. Nahrávání obrazovky je nezbytné pro použití nadpisu okna pro vyhledávání položek v databázi. Pokud jste tato oprávnění už udělili, může být třeba ještě KeePassXC restartovat.</translation>
     </message>
 </context>
 <context>
@@ -774,16 +793,6 @@ Vyberte databázi, do které chcete přihlašovací údaje uložit.</translation
         <translation>KeePassXC: Nový požadavek na přiřazení klíče</translation>
     </message>
     <message>
-        <source>You have received an association request for the above key.
-
-If you would like to allow it access to your KeePassXC database,
-give it a unique name to identify and accept it.</source>
-        <translation>Obdrželi jste požadavek na přiřazení výše uvedeného klíče.
-
-Pokud jím chcete umožnit přístup do KeePassXC databáze,
-zadejte pro něj neopakující se název pro identifikaci a potvrďte ho.</translation>
-    </message>
-    <message>
         <source>Save and allow access</source>
         <translation>Uložit a umožnit přístup</translation>
     </message>
@@ -862,6 +871,18 @@ Chcete přenést vaše stávající nastavení nyní?</translation>
     <message>
         <source>Don&apos;t show this warning again</source>
         <translation>Toto varování znovu nezobrazovat</translation>
+    </message>
+    <message>
+        <source>You have received an association request for the following database:
+%1
+
+Give the connection a unique name or ID, for example:
+chrome-laptop.</source>
+        <translation>Obdrželi jste požadavek na asociaci pro následující databázi:
+%1
+
+Dejte spojení neopakující se název nebo identifikátor, například:
+chrome-laptop.</translation>
     </message>
 </context>
 <context>
@@ -1129,10 +1150,6 @@ Zvažte vytvoření nového souboru s klíčem.</translation>
         <translation>Zobraz./nezobrazovat hesla</translation>
     </message>
     <message>
-        <source>Enter Additional Credentials:</source>
-        <translation>Zadejte další přihlašovací údaje:</translation>
-    </message>
-    <message>
         <source>Key file selection</source>
         <translation>Výběr souboru s klíčem</translation>
     </message>
@@ -1157,12 +1174,6 @@ Zvažte vytvoření nového souboru s klíčem.</translation>
         <translation>Hardwarový klíč:</translation>
     </message>
     <message>
-        <source>&lt;p&gt;You can use a hardware security key such as a &lt;strong&gt;YubiKey&lt;/strong&gt; or &lt;strong&gt;OnlyKey&lt;/strong&gt; with slots configured for HMAC-SHA1.&lt;/p&gt;
-                           &lt;p&gt;Click for more information...&lt;/p&gt;</source>
-        <translation>1Je možné používat hardwarové bezpečnostní klíče jako například 2YubiKey2 nebo 3OnlyKey3 se sloty nastavenými pro HMAC-SHA1.
-                           &lt;p&gt;Klikněte pro další informace…&lt;/p&gt;</translation>
-    </message>
-    <message>
         <source>Hardware key help</source>
         <translation>Nápověda k hardwarovému klíči</translation>
     </message>
@@ -1177,10 +1188,6 @@ Zvažte vytvoření nového souboru s klíčem.</translation>
     <message>
         <source>Clear Key File</source>
         <translation>Vyčistit soubor s klíčem</translation>
-    </message>
-    <message>
-        <source>Select file...</source>
-        <translation>Vybrat soubor…</translation>
     </message>
     <message>
         <source>Unlock failed and no password given</source>
@@ -1199,6 +1206,42 @@ Abyste tomu, aby se tato chyba objevovala, je třeba přejít do „Nastavení d
     <message>
         <source>Retry with empty password</source>
         <translation>Zkusit znovu bez hesla</translation>
+    </message>
+    <message>
+        <source>Enter Additional Credentials (if any):</source>
+        <translation>Zadejte další přihlašovací údaje (pokud jsou):</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;You can use a hardware security key such as a &lt;strong&gt;YubiKey&lt;/strong&gt; or &lt;strong&gt;OnlyKey&lt;/strong&gt; with slots configured for HMAC-SHA1.&lt;/p&gt;
+&lt;p&gt;Click for more information...&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Je možné používat hardwarové bezpečnostní klíče jako například &lt;strong&gt;YubiKey&lt;/strong&gt; nebo &lt;strong&gt;OnlyKey&lt;/strong&gt; se sloty nastavenými pro HMAC-SHA1.&lt;/p&gt;
+&lt;p&gt;Klikněte pro další informace…&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;In addition to your master password, you can use a secret file to enhance the security of your database. Such a file can be generated in your database&apos;s security settings.&lt;/p&gt;&lt;p&gt;This is &lt;strong&gt;not&lt;/strong&gt; your *.kdbx database file!&lt;br&gt;If you do not have a key file, leave the field empty.&lt;/p&gt;&lt;p&gt;Click for more information...&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Krom hlavního hesla je možné použít tajný soubor a vylepšit tak zabezpečení databáze. Takový soubor je možné vytvořit v nastavení zabezpečení databáze.&lt;/p&gt;&lt;p&gt;Toto &lt;strong&gt;není&lt;/strong&gt; *.kdbx databázový soubor!&lt;br&gt;Pokud nemáte soubor s klíčem, ponechte kolonku nevyplněnou.&lt;/p&gt;&lt;p&gt;Pro více informaci klikněte sem…&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Key file help</source>
+        <translation>Nápověda k souboru s klíčem</translation>
+    </message>
+    <message>
+        <source>?</source>
+        <translation>?</translation>
+    </message>
+    <message>
+        <source>Select key file...</source>
+        <translation>Vyberte soubor s klíčem…</translation>
+    </message>
+    <message>
+        <source>Cannot use database file as key file</source>
+        <translation>Soubor s databází není možné použít pro účely souboru s klíčem</translation>
+    </message>
+    <message>
+        <source>You cannot use your database file as a key file.
+If you do not have a key file, please leave the field empty.</source>
+        <translation>Soubor s databází není možné použít pro účely souboru s klíčem (bude se měnit).
+Pokud nemáte žádný soubor, který by se zaručeně neměnil (a byl tedy vhodný jako klíč), tuto kolonku nevyplňujte.</translation>
     </message>
 </context>
 <context>
@@ -1839,6 +1882,10 @@ Opravdu chcete pokračovat bez hesla?</translation>
     <message>
         <source>Average password length is less than ten characters. Longer passwords provide more security.</source>
         <translation>Průměrná délka hesla je kratší, než deset znaků. Delší hesla poskytují vyšší zabezpečení.</translation>
+    </message>
+    <message>
+        <source>Please wait, database statistics are being calculated...</source>
+        <translation>Čekejte, probíhá výpočet statistik o databázi…</translation>
     </message>
 </context>
 <context>
@@ -6280,6 +6327,10 @@ Jádro systému: %3 %4</translation>
     <message>
         <source>Invalid password generator after applying all options</source>
         <translation>Po uplatnění všech možností není vytváření hesel platné</translation>
+    </message>
+    <message>
+        <source>Show the protected attributes in clear text.</source>
+        <translation>Zobrazit chráněné atributy v čitelném textu.</translation>
     </message>
 </context>
 <context>
