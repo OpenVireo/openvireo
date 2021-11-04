@@ -30,6 +30,7 @@ public:
     static const QCommandLineOption TotpOption;
     static const QCommandLineOption AttributesOption;
     static const QCommandLineOption ProtectedAttributesOption;
+    static const QCommandLineOption AttachmentsOption;
 };
 
 #endif // KEEPASSXC_SHOW_H
