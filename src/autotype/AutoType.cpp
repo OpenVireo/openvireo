@@ -434,38 +434,33 @@ void AutoType::startGlobalAutoType(const QString& search)
  */
 void AutoType::performGlobalAutoType(const QList<QSharedPointer<Database>>& dbList, const QString& search)
 {
-    if (!m_plugin) {
-        return;
-    }
-
-    if (!m_inGlobalAutoTypeDialog.tryLock()) {
-        return;
-    }
-
-    if (m_windowTitleForGlobal.isEmpty()) {
-        m_inGlobalAutoTypeDialog.unlock();
+    if (!m_plugin || !m_inGlobalAutoTypeDialog.tryLock()) {
         return;
     }
 
     QList<AutoTypeMatch> matchList;
-    bool hideExpired = config()->get(Config::AutoTypeHideExpiredEntry).toBool();
+    // Generate entry/sequence match list if there is a valid window title
+    if (!m_windowTitleForGlobal.isEmpty()) {
+        bool hideExpired = config()->get(Config::AutoTypeHideExpiredEntry).toBool();
+        for (const auto& db : dbList) {
+            const QList<Entry*> dbEntries = db->rootGroup()->entriesRecursive();
+            for (auto entry : dbEntries) {
+                auto group = entry->group();
+                if (!group || !group->resolveAutoTypeEnabled() || !entry->autoTypeEnabled()) {
+                    continue;
+                }
 
-    for (const auto& db : dbList) {
-        const QList<Entry*> dbEntries = db->rootGroup()->entriesRecursive();
-        for (auto entry : dbEntries) {
-            auto group = entry->group();
-            if (!group || !group->resolveAutoTypeEnabled() || !entry->autoTypeEnabled()) {
-                continue;
-            }
-
-            if (hideExpired && entry->isExpired()) {
-                continue;
-            }
-            const QSet<QString> sequences = Tools::asSet(entry->autoTypeSequences(m_windowTitleForGlobal));
-            for (const auto& sequence : sequences) {
-                matchList << AutoTypeMatch(entry, sequence);
+                if (hideExpired && entry->isExpired()) {
+                    continue;
+                }
+                const QSet<QString> sequences = Tools::asSet(entry->autoTypeSequences(m_windowTitleForGlobal));
+                for (const auto& sequence : sequences) {
+                    matchList << AutoTypeMatch(entry, sequence);
+                }
             }
         }
+    } else {
+        qWarning() << "Auto-Type: Window title was empty from the operating system";
     }
 
     // Show the selection dialog if we always ask, have multiple matches, or no matches
