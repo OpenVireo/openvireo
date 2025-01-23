@@ -9224,6 +9224,10 @@ This option is deprecated, use --set-key-file instead.</source>
         <source>Passkey</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>start minimized to the system tray</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QtIOCompressor</name>
