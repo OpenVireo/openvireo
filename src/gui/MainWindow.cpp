@@ -817,26 +817,45 @@ void MainWindow::updateCopyAttributesMenu()
 
 void MainWindow::updateSetTagsMenu()
 {
-    // Remove all existing actions
-    m_ui->menuTags->clear();
+    auto actionForTag = [](const QMenu* menu, const QString& tag) -> QAction* {
+        for (const auto action : menu->actions()) {
+            if (action->text() == tag) {
+                return action;
+            }
+        }
+        return nullptr;
+    };
 
     auto dbWidget = m_ui->tabWidget->currentDatabaseWidget();
     if (dbWidget) {
         // Enumerate tags applied to the selected entries
         QSet<QString> selectedTags;
-        for (auto entry : dbWidget->entryView()->selectedEntries()) {
-            for (auto tag : entry->tagList()) {
+        for (const auto entry : dbWidget->entryView()->selectedEntries()) {
+            for (const auto& tag : entry->tagList()) {
                 selectedTags.insert(tag);
             }
         }
 
         // Add known database tags as actions and set checked if
         // a selected entry has that tag
-        for (auto tag : dbWidget->database()->tagList()) {
-            auto action = m_ui->menuTags->addAction(icons()->icon("tag"), tag);
-            action->setCheckable(true);
-            action->setChecked(selectedTags.contains(tag));
-            m_setTagsMenuActions->addAction(action);
+        const auto tagList = dbWidget->database()->tagList();
+        for (const auto& tag : tagList) {
+            auto action = actionForTag(m_ui->menuTags, tag);
+            if (action) {
+                action->setChecked(selectedTags.contains(tag));
+            } else {
+                action = m_ui->menuTags->addAction(icons()->icon("tag"), tag);
+                action->setCheckable(true);
+                action->setChecked(selectedTags.contains(tag));
+                m_setTagsMenuActions->addAction(action);
+            }
+        }
+
+        // Remove missing tags
+        for (const auto action : m_ui->menuTags->actions()) {
+            if (!tagList.contains(action->text())) {
+                action->deleteLater();
+            }
         }
     }
 
@@ -942,6 +961,14 @@ void MainWindow::updateMenuActionState()
     m_ui->menuEntryCopyAttribute->setEnabled(singleEntryOrEditing);
     m_ui->menuEntryTotp->setEnabled(singleEntrySelected);
     m_ui->menuTags->setEnabled(multiEntrySelected);
+    // Handle tear-off tags menu
+    if (m_ui->menuTags->isTearOffMenuVisible()) {
+        if (!databaseUnlocked) {
+            m_ui->menuTags->hideTearOffMenu();
+        } else {
+            updateSetTagsMenu();
+        }
+    }
     m_ui->actionEntryAutoType->setEnabled(singleEntrySelected && dbWidget->currentEntryHasAutoTypeEnabled());
     m_ui->actionEntryAutoType->menu()->setEnabled(singleEntrySelected && dbWidget->currentEntryHasAutoTypeEnabled());
     m_ui->actionEntryAutoTypeSequence->setText(singleEntrySelected
