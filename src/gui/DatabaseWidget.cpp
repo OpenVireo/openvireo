@@ -924,6 +924,16 @@ void DatabaseWidget::performAutoTypeTOTP()
     performAutoType(QStringLiteral("{TOTP}"));
 }
 
+void DatabaseWidget::performAutoTypeURL()
+{
+    performAutoType(QStringLiteral("{URL}"));
+}
+
+void DatabaseWidget::performAutoTypeURLEnter()
+{
+    performAutoType(QStringLiteral("{URL}{ENTER}"));
+}
+
 void DatabaseWidget::openUrl()
 {
     auto currentEntry = currentSelectedEntry();
