@@ -573,6 +573,10 @@
         <source>Font size selection</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Skip confirmation for main window Auto-Type actions</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ApplicationSettingsWidgetSecurity</name>
