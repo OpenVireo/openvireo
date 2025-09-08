@@ -2015,6 +2015,7 @@ void MainWindow::initViewMenu()
             restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
         } else {
             kpxcApp->applyTheme();
+            kpxcApp->applyFontSize();
         }
     });
 
