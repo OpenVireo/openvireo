@@ -59,7 +59,7 @@
             <x>0</x>
             <y>0</y>
             <width>568</width>
-            <height>1202</height>
+            <height>1226</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -536,6 +536,13 @@
                <widget class="QCheckBox" name="ConfirmMoveEntryToRecycleBinCheckBox">
                 <property name="text">
                  <string>Show confirmation before moving entries to recycle bin</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="autoGeneratePasswordForNewEntriesCheckBox">
+                <property name="text">
+                 <string>Auto-generate password for new entries</string>
                 </property>
                </widget>
               </item>
