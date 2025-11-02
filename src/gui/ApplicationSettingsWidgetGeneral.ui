@@ -554,14 +554,59 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="openUrlOnDoubleClick">
-                <property name="text">
-                 <string>Open browser on double clicking URL field in entry view</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="urlDoubleClickLayout">
+                <item>
+                 <widget class="QLabel" name="urlDoubleClickLabel">
+                  <property name="text">
+                   <string>Double-click action for URL:</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>urlDoubleClickComboBox</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="urlDoubleClickComboBox">
+                  <property name="focusPolicy">
+                   <enum>Qt::StrongFocus</enum>
+                  </property>
+                  <property name="accessibleName">
+                   <string>Double-click action for URL field</string>
+                  </property>
+                  <property name="sizeAdjustPolicy">
+                   <enum>QComboBox::AdjustToContents</enum>
+                  </property>
+                  <item>
+                   <property name="text">
+                    <string>Open entry URL in browser</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Copy entry URL to clipboard</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Edit entry</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="urlDoubleClickSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
               </item>
               <item>
                <widget class="QCheckBox" name="useGroupIconOnEntryCreationCheckBox">
@@ -1439,7 +1484,7 @@
   <tabstop>alternativeSaveComboBox</tabstop>
   <tabstop>ConfirmMoveEntryToRecycleBinCheckBox</tabstop>
   <tabstop>EnableCopyOnDoubleClickCheckBox</tabstop>
-  <tabstop>openUrlOnDoubleClick</tabstop>
+  <tabstop>urlDoubleClickComboBox</tabstop>
   <tabstop>useGroupIconOnEntryCreationCheckBox</tabstop>
   <tabstop>minimizeOnOpenUrlCheckBox</tabstop>
   <tabstop>hideWindowOnCopyCheckBox</tabstop>

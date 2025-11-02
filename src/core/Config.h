@@ -50,6 +50,7 @@ public:
         SearchLimitGroup,
         MinimizeOnOpenUrl,
         OpenURLOnDoubleClick,
+        URLDoubleClickAction,
         HideWindowOnCopy,
         MinimizeOnCopy,
         MinimizeAfterUnlock,

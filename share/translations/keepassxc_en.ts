@@ -581,10 +581,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Open browser on double clicking URL field in entry view</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Font size:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -594,6 +590,26 @@
     </message>
     <message>
         <source>Skip confirmation for main window Auto-Type actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click action for URL:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click action for URL field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open entry URL in browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy entry URL to clipboard</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

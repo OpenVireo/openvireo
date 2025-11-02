@@ -67,6 +67,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::SearchLimitGroup,{QS("SearchLimitGroup"), Roaming, false}},
     {Config::MinimizeOnOpenUrl,{QS("MinimizeOnOpenUrl"), Roaming, false}},
     {Config::OpenURLOnDoubleClick, {QS("OpenURLOnDoubleClick"), Roaming, true}},
+    {Config::URLDoubleClickAction, {QS("URLDoubleClickAction"), Roaming, 0}},
     {Config::HideWindowOnCopy,{QS("HideWindowOnCopy"), Roaming, false}},
     {Config::MinimizeOnCopy,{QS("MinimizeOnCopy"), Roaming, true}},
     {Config::AutoGeneratePasswordForNewEntries,{QS("AutoGeneratePasswordForNewEntries"), Roaming, false}},
@@ -490,6 +491,15 @@ void Config::migrate()
 
         // Reset database columns if upgrading from pre 2.6.0
         remove(GUI_ListViewState);
+    }
+
+    // Migrate from boolean OpenURLOnDoubleClick to enum URLDoubleClickAction
+    if (m_settings->contains(configStrings[OpenURLOnDoubleClick].name)
+        && !m_settings->contains(configStrings[URLDoubleClickAction].name)) {
+        bool openUrlOnDoubleClick = get(OpenURLOnDoubleClick).toBool();
+        // Convert: true (open browser) -> 0, false (edit entry) -> 2
+        set(URLDoubleClickAction, openUrlOnDoubleClick ? 0 : 2);
+        // Keep the old setting for now for compatibility
     }
 
     m_settings->setValue("ConfigVersion", CONFIG_VERSION);
