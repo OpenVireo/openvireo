@@ -755,7 +755,7 @@ class Build(Command):
         # Setup build signing if requested
         if sign:
             cmake_opts.append(f'-DWITH_XC_CODESIGN_IDENTITY={sign_identity}')
-            cmake_opts.append(f'-WITH_XC_CODESIGN_TIMESTAMP_URL={sign_timestamp_url}')
+            cmake_opts.append(f'-DWITH_XC_CODESIGN_TIMESTAMP_URL={sign_timestamp_url}')
         # Use vcpkg for dependency deployment
         cmake_opts.append('-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON')
 
