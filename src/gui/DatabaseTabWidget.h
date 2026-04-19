@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 KeePassXC Team <team@keepassxc.org>
+ * Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@ public slots:
     void showDatabaseReports(bool state);
     void showDatabaseSettings(bool state);
     void showDatabaseSecurity();
-#ifdef WITH_XC_BROWSER_PASSKEYS
+#ifdef KPXC_FEATURE_BROWSER
     void showPasskeys();
     void importPasskey();
     void importPasskeyToEntry();
