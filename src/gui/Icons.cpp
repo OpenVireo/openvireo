@@ -26,6 +26,7 @@
 
 #include <algorithm>
 
+#include "config-keepassx.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "gui/DatabaseIcons.h"

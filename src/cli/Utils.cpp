@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -49,24 +49,28 @@ namespace Utils
     void setDefaultTextStreams()
     {
         auto fd = new QFile();
-        fd->open(stdout, QIODevice::WriteOnly);
-        STDOUT.setDevice(fd);
+        if (fd->open(stdout, QIODevice::WriteOnly)) {
+            STDOUT.setDevice(fd);
+        }
 
         fd = new QFile();
-        fd->open(stderr, QIODevice::WriteOnly);
-        STDERR.setDevice(fd);
+        if (fd->open(stderr, QIODevice::WriteOnly)) {
+            STDERR.setDevice(fd);
+        }
 
         fd = new QFile();
-        fd->open(stdin, QIODevice::ReadOnly);
-        STDIN.setDevice(fd);
+        if (fd->open(stdin, QIODevice::ReadOnly)) {
+            STDIN.setDevice(fd);
+        }
 
         fd = new QFile();
 #ifdef Q_OS_WIN
-        fd->open(fopen("nul", "w"), QIODevice::WriteOnly);
+        if (fd->open(fopen("nul", "w"), QIODevice::WriteOnly)) {
 #else
-        fd->open(fopen("/dev/null", "w"), QIODevice::WriteOnly);
+        if (fd->open(fopen("/dev/null", "w"), QIODevice::WriteOnly)) {
 #endif
-        DEVNULL.setDevice(fd);
+            DEVNULL.setDevice(fd);
+        }
 
 #ifdef Q_OS_WIN
         origCodePage = GetConsoleCP();

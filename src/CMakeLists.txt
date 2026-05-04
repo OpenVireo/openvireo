@@ -1,4 +1,4 @@
-#  Copyright (C) 2024 KeePassXC Team <team@keepassxc.org>
+#  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
 #  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -243,7 +243,7 @@ if(UNIX AND NOT APPLE)
         list(APPEND gui_SOURCES
             gui/osutils/nixutils/X11Funcs.cpp)
     endif()
-    qt5_add_dbus_adaptor(gui_SOURCES
+    qt6_add_dbus_adaptor(gui_SOURCES
             gui/org.keepassxc.KeePassXC.MainWindow.xml
             gui/MainWindow.h
             MainWindow)
@@ -253,7 +253,7 @@ if(UNIX AND NOT APPLE)
         PROPERTIES
         INCLUDE "quickunlock/PolkitDbusTypes.h"
         )
-    qt5_add_dbus_interface(core_SOURCES
+    qt6_add_dbus_interface(core_SOURCES
         quickunlock/dbus/org.freedesktop.PolicyKit1.Authority.xml
         polkit_dbus
     )
@@ -323,19 +323,21 @@ endif()
 configure_file(config-keepassx.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-keepassx.h)
 configure_file(git-info.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/git-info.h)
 
+# SVG Widgets
+find_package(Qt6 REQUIRED COMPONENTS SvgWidgets)
+
 # Core Library Definition
 add_library(keepassxc_core STATIC ${core_SOURCES})
 target_compile_definitions(keepassxc_core PRIVATE KPXC_BUILDING_CORE)
 target_link_libraries(keepassxc_core 
         ${qrcode_LIB}
-        Qt5::Core
-        Qt5::Concurrent
+        Qt6::Core
+        Qt6::Concurrent
         ${BOTAN_LIBRARIES}
         ${PCSC_LIBRARIES}
         ${ZXCVBN_LIBRARIES}
         ${ZLIB_LIBRARIES}
         ${MINIZIP_LIBRARIES}
-        ${ARGON2_LIBRARIES}
         ${thirdparty_LIBRARIES})
 
 # GUI Library Definition
@@ -343,8 +345,9 @@ add_library(keepassxc_gui STATIC ${gui_SOURCES})
 target_compile_definitions(keepassxc_gui PRIVATE KPXC_BUILDING_CORE)
 target_link_libraries(keepassxc_gui
         keepassxc_core
-        Qt5::Network
-        Qt5::Widgets
+        Qt6::Network
+        Qt6::SvgWidgets
+        Qt6::Widgets
         ${autotype_LIB}
         ${browser_LIB}
         ${fdosecrets_LIB}
@@ -353,22 +356,21 @@ target_link_libraries(keepassxc_gui
 
 if(APPLE)
     target_link_libraries(keepassxc_gui "-framework Foundation -framework AppKit -framework Carbon -framework Security -framework LocalAuthentication -framework ScreenCaptureKit")
-    if(Qt5MacExtras_FOUND)
-        target_link_libraries(keepassxc_gui Qt5::MacExtras)
+    if(Qt6MacExtras_FOUND)
+        target_link_libraries(keepassxc_gui Qt6::MacExtras)
     endif()
 endif()
 if(HAIKU)
     target_link_libraries(keepassxc_gui network)
 endif()
 if(UNIX AND NOT APPLE)
-    target_link_libraries(keepassxc_core Qt5::DBus ${LIBUSB_LIBRARIES})
+    target_link_libraries(keepassxc_core Qt6::DBus ${LIBUSB_LIBRARIES})
     if("${CMAKE_SYSTEM}" MATCHES "Linux")
         target_link_libraries(keepassxc_core ${KEYUTILS_LIBRARIES})
     endif()
     if(WITH_X11)
-        target_link_libraries(keepassxc_gui Qt5::X11Extras X11)
+        target_link_libraries(keepassxc_gui X11)
     endif()
-    target_include_directories(keepassxc_gui PRIVATE ${Qt5Gui_PRIVATE_INCLUDE_DIRS})
 endif()
 if(WIN32)
     target_link_libraries(keepassxc_gui Wtsapi32.lib Ws2_32.lib)
@@ -448,11 +450,9 @@ install(TARGETS ${PROGNAME}
 
 # Windows Installer Definition
 if(WIN32)
-    if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
-        set(OUTPUT_FILE_POSTFIX "Win64")
-    else()
-        set(OUTPUT_FILE_POSTFIX "Win32")
-    endif()
+    # Deploy used libraries into build directory for debugging
+    add_custom_command(TARGET ${PROGNAME} POST_BUILD
+        COMMAND ${WINDEPLOYQT_EXE} --dir $<TARGET_FILE_DIR:${PROGNAME}> $<TARGET_FILE:${PROGNAME}>)
 
     # We have to copy the license file in the configuration phase.
     # CMake checks that CPACK_RESOURCE_FILE_LICENSE actually exists and
@@ -516,13 +516,6 @@ if(WIN32)
                 COMPONENT Runtime)
 
         # Use windeployqt.exe to setup Qt dependencies
-        if(Qt5Core_VERSION VERSION_LESS "5.14.1")
-            set(WINDEPLOYQT_MODE "--release")
-            if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
-                set(WINDEPLOYQT_MODE "--debug")
-            endif()
-        endif()
-
         install(CODE "execute_process(COMMAND ${WINDEPLOYQT_EXE} ${PROGNAME}.exe ${WINDEPLOYQT_MODE} WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX} OUTPUT_QUIET)"
                 COMPONENT Runtime)
 
@@ -549,7 +542,7 @@ if(WIN32)
     endif()
 
     # install CA cert chains
-    find_file(SSL_CA_BUNDLE ca-bundle.crt PATHS "${Qt5_PREFIX}/ssl/certs")
+    find_file(SSL_CA_BUNDLE ca-bundle.crt PATHS "${Qt6_PREFIX}/ssl/certs")
     if(SSL_CA_BUNDLE)
         install(FILES ${SSL_CA_BUNDLE} DESTINATION "ssl/certs")
     else()

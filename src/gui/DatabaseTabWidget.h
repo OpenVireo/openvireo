@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSX_DATABASETABWIDGET_H
-#define KEEPASSX_DATABASETABWIDGET_H
+#ifndef KEEPASSXC_DATABASETABWIDGET_H
+#define KEEPASSXC_DATABASETABWIDGET_H
 
 #include "DatabaseOpenDialog.h"
 #include "config-keepassx.h"
@@ -129,4 +129,4 @@ private:
     bool m_databaseOpenInProgress;
 };
 
-#endif // KEEPASSX_DATABASETABWIDGET_H
+#endif // KEEPASSXC_DATABASETABWIDGET_H

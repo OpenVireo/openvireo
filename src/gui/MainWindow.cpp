@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2025 KeePassXC Team <team@keepassxc.org>
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -273,29 +273,6 @@ MainWindow::MainWindow()
     connect(m_inactivityTimer, SIGNAL(inactivityDetected()), this, SLOT(lockAllDatabases()));
     applySettingsChanges();
 
-    // Qt 5.10 introduced a new "feature" to hide shortcuts in context menus
-    // Unfortunately, Qt::AA_DontShowShortcutsInContextMenus is broken, have to manually enable them
-    m_ui->actionEntryNew->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryEdit->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryExpire->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryDelete->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryRestore->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryClone->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryTotp->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryDownloadIcon->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyTotp->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyPasswordTotp->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryMoveUp->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryMoveDown->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyUsername->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyPassword->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryAutoTypeSequence->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryOpenUrl->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyURL->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryCopyTitle->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryAddToAgent->setShortcutVisibleInContextMenu(true);
-    m_ui->actionEntryRemoveFromAgent->setShortcutVisibleInContextMenu(true);
-
     connect(m_ui->menuEntries, SIGNAL(aboutToShow()), SLOT(obtainContextFocusLock()));
     connect(m_ui->menuEntries, SIGNAL(aboutToHide()), SLOT(releaseContextFocusLock()));
     connect(m_entryContextMenu, SIGNAL(aboutToShow()), SLOT(obtainContextFocusLock()));
@@ -306,18 +283,18 @@ MainWindow::MainWindow()
     connect(m_ui->menuGroups, SIGNAL(aboutToHide()), SLOT(releaseContextFocusLock()));
 
     // Control window state
-    new QShortcut(Qt::CTRL + Qt::Key_M, this, SLOT(minimizeOrHide()));
-    new QShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_M, this, SLOT(hideWindow()));
+    new QShortcut(Qt::CTRL | Qt::Key_M, this, SLOT(minimizeOrHide()));
+    new QShortcut(Qt::CTRL | Qt::SHIFT | Qt::Key_M, this, SLOT(hideWindow()));
     // Control database tabs
     // Ctrl+Tab is broken on Mac, so use Alt (i.e. the Option key) - https://bugreports.qt.io/browse/QTBUG-8596
     auto dbTabModifier2 = Qt::CTRL;
 #ifdef Q_OS_MACOS
     dbTabModifier2 = Qt::ALT;
 #endif
-    new QShortcut(dbTabModifier2 + Qt::Key_Tab, this, SLOT(selectNextDatabaseTab()));
-    new QShortcut(Qt::CTRL + Qt::Key_PageDown, this, SLOT(selectNextDatabaseTab()));
-    new QShortcut(dbTabModifier2 + Qt::SHIFT + Qt::Key_Tab, this, SLOT(selectPreviousDatabaseTab()));
-    new QShortcut(Qt::CTRL + Qt::Key_PageUp, this, SLOT(selectPreviousDatabaseTab()));
+    new QShortcut(dbTabModifier2 | Qt::Key_Tab, this, SLOT(selectNextDatabaseTab()));
+    new QShortcut(Qt::CTRL | Qt::Key_PageDown, this, SLOT(selectNextDatabaseTab()));
+    new QShortcut(dbTabModifier2 | Qt::SHIFT | Qt::Key_Tab, this, SLOT(selectPreviousDatabaseTab()));
+    new QShortcut(Qt::CTRL | Qt::Key_PageUp, this, SLOT(selectPreviousDatabaseTab()));
 
     // Tab selection by number, Windows uses Ctrl, macOS uses Command,
     // and Linux uses Alt to emulate a browser-like experience
@@ -325,23 +302,23 @@ MainWindow::MainWindow()
 #ifdef Q_OS_LINUX
     dbTabModifier = Qt::ALT;
 #endif
-    auto shortcut = new QShortcut(dbTabModifier + Qt::Key_1, this);
+    auto shortcut = new QShortcut(dbTabModifier | Qt::Key_1, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(0); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_2, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_2, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(1); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_3, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_3, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(2); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_4, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_4, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(3); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_5, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_5, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(4); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_6, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_6, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(5); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_7, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_7, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(6); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_8, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_8, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(7); });
-    shortcut = new QShortcut(dbTabModifier + Qt::Key_9, this);
+    shortcut = new QShortcut(dbTabModifier | Qt::Key_9, this);
     connect(shortcut, &QShortcut::activated, [this]() { selectDatabaseTab(m_ui->tabWidget->count() - 1); });
 
     m_ui->actionDatabaseNew->setIcon(icons()->icon("document-new"));
@@ -2176,8 +2153,8 @@ void MainWindow::initActionCollection()
     // Prevent conflicts with global Mac shortcuts (force Control on all platforms)
     // Note: Qt::META means Ctrl on Mac.
 #ifdef Q_OS_MAC
-    ac->setDefaultShortcut(m_ui->actionEntryAddToAgent, Qt::META + Qt::Key_H);
-    ac->setDefaultShortcut(m_ui->actionEntryRemoveFromAgent, Qt::META + Qt::SHIFT + Qt::Key_H);
+    ac->setDefaultShortcut(m_ui->actionEntryAddToAgent, Qt::META | Qt::Key_H);
+    ac->setDefaultShortcut(m_ui->actionEntryRemoveFromAgent, Qt::META | Qt::SHIFT | Qt::Key_H);
 #endif
 
     QTimer::singleShot(1, ac, &ActionCollection::restoreShortcuts);
@@ -2222,8 +2199,6 @@ bool MainWindowEventFilter::eventFilter(QObject* watched, QEvent* event)
 
     auto eventType = event->type();
     if (eventType == QEvent::MouseButtonPress) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-        // startSystemMove was introduced in Qt 5.15
         auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
         if (watched == mainWindow->m_ui->menubar) {
             if (!mainWindow->m_ui->menubar->actionAt(mouseEvent->pos())) {
@@ -2241,7 +2216,6 @@ bool MainWindowEventFilter::eventFilter(QObject* watched, QEvent* event)
                 return true;
             }
         }
-#endif
     } else if (eventType == QEvent::KeyRelease && watched == mainWindow) {
 #ifdef Q_OS_MACOS
         // On macOS, the menubar is always visible, so no need to toggle it

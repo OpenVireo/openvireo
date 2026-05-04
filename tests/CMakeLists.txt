@@ -1,4 +1,4 @@
-#  Copyright (C) 2023 KeePassXC Team <team@keepassxc.org>
+#  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
 #  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,8 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_CURRENT_BINARY_DIR}/../src)
 
+add_definitions(-DQT_TEST_LIB -DQT_NO_USE_NODISCARD_FILE_OPEN)
+
 set(KEEPASSX_TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
 configure_file(config-keepassx-tests.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-keepassx-tests.h)
 
@@ -31,7 +33,7 @@ function(add_unit_test)
     set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "LANG=en_US.UTF-8")
 endfunction()
 
-set(TEST_LIBRARIES keepassxc_gui Qt5::Test)
+set(TEST_LIBRARIES keepassxc_gui Qt6::Test)
 
 set(testsupport_SOURCES
         modeltest.cpp
@@ -39,7 +41,7 @@ set(testsupport_SOURCES
         mock/MockClock.cpp
         util/TemporaryFile.cpp)
 add_library(testsupport STATIC ${testsupport_SOURCES})
-target_link_libraries(testsupport Qt5::Core Qt5::Concurrent Qt5::Widgets Qt5::Test)
+target_link_libraries(testsupport Qt6::Core Qt6::Concurrent Qt6::Widgets Qt6::Test)
 
 add_unit_test(NAME testgroup SOURCES TestGroup.cpp
         LIBS testsupport ${TEST_LIBRARIES})

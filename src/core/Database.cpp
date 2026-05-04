@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -338,7 +338,7 @@ bool Database::saveAs(const QString& filePath, SaveAction action, const QString&
 
 #ifdef Q_OS_WIN
         if (isHidden) {
-            SetFileAttributes(realFilePath.toStdString().c_str(), FILE_ATTRIBUTE_HIDDEN);
+            SetFileAttributes(realFilePath.toStdWString().c_str(), FILE_ATTRIBUTE_HIDDEN);
         }
 #endif
         m_ignoreFileChangesUntilSaved = false;
@@ -522,7 +522,9 @@ bool Database::import(const QString& xmlExportPath, QString* error)
 {
     KdbxXmlReader reader(KeePass2::FILE_VERSION_4);
     QFile file(xmlExportPath);
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
 
     reader.readDatabase(&file, this);
 

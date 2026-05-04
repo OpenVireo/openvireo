@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 KeePassXC Team <team@keepassxc.org>
+ * Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
  * Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -125,7 +125,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     tagsWidget->setLayout(tagsLayout);
     tagsLayout->addWidget(tagsTitle);
     tagsLayout->addWidget(m_tagView);
-    tagsLayout->setMargin(0);
+    tagsLayout->setContentsMargins(0, 0, 0, 0);
 
     m_groupSplitter->setOrientation(Qt::Vertical);
     m_groupSplitter->setChildrenCollapsible(true);
@@ -139,7 +139,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
 
     auto rightHandSideWidget = new QWidget(m_mainSplitter);
     auto rightHandSideVBox = new QVBoxLayout();
-    rightHandSideVBox->setMargin(0);
+    rightHandSideVBox->setContentsMargins(0, 0, 0, 0);
     rightHandSideVBox->addWidget(m_searchingLabel);
     rightHandSideVBox->addWidget(m_shareLabel);
     rightHandSideVBox->addWidget(m_previewSplitter);
@@ -1035,15 +1035,11 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
 
         if (launch) {
             const QString cmd = cmdString.mid(6);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
             QStringList cmdList = QProcess::splitCommand(cmd);
             if (!cmdList.isEmpty()) {
                 const QString program = cmdList.takeFirst();
                 QProcess::startDetached(program, cmdList);
             }
-#else
-            QProcess::startDetached(cmd);
-#endif
 
             if (config()->get(Config::MinimizeOnOpenUrl).toBool()) {
                 getMainWindow()->minimizeOrHide();

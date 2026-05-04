@@ -1,4 +1,4 @@
-#  Copyright (C) 2024 KeePassXC Team <team@keepassxc.org>
+#  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
 #  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -251,12 +251,14 @@ add_gcc_compiler_flags("-Wall -Wextra -Wundef -Wpointer-arith -Wno-long-long")
 add_gcc_compiler_flags("-Wformat=2 -Wmissing-format-attribute")
 add_gcc_compiler_flags("-fvisibility=hidden")
 add_gcc_compiler_cxxflags("-fvisibility-inlines-hidden")
+# Qt6 marks these as errors with newer compilers. Treat them as warnings for now.
+check_add_gcc_compiler_cxxflag("-Wno-error=sfinae-incomplete" SFINAE_INCOMPLETE_FLAG)
 
 if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
     check_add_gcc_compiler_flag("-Wshadow-compatible-local")
     check_add_gcc_compiler_flag("-Wshadow-local")
     add_gcc_compiler_flags("-Werror")
-    # C++20 marks enum arithmetic as deprecated, but we use it in Botan and Qt5
+    # C++20 marks enum arithmetic as deprecated, but we use it in Botan and Qt6
     add_gcc_compiler_cxxflags("-Wno-deprecated-enum-enum-conversion -Wno-error=deprecated ")
 endif()
 
@@ -268,16 +270,19 @@ add_gcc_compiler_cxxflags("-Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virt
 add_gcc_compiler_cflags("-Wchar-subscripts -Wwrite-strings")
 
 if(WITH_ASAN)
-    if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE))
-        message(FATAL_ERROR "WITH_ASAN is only supported on Linux / macOS at the moment.")
+    if(MSVC)
+        if(NOT CMAKE_COMPILER_IS_CLANG_MSVC)
+            add_compile_options(/fsanitize=address)
+        else()
+            message(WARNING "Address Sanitizer is not supported with clang-cl on MSVC, skipping ASAN flags")
+        endif()
+    else()
+        add_gcc_compiler_flags("-fsanitize=address -DWITH_ASAN")
+
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            add_gcc_compiler_flags("-fsanitize=leak -DWITH_LSAN")
+        endif()
     endif()
-
-    add_gcc_compiler_flags("-fsanitize=address -DWITH_ASAN")
-
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_gcc_compiler_flags("-fsanitize=leak -DWITH_LSAN")
-    endif()
-
 endif()
 
 if(CMAKE_BUILD_TYPE_LOWER MATCHES "(release|relwithdebinfo|minsizerel)")
@@ -330,9 +335,9 @@ if(WIN32)
             message(FATAL_ERROR "Only Microsoft Visual Studio 2019 and newer are supported!")
         endif()
         add_compile_options(/permissive- /utf-8)
-        # Clang-cl does not support /MP, /Zf, or /fsanitize=address
+        # Clang-cl does not support /MP or /Zf
         if (NOT CMAKE_COMPILER_IS_CLANG_MSVC)
-            add_compile_options(/MP /Zf /fsanitize=address)
+            add_compile_options(/MP /Zf)
         endif()
 
         # Enable high entropy ASLR on release builds
@@ -407,32 +412,20 @@ endif()
 # Find Qt
 set(QT_COMPONENTS Core Network Concurrent Gui Svg Widgets Test LinguistTools)
 if(UNIX AND NOT APPLE)
-    if(WITH_X11)
-        list(APPEND QT_COMPONENTS X11Extras)
-    endif()
-    find_package(Qt5 COMPONENTS ${QT_COMPONENTS} DBus REQUIRED)
+    find_package(Qt6 COMPONENTS ${QT_COMPONENTS} DBus REQUIRED)
 elseif(APPLE)
-    find_package(Qt5 COMPONENTS ${QT_COMPONENTS} REQUIRED HINTS
-            /usr/local/opt/qt@5/lib/cmake
-            /usr/local/Cellar/qt@5/*/lib/cmake
-            /opt/homebrew/opt/qt@5/lib/cmake
-            ENV PATH)
-    find_package(Qt5 COMPONENTS MacExtras HINTS
-            /usr/local/opt/qt@5/lib/cmake
-            /usr/local/Cellar/qt@5/*/lib/cmake
-            /opt/homebrew/opt/qt@5/lib/cmake
+    find_package(Qt6 COMPONENTS ${QT_COMPONENTS} REQUIRED HINTS
+            /usr/local/opt/qt/lib/cmake
+            /usr/local/Cellar/qt/*/lib/cmake
+            /opt/homebrew/opt/qt/lib/cmake
             ENV PATH)
 else()
-    find_package(Qt5 COMPONENTS ${QT_COMPONENTS} REQUIRED)
+    find_package(Qt6 COMPONENTS ${QT_COMPONENTS} REQUIRED)
 endif()
 
 # Minimum Qt version check
-if(Qt5Core_VERSION VERSION_LESS "5.12.0")
-    message(FATAL_ERROR "Qt version 5.12.0 or higher is required")
-endif()
-# C++20 is not supported before Qt 5.15.0
-if(Qt5Core_VERSION VERSION_LESS "5.15.0")
-    set(CMAKE_CXX_STANDARD 17)
+if(Qt6Core_VERSION VERSION_LESS "6.2.4")
+    message(FATAL_ERROR "Qt version 6.2.4 or higher is required")
 endif()
 
 # Process moc automatically
@@ -447,21 +440,18 @@ if(NOT CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
     add_definitions(-DQT_NO_DEBUG_OUTPUT)
 endif()
 
-get_filename_component(Qt5_PREFIX ${Qt5_DIR}/../../.. REALPATH)
+get_filename_component(Qt6_PREFIX ${Qt6_DIR}/../../.. REALPATH)
 
 if(APPLE)
-    # Add includes under Qt5 Prefix in case Qt6 is also installed
-    include_directories(SYSTEM ${Qt5_PREFIX}/include)
-
     set(CMAKE_MACOSX_RPATH TRUE)
-    find_program(MACDEPLOYQT_EXE macdeployqt HINTS ${Qt5_PREFIX}/bin ${Qt5_PREFIX}/tools/qt5/bin ENV PATH)
+    find_program(MACDEPLOYQT_EXE macdeployqt HINTS ${Qt6_PREFIX}/bin ${Qt6_PREFIX}/tools/qt/bin ENV PATH)
     if(NOT MACDEPLOYQT_EXE)
         message(FATAL_ERROR "macdeployqt is required to build on macOS")
     endif()
     message(STATUS "Using macdeployqt: ${MACDEPLOYQT_EXE}")
     set(MACDEPLOYQT_EXTRA_BINARIES "")
 elseif(WIN32)
-    find_program(WINDEPLOYQT_EXE windeployqt HINTS ${Qt5_PREFIX}/bin ${Qt5_PREFIX}/tools/qt5/bin ENV PATH)
+    find_program(WINDEPLOYQT_EXE windeployqt HINTS ${Qt6_PREFIX}/bin ${Qt6_PREFIX}/tools/qt/bin ENV PATH)
     if(NOT WINDEPLOYQT_EXE)
         message(FATAL_ERROR "windeployqt is required to build on Windows")
     endif()
@@ -469,20 +459,14 @@ elseif(WIN32)
 endif()
 
 # Find Botan
-# TODO: Increase minimum to 2.19.1 and drop Argon2 package
 find_package(Botan REQUIRED)
 if(BOTAN_VERSION VERSION_GREATER_EQUAL "3.0.0")
     set(WITH_BOTAN3 TRUE)
-elseif(BOTAN_VERSION VERSION_LESS "2.12.0")
+elseif(BOTAN_VERSION VERSION_LESS "2.19.1")
     # Check for minimum Botan version
-    message(FATAL_ERROR "Botan 2.12.0 or higher is required")   
+    message(FATAL_ERROR "Botan 2.19.1 or higher is required")   
 endif()
 include_directories(SYSTEM ${BOTAN_INCLUDE_DIR})
-
-# Find Argon2 -- Botan 2.18 and below does not support threaded Argon2
-find_library(ARGON2_LIBRARIES NAMES argon2)
-find_path(ARGON2_INCLUDE_DIR NAMES argon2.h PATH_SUFFIXES local/include)
-include_directories(SYSTEM ${ARGON2_INCLUDE_DIR})
 
 # Find zlib
 find_package(ZLIB REQUIRED)
@@ -493,6 +477,7 @@ include_directories(SYSTEM ${ZLIB_INCLUDE_DIR})
 
 # Find Minizip
 find_package(Minizip REQUIRED)
+include_directories(SYSTEM ${MINIZIP_INCLUDE_DIR})
 
 # Find PCSC and LibUSB for hardware key support
 find_package(PCSC REQUIRED)
@@ -511,9 +496,14 @@ endif()
 
 # Find zxcvbn or use the bundled version
 find_library(ZXCVBN_LIBRARIES zxcvbn)
-if(NOT ZXCVBN_LIBRARIES)
+find_path(ZXCVBN_INCLUDE_DIR zxcvbn.h PATH_SUFFIXES zxcvbn)
+if(NOT ZXCVBN_LIBRARIES OR NOT ZXCVBN_INCLUDE_DIR)
+    message(STATUS "Using internal built zxcvbn library")
     add_subdirectory(src/thirdparty/zxcvbn)
     set(ZXCVBN_LIBRARIES zxcvbn)
+else()
+    message(STATUS "Using system zxcvbn: ${ZXCVBN_LIBRARIES}")
+    include_directories(SYSTEM ${ZXCVBN_INCLUDE_DIR})
 endif()
 
 # Add KeePassXC sources and tests
