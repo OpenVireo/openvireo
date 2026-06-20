@@ -26,14 +26,17 @@
 #include "autotype/AutoTypePlatformPlugin.h"
 #include "autotype/AutoTypeAction.h"
 
+class MacUtils;
+
 class AutoTypePlatformMac : public QObject, public AutoTypePlatformInterface
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.keepassx.AutoTypePlatformMac")
+    Q_PLUGIN_METADATA(IID "org.keepassxc.AutoTypePlatformMac")
     Q_INTERFACES(AutoTypePlatformInterface)
 
 public:
     AutoTypePlatformMac();
+    void setOSUtils(OSUtilsBase* osUtils) override;
     bool isAvailable() override;
     QStringList windowTitles() override;
     WId activeWindow() override;
@@ -50,6 +53,8 @@ public:
 private:
     static int windowLayer(CFDictionaryRef window);
     static QString windowStringProperty(CFDictionaryRef window, CFStringRef propertyRef);
+
+    MacUtils* m_macUtils = nullptr;
 };
 
 class AutoTypeExecutorMac : public AutoTypeExecutor
