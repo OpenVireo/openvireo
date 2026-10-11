@@ -37,6 +37,7 @@ namespace Ui
 
 class InactivityTimer;
 class SearchWidget;
+class VaultHeaderBar;
 class MainWindowEventFilter;
 
 class MainWindow : public QMainWindow
@@ -187,6 +188,9 @@ private:
     QPointer<QSystemTrayIcon> m_trayIcon;
     QPointer<ScreenLockListener> m_screenLockListener;
     QPointer<SearchWidget> m_searchWidget;
+    // Vault Index layout: search and sync status above the database view instead of in the toolbar
+    QPointer<VaultHeaderBar> m_vaultHeader;
+    bool m_vaultLayout = false;
     QPointer<QProgressBar> m_progressBar;
     QPointer<QLabel> m_progressBarLabel;
     QPointer<QLabel> m_statusBarLabel;

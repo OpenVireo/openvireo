@@ -24,6 +24,7 @@
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/osutils/OSUtils.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/styles/dark/DarkStyle.h"
 #include "gui/styles/light/LightStyle.h"
 
@@ -198,6 +199,7 @@ void Application::applyTheme()
             stylesheetFile.close();
         }
     }
+    FluentTheme::apply(m_darkTheme);
     applyFontSize();
 }
 

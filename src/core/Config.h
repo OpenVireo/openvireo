@@ -104,6 +104,7 @@ public:
         GUI_MonospaceNotes,
         GUI_ApplicationTheme,
         GUI_CompactMode,
+        GUI_VaultLayout,
         GUI_CheckForUpdates,
         GUI_CheckForUpdatesIncludeBetas,
         GUI_SearchWaitForEnter,
@@ -119,6 +120,7 @@ public:
         GUI_PreviewSplitterState,
         GUI_SplitterState,
         GUI_GroupSplitterState,
+        GUI_VaultSplitterState,
         GUI_AutoTypeSelectDialogSize,
         GUI_CheckForUpdatesNextCheck,
 

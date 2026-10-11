@@ -104,6 +104,7 @@ set(gui_SOURCES
         gui/styles/base/BaseStyle.cpp
         gui/styles/dark/DarkStyle.cpp
         gui/styles/light/LightStyle.cpp
+        gui/styles/FluentTheme.cpp
         gui/AboutDialog.cpp
         gui/ActionCollection.cpp
         gui/Application.cpp
@@ -164,6 +165,10 @@ set(gui_SOURCES
         gui/entry/EntryHistoryModel.cpp
         gui/entry/EntryModel.cpp
         gui/entry/EntryView.cpp
+        gui/entry/EntryListItemDelegate.cpp
+        gui/vault/EntryDetailCard.cpp
+        gui/vault/VaultPanes.cpp
+        gui/vault/VaultWidgets.cpp
         gui/export/ExportDialog.cpp
         gui/group/EditGroupWidget.cpp
         gui/group/GroupModel.cpp
@@ -371,6 +376,7 @@ target_link_libraries(keepassxc_gui
         Qt6::Network
         Qt6::SvgWidgets
         Qt6::Widgets
+        FluentQt::FluentQt
         ${autotype_LIB}
         ${browser_LIB}
         ${fdosecrets_LIB}

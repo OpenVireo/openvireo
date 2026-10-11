@@ -32,6 +32,13 @@ DatabaseWidget, DatabaseWidget #groupView, DatabaseWidget #tagView {
     border: none;
 }
 
+/* Vault Index layout: groups and tags sit directly on the navigation pane */
+DatabaseWidget #groupView[vaultLayout="true"], DatabaseWidget #tagView[vaultLayout="true"],
+DatabaseWidget #groupView[vaultLayout="true"]:!active, DatabaseWidget #tagView[vaultLayout="true"]:!active,
+DatabaseWidget #groupView[vaultLayout="true"]:disabled, DatabaseWidget #tagView[vaultLayout="true"]:disabled {
+    background-color: transparent;
+}
+
 EntryPreviewWidget *[blendIn="true"]
 {
     background-color: palette(window);

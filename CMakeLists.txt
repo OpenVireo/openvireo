@@ -460,6 +460,28 @@ if(Qt6Core_VERSION VERSION_LESS "6.2.4")
     message(FATAL_ERROR "Qt version 6.2.4 or higher is required")
 endif()
 
+# Fluent-Qt provides the Fluent Design widgets used by the Vault Index main window layout.
+# Offline builds can point FETCHCONTENT_SOURCE_DIR_FLUENTQT at a local checkout.
+include(FetchContent)
+set(FLUENT_QT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_ENABLE_WARNINGS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(fluentqt
+        GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
+        GIT_TAG v1.9.3
+        GIT_SHALLOW TRUE)
+# Build Fluent-Qt with its own flags rather than our -Werror and extra warnings
+set(_kpxc_saved_c_flags "${CMAKE_C_FLAGS}")
+set(_kpxc_saved_cxx_flags "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-W[^ ]*" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+string(REGEX REPLACE "-W[^ ]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+FetchContent_MakeAvailable(fluentqt)
+set(CMAKE_C_FLAGS "${_kpxc_saved_c_flags}")
+set(CMAKE_CXX_FLAGS "${_kpxc_saved_cxx_flags}")
+# Treat Fluent-Qt headers as system headers so our warning flags don't apply to them
+get_target_property(_fluentqt_includes FluentQt INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(FluentQt PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_fluentqt_includes}")
+
 # Process moc automatically
 set(CMAKE_AUTOMOC ON)
 # Process .ui files automatically
