@@ -301,6 +301,7 @@ private slots:
     void reloadDatabaseFile(bool triggeredBySave);
     void restoreGroupEntryFocus(const QUuid& groupUuid, const QUuid& EntryUuid);
     void onConfigChanged(Config::ConfigKey key);
+    void fitVaultTagList();
 
 private:
     int addChildWidget(QWidget* w);

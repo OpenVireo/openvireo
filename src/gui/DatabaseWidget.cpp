@@ -127,13 +127,15 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
 
     // Setup searches and tags view and place under groups
     m_tagView->setObjectName("tagView");
+    // The Vault Index layout searches from the header, so its sidebar only lists tags
+    m_tagView->setSearchesVisible(!m_vaultLayout);
     m_tagView->setDatabase(m_db);
     connect(m_tagView, SIGNAL(activated(QModelIndex)), this, SLOT(filterByTag()));
     connect(m_tagView, SIGNAL(clicked(QModelIndex)), this, SLOT(filterByTag()));
 
     auto tagsWidget = new QWidget();
     auto tagsLayout = new QVBoxLayout();
-    auto tagsTitle = new QLabel(tr("Searches and Tags"));
+    auto tagsTitle = new QLabel(m_vaultLayout ? tr("Tags") : tr("Searches and Tags"));
     tagsTitle->setProperty("title", true);
     tagsWidget->setObjectName("tagWidget");
     tagsWidget->setLayout(tagsLayout);
@@ -150,6 +152,10 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_groupSplitter->setSizes({1, 1});
     // Initial visibility based on config value
     m_groupSplitter->setVisible(!config()->get(Config::GUI_HideGroupPanel).toBool());
+    if (m_vaultLayout) {
+        connect(m_tagView->model(), &QAbstractItemModel::modelReset, this, &DatabaseWidget::fitVaultTagList);
+        fitVaultTagList();
+    }
 
     m_previewView->setObjectName("previewWidget");
     m_previewView->hide();
@@ -414,6 +420,11 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
             m_previewSplitter->setSizes(value);
             break;
         case Config::GUI_GroupSplitterState:
+            if (m_vaultLayout) {
+                // The tag list is sized to its tags
+                fitVaultTagList();
+                break;
+            }
             if (value.size() < 2) {
                 value = QList({static_cast<int>(height() * 0.6), static_cast<int>(height() * 0.4)});
             }
@@ -423,6 +434,23 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
             break;
         }
     }
+}
+
+void DatabaseWidget::fitVaultTagList()
+{
+    // Without the searches the tag list is empty until the database has tags, and only needs room for a
+    // few of them; the rest scroll and the groups get the remaining height
+    auto tagsWidget = m_groupSplitter->widget(1);
+    const int rows = m_tagView->model()->rowCount();
+    tagsWidget->setVisible(rows > 0);
+    if (rows == 0) {
+        return;
+    }
+    const auto title = tagsWidget->findChild<QLabel*>();
+    const int listHeight = m_tagView->sizeHintForRow(0) * qMin(rows, 8) + m_tagView->frameWidth() * 2;
+    const int height = title->sizeHint().height() + tagsWidget->layout()->spacing() + listHeight;
+    tagsWidget->setMaximumHeight(height);
+    m_groupSplitter->setSizes({qMax(0, m_groupSplitter->height() - height), height});
 }
 
 void DatabaseWidget::onConfigChanged(Config::ConfigKey key)
@@ -2065,8 +2093,12 @@ void DatabaseWidget::endSearch()
         m_entryView->setFirstEntryActive();
         // Enforce preview view update (prevents stale information if focus group is empty)
         m_previewView->setEntry(currentSelectedEntry());
-        // Reset selection on tag view
-        m_tagView->selectionModel()->clearSelection();
+        // Reset selection on tag view; without Clear Search to return to, no tag stays current either
+        if (m_vaultLayout) {
+            m_tagView->selectionModel()->clear();
+        } else {
+            m_tagView->selectionModel()->clearSelection();
+        }
     }
 
     m_searchingLabel->setVisible(false);
