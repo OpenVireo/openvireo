@@ -34,6 +34,7 @@
 #include "gui/Icons.h"
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
 #include "quickunlock/QuickUnlockInterface.h"
 
@@ -214,6 +215,14 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     // The menubar is always shown on macOS, so hide the option to avoid confusion
     m_generalUi->menubarShowCheckBox->setVisible(false);
 #endif
+
+    // The Vault Index layout has no toolbar, so none of the toolbar options apply
+    if (FluentTheme::vaultLayoutEnabled()) {
+        m_generalUi->toolbarShowCheckBox->setVisible(false);
+        m_generalUi->toolButtonStyleLabel->setVisible(false);
+        m_generalUi->toolButtonStyleComboBox->setVisible(false);
+        m_generalUi->toolbarMovableCheckBox->setVisible(false);
+    }
 
 #ifdef KPXC_FEATURE_UPDATES
     connect(m_generalUi->checkForUpdatesOnStartupCheckBox, SIGNAL(toggled(bool)), SLOT(checkUpdatesToggled(bool)));

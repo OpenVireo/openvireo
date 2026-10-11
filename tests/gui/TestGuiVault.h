@@ -44,6 +44,7 @@ private slots:
     void testFluentSearchBox();
     void testDatabasePicker();
     void testWindowFrame();
+    void testToolbarSettingsHidden();
     void testScreenshots();
 
 private:
