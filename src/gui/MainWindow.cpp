@@ -48,6 +48,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultWindowFrame.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/entry/EntryView.h"
 #include "gui/osutils/OSUtils.h"
@@ -116,7 +117,9 @@ MainWindow::MainWindow()
     m_searchWidget->connectSignals(m_actionMultiplexer);
     if (m_vaultLayout) {
         m_vaultHeader = new VaultHeaderBar(m_ui->tabWidget, m_searchWidget, m_ui->centralwidget);
-        m_ui->verticalLayout->insertWidget(0, m_vaultHeader);
+        // Where supported, the header doubles as the window's title bar
+        m_vaultFrame = new VaultWindowFrame(this, m_vaultHeader);
+        m_ui->verticalLayout->insertWidget(0, m_vaultFrame->widget());
         m_vaultHeader->setVisible(false);
         // Stands in for the toolbar's widget action: enabled while a database is shown
         m_searchWidgetAction = new QAction(this);
@@ -574,7 +577,8 @@ MainWindow::MainWindow()
     installEventFilter(eventFilter);
 
 #ifdef Q_OS_MACOS
-    setUnifiedTitleAndToolBarOnMac(true);
+    // The Fluent window frame draws its own title bar
+    setUnifiedTitleAndToolBarOnMac(!m_vaultFrame || !m_vaultFrame->isUnified());
 #endif
 
 #ifdef KPXC_FEATURE_UPDATES
