@@ -32,6 +32,7 @@
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
 #include "gui/export/ExportDialog.h"
+#include "gui/styles/FluentTheme.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
@@ -75,7 +76,8 @@ DatabaseTabWidget::~DatabaseTabWidget() = default;
 
 void DatabaseTabWidget::toggleTabbar()
 {
-    if (count() > 1) {
+    // The Vault Index layout switches databases from the header's database picker
+    if (count() > 1 && !FluentTheme::vaultLayoutEnabled()) {
         tabBar()->show();
         setFocusPolicy(Qt::StrongFocus);
         emit tabVisibilityChanged(true);

@@ -41,7 +41,10 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QMenu>
+#include <QTabBar>
 #include <QTest>
+#include <QTimer>
 #include <QToolBar>
 
 int main(int argc, char* argv[])
@@ -74,7 +77,8 @@ namespace
 void TestGuiVault::initTestCase()
 {
     QVERIFY(Crypto::init());
-    Config::createConfigFromFile(TemporaryFile::createTempConfigFile(), {});
+    // A temporary local config too, so databases opened by a developer's own build don't reopen here
+    Config::createConfigFromFile(TemporaryFile::createTempConfigFile(), TemporaryFile::createTempConfigFile());
     QLocale::setDefault(QLocale::c());
     Application::bootstrap();
 
@@ -263,6 +267,66 @@ void TestGuiVault::testFluentSearchBox()
     QTest::keyClick(box, Qt::Key_Escape);
     QTRY_VERIFY(box->text().isEmpty());
     QTRY_VERIFY(hasLabelWithText(commandBar, "Work"));
+}
+
+void TestGuiVault::testDatabasePicker()
+{
+    auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
+    auto* picker = header->databasePicker();
+    QVERIFY(picker->isVisible());
+    QCOMPARE(picker->text(), m_dbWidget->displayName());
+
+    // Open a second database and leave it locked
+    TemporaryFile secondFile;
+    QVERIFY(secondFile.copyFromFile(QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath("NewDatabase.kdbx")));
+    fileDialog()->setNextFileName(secondFile.fileName());
+    m_mainWindow->findChild<QAction*>("actionDatabaseOpen")->trigger();
+    QApplication::processEvents();
+    QCOMPARE(m_tabWidget->count(), 2);
+    auto* second = m_tabWidget->currentDatabaseWidget();
+    QVERIFY(second != m_dbWidget);
+    QVERIFY(second->isLocked());
+
+    // The picker replaces the tab bar and stays available while locked; search doesn't apply
+    QVERIFY(m_tabWidget->tabBar()->isHidden());
+    QVERIFY(header->isVisible());
+    QCOMPARE(picker->text(), second->displayName());
+    QVERIFY(!header->findChild<SearchWidget*>("SearchWidget")->isVisible());
+
+    // Switch back from the picker's menu: open databases first, then database commands
+    QStringList menuItems;
+    bool firstChecked = true;
+    QTimer::singleShot(0, this, [&] {
+        auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+        QVERIFY(menu);
+        for (auto* action : menu->actions()) {
+            menuItems << (action->isSeparator() ? QStringLiteral("-") : action->objectName());
+        }
+        firstChecked = menu->actions().at(0)->isChecked();
+        const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+        if (!dir.isEmpty()) {
+            QTest::qWait(300);
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-picker.png"));
+            menu->grab().save(QDir(dir).absoluteFilePath("vault-picker-menu.png"));
+        }
+        menu->actions().at(0)->trigger();
+    });
+    QTest::mouseClick(picker, Qt::LeftButton);
+    QApplication::processEvents();
+
+    QVERIFY(!firstChecked);
+    QCOMPARE(menuItems.size(), 8);
+    QCOMPARE(menuItems.mid(2),
+             QStringList({"-", "actionDatabaseNew", "actionDatabaseOpen", "-", "actionLockAllDatabases",
+                          "actionDatabaseClose"}));
+    QCOMPARE(m_tabWidget->currentDatabaseWidget(), m_dbWidget.data());
+    QCOMPARE(picker->text(), m_dbWidget->displayName());
+    QVERIFY(header->findChild<SearchWidget*>("SearchWidget")->isVisible());
+
+    // Close the second database again
+    QVERIFY(m_tabWidget->closeDatabaseTab(second));
+    QCOMPARE(m_tabWidget->count(), 1);
+    QCOMPARE(picker->text(), m_dbWidget->displayName());
 }
 
 void TestGuiVault::testScreenshots()

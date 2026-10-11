@@ -28,6 +28,7 @@
 #include <components/foundation/FluentElement.h>
 
 class Database;
+class DatabaseTabWidget;
 class DatabaseWidget;
 class QLabel;
 class QTimer;
@@ -81,8 +82,7 @@ private:
 };
 
 /**
- * Vault Index navigation pane: the open database, its group tree and tags,
- * and links to the password generator, reports and settings.
+ * Vault Index navigation pane: the database's group tree and tags, and links to the password generator, reports and settings.
  */
 class VaultNavPane : public QWidget, public fluent::FluentElement
 {
@@ -91,17 +91,9 @@ class VaultNavPane : public QWidget, public fluent::FluentElement
 public:
     VaultNavPane(QWidget* groups, QWidget* parent = nullptr);
 
-    void setDatabase(const QSharedPointer<Database>& db);
     void onThemeUpdated() override;
 
-private slots:
-    void refresh();
-
 private:
-    QSharedPointer<Database> m_db;
-    QLabel* m_dbIcon;
-    QLabel* m_dbName;
-    QLabel* m_dbDetail;
     QLabel* m_groupsLabel;
 };
 
@@ -172,21 +164,57 @@ private:
 };
 
 /**
- * Header above the database view in the Vault Index layout: search and sync status.
+ * Database picker at the start of the header: shows the current database and
+ * switches between the open databases in place of the tab bar.
+ */
+class VaultDatabasePicker : public QAbstractButton, public fluent::FluentElement
+{
+    Q_OBJECT
+
+public:
+    explicit VaultDatabasePicker(DatabaseTabWidget* tabs, QWidget* parent = nullptr);
+
+    QSize sizeHint() const override;
+    void onThemeUpdated() override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+
+private slots:
+    void setDatabaseWidget(DatabaseWidget* dbWidget);
+    void refresh();
+    void showDatabaseMenu();
+
+private:
+    QPointer<DatabaseTabWidget> m_tabs;
+    QPointer<DatabaseWidget> m_dbWidget;
+    QString m_detail;
+    bool m_locked = false;
+    bool m_hovered = false;
+    bool m_menuOpen = false;
+};
+
+/**
+ * Header above the database view in the Vault Index layout: the database
+ * picker, search and sync status.
  */
 class VaultHeaderBar : public QWidget
 {
     Q_OBJECT
 
 public:
-    VaultHeaderBar(QWidget* searchWidget, QWidget* parent = nullptr);
+    VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, QWidget* parent = nullptr);
 
+    VaultDatabasePicker* databasePicker() const;
     VaultSyncChip* syncChip() const;
 
 protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    VaultDatabasePicker* m_databasePicker;
     VaultSyncChip* m_syncChip;
 };
 

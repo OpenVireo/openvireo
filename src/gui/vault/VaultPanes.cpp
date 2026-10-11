@@ -18,17 +18,21 @@
 #include "VaultPanes.h"
 
 #include "core/Database.h"
+#include "core/Tools.h"
+#include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
+#include "gui/Icons.h"
 #include "gui/remote/RemoteSettings.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultWidgets.h"
 
-#include <components/layout/Card.h>
+#include <components/menus_toolbars/Menu.h>
 
 #include <QDir>
 #include <QFileInfo>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenu>
@@ -46,23 +50,6 @@ namespace
             return QStringLiteral("~") + path.mid(home.size());
         }
         return QDir::toNativeSeparators(path);
-    }
-
-    QLabel* glyphLabel(const QString& glyph, int size, QWidget* parent)
-    {
-        auto* label = new QLabel(glyph, parent);
-        QFont font(Typography::FontFamily::FluentIcons);
-        font.setPixelSize(size);
-        label->setFont(font);
-        label->setAlignment(Qt::AlignCenter);
-        return label;
-    }
-
-    void setLabelColor(QLabel* label, const QColor& color)
-    {
-        auto palette = label->palette();
-        palette.setColor(QPalette::WindowText, color);
-        label->setPalette(palette);
     }
 } // namespace
 
@@ -155,9 +142,6 @@ void VaultNavButton::paintEvent(QPaintEvent* event)
 
 VaultNavPane::VaultNavPane(QWidget* groups, QWidget* parent)
     : QWidget(parent)
-    , m_dbIcon(glyphLabel(Typography::Icons::Storage, Typography::IconSize::Large, this))
-    , m_dbName(new QLabel(this))
-    , m_dbDetail(new QLabel(this))
     , m_groupsLabel(new QLabel(tr("Groups"), this))
 {
     setObjectName("vaultNavPane");
@@ -166,23 +150,6 @@ VaultNavPane::VaultNavPane(QWidget* groups, QWidget* parent)
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(8, 4, 8, 10);
     layout->setSpacing(2);
-
-    // The open database
-    auto* dbCard = new fluent::layout::Card(this);
-    dbCard->setAppearance(fluent::layout::Card::Layer);
-    dbCard->setBorderVisible(true);
-    auto* dbLayout = new QHBoxLayout(dbCard);
-    dbLayout->setContentsMargins(10, 6, 10, 6);
-    dbLayout->setSpacing(10);
-    m_dbIcon->setFixedWidth(24);
-    dbLayout->addWidget(m_dbIcon);
-    auto* dbText = new QVBoxLayout();
-    dbText->setSpacing(0);
-    dbText->addWidget(m_dbName);
-    dbText->addWidget(m_dbDetail);
-    dbLayout->addLayout(dbText, 1);
-    layout->addWidget(dbCard);
-    layout->addSpacing(8);
 
     m_groupsLabel->setContentsMargins(12, 4, 12, 4);
     layout->addWidget(m_groupsLabel);
@@ -207,53 +174,9 @@ VaultNavPane::VaultNavPane(QWidget* groups, QWidget* parent)
     onThemeUpdated();
 }
 
-void VaultNavPane::setDatabase(const QSharedPointer<Database>& db)
-{
-    if (m_db) {
-        m_db->disconnect(this);
-    }
-    m_db = db;
-    if (m_db) {
-        connect(m_db.data(), &Database::modified, this, &VaultNavPane::refresh);
-        connect(m_db.data(), &Database::filePathChanged, this, &VaultNavPane::refresh);
-        connect(m_db.data(), &Database::databaseOpened, this, &VaultNavPane::refresh);
-    }
-    refresh();
-}
-
-void VaultNavPane::refresh()
-{
-    if (!m_db) {
-        m_dbName->clear();
-        m_dbDetail->clear();
-        return;
-    }
-
-    const QFileInfo file(m_db->filePath());
-    auto name = m_db->metadata()->name();
-    if (name.isEmpty()) {
-        name = file.fileName();
-    }
-    m_dbName->setText(name);
-    m_dbName->setToolTip(m_db->filePath());
-
-    QStringList detail;
-    if (!m_db->filePath().isEmpty()) {
-        detail << homeRelative(file.absolutePath());
-    }
-    if (m_db->rootGroup()) {
-        detail << tr("%n entries", "", m_db->rootGroup()->entriesRecursive().size());
-    }
-    m_dbDetail->setText(detail.join(QStringLiteral(" · ")));
-}
-
 void VaultNavPane::onThemeUpdated()
 {
-    const auto p = FluentTheme::palette();
-    setLabelColor(m_dbIcon, p.accentText);
-    Vault::styleLabel(m_dbName, Typography::FontRole::BodyStrong, p.text);
-    Vault::styleLabel(m_dbDetail, Typography::FontRole::Caption, p.textSecondary);
-    Vault::styleLabel(m_groupsLabel, Typography::FontRole::Caption, p.textSecondary);
+    Vault::styleLabel(m_groupsLabel, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
     update();
 }
 
@@ -526,23 +449,250 @@ void VaultSyncChip::paintEvent(QPaintEvent* event)
     painter.drawText(r.adjusted(24, 0, -10, 0), Qt::AlignLeft | Qt::AlignVCenter, text());
 }
 
-VaultHeaderBar::VaultHeaderBar(QWidget* searchWidget, QWidget* parent)
+VaultDatabasePicker::VaultDatabasePicker(DatabaseTabWidget* tabs, QWidget* parent)
+    : QAbstractButton(parent)
+    , m_tabs(tabs)
+{
+    setObjectName("vaultDatabasePicker");
+    setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::TabFocus);
+    setAttribute(Qt::WA_Hover);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    connect(this, &QAbstractButton::clicked, this, &VaultDatabasePicker::showDatabaseMenu);
+    connect(tabs, &DatabaseTabWidget::activeDatabaseChanged, this, &VaultDatabasePicker::setDatabaseWidget);
+    connect(tabs, &DatabaseTabWidget::tabNameChanged, this, &VaultDatabasePicker::refresh);
+    connect(tabs, &DatabaseTabWidget::databaseLocked, this, &VaultDatabasePicker::refresh);
+    connect(tabs, &DatabaseTabWidget::databaseUnlocked, this, &VaultDatabasePicker::refresh);
+    connect(tabs, &DatabaseTabWidget::databaseClosed, this, &VaultDatabasePicker::refresh);
+    setDatabaseWidget(tabs->currentDatabaseWidget());
+}
+
+void VaultDatabasePicker::setDatabaseWidget(DatabaseWidget* dbWidget)
+{
+    if (m_dbWidget) {
+        m_dbWidget->disconnect(this);
+        if (m_dbWidget->database()) {
+            m_dbWidget->database()->disconnect(this);
+        }
+    }
+    m_dbWidget = dbWidget;
+    if (m_dbWidget) {
+        // The entry count and name follow the database; a reload replaces the database
+        auto connectDatabase = [this](const QSharedPointer<Database>& db) {
+            if (db) {
+                connect(db.data(), &Database::modified, this, &VaultDatabasePicker::refresh);
+                connect(db.data(), &Database::filePathChanged, this, &VaultDatabasePicker::refresh);
+            }
+        };
+        connectDatabase(m_dbWidget->database());
+        connect(m_dbWidget,
+                &DatabaseWidget::databaseReplaced,
+                this,
+                [this, connectDatabase](const QSharedPointer<Database>& oldDb, const QSharedPointer<Database>& newDb) {
+                    if (oldDb) {
+                        oldDb->disconnect(this);
+                    }
+                    connectDatabase(newDb);
+                    refresh();
+                });
+    }
+    refresh();
+}
+
+void VaultDatabasePicker::refresh()
+{
+    if (!m_dbWidget || !m_dbWidget->database()) {
+        setText({});
+        m_detail.clear();
+        m_locked = false;
+        setToolTip({});
+        updateGeometry();
+        update();
+        return;
+    }
+
+    const auto db = m_dbWidget->database();
+    m_locked = m_dbWidget->isLocked();
+    setText(m_dbWidget->displayName());
+
+    QStringList detail;
+    if (m_locked) {
+        detail << tr("Locked");
+    } else if (db->rootGroup()) {
+        detail << tr("%n entries", "", db->rootGroup()->entriesRecursive().size());
+    }
+    if (!db->filePath().isEmpty()) {
+        detail << homeRelative(QFileInfo(db->filePath()).absolutePath());
+    }
+    m_detail = detail.join(QStringLiteral(" · "));
+
+    const int open = m_tabs ? m_tabs->count() : 0;
+    setToolTip(open > 1 ? tr("%1\n%n databases open", "", open).arg(db->filePath()) : db->filePath());
+    updateGeometry();
+    update();
+}
+
+void VaultDatabasePicker::showDatabaseMenu()
+{
+    if (!m_tabs) {
+        return;
+    }
+
+    fluent::menus_toolbars::FluentMenu menu(tr("Databases"), this);
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        auto* dbWidget = m_tabs->databaseWidgetFromIndex(i);
+        auto* action = menu.addAction(Tools::escapeAccelerators(m_tabs->tabName(i)));
+        action->setCheckable(true);
+        action->setChecked(i == m_tabs->currentIndex());
+        if (dbWidget && dbWidget->isLocked()) {
+            action->setIcon(icons()->icon("database-lock"));
+        }
+        action->setToolTip(dbWidget ? dbWidget->database()->filePath() : QString());
+        connect(action, &QAction::triggered, this, [this, i] {
+            if (m_tabs) {
+                m_tabs->setCurrentIndex(i);
+            }
+        });
+    }
+
+    menu.addSeparator();
+    for (const auto* name : {"actionDatabaseNew", "actionDatabaseOpen"}) {
+        if (auto* action = FluentTheme::action(name)) {
+            menu.addAction(action);
+        }
+    }
+    menu.addSeparator();
+    for (const auto* name : {"actionLockAllDatabases", "actionDatabaseClose"}) {
+        if (auto* action = FluentTheme::action(name)) {
+            menu.addAction(action);
+        }
+    }
+
+    m_menuOpen = true;
+    update();
+    menu.setMinimumWidth(width());
+    menu.exec(mapToGlobal(QPoint(0, height() + 2)));
+    m_menuOpen = false;
+    update();
+}
+
+QSize VaultDatabasePicker::sizeHint() const
+{
+    const QFontMetrics nameMetrics(Vault::font(Typography::FontRole::BodyStrong));
+    const QFontMetrics detailMetrics(Vault::font(Typography::FontRole::Caption));
+    const int textWidth = qMax(nameMetrics.horizontalAdvance(text()), detailMetrics.horizontalAdvance(m_detail));
+    // Tile, text and chevron; long paths elide
+    return {qBound(200, textWidth + 82, 320), 42};
+}
+
+void VaultDatabasePicker::onThemeUpdated()
+{
+    update();
+}
+
+void VaultDatabasePicker::enterEvent(QEnterEvent* event)
+{
+    m_hovered = true;
+    update();
+    QAbstractButton::enterEvent(event);
+}
+
+void VaultDatabasePicker::leaveEvent(QEvent* event)
+{
+    m_hovered = false;
+    update();
+    QAbstractButton::leaveEvent(event);
+}
+
+void VaultDatabasePicker::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    QPainterPath path;
+    path.addRoundedRect(r, 6, 6);
+    if (m_menuOpen || isDown()) {
+        painter.fillPath(path, p.subtlePressed);
+    } else if (m_hovered) {
+        painter.fillPath(path, p.subtleHover);
+    }
+    if (hasFocus()) {
+        painter.setPen(QPen(p.text, 2));
+        painter.drawPath(path);
+    }
+
+    // Database tile, showing a lock while the database is locked
+    const QRectF tile(r.left() + 8, r.center().y() - 14, 28, 28);
+    QPainterPath tilePath;
+    tilePath.addRoundedRect(tile, 6, 6);
+    painter.fillPath(tilePath, p.accentSubtle);
+    QFont glyphFont(Typography::FontFamily::FluentIcons);
+    glyphFont.setPixelSize(16);
+    painter.setFont(glyphFont);
+    painter.setPen(p.accentText);
+    painter.drawText(tile, Qt::AlignCenter, m_locked ? Typography::Icons::Lock : Typography::Icons::Storage);
+
+    // Chevron
+    const QRectF chevron(r.right() - 26, r.top(), 18, r.height());
+    glyphFont.setPixelSize(10);
+    painter.setFont(glyphFont);
+    painter.setPen(p.textSecondary);
+    painter.drawText(chevron, Qt::AlignCenter, Typography::Icons::ChevronDown);
+
+    // Name over path and entry count
+    const QRectF textRect(tile.right() + 10, r.top() + 4, chevron.left() - tile.right() - 14, r.height() - 8);
+    const auto nameFont = Vault::font(Typography::FontRole::BodyStrong);
+    const auto detailFont = Vault::font(Typography::FontRole::Caption);
+    const QFontMetrics nameMetrics(nameFont);
+    const QFontMetrics detailMetrics(detailFont);
+    const int width = qRound(textRect.width());
+    painter.setFont(nameFont);
+    painter.setPen(p.text);
+    painter.drawText(textRect.adjusted(0, 0, 0, -textRect.height() / 2),
+                     Qt::AlignLeft | Qt::AlignBottom,
+                     nameMetrics.elidedText(text(), Qt::ElideRight, width));
+    painter.setFont(detailFont);
+    painter.setPen(p.textSecondary);
+    painter.drawText(textRect.adjusted(0, textRect.height() / 2, 0, 0),
+                     Qt::AlignLeft | Qt::AlignTop,
+                     detailMetrics.elidedText(m_detail, Qt::ElideMiddle, width));
+}
+
+VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, QWidget* parent)
     : QWidget(parent)
+    , m_databasePicker(new VaultDatabasePicker(tabs, this))
     , m_syncChip(new VaultSyncChip(this))
 {
     setObjectName("vaultHeaderBar");
 
-    auto* layout = new QHBoxLayout(this);
+    // Picker on the left; search and sync centered between equal side columns
+    auto* layout = new QGridLayout(this);
     layout->setContentsMargins(12, 8, 12, 4);
-    layout->setSpacing(12);
-    layout->addStretch(1);
+    layout->setHorizontalSpacing(12);
+    layout->addWidget(m_databasePicker, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
+
+    auto* center = new QHBoxLayout();
+    center->setSpacing(12);
     searchWidget->setParent(this);
     searchWidget->setMinimumWidth(240);
     searchWidget->setMaximumWidth(440);
     searchWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    layout->addWidget(searchWidget, 3);
-    layout->addWidget(m_syncChip);
-    layout->addStretch(1);
+    center->addWidget(searchWidget, 1);
+    center->addWidget(m_syncChip);
+    layout->addLayout(center, 0, 1);
+
+    layout->setColumnStretch(0, 1);
+    layout->setColumnStretch(1, 3);
+    layout->setColumnStretch(2, 1);
+}
+
+VaultDatabasePicker* VaultHeaderBar::databasePicker() const
+{
+    return m_databasePicker;
 }
 
 VaultSyncChip* VaultHeaderBar::syncChip() const
