@@ -42,6 +42,7 @@ private slots:
     void testCommandBar();
     void testSearchTitle();
     void testFluentSearchBox();
+    void testDatabasePicker();
     void testScreenshots();
 
 private:

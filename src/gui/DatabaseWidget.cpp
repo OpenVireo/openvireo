@@ -505,9 +505,6 @@ void DatabaseWidget::replaceDatabase(QSharedPointer<Database> db)
     connectDatabaseSignals();
     m_groupView->changeDatabase(m_db);
     m_tagView->setDatabase(m_db);
-    if (m_vaultNavPane) {
-        m_vaultNavPane->setDatabase(m_db);
-    }
     m_remoteSettings->setDatabase(m_db);
 
     // Restore the new parent group pointer, if not found default to the root group
@@ -1206,8 +1203,7 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_entryView->setListMode(true);
     m_groupView->setNavigationStyle(true);
 
-    m_vaultNavPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
-    m_vaultNavPane->setDatabase(m_db);
+    auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
 
     auto surface = new VaultSurface(m_mainSplitter);
     auto surfaceLayout = new QVBoxLayout(surface);
@@ -1237,7 +1233,7 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_previewSplitter->setStretchFactor(1, 55);
 
     m_mainSplitter->setChildrenCollapsible(false);
-    m_mainSplitter->addWidget(m_vaultNavPane);
+    m_mainSplitter->addWidget(navPane);
     m_mainSplitter->addWidget(surface);
     m_mainSplitter->setStretchFactor(0, 0);
     m_mainSplitter->setStretchFactor(1, 100);
