@@ -67,6 +67,8 @@ namespace FluentTheme
         QColor successBg;
     };
     Palette palette();
+    // True while Fluent-Qt uses its dark appearance
+    bool isDark();
 
     // Look up one of the main window actions registered with the ActionCollection
     QAction* action(const QString& objectName);
