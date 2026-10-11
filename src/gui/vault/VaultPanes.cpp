@@ -457,7 +457,7 @@ VaultDatabasePicker::VaultDatabasePicker(DatabaseTabWidget* tabs, QWidget* paren
     setCursor(Qt::PointingHandCursor);
     setFocusPolicy(Qt::TabFocus);
     setAttribute(Qt::WA_Hover);
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     connect(this, &QAbstractButton::clicked, this, &VaultDatabasePicker::showDatabaseMenu);
     connect(tabs, &DatabaseTabWidget::activeDatabaseChanged, this, &VaultDatabasePicker::setDatabaseWidget);
@@ -669,21 +669,22 @@ VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, Q
 {
     setObjectName("vaultHeaderBar");
 
-    // Picker on the left; search and sync centered between equal side columns
+    // Picker on the left, sync status on the right, search centered between equal side columns
     auto* layout = new QGridLayout(this);
     layout->setContentsMargins(12, 8, 12, 4);
     layout->setHorizontalSpacing(12);
     layout->addWidget(m_databasePicker, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
 
-    auto* center = new QHBoxLayout();
-    center->setSpacing(12);
     searchWidget->setParent(this);
     searchWidget->setMinimumWidth(240);
     searchWidget->setMaximumWidth(440);
     searchWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    center->addWidget(searchWidget, 1);
-    center->addWidget(m_syncChip);
+    auto* center = new QHBoxLayout();
+    center->addStretch(1);
+    center->addWidget(searchWidget, 100);
+    center->addStretch(1);
     layout->addLayout(center, 0, 1);
+    layout->addWidget(m_syncChip, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
 
     layout->setColumnStretch(0, 1);
     layout->setColumnStretch(1, 3);
