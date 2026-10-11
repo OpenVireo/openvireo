@@ -80,6 +80,9 @@ private slots:
     void updateSaveButtonVisibility();
 
 private:
+    void useFluentSearchBox();
+    void addFluentSearchButtons();
+
     const QScopedPointer<Ui::SearchWidget> m_ui;
     PopupHelpWidget* m_helpWidget;
     QTimer* m_searchTimer;
@@ -88,6 +91,8 @@ private:
     QAction* m_actionLimitGroup;
     QAction* m_actionWaitForEnter;
     QMenu* m_searchMenu;
+    // Vault Index layout: Fluent-Qt AutoSuggestBox in place of the plain line edit
+    bool m_fluentSearch = false;
 };
 
 #endif // SEARCHWIDGET_H
