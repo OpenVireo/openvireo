@@ -23,6 +23,7 @@
 
 namespace Ui
 {
+    class ApplicationSettingsWidgetAutoType;
     class ApplicationSettingsWidgetGeneral;
     class ApplicationSettingsWidgetSecurity;
 } // namespace Ui
@@ -69,8 +70,10 @@ private slots:
 private:
     QWidget* const m_secWidget;
     QWidget* const m_generalWidget;
+    QWidget* const m_autoTypeWidget;
     const QScopedPointer<Ui::ApplicationSettingsWidgetSecurity> m_secUi;
     const QScopedPointer<Ui::ApplicationSettingsWidgetGeneral> m_generalUi;
+    const QScopedPointer<Ui::ApplicationSettingsWidgetAutoType> m_autoTypeUi;
     Qt::Key m_globalAutoTypeKey;
     Qt::KeyboardModifiers m_globalAutoTypeModifiers;
     class ExtraPage;
