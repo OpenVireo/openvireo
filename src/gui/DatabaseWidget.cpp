@@ -1165,17 +1165,25 @@ void DatabaseWidget::syncWithRemote(const RemoteParams* params)
     result.errorMessage = tr("Remote Sync did not contain any download or upload commands.");
 
     // Download the database
-    if (!params->downloadCommand.isEmpty()) {
+    if (params->hasDownload()) {
         emit updateSyncProgress(25, tr("Downloading..."));
         // Start a download first then merge and upload in the callback
         result = remoteHandler->download(params);
-        if (result.success) {
+        if (result.success && result.remoteMissing) {
+            // First sync with a sync server: there is nothing to merge, publish the local database
+            if (m_db->isModified() && !save()) {
+                result.success = false;
+                result.errorMessage = tr("The database must be saved before it can be uploaded.");
+            } else {
+                result.filePath = m_db->filePath();
+            }
+        } else if (result.success) {
             QString error;
             QSharedPointer<Database> remoteDb = QSharedPointer<Database>::create();
             if (!remoteDb->open(result.filePath, m_db->key(), &error)) {
                 // Failed to open downloaded remote database with same key
                 // Unlock downloaded remote database via dialog
-                syncDatabaseWithLockedDatabase(result.filePath, params);
+                syncDatabaseWithLockedDatabase(result.filePath, params, result.etag);
                 return;
             }
             remoteDb->markAsTemporaryDatabase();
@@ -1190,13 +1198,17 @@ void DatabaseWidget::syncWithRemote(const RemoteParams* params)
     uploadAndFinishSync(params, result);
 }
 
-void DatabaseWidget::syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params)
+void DatabaseWidget::syncDatabaseWithLockedDatabase(const QString& filePath,
+                                                    const RemoteParams* params,
+                                                    const QString& etag)
 {
     // disconnect any previously added slots to these signal
     disconnect(this, &DatabaseWidget::databaseSyncUnlocked, nullptr, nullptr);
     disconnect(this, &DatabaseWidget::databaseSyncUnlockFailed, nullptr, nullptr);
 
-    connect(this, &DatabaseWidget::databaseSyncUnlocked, [this, params](const RemoteHandler::RemoteResult& result) {
+    connect(this, &DatabaseWidget::databaseSyncUnlocked, [this, params, etag](RemoteHandler::RemoteResult result) {
+        // Carry the downloaded version through the unlock dialog so the upload can detect conflicts
+        result.etag = etag;
         uploadAndFinishSync(params, result);
     });
     connect(this, &DatabaseWidget::databaseSyncUnlockFailed, [this, params](const RemoteHandler::RemoteResult& result) {
@@ -1209,9 +1221,9 @@ void DatabaseWidget::syncDatabaseWithLockedDatabase(const QString& filePath, con
 void DatabaseWidget::uploadAndFinishSync(const RemoteParams* params, RemoteHandler::RemoteResult result)
 {
     QScopedPointer<RemoteHandler> remoteHandler(new RemoteHandler(this));
-    if (result.success && !params->uploadCommand.isEmpty()) {
+    if (result.success && params->hasUpload()) {
         emit updateSyncProgress(75, tr("Uploading..."));
-        result = remoteHandler->upload(result.filePath, params);
+        result = remoteHandler->upload(result.filePath, params, result.etag);
     }
 
     finishSync(params, result);

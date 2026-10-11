@@ -25,6 +25,7 @@
 
 class Database;
 class RemoteSettings;
+struct RemoteParams;
 
 namespace Ui
 {
@@ -50,8 +51,10 @@ private slots:
     void removeCurrentSettings();
     void editCurrentSettings();
     void testDownload();
+    void updateTypeVisibility();
 
 private:
+    RemoteParams* paramsFromFields() const;
     void updateSettingsList();
     QListWidgetItem* findItemByName(const QString& name);
     void clearFields();

@@ -26,6 +26,7 @@
 #include "gui/MessageBox.h"
 
 #include <QFile>
+#include <QUrl>
 
 DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     : DatabaseSettingsWidget(parent)
@@ -43,6 +44,11 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
             this,
             &DatabaseSettingsWidgetRemote::editCurrentSettings);
     connect(m_ui->testDownloadCommandButton, &QPushButton::clicked, this, &DatabaseSettingsWidgetRemote::testDownload);
+    connect(m_ui->testServerButton, &QPushButton::clicked, this, &DatabaseSettingsWidgetRemote::testDownload);
+    connect(m_ui->typeComboBox,
+            QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this,
+            &DatabaseSettingsWidgetRemote::updateTypeVisibility);
 
     auto setModified = [this]() { m_modified = true; };
     connect(m_ui->nameLineEdit, &QLineEdit::textChanged, setModified);
@@ -52,6 +58,13 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     connect(m_ui->uploadCommand, &QLineEdit::textChanged, setModified);
     connect(m_ui->inputForUpload, &QPlainTextEdit::textChanged, setModified);
     connect(m_ui->uploadTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+    connect(m_ui->typeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), setModified);
+    connect(m_ui->serverUrlEdit, &QLineEdit::textChanged, setModified);
+    connect(m_ui->serverDatabaseIdEdit, &QLineEdit::textChanged, setModified);
+    connect(m_ui->serverTokenEdit, &QLineEdit::textChanged, setModified);
+    connect(m_ui->serverTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+
+    updateTypeVisibility();
 }
 
 DatabaseSettingsWidgetRemote::~DatabaseSettingsWidgetRemote() = default;
@@ -100,16 +113,28 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
         return;
     }
 
-    auto* params = new RemoteParams();
-    params->name = m_ui->nameLineEdit->text();
-    params->downloadCommand = m_ui->downloadCommand->text();
-    params->downloadInput = m_ui->inputForDownload->toPlainText();
-    params->downloadTimeoutMsec = m_ui->downloadTimeoutSec->value() * 1000;
-    params->uploadCommand = m_ui->uploadCommand->text();
-    params->uploadInput = m_ui->inputForUpload->toPlainText();
-    params->uploadTimeoutMsec = m_ui->uploadTimeoutSec->value() * 1000;
+    QScopedPointer<RemoteParams> params(paramsFromFields());
+    if (params->type == RemoteParams::Type::SyncServer) {
+        QUrl url(params->serverUrl.trimmed());
+        if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
+            m_ui->messageWidget->showMessage(tr("Enter a valid server URL starting with https://."),
+                                             MessageWidget::Warning);
+            return;
+        }
+        if (params->serverDatabaseId.trimmed().isEmpty() || params->serverToken.trimmed().isEmpty()) {
+            m_ui->messageWidget->showMessage(tr("Database ID and access token cannot be empty."),
+                                             MessageWidget::Warning);
+            return;
+        }
+        if (url.scheme() == "http" && url.host() != "localhost" && url.host() != "127.0.0.1" && url.host() != "::1") {
+            m_ui->messageWidget->showMessage(
+                tr("Warning: the access token will be sent unencrypted. Use https:// for servers other than "
+                   "localhost."),
+                MessageWidget::Warning);
+        }
+    }
 
-    m_remoteSettings->addRemoteParams(params);
+    m_remoteSettings->addRemoteParams(params.take());
     updateSettingsList();
 
     auto item = findItemByName(name);
@@ -149,6 +174,11 @@ void DatabaseSettingsWidgetRemote::editCurrentSettings()
     }
 
     m_ui->nameLineEdit->setText(params->name);
+    m_ui->typeComboBox->setCurrentIndex(params->type == RemoteParams::Type::SyncServer ? 1 : 0);
+    m_ui->serverUrlEdit->setText(params->serverUrl);
+    m_ui->serverDatabaseIdEdit->setText(params->serverDatabaseId);
+    m_ui->serverTokenEdit->setText(params->serverToken);
+    m_ui->serverTimeoutSec->setValue(params->downloadTimeoutMsec / 1000);
     m_ui->downloadCommand->setText(params->downloadCommand);
     m_ui->inputForDownload->setPlainText(params->downloadInput);
     m_ui->downloadTimeoutSec->setValue(params->downloadTimeoutMsec / 1000);
@@ -171,6 +201,11 @@ void DatabaseSettingsWidgetRemote::updateSettingsList()
 void DatabaseSettingsWidgetRemote::clearFields()
 {
     m_ui->nameLineEdit->setText("");
+    m_ui->typeComboBox->setCurrentIndex(0);
+    m_ui->serverUrlEdit->setText("");
+    m_ui->serverDatabaseIdEdit->setText("");
+    m_ui->serverTokenEdit->setText("");
+    m_ui->serverTimeoutSec->setValue(30);
     m_ui->downloadCommand->setText("");
     m_ui->inputForDownload->setPlainText("");
     m_ui->downloadTimeoutSec->setValue(10);
@@ -180,24 +215,62 @@ void DatabaseSettingsWidgetRemote::clearFields()
     m_modified = false;
 }
 
-void DatabaseSettingsWidgetRemote::testDownload()
+RemoteParams* DatabaseSettingsWidgetRemote::paramsFromFields() const
 {
     auto* params = new RemoteParams();
     params->name = m_ui->nameLineEdit->text();
-    params->downloadCommand = m_ui->downloadCommand->text();
-    params->downloadInput = m_ui->inputForDownload->toPlainText();
-    params->downloadTimeoutMsec = m_ui->downloadTimeoutSec->value() * 1000;
+    if (m_ui->typeComboBox->currentIndex() == 1) {
+        params->type = RemoteParams::Type::SyncServer;
+        params->serverUrl = m_ui->serverUrlEdit->text().trimmed();
+        params->serverDatabaseId = m_ui->serverDatabaseIdEdit->text().trimmed();
+        params->serverToken = m_ui->serverTokenEdit->text().trimmed();
+        params->downloadTimeoutMsec = m_ui->serverTimeoutSec->value() * 1000;
+        params->uploadTimeoutMsec = params->downloadTimeoutMsec;
+    } else {
+        params->downloadCommand = m_ui->downloadCommand->text();
+        params->downloadInput = m_ui->inputForDownload->toPlainText();
+        params->downloadTimeoutMsec = m_ui->downloadTimeoutSec->value() * 1000;
+        params->uploadCommand = m_ui->uploadCommand->text();
+        params->uploadInput = m_ui->inputForUpload->toPlainText();
+        params->uploadTimeoutMsec = m_ui->uploadTimeoutSec->value() * 1000;
+    }
+    return params;
+}
 
-    QScopedPointer<RemoteHandler> remoteHandler(new RemoteHandler(this));
-    if (params->downloadCommand.isEmpty()) {
+void DatabaseSettingsWidgetRemote::updateTypeVisibility()
+{
+    bool isServer = m_ui->typeComboBox->currentIndex() == 1;
+    m_ui->commandTabWidget->setVisible(!isServer);
+    m_ui->serverSettingsWidget->setVisible(isServer);
+}
+
+void DatabaseSettingsWidgetRemote::testDownload()
+{
+    QScopedPointer<RemoteParams> params(paramsFromFields());
+    bool isServer = params->type == RemoteParams::Type::SyncServer;
+
+    if (!isServer && params->downloadCommand.isEmpty()) {
         m_ui->messageWidget->showMessage(tr("Download command cannot be empty."), MessageWidget::Warning);
         return;
     }
+    if (isServer && (params->serverUrl.isEmpty() || params->serverDatabaseId.isEmpty())) {
+        m_ui->messageWidget->showMessage(tr("Server URL and database ID cannot be empty."), MessageWidget::Warning);
+        return;
+    }
 
-    RemoteHandler::RemoteResult result = remoteHandler->download(params);
+    QScopedPointer<RemoteHandler> remoteHandler(new RemoteHandler(this));
+    RemoteHandler::RemoteResult result = remoteHandler->download(params.data());
     if (!result.success) {
         m_ui->messageWidget->showMessage(tr("Download failed with error: %1").arg(result.errorMessage),
                                          MessageWidget::Error);
+        return;
+    }
+
+    if (result.remoteMissing) {
+        m_ui->messageWidget->showMessage(
+            tr("Connected to the sync server. The database does not exist there yet and will be uploaded on the "
+               "first sync."),
+            MessageWidget::Positive);
         return;
     }
 
@@ -207,5 +280,7 @@ void DatabaseSettingsWidgetRemote::testDownload()
         return;
     }
 
+    // The test download is not used for anything, don't leave a copy of the database behind
+    QFile::remove(result.filePath);
     m_ui->messageWidget->showMessage(tr("Download successful."), MessageWidget::Positive);
 }
