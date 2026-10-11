@@ -297,6 +297,15 @@ void DatabaseTabWidget::importFile()
             return;
         }
         default:
+            if (m_importWizard->importType() == ImportWizard::IMPORT_SYNC_SERVER) {
+                // Keep the server database as-is (same credentials, sync settings) so it stays in sync,
+                // and ask where to store the local copy
+                auto dbWidget = new DatabaseWidget(db, this);
+                addDatabaseTab(dbWidget);
+                db->markAsModified();
+                dbWidget->save();
+                return;
+            }
             // Start the new database wizard with the imported database
             auto newDb = execNewDatabaseWizard();
             if (newDb) {

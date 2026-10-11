@@ -129,7 +129,9 @@ public:
     void setSearchStringForAutoType(const QString& search);
 
     void syncWithRemote(const RemoteParams* params);
-    void syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params);
+    void syncDatabaseWithLockedDatabase(const QString& filePath,
+                                        const RemoteParams* params,
+                                        const QString& etag = {});
     QList<RemoteParams*> getRemoteParams() const;
 
 signals:

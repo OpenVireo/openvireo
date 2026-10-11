@@ -27,6 +27,7 @@
 
 #include "../remote/RemoteHandler.h"
 
+class CompositeKey;
 class CsvImportWidget;
 class Database;
 namespace Ui
@@ -60,6 +61,12 @@ private:
                                           const QString& downloadInput,
                                           const QString& password,
                                           const QString& keyfile);
+    QSharedPointer<Database> importSyncServer(const QString& serverUrl,
+                                              const QString& token,
+                                              const QString& databaseId,
+                                              const QString& password,
+                                              const QString& keyfile);
+    QSharedPointer<CompositeKey> buildKey(const QString& password, const QString& keyfile);
 
     void setupDatabasePreview();
 

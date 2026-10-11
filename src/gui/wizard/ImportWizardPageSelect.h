@@ -46,11 +46,13 @@ private slots:
     void chooseImportFile();
     void chooseKeyFile();
     void updateDatabaseChoices() const;
+    void loadSyncServerDatabases();
 
 private:
     QString importFileFilter();
     void setCredentialState(bool passwordEnabled, bool keyFileEnable = false);
     void setDownloadCommand(bool downloadCommandEnabled);
+    void setSyncServer(bool syncServerEnabled);
 
     QScopedPointer<Ui::ImportWizardPageSelect> m_ui;
 };

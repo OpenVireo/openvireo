@@ -24,6 +24,9 @@
 #include "gui/FileDialog.h"
 #include "gui/Icons.h"
 #include "gui/MainWindow.h"
+#include "gui/MessageBox.h"
+#include "gui/remote/RemoteHandler.h"
+#include "gui/remote/RemoteSettings.h"
 
 #include <QDesktopServices>
 
@@ -39,6 +42,7 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     new QListWidgetItem(icons()->icon("bitwarden"), tr("Bitwarden (.json)"), m_ui->importTypeList);
     new QListWidgetItem(icons()->icon("proton"), tr("Proton Pass (.json)"), m_ui->importTypeList);
     new QListWidgetItem(icons()->icon("web"), tr("Remote Database (.kdbx)"), m_ui->importTypeList);
+    new QListWidgetItem(icons()->icon("remote-sync"), tr("KeePassXC Sync Server (.kdbx)"), m_ui->importTypeList);
     new QListWidgetItem(icons()->icon("object-locked"), tr("KeePass 1 Database (.kdb)"), m_ui->importTypeList);
 
     m_ui->importTypeList->item(0)->setData(Qt::UserRole, ImportWizard::IMPORT_CSV);
@@ -47,7 +51,8 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     m_ui->importTypeList->item(3)->setData(Qt::UserRole, ImportWizard::IMPORT_BITWARDEN);
     m_ui->importTypeList->item(4)->setData(Qt::UserRole, ImportWizard::IMPORT_PROTONPASS);
     m_ui->importTypeList->item(5)->setData(Qt::UserRole, ImportWizard::IMPORT_REMOTE);
-    m_ui->importTypeList->item(6)->setData(Qt::UserRole, ImportWizard::IMPORT_KEEPASS1);
+    m_ui->importTypeList->item(6)->setData(Qt::UserRole, ImportWizard::IMPORT_SYNC_SERVER);
+    m_ui->importTypeList->item(7)->setData(Qt::UserRole, ImportWizard::IMPORT_KEEPASS1);
 
     connect(m_ui->importTypeList, &QListWidget::currentItemChanged, this, &ImportWizardPageSelect::itemSelected);
     m_ui->importTypeList->setCurrentRow(0);
@@ -67,6 +72,11 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
 
     connect(m_ui->importFileEdit, &QLineEdit::textChanged, this, &QWizardPage::completeChanged);
     connect(m_ui->downloadCommand, &QLineEdit::textChanged, this, &QWizardPage::completeChanged);
+    connect(m_ui->serverUrlEdit, &QLineEdit::textChanged, this, &QWizardPage::completeChanged);
+    connect(m_ui->serverTokenEdit, &QLineEdit::textChanged, this, &QWizardPage::completeChanged);
+    connect(m_ui->serverDatabaseIdChoice, &QComboBox::currentTextChanged, this, &QWizardPage::completeChanged);
+    connect(
+        m_ui->serverLoadDatabasesButton, &QPushButton::clicked, this, &ImportWizardPageSelect::loadSyncServerDatabases);
 
     registerField("ImportType", this);
     registerField("ImportFile", m_ui->importFileEdit);
@@ -76,6 +86,9 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     registerField("ImportKeyFile", m_ui->keyFileEdit);
     registerField("DownloadCommand", m_ui->downloadCommand);
     registerField("DownloadInput", m_ui->downloadCommandInput, "plainText", "textChanged");
+    registerField("SyncServerUrl", m_ui->serverUrlEdit);
+    registerField("SyncServerToken", m_ui->serverTokenEdit);
+    registerField("SyncServerDatabaseId", m_ui->serverDatabaseIdChoice, "currentText", "currentTextChanged");
 }
 
 ImportWizardPageSelect::~ImportWizardPageSelect()
@@ -112,6 +125,11 @@ bool ImportWizardPageSelect::isComplete() const
     if (field("ImportType").toInt() == ImportWizard::IMPORT_REMOTE) {
         return !field("DownloadCommand").toString().isEmpty();
     }
+    if (field("ImportType").toInt() == ImportWizard::IMPORT_SYNC_SERVER) {
+        return !field("SyncServerUrl").toString().trimmed().isEmpty()
+               && !field("SyncServerToken").toString().trimmed().isEmpty()
+               && !field("SyncServerDatabaseId").toString().trimmed().isEmpty();
+    }
     return !field("ImportFile").toString().isEmpty();
 }
 
@@ -130,6 +148,7 @@ void ImportWizardPageSelect::itemSelected(QListWidgetItem* current, QListWidgetI
 
     auto type = current->data(Qt::UserRole).toInt();
     setField("ImportType", type);
+    setSyncServer(false);
     switch (type) {
     // Unencrypted types
     case ImportWizard::IMPORT_CSV:
@@ -152,6 +171,11 @@ void ImportWizardPageSelect::itemSelected(QListWidgetItem* current, QListWidgetI
     case ImportWizard::IMPORT_REMOTE:
         setCredentialState(true, true);
         setDownloadCommand(true);
+        break;
+    case ImportWizard::IMPORT_SYNC_SERVER:
+        setCredentialState(true, true);
+        setDownloadCommand(false);
+        setSyncServer(true);
         break;
     default:
         Q_ASSERT(false);
@@ -290,6 +314,57 @@ void ImportWizardPageSelect::setDownloadCommand(bool downloadCommandEnabled)
             height += downloadCommandEnabled ? diff : -diff;
         }
         window()->resize(window()->width(), height);
+    }
+}
+
+void ImportWizardPageSelect::setSyncServer(bool syncServerEnabled)
+{
+    bool stateChanged = m_ui->syncServerFields->isVisible() != syncServerEnabled;
+    m_ui->syncServerFields->setVisible(syncServerEnabled);
+    if (syncServerEnabled) {
+        m_ui->importFileLabel->setVisible(false);
+        m_ui->importFileEdit->setVisible(false);
+        m_ui->importFileButton->setVisible(false);
+        m_ui->temporaryDatabaseRadio->setVisible(true);
+    }
+    // The server copy keeps its own credentials, so a "new" database is really a local copy of it
+    m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local Copy (keeps the server database's credentials)")
+                                                      : tr("New Database"));
+
+    // Workaround Qt bug where the wizard window is not updated when the internal layout changes
+    if (window() && stateChanged) {
+        auto diff = m_ui->syncServerFields->sizeHint().height() + m_ui->inputFields->layout()->spacing();
+        window()->resize(window()->width(), window()->height() + (syncServerEnabled ? diff : -diff));
+    }
+}
+
+void ImportWizardPageSelect::loadSyncServerDatabases()
+{
+    RemoteParams params;
+    params.type = RemoteParams::Type::SyncServer;
+    params.serverUrl = m_ui->serverUrlEdit->text().trimmed();
+    params.serverToken = m_ui->serverTokenEdit->text().trimmed();
+    if (params.serverUrl.isEmpty() || params.serverToken.isEmpty()) {
+        MessageBox::warning(this, tr("Sync Server"), tr("Enter the server URL and access token first."));
+        return;
+    }
+
+    RemoteHandler handler;
+    auto listing = handler.listSyncServerDatabases(&params);
+    if (!listing.success) {
+        MessageBox::warning(this, tr("Sync Server"), listing.errorMessage);
+        return;
+    }
+    if (listing.databaseIds.isEmpty()) {
+        MessageBox::information(this, tr("Sync Server"), tr("There are no databases on the server yet."));
+        return;
+    }
+
+    auto current = m_ui->serverDatabaseIdChoice->currentText();
+    m_ui->serverDatabaseIdChoice->clear();
+    m_ui->serverDatabaseIdChoice->addItems(listing.databaseIds);
+    if (!current.isEmpty() && listing.databaseIds.contains(current)) {
+        m_ui->serverDatabaseIdChoice->setCurrentText(current);
     }
 }
 

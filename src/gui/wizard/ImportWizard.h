@@ -51,6 +51,7 @@ public:
         IMPORT_PROTONPASS,
         IMPORT_KEEPASS1,
         IMPORT_REMOTE,
+        IMPORT_SYNC_SERVER,
     };
 
     enum ImportIntoType
@@ -60,6 +61,7 @@ public:
         TEMPORARY_DATABASE,
     };
 
+    ImportWizard::ImportType importType();
     ImportWizard::ImportIntoType importIntoType();
     QPair<QUuid, QUuid> importInto();
 
