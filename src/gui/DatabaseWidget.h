@@ -48,7 +48,6 @@ class ElidedLabel;
 class RemoteSettings;
 class EntryDetailCard;
 class VaultCommandBar;
-class VaultNavPane;
 class QHBoxLayout;
 class QVBoxLayout;
 struct RemoteParams;
@@ -335,7 +334,6 @@ private:
 
     // Vault Index layout (Fluent-Qt); null in the classic layout
     bool m_vaultLayout = false;
-    QPointer<VaultNavPane> m_vaultNavPane;
     QPointer<VaultCommandBar> m_vaultCommandBar;
     QPointer<EntryDetailCard> m_detailCard;
 

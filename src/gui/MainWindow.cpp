@@ -115,12 +115,13 @@ MainWindow::MainWindow()
     m_searchWidget = new SearchWidget();
     m_searchWidget->connectSignals(m_actionMultiplexer);
     if (m_vaultLayout) {
-        m_vaultHeader = new VaultHeaderBar(m_searchWidget, m_ui->centralwidget);
+        m_vaultHeader = new VaultHeaderBar(m_ui->tabWidget, m_searchWidget, m_ui->centralwidget);
         m_ui->verticalLayout->insertWidget(0, m_vaultHeader);
+        m_vaultHeader->setVisible(false);
         // Stands in for the toolbar's widget action: enabled while a database is shown
         m_searchWidgetAction = new QAction(this);
         connect(m_searchWidgetAction, &QAction::changed, this, [this] {
-            m_vaultHeader->setVisible(m_searchWidgetAction->isEnabled());
+            m_searchWidget->setVisible(m_searchWidgetAction->isEnabled());
         });
         connect(m_ui->tabWidget,
                 &DatabaseTabWidget::activeDatabaseChanged,
@@ -1028,6 +1029,10 @@ void MainWindow::updateMenuActionState()
 #endif
 
     m_searchWidgetAction->setEnabled(inDatabase);
+    if (m_vaultHeader) {
+        // The database picker stays available while a database is locked or being edited
+        m_vaultHeader->setVisible(dbWidget != nullptr);
+    }
 }
 
 void MainWindow::updateToolbarSeparatorVisibility()
