@@ -33,14 +33,17 @@
 #include "gui/group/GroupView.h"
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultWindowFrame.h"
 
 #include <components/textfields/AutoSuggestBox.h>
+#include <components/windowing/TitleBar.h>
 
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScreen>
 #include <QMenu>
 #include <QTabBar>
 #include <QTest>
@@ -329,6 +332,34 @@ void TestGuiVault::testDatabasePicker()
     QCOMPARE(picker->text(), m_dbWidget->displayName());
 }
 
+void TestGuiVault::testWindowFrame()
+{
+    if (!VaultWindowFrame::isSupported()) {
+        QSKIP("The Fluent window frame replaces the native title bar on macOS only");
+    }
+
+    // The header sits in a Fluent title bar at the very top of the window, beside the window controls
+    auto* titleBar = m_mainWindow->findChild<fluent::windowing::TitleBar*>("vaultTitleBar");
+    QVERIFY(titleBar);
+    auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
+    QCOMPARE(header->parentWidget(), titleBar);
+    QCOMPARE(titleBar->mapTo(m_mainWindow.data(), QPoint(0, 0)).y(), 0);
+    QTRY_VERIFY(titleBar->systemReservedLeadingWidth() > 0);
+    QVERIFY(header->x() >= titleBar->systemReservedLeadingWidth());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    QVERIFY(m_mainWindow->windowFlags().testFlag(Qt::ExpandedClientAreaHint));
+#endif
+
+    // The title bar stays (and can move the window) when no database is shown
+    m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+    QApplication::processEvents();
+    QVERIFY(!header->isVisible());
+    QVERIFY(titleBar->isVisible());
+    m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+    QApplication::processEvents();
+    QVERIFY(header->isVisible());
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
@@ -344,5 +375,10 @@ void TestGuiVault::testScreenshots()
         QApplication::processEvents();
         QTest::qWait(200);
         QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-%1.png").arg(theme))));
+        // Includes the native window controls; needs screen recording permission
+        const auto frame = m_mainWindow->frameGeometry();
+        m_mainWindow->screen()
+            ->grabWindow(0, frame.x(), frame.y(), frame.width(), frame.height())
+            .save(QDir(dir).absoluteFilePath(QString("vault-window-%1.png").arg(theme)));
     }
 }

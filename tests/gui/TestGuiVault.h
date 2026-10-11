@@ -43,6 +43,7 @@ private slots:
     void testSearchTitle();
     void testFluentSearchBox();
     void testDatabasePicker();
+    void testWindowFrame();
     void testScreenshots();
 
 private:
