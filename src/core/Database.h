@@ -165,7 +165,7 @@ public:
     bool changeKdf(const QSharedPointer<Kdf>& kdf);
     QByteArray transformedDatabaseKey() const;
 
-    void markAsTemporaryDatabase();
+    void markAsTemporaryDatabase(bool temporary = true);
     bool isTemporaryDatabase();
 
     static Database* databaseByUuid(const QUuid& uuid);

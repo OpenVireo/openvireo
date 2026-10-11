@@ -1867,6 +1867,10 @@ void DatabaseWidget::onDatabaseModified()
     m_remoteSettings->loadSettings();
     int autosaveDelayMs = m_db->metadata()->autosaveDelayMin() * 60 * 1000; // min to msec for QTimer
     bool autosaveAfterEveryChangeConfig = config()->get(Config::AutoSaveAfterEveryChange).toBool();
+    if (m_db->isTemporaryDatabase()) {
+        // Temporary databases are only saved when the user asks, which prompts for a location
+        return;
+    }
     if (autosaveDelayMs > 0 && autosaveAfterEveryChangeConfig) {
         // reset delay when modified
         m_autosaveTimer->start(autosaveDelayMs);
@@ -1884,7 +1888,7 @@ void DatabaseWidget::onAutosaveDelayTimeout()
 {
     const bool isAutosaveDelayEnabled = m_db->metadata()->autosaveDelayMin() > 0;
     const bool autosaveAfterEveryChangeConfig = config()->get(Config::AutoSaveAfterEveryChange).toBool();
-    if (!(isAutosaveDelayEnabled && autosaveAfterEveryChangeConfig)) {
+    if (!(isAutosaveDelayEnabled && autosaveAfterEveryChangeConfig) || m_db->isTemporaryDatabase()) {
         // User might disable the delay/autosave while the timer is running
         return;
     }
@@ -2083,9 +2087,11 @@ bool DatabaseWidget::lock()
 
     if (m_db->isModified()) {
         bool saved = false;
-        // Attempt to save on exit, but don't block locking if it fails
-        if (config()->get(Config::AutoSaveOnExit).toBool()
-            || config()->get(Config::AutoSaveAfterEveryChange).toBool()) {
+        // Attempt to save on exit, but don't block locking if it fails.
+        // Temporary databases skip this and go straight to asking the user.
+        if (!m_db->isTemporaryDatabase()
+            && (config()->get(Config::AutoSaveOnExit).toBool()
+                || config()->get(Config::AutoSaveAfterEveryChange).toBool())) {
             saved = save();
 
             if (!saved) {
@@ -2513,8 +2519,8 @@ bool DatabaseWidget::save()
         return false;
     }
 
-    // Read-only and new databases ask for filename
-    if (m_db->filePath().isEmpty()) {
+    // New and temporary databases ask for filename; a temporary database's file lives in the temp directory
+    if (m_db->filePath().isEmpty() || m_db->isTemporaryDatabase()) {
         return saveAs();
     }
 
@@ -2586,8 +2592,23 @@ bool DatabaseWidget::saveAs()
 
     bool ok = false;
     if (!newFilePath.isEmpty()) {
+        // Once saved somewhere the user chose, the database is no longer temporary.
+        // Clear the flag before saving so listeners of databaseSaved() see the final state.
+        const bool wasTemporary = m_db->isTemporaryDatabase();
+        const QString temporaryFilePath = m_db->filePath();
+        m_db->markAsTemporaryDatabase(false);
+
         QString errorMessage;
-        if (!performSave(errorMessage, newFilePath)) {
+        ok = performSave(errorMessage, newFilePath);
+        if (ok) {
+            // Remove the downloaded copy, but only if it really is in the temp directory
+            if (wasTemporary && !temporaryFilePath.isEmpty()
+                && QFileInfo(temporaryFilePath).canonicalPath() == QFileInfo(QDir::tempPath()).canonicalFilePath()
+                && QFileInfo(temporaryFilePath).canonicalFilePath() != QFileInfo(newFilePath).canonicalFilePath()) {
+                QFile::remove(temporaryFilePath);
+            }
+        } else {
+            m_db->markAsTemporaryDatabase(wasTemporary);
             showMessage(tr("Writing the database failed: %1").arg(errorMessage),
                         MessageWidget::Error,
                         true,
