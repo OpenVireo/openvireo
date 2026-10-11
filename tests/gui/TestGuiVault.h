@@ -45,6 +45,7 @@ private slots:
     void testDatabasePicker();
     void testWindowFrame();
     void testToolbarSettingsHidden();
+    void testSettingsModal();
     void testScreenshots();
 
 private:

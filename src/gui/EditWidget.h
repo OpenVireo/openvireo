@@ -26,6 +26,8 @@
 #include "gui/DialogyWidget.h"
 #include "gui/MessageWidget.h"
 
+class CategoryListWidget;
+class QDialogButtonBox;
 class QLabel;
 
 namespace Ui
@@ -48,6 +50,9 @@ public:
     void setCurrentPage(int index);
     void setHeadline(const QString& text);
     QLabel* headlineLabel();
+    // For hosts that present the categories and the buttons in their own way
+    CategoryListWidget* categoryList() const;
+    QDialogButtonBox* buttonBox() const;
     void setReadOnly(bool readOnly);
     bool readOnly() const;
     void enableApplyButton(bool enabled);

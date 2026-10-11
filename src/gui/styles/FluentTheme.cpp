@@ -87,6 +87,11 @@ void FluentTheme::apply(bool dark)
     fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
 }
 
+bool FluentTheme::isDark()
+{
+    return fluent::FluentElement::themeUsesDarkAppearance(fluent::FluentElement::currentTheme());
+}
+
 FluentTheme::Palette FluentTheme::palette()
 {
     const auto theme = fluent::FluentElement::currentTheme();

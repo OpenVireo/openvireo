@@ -38,6 +38,7 @@ public:
     ~CategoryListWidget() override;
 
     int currentCategory();
+    QListWidget* listWidget() const;
     void setCurrentCategory(int index);
     int addCategory(const QString& labelText, const QIcon& icon);
     void setCategoryHidden(int index, bool hidden);

@@ -38,6 +38,7 @@ namespace Ui
 class InactivityTimer;
 class SearchWidget;
 class VaultHeaderBar;
+class VaultSettingsModal;
 class VaultWindowFrame;
 class MainWindowEventFilter;
 
@@ -192,6 +193,7 @@ private:
     // Vault Index layout: search and sync status above the database view instead of in the toolbar
     QPointer<VaultHeaderBar> m_vaultHeader;
     QPointer<VaultWindowFrame> m_vaultFrame;
+    QPointer<VaultSettingsModal> m_settingsModal;
     bool m_vaultLayout = false;
     QPointer<QProgressBar> m_progressBar;
     QPointer<QLabel> m_progressBarLabel;

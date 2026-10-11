@@ -34,6 +34,7 @@
 #include "gui/group/GroupView.h"
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 
 #include <components/textfields/AutoSuggestBox.h>
@@ -43,8 +44,11 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListView>
+#include <QListWidget>
 #include <QPushButton>
 #include <QScreen>
+#include <QStackedWidget>
 #include <QMenu>
 #include <QTabBar>
 #include <QTest>
@@ -379,6 +383,65 @@ void TestGuiVault::testToolbarSettingsHidden()
     QTRY_VERIFY(!settingsWidget->isVisible());
 }
 
+void TestGuiVault::testSettingsModal()
+{
+    auto* modal = m_mainWindow->findChild<VaultSettingsModal*>("vaultSettingsModal");
+    QVERIFY(modal);
+    QVERIFY(!modal->isOpen());
+    auto* settingsAction = m_mainWindow->findChild<QAction*>("actionSettings");
+    auto* stackedWidget = m_mainWindow->centralWidget()->findChild<QStackedWidget*>("stackedWidget");
+    const int screen = stackedWidget->currentIndex();
+
+    settingsAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QVERIFY(settingsAction->isChecked());
+    // The modal sits over the window; the database stays behind it but can't be used
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    QCOMPARE(stackedWidget->currentIndex(), screen);
+    QVERIFY(m_dbWidget->isVisible());
+    QVERIFY(!m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+    QVERIFY(m_mainWindow->windowTitle().startsWith("Settings"));
+
+    auto* settingsWidget = m_mainWindow->findChild<ApplicationSettingsWidget*>();
+    QVERIFY(modal->card()->isAncestorOf(settingsWidget));
+    QVERIFY(settingsWidget->findChild<QWidget*>("categoryList")->isHidden());
+    QVERIFY(settingsWidget->findChild<QDialogButtonBox*>("buttonBox")->isHidden());
+
+    // The sidebar drives the settings pages
+    auto* navigation = modal->navigation();
+    auto* categories = settingsWidget->findChild<QListWidget*>("categoryList");
+    QCOMPARE(navigation->model()->rowCount(), categories->count());
+    QCOMPARE(m_mainWindow->focusWidget(), navigation);
+    const auto securityRect = navigation->visualRect(navigation->model()->index(1, 0));
+    QTest::mouseClick(navigation->viewport(), Qt::LeftButton, {}, securityRect.center());
+    QCOMPARE(categories->currentRow(), 1);
+    QCOMPARE(settingsWidget->findChild<QStackedWidget*>("stackedWidget")->currentIndex(), 1);
+
+    // Tab stays inside the modal
+    for (int i = 0; i < 40; ++i) {
+        QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Tab);
+        QVERIFY(modal->isAncestorOf(m_mainWindow->focusWidget()));
+    }
+
+    // Cancel closes it and brings the database back
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultSettingsCancel"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    QVERIFY(!settingsAction->isChecked());
+    QVERIFY(m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+    QVERIFY(!m_mainWindow->windowTitle().startsWith("Settings"));
+
+    // So do Save and the close button
+    settingsAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultSettingsSave"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    settingsAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultSettingsClose"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    categories->setCurrentRow(0);
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
@@ -394,6 +457,13 @@ void TestGuiVault::testScreenshots()
         QApplication::processEvents();
         QTest::qWait(200);
         QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-%1.png").arg(theme))));
+        m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+        QApplication::processEvents();
+        QTest::qWait(100);
+        QVERIFY(
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-settings-%1.png").arg(theme))));
+        m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+        QApplication::processEvents();
         // Includes the native window controls; needs screen recording permission
         const auto frame = m_mainWindow->frameGeometry();
         m_mainWindow->screen()

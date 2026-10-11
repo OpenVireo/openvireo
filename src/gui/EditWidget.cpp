@@ -137,6 +137,16 @@ QLabel* EditWidget::headlineLabel()
     return m_ui->headerLabel;
 }
 
+CategoryListWidget* EditWidget::categoryList() const
+{
+    return m_ui->categoryList;
+}
+
+QDialogButtonBox* EditWidget::buttonBox() const
+{
+    return m_ui->buttonBox;
+}
+
 void EditWidget::setReadOnly(bool readOnly)
 {
     m_readOnly = readOnly;
