@@ -1225,9 +1225,9 @@ void Database::setPublicIcon(int iconIndex)
     markAsModified();
 }
 
-void Database::markAsTemporaryDatabase()
+void Database::markAsTemporaryDatabase(bool temporary)
 {
-    m_isTemporaryDatabase = true;
+    m_isTemporaryDatabase = temporary;
 }
 
 bool Database::isTemporaryDatabase()
