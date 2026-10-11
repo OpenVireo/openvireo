@@ -47,6 +47,7 @@ private slots:
     void testToolbarSettingsHidden();
     void testSettingsModal();
     void testAutoTypeSettingsPage();
+    void testSidebarListsOnlyTags();
     void testScreenshots();
 
 private:
