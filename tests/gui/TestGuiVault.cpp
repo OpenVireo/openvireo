@@ -22,6 +22,7 @@
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
 #include "gui/Application.h"
+#include "gui/ApplicationSettingsWidget.h"
 #include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
@@ -358,6 +359,24 @@ void TestGuiVault::testWindowFrame()
     m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
     QApplication::processEvents();
     QVERIFY(header->isVisible());
+}
+
+void TestGuiVault::testToolbarSettingsHidden()
+{
+    m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+    auto* settingsWidget = m_mainWindow->findChild<ApplicationSettingsWidget*>();
+    QVERIFY(settingsWidget);
+    QTRY_VERIFY(settingsWidget->isVisible());
+
+    // The Vault Index layout has no toolbar to show, style or move
+    QVERIFY(settingsWidget->findChild<QWidget*>("toolbarShowCheckBox")->isHidden());
+    QVERIFY(settingsWidget->findChild<QWidget*>("toolButtonStyleLabel")->isHidden());
+    QVERIFY(settingsWidget->findChild<QWidget*>("toolButtonStyleComboBox")->isHidden());
+    QVERIFY(settingsWidget->findChild<QWidget*>("toolbarMovableCheckBox")->isHidden());
+    QVERIFY(!settingsWidget->findChild<QWidget*>("languageComboBox")->isHidden());
+
+    QTest::keyClick(settingsWidget, Qt::Key_Escape);
+    QTRY_VERIFY(!settingsWidget->isVisible());
 }
 
 void TestGuiVault::testScreenshots()
