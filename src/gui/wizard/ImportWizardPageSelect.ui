@@ -94,6 +94,98 @@
       <property name="sizeConstraint">
        <enum>QLayout::SetMinimumSize</enum>
       </property>
+      <item row="0" column="0" colspan="2">
+       <widget class="QWidget" name="syncServerFields" native="true">
+        <layout class="QFormLayout" name="syncServerLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="serverUrlLabel">
+           <property name="text">
+            <string>Server URL:</string>
+           </property>
+           <property name="buddy">
+            <cstring>serverUrlEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="serverUrlEdit">
+           <property name="accessibleName">
+            <string>Sync server URL field</string>
+           </property>
+           <property name="placeholderText">
+            <string>e.g.: https://sync.example.com</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="serverTokenLabel">
+           <property name="text">
+            <string>Access token:</string>
+           </property>
+           <property name="buddy">
+            <cstring>serverTokenEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="serverTokenEdit">
+           <property name="accessibleName">
+            <string>Sync server access token field</string>
+           </property>
+           <property name="echoMode">
+            <enum>QLineEdit::Password</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="serverDatabaseIdLabel">
+           <property name="text">
+            <string>Database ID:</string>
+           </property>
+           <property name="buddy">
+            <cstring>serverDatabaseIdChoice</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <layout class="QHBoxLayout" name="serverDatabaseIdLayout" stretch="1,0">
+           <item>
+            <widget class="QComboBox" name="serverDatabaseIdChoice">
+             <property name="accessibleName">
+              <string>Sync server database ID</string>
+             </property>
+             <property name="editable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="serverLoadDatabasesButton">
+             <property name="toolTip">
+              <string>List the databases stored on the server</string>
+             </property>
+             <property name="text">
+              <string>Load</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
       <item row="3" column="0">
        <widget class="QLabel" name="importFileLabel">
         <property name="text">

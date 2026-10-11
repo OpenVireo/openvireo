@@ -95,6 +95,14 @@ void ImportWizardPageReview::initializePage()
                             field("ImportPassword").toString(),
                             field("ImportKeyFile").toString());
         break;
+    case ImportWizard::IMPORT_SYNC_SERVER:
+        m_ui->filenameLabel->setText(field("SyncServerDatabaseId").toString());
+        m_db = importSyncServer(field("SyncServerUrl").toString(),
+                                field("SyncServerToken").toString(),
+                                field("SyncServerDatabaseId").toString(),
+                                field("ImportPassword").toString(),
+                                field("ImportKeyFile").toString());
+        break;
     default:
         break;
     }
@@ -251,11 +259,109 @@ QSharedPointer<Database> ImportWizardPageReview::importRemote(const QString& dow
     params->downloadInput = downloadInput;
 
     auto result = m_remoteHandler->download(params);
+    delete params;
 
     if (!result.success) {
         m_ui->messageWidget->showMessage(result.errorMessage, KMessageWidget::Error, -1);
+        return {};
     }
 
+    auto key = buildKey(password, keyfile);
+
+    QString error;
+    QSharedPointer<Database> remoteDb = QSharedPointer<Database>::create();
+    if (!remoteDb->open(result.filePath, key, &error)) {
+        QFile::remove(result.filePath);
+        m_ui->messageWidget->showMessage(
+            tr("Could not open remote database. Password or key file may be incorrect."), KMessageWidget::Error, -1);
+        return {};
+    }
+    remoteDb->markAsTemporaryDatabase();
+
+    return remoteDb;
+}
+
+QSharedPointer<Database> ImportWizardPageReview::importSyncServer(const QString& serverUrl,
+                                                                  const QString& token,
+                                                                  const QString& databaseId,
+                                                                  const QString& password,
+                                                                  const QString& keyfile)
+{
+    RemoteParams params;
+    params.type = RemoteParams::Type::SyncServer;
+    params.serverUrl = serverUrl.trimmed();
+    params.serverToken = token.trimmed();
+    params.serverDatabaseId = databaseId.trimmed();
+    params.downloadTimeoutMsec = 30000;
+    params.uploadTimeoutMsec = 30000;
+
+    auto result = m_remoteHandler->download(&params);
+    if (!result.success) {
+        m_ui->messageWidget->showMessage(result.errorMessage, KMessageWidget::Error, -1);
+        return {};
+    }
+    if (result.remoteMissing) {
+        m_ui->messageWidget->showMessage(
+            tr("The database '%1' does not exist on the sync server.").arg(params.serverDatabaseId),
+            KMessageWidget::Error,
+            -1);
+        return {};
+    }
+
+    QString error;
+    auto db = QSharedPointer<Database>::create();
+    if (!db->open(result.filePath, buildKey(password, keyfile), &error)) {
+        QFile::remove(result.filePath);
+        m_ui->messageWidget->showMessage(
+            tr("Could not open the database from the sync server. Password or key file may be incorrect."),
+            KMessageWidget::Error,
+            -1);
+        return {};
+    }
+
+    // Link the imported database to the server so Remote Sync works right away.
+    // The device that uploaded it has usually configured this already.
+    RemoteSettings remoteSettings(db);
+    auto normalizedUrl = [](QString url) {
+        url = url.trimmed();
+        while (url.endsWith('/')) {
+            url.chop(1);
+        }
+        return url;
+    };
+    bool linked = false;
+    for (const auto existing : remoteSettings.getAllRemoteParams()) {
+        if (existing->type == RemoteParams::Type::SyncServer
+            && normalizedUrl(existing->serverUrl) == normalizedUrl(params.serverUrl)
+            && existing->serverDatabaseId == params.serverDatabaseId) {
+            // Keep the token that worked for this import
+            existing->serverToken = params.serverToken;
+            linked = true;
+        }
+    }
+    if (!linked) {
+        auto* link = new RemoteParams(params);
+        link->name = tr("Sync Server (%1)").arg(params.serverDatabaseId);
+        for (int i = 2; remoteSettings.getRemoteParams(link->name); ++i) {
+            link->name = tr("Sync Server (%1) %2").arg(params.serverDatabaseId).arg(i);
+        }
+        remoteSettings.addRemoteParams(link);
+    }
+    remoteSettings.saveSettings();
+
+    if (field("ImportIntoType").toInt() == ImportWizard::TEMPORARY_DATABASE) {
+        db->markAsTemporaryDatabase();
+    } else {
+        // Don't leave the download in the temp directory; the first save asks where to keep the local copy
+        QFile::remove(result.filePath);
+        db->setFilePath({});
+    }
+
+    return db;
+}
+
+QSharedPointer<CompositeKey> ImportWizardPageReview::buildKey(const QString& password, const QString& keyfile)
+{
     auto key = QSharedPointer<CompositeKey>::create();
 
     if (!password.isEmpty()) {
@@ -269,14 +375,5 @@ QSharedPointer<Database> ImportWizardPageReview::importRemote(const QString& dow
             m_ui->messageWidget->showMessage(tr("Could not load key file."), KMessageWidget::Error, -1);
         }
     }
-
-    QString error;
-    QSharedPointer<Database> remoteDb = QSharedPointer<Database>::create();
-    remoteDb->markAsTemporaryDatabase();
-    if (!remoteDb->open(result.filePath, key, &error)) {
-        m_ui->messageWidget->showMessage(
-            tr("Could not open remote database. Password or key file may be incorrect."), KMessageWidget::Error, -1);
-    }
-
-    return remoteDb;
+    return key;
 }

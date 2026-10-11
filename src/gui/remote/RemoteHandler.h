@@ -39,15 +39,31 @@ public:
         QString filePath;
         QString stdOutput;
         QString stdError;
+        // Sync server only: version of the downloaded database, used to detect concurrent uploads
+        QString etag;
+        // Sync server only: the database does not exist on the server yet
+        bool remoteMissing = false;
+    };
+
+    struct SyncServerListing
+    {
+        bool success = false;
+        QString errorMessage;
+        QStringList databaseIds;
     };
 
     RemoteResult download(const RemoteParams* params);
-    RemoteResult upload(const QString& filePath, const RemoteParams* params);
+    RemoteResult upload(const QString& filePath, const RemoteParams* params, const QString& etag = {});
+    // Names of the databases the access token can see on a sync server
+    SyncServerListing listSyncServerDatabases(const RemoteParams* params);
 
     // Used for testing only
     static void setRemoteProcessFunc(std::function<QScopedPointer<RemoteProcess>(QObject*)> func);
 
 private:
+    static RemoteResult downloadFromSyncServer(const RemoteParams* params);
+    static RemoteResult uploadToSyncServer(const QString& filePath, const RemoteParams* params, const QString& etag);
+
     static std::function<QScopedPointer<RemoteProcess>(QObject*)> m_createRemoteProcess;
     static QString m_tempFileLocation;
 

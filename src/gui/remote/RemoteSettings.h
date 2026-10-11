@@ -26,13 +26,35 @@ class Database;
 
 struct RemoteParams
 {
+    enum class Type
+    {
+        // Run user-supplied shell commands (scp, sftp, rclone, ...)
+        Command,
+        // Talk to a KeePassXC sync server over its REST API (see sync_server/)
+        SyncServer
+    };
+
     QString name;
+    Type type = Type::Command;
     QString downloadCommand;
     QString downloadInput;
-    int downloadTimeoutMsec;
+    int downloadTimeoutMsec = 10000;
     QString uploadCommand;
     QString uploadInput;
-    int uploadTimeoutMsec;
+    int uploadTimeoutMsec = 10000;
+    // Sync server settings
+    QString serverUrl;
+    QString serverDatabaseId;
+    QString serverToken;
+
+    bool hasDownload() const
+    {
+        return type == Type::SyncServer || !downloadCommand.isEmpty();
+    }
+    bool hasUpload() const
+    {
+        return type == Type::SyncServer || !uploadCommand.isEmpty();
+    }
 };
 Q_DECLARE_METATYPE(RemoteParams)
 

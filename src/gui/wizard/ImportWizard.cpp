@@ -69,6 +69,11 @@ bool ImportWizard::validateCurrentPage()
     return ret;
 }
 
+ImportWizard::ImportType ImportWizard::importType()
+{
+    return static_cast<ImportType>(field("ImportType").toInt());
+}
+
 ImportWizard::ImportIntoType ImportWizard::importIntoType()
 {
     return static_cast<ImportIntoType>(field("ImportIntoType").toInt());

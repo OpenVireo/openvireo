@@ -87,6 +87,12 @@ QString RemoteSettings::toConfig() const
     for (const auto params : m_remoteParams.values()) {
         QJsonObject object;
         object["name"] = params->name;
+        if (params->type == RemoteParams::Type::SyncServer) {
+            object["type"] = "syncServer";
+            object["serverUrl"] = params->serverUrl;
+            object["serverDatabaseId"] = params->serverDatabaseId;
+            object["serverToken"] = params->serverToken;
+        }
         object["downloadCommand"] = params->downloadCommand;
         object["downloadCommandInput"] = params->downloadInput;
         object["downloadTimeoutMsec"] = params->downloadTimeoutMsec;
@@ -108,6 +114,12 @@ void RemoteSettings::fromConfig(const QString& data)
         auto itemMap = item.toMap();
         auto* params = new RemoteParams();
         params->name = itemMap["name"].toString();
+        if (itemMap["type"].toString() == "syncServer") {
+            params->type = RemoteParams::Type::SyncServer;
+            params->serverUrl = itemMap["serverUrl"].toString();
+            params->serverDatabaseId = itemMap["serverDatabaseId"].toString();
+            params->serverToken = itemMap["serverToken"].toString();
+        }
         params->downloadCommand = itemMap["downloadCommand"].toString();
         params->downloadInput = itemMap["downloadCommandInput"].toString();
         params->downloadTimeoutMsec = itemMap.value("downloadTimeoutMsec", 10000).toInt();
