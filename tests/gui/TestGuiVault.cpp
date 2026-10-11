@@ -469,6 +469,38 @@ void TestGuiVault::testAutoTypeSettingsPage()
     QTRY_VERIFY(!settingsWidget->isVisible());
 }
 
+void TestGuiVault::testSidebarListsOnlyTags()
+{
+    // Searching happens in the header, so the sidebar lists tags without the searches
+    auto* tagView = m_dbWidget->findChild<QListView*>("tagView");
+    QVERIFY(tagView);
+    QTRY_VERIFY(tagView->isVisible());
+    QStringList rows;
+    for (int row = 0; row < tagView->model()->rowCount(); ++row) {
+        rows << tagView->model()->index(row, 0).data().toString();
+    }
+    QCOMPARE(rows, m_db->tagList());
+    QVERIFY(!rows.contains("Clear Search"));
+    QVERIFY(!tagView->selectionModel()->hasSelection());
+
+    auto* tagWidget = m_dbWidget->findChild<QWidget*>("tagWidget");
+    QVERIFY(tagWidget->findChildren<QLabel*>().first()->text() == QString("Tags"));
+
+    // Clicking a tag still searches for it
+    QTest::mouseClick(tagView->viewport(), Qt::LeftButton, {}, tagView->visualRect(tagView->model()->index(0, 0)).center());
+    QTRY_VERIFY(m_dbWidget->isSearchActive());
+    QVERIFY(m_dbWidget->getCurrentSearch().startsWith("tag:"));
+    m_dbWidget->endSearch();
+    QVERIFY(!tagView->selectionModel()->hasSelection());
+    QVERIFY(!tagView->currentIndex().isValid());
+
+    // The groups get the height the few tags don't need
+    auto* groupView = m_dbWidget->findChild<QWidget*>("groupView");
+    QCOMPARE(groupView->height() + tagWidget->height() + groupView->parentWidget()->style()->pixelMetric(
+                 QStyle::PM_SplitterWidth, nullptr, groupView->parentWidget()),
+             groupView->parentWidget()->height());
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");

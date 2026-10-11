@@ -67,7 +67,16 @@ void TagView::setDatabase(QSharedPointer<Database> db)
 {
     m_db = db;
     m_model->setDatabase(db);
-    setCurrentIndex(m_model->index(0));
+    if (m_searchesVisible) {
+        // Start on Clear Search
+        setCurrentIndex(m_model->index(0));
+    }
+}
+
+void TagView::setSearchesVisible(bool visible)
+{
+    m_searchesVisible = visible;
+    m_model->setSearchesVisible(visible);
 }
 
 void TagView::contextMenuRequested(const QPoint& pos)

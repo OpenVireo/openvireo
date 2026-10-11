@@ -33,6 +33,7 @@ class TagView : public QListView
 public:
     explicit TagView(QWidget* parent = nullptr);
     void setDatabase(QSharedPointer<Database> db);
+    void setSearchesVisible(bool visible);
 
 signals:
 
@@ -42,6 +43,7 @@ private slots:
 private:
     QSharedPointer<Database> m_db;
     QPointer<TagModel> m_model;
+    bool m_searchesVisible = true;
 };
 
 #endif // KEEPASSX_ENTRYVIEW_H
