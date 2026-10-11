@@ -169,6 +169,7 @@ set(gui_SOURCES
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultPanes.cpp
         gui/vault/VaultWidgets.cpp
+        gui/vault/VaultWindowFrame.cpp
         gui/export/ExportDialog.cpp
         gui/group/EditGroupWidget.cpp
         gui/group/GroupModel.cpp
