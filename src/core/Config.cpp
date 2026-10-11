@@ -124,6 +124,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_MonospaceNotes, {QS("GUI/MonospaceNotes"), Roaming, false}},
     {Config::GUI_ApplicationTheme, {QS("GUI/ApplicationTheme"), Roaming, QS("auto")}},
     {Config::GUI_CompactMode, {QS("GUI/CompactMode"), Roaming, false}},
+    {Config::GUI_VaultLayout, {QS("GUI/VaultLayout"), Roaming, true}},
     {Config::GUI_CheckForUpdates, {QS("GUI/CheckForUpdates"), Roaming, true}},
     {Config::GUI_CheckForUpdatesNextCheck, {QS("GUI/CheckForUpdatesNextCheck"), Local, 0}},
     {Config::GUI_CheckForUpdatesIncludeBetas, {QS("GUI/CheckForUpdatesIncludeBetas"), Roaming, false}},
@@ -140,6 +141,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_SplitterState, {QS("GUI/SplitterState"), Local, {}}},
     {Config::GUI_GroupSplitterState, {QS("GUI/GroupSplitterState"), Local, {}}},
     {Config::GUI_PreviewSplitterState, {QS("GUI/PreviewSplitterState"), Local, {}}},
+    {Config::GUI_VaultSplitterState, {QS("GUI/VaultSplitterState"), Local, {}}},
     {Config::GUI_AutoTypeSelectDialogSize, {QS("GUI/AutoTypeSelectDialogSize"), Local, QSize(600, 250)}},
 
     // Security

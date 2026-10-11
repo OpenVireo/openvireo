@@ -31,6 +31,7 @@
 #include <QWindow>
 
 #include "gui/Icons.h"
+#include "gui/entry/EntryListItemDelegate.h"
 #include "gui/SortFilterHideProxyModel.h"
 
 #define ICON_ONLY_SECTION_SIZE 26
@@ -132,9 +133,15 @@ EntryView::EntryView(QWidget* parent)
     header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(header(), SIGNAL(customContextMenuRequested(QPoint)), SLOT(showHeaderMenu(QPoint)));
-    connect(header(), SIGNAL(sectionCountChanged(int, int)), SIGNAL(viewStateChanged()));
-    connect(header(), SIGNAL(sectionMoved(int, int, int)), SIGNAL(viewStateChanged()));
-    connect(header(), SIGNAL(sectionResized(int, int, int)), SIGNAL(viewStateChanged()));
+    // List mode hides columns itself, which must not overwrite the saved column layout
+    auto emitViewStateChanged = [this] {
+        if (!m_listMode) {
+            emit viewStateChanged();
+        }
+    };
+    connect(header(), &QHeaderView::sectionCountChanged, this, emitViewStateChanged);
+    connect(header(), &QHeaderView::sectionMoved, this, emitViewStateChanged);
+    connect(header(), &QHeaderView::sectionResized, this, emitViewStateChanged);
     connect(header(), SIGNAL(sortIndicatorChanged(int, Qt::SortOrder)), SLOT(sortIndicatorChanged(int, Qt::SortOrder)));
 }
 
@@ -214,7 +221,9 @@ void EntryView::focusInEvent(QFocusEvent* event)
 void EntryView::displayGroup(Group* group)
 {
     m_model->setGroup(group);
-    header()->hideSection(EntryModel::ParentGroup);
+    if (!m_listMode) {
+        header()->hideSection(EntryModel::ParentGroup);
+    }
     setFirstEntryActive();
     m_inSearchMode = false;
 }
@@ -222,7 +231,9 @@ void EntryView::displayGroup(Group* group)
 void EntryView::displaySearch(const QList<Entry*>& entries)
 {
     m_model->setEntries(entries);
-    header()->showSection(EntryModel::ParentGroup);
+    if (!m_listMode) {
+        header()->showSection(EntryModel::ParentGroup);
+    }
 
     setFirstEntryActive();
 
@@ -328,6 +339,9 @@ int EntryView::currentEntryIndex()
  */
 QByteArray EntryView::viewState() const
 {
+    if (m_listMode) {
+        return {};
+    }
     return header()->saveState();
 }
 
@@ -336,6 +350,9 @@ QByteArray EntryView::viewState() const
  */
 bool EntryView::setViewState(const QByteArray& state)
 {
+    if (m_listMode) {
+        return false;
+    }
     // Reset to unsorted first (https://bugreports.qt.io/browse/QTBUG-86694)
     header()->setSortIndicator(-1, Qt::AscendingOrder);
     bool status = header()->restoreState(state);
@@ -522,13 +539,44 @@ void EntryView::onHeaderChanged()
     header()->hideSection(EntryModel::Accessed);
 }
 
+void EntryView::setListMode(bool enabled)
+{
+    if (m_listMode == enabled) {
+        return;
+    }
+    m_listMode = enabled;
+
+    header()->setHidden(enabled);
+    header()->setStretchLastSection(enabled);
+    setAlternatingRowColors(!enabled);
+    setFrameShape(enabled ? QFrame::NoFrame : QFrame::StyledPanel);
+    setMouseTracking(enabled);
+    viewport()->setAttribute(Qt::WA_Hover, enabled);
+    setItemDelegateForColumn(EntryModel::Title, enabled ? new EntryListItemDelegate(this) : nullptr);
+
+    if (enabled) {
+        for (int column = 0; column < header()->count(); ++column) {
+            setColumnHidden(column, column != EntryModel::Title);
+        }
+        // Keep the list in title order; the header is hidden so users can't change it
+        sortByColumn(EntryModel::Title, Qt::AscendingOrder);
+    } else {
+        resetViewToDefaults();
+    }
+}
+
+bool EntryView::isListMode() const
+{
+    return m_listMode;
+}
+
 void EntryView::showEvent(QShowEvent* event)
 {
     QTreeView::showEvent(event);
 
     // Check if header columns need to be resized to sensible defaults.
     // This is only needed if no previous view state has been loaded.
-    if (m_columnsNeedRelayout) {
+    if (m_columnsNeedRelayout && !m_listMode) {
         fitColumnsToWindow();
         m_columnsNeedRelayout = false;
     }

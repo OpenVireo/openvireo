@@ -54,7 +54,11 @@
 #include "gui/group/EditGroupWidget.h"
 #include "gui/group/GroupView.h"
 #include "gui/reports/ReportsDialog.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagView.h"
+#include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/ElidedLabel.h"
 #include "keeshare/KeeShare.h"
 #include "remote/RemoteHandler.h"
@@ -103,13 +107,23 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     }
 
     m_messageWidget->setHidden(true);
+    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
 
     auto mainLayout = new QVBoxLayout();
-    mainLayout->addWidget(m_messageWidget);
-    auto hbox = new QHBoxLayout();
-    mainLayout->addLayout(hbox);
-    hbox->addWidget(m_mainSplitter);
     m_mainWidget->setLayout(mainLayout);
+    auto contentLayout = mainLayout;
+    if (m_vaultLayout) {
+        // The canvas carries the window background behind the navigation pane
+        mainLayout->setContentsMargins(0, 0, 0, 0);
+        auto canvas = new VaultCanvas(m_mainWidget);
+        mainLayout->addWidget(canvas);
+        contentLayout = new QVBoxLayout(canvas);
+        contentLayout->setContentsMargins(0, 0, 0, 0);
+        contentLayout->setSpacing(0);
+    }
+    contentLayout->addWidget(m_messageWidget);
+    auto hbox = new QHBoxLayout();
+    contentLayout->addLayout(hbox);
 
     // Setup searches and tags view and place under groups
     m_tagView->setObjectName("tagView");
@@ -137,24 +151,14 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     // Initial visibility based on config value
     m_groupSplitter->setVisible(!config()->get(Config::GUI_HideGroupPanel).toBool());
 
-    auto rightHandSideWidget = new QWidget(m_mainSplitter);
-    auto rightHandSideVBox = new QVBoxLayout();
-    rightHandSideVBox->setContentsMargins(0, 0, 0, 0);
-    rightHandSideVBox->addWidget(m_searchingLabel);
-    rightHandSideVBox->addWidget(m_shareLabel);
-    rightHandSideVBox->addWidget(m_previewSplitter);
-    rightHandSideWidget->setLayout(rightHandSideVBox);
-    m_entryView = new EntryView(rightHandSideWidget);
+    m_previewView->setObjectName("previewWidget");
+    m_previewView->hide();
 
-    m_mainSplitter->setChildrenCollapsible(false);
-    m_mainSplitter->addWidget(m_groupSplitter);
-    m_mainSplitter->addWidget(rightHandSideWidget);
-    m_mainSplitter->setStretchFactor(0, 0);
-    m_mainSplitter->setStretchFactor(1, 100);
-    m_mainSplitter->setSizes({1, 1});
-
-    m_previewSplitter->setOrientation(Qt::Vertical);
-    m_previewSplitter->setChildrenCollapsible(true);
+    if (m_vaultLayout) {
+        setupVaultLayout(hbox);
+    } else {
+        setupClassicLayout(hbox);
+    }
 
     m_groupView->setObjectName("groupView");
     m_groupView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -175,14 +179,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_shareLabel->setRawText(tr("Shared group…"));
     m_shareLabel->setAlignment(Qt::AlignCenter);
     m_shareLabel->setVisible(false);
-
-    m_previewView->setObjectName("previewWidget");
-    m_previewView->hide();
-    m_previewSplitter->addWidget(m_entryView);
-    m_previewSplitter->addWidget(m_previewView);
-    m_previewSplitter->setStretchFactor(0, 100);
-    m_previewSplitter->setStretchFactor(1, 0);
-    m_previewSplitter->setSizes({1, 1});
 
     m_editEntryWidget->setObjectName("editEntryWidget");
     m_historyEditEntryWidget->setObjectName("editEntryHistoryWidget");
@@ -377,6 +373,11 @@ QString DatabaseWidget::displayFilePath() const
 
 QHash<Config::ConfigKey, QList<int>> DatabaseWidget::splitterSizes() const
 {
+    if (m_vaultLayout) {
+        return {{Config::GUI_SplitterState, m_mainSplitter->sizes()},
+                {Config::GUI_VaultSplitterState, m_previewSplitter->sizes()},
+                {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
+    }
     return {{Config::GUI_SplitterState, m_mainSplitter->sizes()},
             {Config::GUI_PreviewSplitterState, m_previewSplitter->sizes()},
             {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
@@ -395,8 +396,20 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
             m_mainSplitter->setSizes(value);
             break;
         case Config::GUI_PreviewSplitterState:
+            if (m_vaultLayout) {
+                break;
+            }
             if (value.size() < 2) {
                 value = QList({static_cast<int>(height() * 0.8), static_cast<int>(height() * 0.2)});
+            }
+            m_previewSplitter->setSizes(value);
+            break;
+        case Config::GUI_VaultSplitterState:
+            if (!m_vaultLayout) {
+                break;
+            }
+            if (value.size() < 2) {
+                value = QList({static_cast<int>(width() * 0.3), static_cast<int>(width() * 0.4)});
             }
             m_previewSplitter->setSizes(value);
             break;
@@ -448,6 +461,9 @@ void DatabaseWidget::clearAllWidgets()
     m_historyEditEntryWidget->clear();
     m_editGroupWidget->clear();
     m_previewView->clear();
+    if (m_detailCard) {
+        m_detailCard->setGroup(nullptr);
+    }
 }
 
 void DatabaseWidget::emitCurrentModeChanged()
@@ -489,6 +505,9 @@ void DatabaseWidget::replaceDatabase(QSharedPointer<Database> db)
     connectDatabaseSignals();
     m_groupView->changeDatabase(m_db);
     m_tagView->setDatabase(m_db);
+    if (m_vaultNavPane) {
+        m_vaultNavPane->setDatabase(m_db);
+    }
     m_remoteSettings->setDatabase(m_db);
 
     // Restore the new parent group pointer, if not found default to the root group
@@ -1146,6 +1165,125 @@ void DatabaseWidget::deleteGroup()
     }
 }
 
+void DatabaseWidget::setupClassicLayout(QHBoxLayout* hbox)
+{
+    hbox->addWidget(m_mainSplitter);
+
+    auto rightHandSideWidget = new QWidget(m_mainSplitter);
+    auto rightHandSideVBox = new QVBoxLayout();
+    rightHandSideVBox->setContentsMargins(0, 0, 0, 0);
+    rightHandSideVBox->addWidget(m_searchingLabel);
+    rightHandSideVBox->addWidget(m_shareLabel);
+    rightHandSideVBox->addWidget(m_previewSplitter);
+    rightHandSideWidget->setLayout(rightHandSideVBox);
+    m_entryView = new EntryView(rightHandSideWidget);
+
+    m_mainSplitter->setChildrenCollapsible(false);
+    m_mainSplitter->addWidget(m_groupSplitter);
+    m_mainSplitter->addWidget(rightHandSideWidget);
+    m_mainSplitter->setStretchFactor(0, 0);
+    m_mainSplitter->setStretchFactor(1, 100);
+    m_mainSplitter->setSizes({1, 1});
+
+    m_previewSplitter->setOrientation(Qt::Vertical);
+    m_previewSplitter->setChildrenCollapsible(true);
+    m_previewSplitter->addWidget(m_entryView);
+    m_previewSplitter->addWidget(m_previewView);
+    m_previewSplitter->setStretchFactor(0, 100);
+    m_previewSplitter->setStretchFactor(1, 0);
+    m_previewSplitter->setSizes({1, 1});
+}
+
+/**
+ * Vault Index layout: navigation pane | command bar over entry list | detail card.
+ * Built from the same group, tag and entry views as the classic layout.
+ */
+void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
+{
+    hbox->addWidget(m_mainSplitter);
+
+    m_entryView = new EntryView(m_mainWidget);
+    m_entryView->setListMode(true);
+    m_groupView->setNavigationStyle(true);
+
+    m_vaultNavPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
+    m_vaultNavPane->setDatabase(m_db);
+
+    auto surface = new VaultSurface(m_mainSplitter);
+    auto surfaceLayout = new QVBoxLayout(surface);
+    surfaceLayout->setContentsMargins(0, 0, 0, 0);
+    surfaceLayout->setSpacing(0);
+    m_vaultCommandBar = new VaultCommandBar(surface);
+    surfaceLayout->addWidget(m_vaultCommandBar);
+    surfaceLayout->addWidget(m_shareLabel);
+    surfaceLayout->addWidget(m_previewSplitter, 1);
+
+    // Entry list and detail card, each with its own breathing room
+    auto listHost = new QWidget(m_previewSplitter);
+    auto listLayout = new QVBoxLayout(listHost);
+    listLayout->setContentsMargins(6, 0, 0, 14);
+    listLayout->addWidget(m_entryView);
+    auto cardHost = new QWidget(m_previewSplitter);
+    auto cardLayout = new QVBoxLayout(cardHost);
+    cardLayout->setContentsMargins(4, 0, 14, 14);
+    m_detailCard = new EntryDetailCard(cardHost);
+    cardLayout->addWidget(m_detailCard);
+
+    m_previewSplitter->setOrientation(Qt::Horizontal);
+    m_previewSplitter->setChildrenCollapsible(false);
+    m_previewSplitter->addWidget(listHost);
+    m_previewSplitter->addWidget(cardHost);
+    m_previewSplitter->setStretchFactor(0, 45);
+    m_previewSplitter->setStretchFactor(1, 55);
+
+    m_mainSplitter->setChildrenCollapsible(false);
+    m_mainSplitter->addWidget(m_vaultNavPane);
+    m_mainSplitter->addWidget(surface);
+    m_mainSplitter->setStretchFactor(0, 0);
+    m_mainSplitter->setStretchFactor(1, 100);
+
+    // Groups and tags sit directly on the navigation pane
+    for (QAbstractItemView* view : {static_cast<QAbstractItemView*>(m_groupView.data()),
+                                    static_cast<QAbstractItemView*>(m_tagView.data())}) {
+        // Matched by basestyle.qss, which otherwise fills these views with the window color
+        view->setProperty("vaultLayout", true);
+        view->setFrameShape(QFrame::NoFrame);
+        view->viewport()->setAutoFillBackground(false);
+    }
+    if (auto tagsTitle = m_groupSplitter->findChild<QLabel*>()) {
+        tagsTitle->setProperty("title", false);
+        tagsTitle->setContentsMargins(12, 8, 12, 4);
+        Vault::styleLabel(tagsTitle, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
+    }
+    // Panes are separated by surfaces, not grip lines
+    m_mainSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background: transparent; image: none; }"));
+
+    // The command bar shows the search state and the card replaces the preview panel
+    auto unused = new QWidget(m_mainWidget);
+    unused->hide();
+    m_searchingLabel->setParent(unused);
+    m_previewView->setParent(unused);
+
+    auto model = m_entryView->model();
+    connect(model, &QAbstractItemModel::rowsInserted, this, &DatabaseWidget::updateVaultCommandBar);
+    connect(model, &QAbstractItemModel::rowsRemoved, this, &DatabaseWidget::updateVaultCommandBar);
+    connect(model, &QAbstractItemModel::modelReset, this, &DatabaseWidget::updateVaultCommandBar);
+}
+
+void DatabaseWidget::updateVaultCommandBar()
+{
+    if (!m_vaultCommandBar || !m_entryView) {
+        return;
+    }
+    QString title;
+    if (isSearchActive()) {
+        title = m_searchingLabel->text();
+    } else if (auto group = currentGroup()) {
+        title = group->name();
+    }
+    m_vaultCommandBar->setTitle(title, m_entryView->model()->rowCount());
+}
+
 int DatabaseWidget::addChildWidget(QWidget* w)
 {
     w->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -1786,6 +1924,7 @@ void DatabaseWidget::search(const QString& searchtext)
 
     m_searchingLabel->setVisible(true);
     m_shareLabel->setVisible(false);
+    updateVaultCommandBar();
 
     emit searchModeActivated();
 }
@@ -1858,6 +1997,7 @@ void DatabaseWidget::onGroupChanged()
         m_shareLabel->setVisible(false);
     }
 
+    updateVaultCommandBar();
     emit groupChanged();
 }
 
@@ -1939,6 +2079,8 @@ void DatabaseWidget::endSearch()
     m_lastSearchText.clear();
     m_nextSearchLabelText.clear();
 
+    updateVaultCommandBar();
+
     // Tell the search widget to clear
     emit clearSearch();
 }
@@ -1959,6 +2101,13 @@ void DatabaseWidget::onEntryChanged(Entry* entry)
         m_previewView->setEntry(entry);
     } else {
         m_previewView->setGroup(groupView()->currentGroup());
+    }
+    if (m_detailCard) {
+        if (entry) {
+            m_detailCard->setEntry(entry);
+        } else {
+            m_detailCard->setGroup(groupView()->currentGroup());
+        }
     }
 
     emit entrySelectionChanged();
@@ -2003,7 +2152,8 @@ void DatabaseWidget::showEvent(QShowEvent* event)
 bool DatabaseWidget::focusNextPrevChild(bool next)
 {
     // [parent] <-> GroupView <-> TagView <-> EntryView <-> EntryPreview <-> [parent]
-    QList<QWidget*> sequence = {m_groupView, m_tagView, m_entryView, m_previewView};
+    QWidget* details = m_detailCard ? static_cast<QWidget*>(m_detailCard) : m_previewView;
+    QList<QWidget*> sequence = {m_groupView, m_tagView, m_entryView, details};
     auto widget = qApp->focusWidget();
     if (!widget) {
         return QStackedWidget::focusNextPrevChild(next);

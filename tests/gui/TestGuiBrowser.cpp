@@ -70,6 +70,8 @@ void TestGuiBrowser::initTestCase()
     // Disable quick unlock
     config()->set(Config::Security_QuickUnlock, false);
 
+    // These tests drive the classic toolbar and entry table
+    config()->set(Config::GUI_VaultLayout, false);
     m_mainWindow.reset(new MainWindow());
     m_tabWidget = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
     m_mainWindow->show();
