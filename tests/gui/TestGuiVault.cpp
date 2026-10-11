@@ -51,6 +51,7 @@
 #include <QStackedWidget>
 #include <QMenu>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QTest>
 #include <QTimer>
 #include <QToolBar>
@@ -442,6 +443,32 @@ void TestGuiVault::testSettingsModal()
     categories->setCurrentRow(0);
 }
 
+void TestGuiVault::testAutoTypeSettingsPage()
+{
+    m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+    auto* settingsWidget = m_mainWindow->findChild<ApplicationSettingsWidget*>();
+    QTRY_VERIFY(settingsWidget->isVisible());
+
+    // Auto-Type is a category of its own rather than a tab on the General page
+    QVERIFY(!settingsWidget->findChild<QTabWidget*>("generalSettingsTabWidget"));
+    auto* categories = settingsWidget->findChild<QListWidget*>("categoryList");
+    QCOMPARE(categories->item(0)->text(), QString("General"));
+    QCOMPARE(categories->item(1)->text(), QString("Security"));
+    QCOMPARE(categories->item(2)->text(), QString("Auto-Type"));
+
+    categories->setCurrentRow(2);
+    auto* pages = settingsWidget->findChild<QStackedWidget*>("stackedWidget");
+    QCOMPARE(pages->currentIndex(), 2);
+    auto* autoTypePage = pages->currentWidget()->findChild<QWidget*>("ApplicationSettingsWidgetAutoType");
+    QVERIFY(autoTypePage);
+    QVERIFY(autoTypePage->findChild<QWidget*>("autoTypeShortcutWidget"));
+    QVERIFY(autoTypePage->findChild<QWidget*>("autoTypeAskCheckBox")->isVisibleTo(settingsWidget));
+
+    categories->setCurrentRow(0);
+    QTest::keyClick(settingsWidget, Qt::Key_Escape);
+    QTRY_VERIFY(!settingsWidget->isVisible());
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
@@ -462,6 +489,11 @@ void TestGuiVault::testScreenshots()
         QTest::qWait(100);
         QVERIFY(
             m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-settings-%1.png").arg(theme))));
+        m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList")->setCurrentRow(2);
+        QApplication::processEvents();
+        QVERIFY(m_mainWindow->grab().save(
+            QDir(dir).absoluteFilePath(QString("vault-settings-autotype-%1.png").arg(theme))));
+        m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList")->setCurrentRow(0);
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();
         // Includes the native window controls; needs screen recording permission
