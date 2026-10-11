@@ -48,6 +48,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/entry/EntryView.h"
@@ -130,6 +131,8 @@ MainWindow::MainWindow()
                 &DatabaseTabWidget::activeDatabaseChanged,
                 m_vaultHeader->syncChip(),
                 &VaultSyncChip::setDatabaseWidget);
+        // Settings open in a modal over the window instead of replacing it
+        m_settingsModal = new VaultSettingsModal(this, m_ui->settingsWidget);
     } else {
         m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
     }
@@ -870,10 +873,13 @@ void MainWindow::updateMenuActionState()
     // MainWindow State
     int currentIndex = m_ui->stackedWidget->currentIndex();
     bool hasLockableDatabase = m_ui->tabWidget->hasLockableDatabases();
-    bool inAppSettings = (currentIndex == SettingsScreen);
+    bool inSettingsModal = m_settingsModal && m_settingsModal->isOpen();
+    bool inAppSettings = (currentIndex == SettingsScreen || inSettingsModal);
     bool inPasswordGenerator = (currentIndex == PasswordGeneratorScreen);
 
-    auto dbWidget = (currentIndex == DatabaseTabScreen ? m_ui->tabWidget->currentDatabaseWidget() : nullptr);
+    // The database stays on screen behind the settings modal, but can't be used
+    auto shownDbWidget = (currentIndex == DatabaseTabScreen ? m_ui->tabWidget->currentDatabaseWidget() : nullptr);
+    auto dbWidget = (inSettingsModal ? nullptr : shownDbWidget);
     auto dbMode = (dbWidget ? dbWidget->currentMode() : DatabaseWidget::Mode::None);
 
     // Database State
@@ -1032,10 +1038,12 @@ void MainWindow::updateMenuActionState()
     m_ui->actionImportPasskey->setEnabled(inDatabase);
 #endif
 
-    m_searchWidgetAction->setEnabled(inDatabase);
+    if (!inSettingsModal) {
+        m_searchWidgetAction->setEnabled(inDatabase);
+    }
     if (m_vaultHeader) {
         // The database picker stays available while a database is locked or being edited
-        m_vaultHeader->setVisible(dbWidget != nullptr);
+        m_vaultHeader->setVisible(shownDbWidget != nullptr);
     }
 }
 
@@ -1072,7 +1080,8 @@ void MainWindow::updateWindowTitle()
             customWindowTitlePart.remove(customWindowTitlePart.size() - 1, 1);
         }
         m_ui->actionDatabaseSave->setEnabled(m_ui->tabWidget->canSave(tabWidgetIndex));
-    } else if (stackedWidgetIndex == StackedWidgetIndex::SettingsScreen) {
+    }
+    if (stackedWidgetIndex == StackedWidgetIndex::SettingsScreen || (m_settingsModal && m_settingsModal->isOpen())) {
         customWindowTitlePart = tr("Settings");
     } else if (stackedWidgetIndex == StackedWidgetIndex::PasswordGeneratorScreen) {
         customWindowTitlePart = tr("Password Generator");
@@ -1192,6 +1201,12 @@ void MainWindow::openKeyboardShortcuts()
 
 void MainWindow::switchToDatabases()
 {
+    if (m_settingsModal && m_settingsModal->isOpen()) {
+        m_settingsModal->close();
+        // The screen behind the modal doesn't change, so refresh what depended on the modal
+        updateMenuActionState();
+        updateWindowTitle();
+    }
     if (m_ui->tabWidget->currentIndex() == -1) {
         m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
         statusBar()->setAutoFillBackground(false);
@@ -1203,7 +1218,12 @@ void MainWindow::switchToDatabases()
 
 void MainWindow::switchToSettings(bool enabled)
 {
-    if (enabled) {
+    if (enabled && m_settingsModal) {
+        m_ui->settingsWidget->loadSettings();
+        m_settingsModal->open();
+        updateMenuActionState();
+        updateWindowTitle();
+    } else if (enabled) {
         m_ui->settingsWidget->loadSettings();
         m_ui->stackedWidget->setCurrentIndex(SettingsScreen);
         statusBar()->setAutoFillBackground(true);

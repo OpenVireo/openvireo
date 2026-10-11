@@ -168,6 +168,7 @@ set(gui_SOURCES
         gui/entry/EntryListItemDelegate.cpp
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultPanes.cpp
+        gui/vault/VaultSettingsModal.cpp
         gui/vault/VaultWidgets.cpp
         gui/vault/VaultWindowFrame.cpp
         gui/export/ExportDialog.cpp

@@ -85,6 +85,11 @@ int CategoryListWidget::currentCategory()
     return m_ui->categoryList->currentRow();
 }
 
+QListWidget* CategoryListWidget::listWidget() const
+{
+    return m_ui->categoryList;
+}
+
 void CategoryListWidget::setCurrentCategory(int index)
 {
     m_ui->categoryList->setCurrentRow(index);
