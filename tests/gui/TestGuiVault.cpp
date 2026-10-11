@@ -34,6 +34,8 @@
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultPanes.h"
 
+#include <components/textfields/AutoSuggestBox.h>
+
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -246,6 +248,23 @@ void TestGuiVault::testSearchTitle()
 }
 
 // Saves Light and Dark captures when KPXC_VAULT_SCREENSHOT_DIR is set, for visual review
+void TestGuiVault::testFluentSearchBox()
+{
+    auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
+    auto* box = header->findChild<fluent::textfields::AutoSuggestBox*>("searchEdit");
+    QVERIFY(box);
+    QVERIFY(box->isVisible());
+
+    // Typing searches after the usual delay, Escape clears it
+    auto* commandBar = m_dbWidget->findChild<VaultCommandBar*>();
+    box->setFocus();
+    QTest::keyClicks(box, "postgres");
+    QTRY_VERIFY(hasLabelWithText(commandBar, "Search Results (1)"));
+    QTest::keyClick(box, Qt::Key_Escape);
+    QTRY_VERIFY(box->text().isEmpty());
+    QTRY_VERIFY(hasLabelWithText(commandBar, "Work"));
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");

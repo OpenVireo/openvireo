@@ -27,7 +27,11 @@
 
 #include "core/SignalMultiplexer.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/PopupHelpWidget.h"
+
+#include <components/textfields/AutoSuggestBox.h>
 
 SearchWidget::SearchWidget(QWidget* parent)
     : QWidget(parent)
@@ -36,6 +40,9 @@ SearchWidget::SearchWidget(QWidget* parent)
     , m_clearSearchTimer(new QTimer(this))
 {
     m_ui->setupUi(this);
+    if (FluentTheme::vaultLayoutEnabled()) {
+        useFluentSearchBox();
+    }
     setFocusProxy(m_ui->searchEdit);
 
     m_helpWidget = new PopupHelpWidget(m_ui->searchEdit);
@@ -78,14 +85,16 @@ SearchWidget::SearchWidget(QWidget* parent)
     m_actionWaitForEnter->setChecked(config()->get(Config::GUI_SearchWaitForEnter).toBool());
 
     m_ui->searchIcon->setIcon(icons()->icon("system-search"));
-    m_ui->searchEdit->addAction(m_ui->searchIcon, QLineEdit::LeadingPosition);
-
     m_ui->helpIcon->setIcon(icons()->icon("system-help"));
-    m_ui->searchEdit->addAction(m_ui->helpIcon, QLineEdit::TrailingPosition);
-
     m_ui->saveIcon->setIcon(icons()->icon("document-save"));
-    m_ui->searchEdit->addAction(m_ui->saveIcon, QLineEdit::TrailingPosition);
     m_ui->saveIcon->setVisible(false);
+    if (m_fluentSearch) {
+        addFluentSearchButtons();
+        return;
+    }
+    m_ui->searchEdit->addAction(m_ui->searchIcon, QLineEdit::LeadingPosition);
+    m_ui->searchEdit->addAction(m_ui->helpIcon, QLineEdit::TrailingPosition);
+    m_ui->searchEdit->addAction(m_ui->saveIcon, QLineEdit::TrailingPosition);
 
     // Fix initial visibility of actions (bug in Qt)
     for (QToolButton* toolButton : m_ui->searchEdit->findChildren<QToolButton*>()) {
@@ -95,12 +104,48 @@ SearchWidget::SearchWidget(QWidget* parent)
 
 SearchWidget::~SearchWidget() = default;
 
+void SearchWidget::useFluentSearchBox()
+{
+    auto* box = new fluent::textfields::AutoSuggestBox(this);
+    box->setObjectName("searchEdit");
+    box->setSizePolicy(m_ui->searchEdit->sizePolicy());
+    box->setMinimumSize(m_ui->searchEdit->minimumSize());
+    delete layout()->replaceWidget(m_ui->searchEdit, box);
+    delete m_ui->searchEdit;
+    m_ui->searchEdit = box;
+    m_fluentSearch = true;
+
+    // Enter is handled in eventFilter(); this comes from the box's search button
+    connect(box, &fluent::textfields::AutoSuggestBox::querySubmitted, this, [this] {
+        m_searchTimer->stop();
+        startSearch();
+    });
+}
+
+// Search options, help and save search sit beside the box instead of inside it
+void SearchWidget::addFluentSearchButtons()
+{
+    auto addButton = [this](QAction* action, const QString& glyph, const QString& toolTip) {
+        auto* button = Vault::iconButton(glyph, toolTip, this);
+        Vault::bindAction(button, action);
+        layout()->addWidget(button);
+    };
+    layout()->setSpacing(4);
+    addButton(m_ui->searchIcon, Typography::Icons::Filter, tr("Search options"));
+    addButton(m_ui->saveIcon, Typography::Icons::Save, tr("Save search"));
+    addButton(m_ui->helpIcon, Typography::Icons::Info, tr("Search help"));
+}
+
 bool SearchWidget::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress) {
         auto keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Escape) {
             emit escapePressed();
+            return true;
+        } else if (m_fluentSearch && (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
+            // AutoSuggestBox consumes Enter without emitting returnPressed()
+            onReturnPressed();
             return true;
         } else if (keyEvent->matches(QKeySequence::Copy)) {
             // If the system Copy shortcut (typically Ctrl+C or Cmd+C) is pressed

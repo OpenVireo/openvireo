@@ -41,6 +41,7 @@ private slots:
     void testDetailCardFollowsSelection();
     void testCommandBar();
     void testSearchTitle();
+    void testFluentSearchBox();
     void testScreenshots();
 
 private:
