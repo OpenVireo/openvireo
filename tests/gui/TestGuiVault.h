@@ -46,6 +46,7 @@ private slots:
     void testWindowFrame();
     void testToolbarSettingsHidden();
     void testSettingsModal();
+    void testAutoTypeSettingsPage();
     void testScreenshots();
 
 private:

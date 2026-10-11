@@ -261,7 +261,7 @@ QString ShortcutSettingsPage::name()
 
 QIcon ShortcutSettingsPage::icon()
 {
-    return icons()->icon("auto-type");
+    return icons()->icon("keyboard-shortcuts");
 }
 
 QWidget* ShortcutSettingsPage::createWidget()
