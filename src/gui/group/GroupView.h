@@ -36,6 +36,7 @@ public:
     void setCurrentGroup(Group* group);
     void expandGroup(Group* group, bool expand = true);
     void sortGroups(bool reverse = false);
+    void setNavigationStyle(bool enabled);
 
 signals:
     void groupSelectionChanged();
@@ -52,12 +53,16 @@ private slots:
 protected:
     void dragMoveEvent(QDragMoveEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
+    void drawRow(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void drawBranches(QPainter* painter, const QRect& rect, const QModelIndex& index) const override;
 
 private:
     void recInitExpanded(Group* group);
 
     GroupModel* const m_model;
     bool m_updatingExpanded;
+    // Vault Index layout: draw groups as Fluent navigation items
+    bool m_navigationStyle = false;
 };
 
 #endif // KEEPASSX_GROUPVIEW_H

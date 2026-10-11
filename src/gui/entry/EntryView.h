@@ -48,6 +48,8 @@ public:
     void setFirstEntryActive();
     QByteArray viewState() const;
     bool setViewState(const QByteArray& state);
+    void setListMode(bool enabled);
+    bool isListMode() const;
 
     void displayGroup(Group* group);
     void displaySearch(const QList<Entry*>& entries);
@@ -85,6 +87,8 @@ private:
     Qt::SortOrder m_lastOrder;
     bool m_inSearchMode = false;
     bool m_columnsNeedRelayout = true;
+    // Vault Index layout: one two-line column, no header, no saved column state
+    bool m_listMode = false;
 
     QMenu* m_headerMenu;
     QActionGroup* m_columnActions;

@@ -46,6 +46,8 @@
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
 #include "gui/SearchWidget.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultPanes.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/entry/EntryView.h"
 #include "gui/osutils/OSUtils.h"
@@ -108,21 +110,40 @@ MainWindow::MainWindow()
         m_ui->toolBar->setIconSize({20, 20});
     }
 
-    // Setup the search widget in the toolbar
+    // Setup the search widget in the toolbar, or in the header for the Vault Index layout
+    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
     m_searchWidget = new SearchWidget();
     m_searchWidget->connectSignals(m_actionMultiplexer);
-    m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
+    if (m_vaultLayout) {
+        m_vaultHeader = new VaultHeaderBar(m_searchWidget, m_ui->centralwidget);
+        m_ui->verticalLayout->insertWidget(0, m_vaultHeader);
+        // Stands in for the toolbar's widget action: enabled while a database is shown
+        m_searchWidgetAction = new QAction(this);
+        connect(m_searchWidgetAction, &QAction::changed, this, [this] {
+            m_vaultHeader->setVisible(m_searchWidgetAction->isEnabled());
+        });
+        connect(m_ui->tabWidget,
+                &DatabaseTabWidget::activeDatabaseChanged,
+                m_vaultHeader->syncChip(),
+                &VaultSyncChip::setDatabaseWidget);
+    } else {
+        m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
+    }
     m_searchWidgetAction->setEnabled(false);
 
     new QShortcut(QKeySequence::Find, this, SLOT(focusSearchWidget()));
 
     connect(m_searchWidget, &SearchWidget::searchCanceled, this, [this] {
-        m_ui->toolBar->setExpanded(false);
-        m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
+        if (!m_vaultLayout) {
+            m_ui->toolBar->setExpanded(false);
+            m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
+        }
     });
     connect(m_searchWidget, &SearchWidget::lostFocus, this, [this] {
-        m_ui->toolBar->setExpanded(false);
-        m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
+        if (!m_vaultLayout) {
+            m_ui->toolBar->setExpanded(false);
+            m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
+        }
     });
 
     m_countDefaultAttributes = m_ui->menuEntryCopyAttribute->actions().size();
@@ -1011,7 +1032,7 @@ void MainWindow::updateMenuActionState()
 
 void MainWindow::updateToolbarSeparatorVisibility()
 {
-    if (!m_showToolbarSeparator) {
+    if (!m_showToolbarSeparator || m_vaultLayout) {
         m_ui->toolbarSeparator->setVisible(false);
         return;
     }
@@ -1455,8 +1476,10 @@ bool MainWindow::focusNextPrevChild(bool next)
 void MainWindow::focusSearchWidget()
 {
     if (m_searchWidgetAction->isEnabled()) {
-        m_ui->toolBar->setVisible(true);
-        m_ui->toolBar->setExpanded(true);
+        if (!m_vaultLayout) {
+            m_ui->toolBar->setVisible(true);
+            m_ui->toolBar->setExpanded(true);
+        }
         m_searchWidget->focusSearch();
     }
 }
@@ -1494,6 +1517,8 @@ void MainWindow::restoreWindowInformation()
 {
     restoreGeometry(config()->get(Config::GUI_MainWindowGeometry).toByteArray());
     restoreState(config()->get(Config::GUI_MainWindowState).toByteArray());
+    // Saved state from the classic layout would bring the toolbar back
+    m_ui->toolBar->setHidden(m_vaultLayout || config()->get(Config::GUI_HideToolbar).toBool());
 }
 
 bool MainWindow::saveLastDatabases()
@@ -1658,13 +1683,14 @@ void MainWindow::applySettingsChanges()
     m_ui->menubar->setMaximumHeight(hideMenubar ? 0 : QWIDGETSIZE_MAX);
 #endif
 
-    m_ui->toolBar->setHidden(config()->get(Config::GUI_HideToolbar).toBool());
     auto movable = config()->get(Config::GUI_MovableToolbar).toBool();
     m_ui->toolBar->setMovable(movable);
     if (!movable) {
         // Move the toolbar back to the top of the main window
         addToolBar(Qt::TopToolBarArea, m_ui->toolBar);
     }
+    // The Vault Index layout puts its commands next to the entries instead of in the toolbar
+    m_ui->toolBar->setHidden(m_vaultLayout || config()->get(Config::GUI_HideToolbar).toBool());
 
     bool isOk = false;
     const auto toolButtonStyle =
@@ -1989,6 +2015,21 @@ void MainWindow::initViewMenu()
             kpxcApp->applyTheme();
         }
     });
+
+    auto vaultLayoutAction = new QAction(tr("Vault Index Layout"), this);
+    vaultLayoutAction->setObjectName("actionVaultLayout");
+    vaultLayoutAction->setCheckable(true);
+    vaultLayoutAction->setChecked(m_vaultLayout);
+    m_ui->menuView->insertAction(m_ui->actionCompactMode, vaultLayoutAction);
+    connect(vaultLayoutAction, &QAction::toggled, this, [this](bool checked) {
+        config()->set(Config::GUI_VaultLayout, checked);
+        if (checked != m_vaultLayout) {
+            restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
+        }
+    });
+    // The Vault Index layout has no toolbar or preview panel
+    m_ui->actionShowToolbar->setVisible(!m_vaultLayout);
+    m_ui->actionShowPreviewPanel->setVisible(!m_vaultLayout);
 
     bool compact = config()->get(Config::GUI_CompactMode).toBool();
     m_ui->actionCompactMode->setChecked(compact);

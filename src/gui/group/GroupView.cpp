@@ -20,11 +20,91 @@
 
 #include <QDragMoveEvent>
 #include <QMimeData>
+#include <QPainter>
+#include <QPainterPath>
 #include <QShortcut>
+#include <QStyledItemDelegate>
 
 #include "core/Config.h"
 #include "core/Group.h"
 #include "gui/group/GroupModel.h"
+#include "gui/styles/FluentTheme.h"
+
+#include <FluentQt/Foundation.h>
+
+namespace
+{
+    constexpr int NavRowHeight = 36;
+
+    QFont fluentFont(Typography::FontRole role)
+    {
+        return fluent::ThemeRegistry::instance().resolvedFontStyle(role).toQFont();
+    }
+
+    // Paints a group as a navigation item: icon, name and its entry count.
+    // The row background and selection pill are drawn by GroupView::drawRow.
+    class GroupNavItemDelegate : public QStyledItemDelegate
+    {
+    public:
+        GroupNavItemDelegate(GroupModel* model, QObject* parent)
+            : QStyledItemDelegate(parent)
+            , m_model(model)
+        {
+        }
+
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            auto size = QStyledItemDelegate::sizeHint(option, index);
+            size.setHeight(NavRowHeight);
+            return size;
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            const auto p = FluentTheme::palette();
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+
+            QRect rect = option.rect.adjusted(4, 0, -12, 0);
+            const auto icon = index.data(Qt::DecorationRole);
+            QPixmap pixmap;
+            if (icon.canConvert<QPixmap>()) {
+                pixmap = icon.value<QPixmap>();
+            } else if (icon.canConvert<QIcon>()) {
+                pixmap = icon.value<QIcon>().pixmap(16, 16);
+            }
+            if (!pixmap.isNull()) {
+                painter->drawPixmap(QRect(rect.left(), rect.center().y() - 8, 16, 16), pixmap);
+            }
+            rect.setLeft(rect.left() + 28);
+
+            auto* group = m_model->groupFromIndex(index);
+            if (group) {
+                const auto count = QString::number(group->entries().size());
+                const auto countFont = fluentFont(Typography::FontRole::Caption);
+                painter->setFont(countFont);
+                painter->setPen(p.textTertiary);
+                const int countWidth = QFontMetrics(countFont).horizontalAdvance(count);
+                painter->drawText(rect, Qt::AlignRight | Qt::AlignVCenter, count);
+                rect.setRight(rect.right() - countWidth - 8);
+            }
+
+            const auto nameFont = fluentFont(Typography::FontRole::Body);
+            painter->setFont(nameFont);
+            painter->setPen(index.data(Qt::ForegroundRole).canConvert<QColor>()
+                                ? index.data(Qt::ForegroundRole).value<QColor>()
+                                : p.text);
+            const auto name =
+                QFontMetrics(nameFont).elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, rect.width());
+            painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, name);
+
+            painter->restore();
+        }
+
+    private:
+        GroupModel* m_model;
+    };
+} // namespace
 
 GroupView::GroupView(Database* db, QWidget* parent)
     : QTreeView(parent)
@@ -95,6 +175,78 @@ void GroupView::changeDatabase(const QSharedPointer<Database>& newDb)
 {
     m_model->changeDatabase(newDb.data());
     setColumnWidth(0, sizeHintForColumn(0));
+}
+
+void GroupView::setNavigationStyle(bool enabled)
+{
+    if (m_navigationStyle == enabled) {
+        return;
+    }
+    m_navigationStyle = enabled;
+
+    setItemDelegate(enabled ? new GroupNavItemDelegate(m_model, this) : new QStyledItemDelegate(this));
+    setFrameShape(enabled ? QFrame::NoFrame : QFrame::StyledPanel);
+    setIndentation(enabled ? 16 : style()->pixelMetric(QStyle::PM_TreeViewIndentation, nullptr, this));
+    setMouseTracking(enabled);
+    viewport()->setAttribute(Qt::WA_Hover, enabled);
+    // Let the navigation pane's surface show through
+    viewport()->setAutoFillBackground(!enabled);
+}
+
+void GroupView::drawRow(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (!m_navigationStyle) {
+        QTreeView::drawRow(painter, option, index);
+        return;
+    }
+
+    const auto p = FluentTheme::palette();
+    const bool selected = selectionModel()->isSelected(index);
+    const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing);
+    QRectF row = QRectF(option.rect).adjusted(4, 2, -4, -2);
+    if (selected || hovered) {
+        QPainterPath path;
+        path.addRoundedRect(row, 4, 4);
+        painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
+    }
+    if (selected) {
+        QPainterPath pill;
+        pill.addRoundedRect(QRectF(row.left(), row.center().y() - 8, 3, 16), 1.5, 1.5);
+        painter->fillPath(pill, p.accent);
+    }
+    painter->restore();
+
+    // The style must not paint its own selection or hover highlight over ours
+    QStyleOptionViewItem plain(option);
+    plain.state &= ~(QStyle::State_Selected | QStyle::State_MouseOver | QStyle::State_HasFocus);
+    QTreeView::drawRow(painter, plain, index);
+}
+
+void GroupView::drawBranches(QPainter* painter, const QRect& rect, const QModelIndex& index) const
+{
+    if (!m_navigationStyle) {
+        QTreeView::drawBranches(painter, rect, index);
+        return;
+    }
+
+    if (!model()->hasChildren(index)) {
+        return;
+    }
+
+    // Fluent chevron in place of the platform branch indicator
+    QFont iconFont(Typography::FontFamily::FluentIcons);
+    iconFont.setPixelSize(Typography::IconSize::Compact);
+    painter->save();
+    painter->setFont(iconFont);
+    painter->setPen(FluentTheme::palette().textSecondary);
+    QRect chevron(rect.right() - indentation() + 1, rect.top(), indentation(), rect.height());
+    painter->drawText(chevron,
+                      Qt::AlignCenter,
+                      isExpanded(index) ? Typography::Icons::ChevronDown : Typography::Icons::ChevronRight);
+    painter->restore();
 }
 
 void GroupView::dragMoveEvent(QDragMoveEvent* event)

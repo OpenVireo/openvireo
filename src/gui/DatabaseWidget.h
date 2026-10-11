@@ -46,6 +46,11 @@ class EntryPreviewWidget;
 class TagView;
 class ElidedLabel;
 class RemoteSettings;
+class EntryDetailCard;
+class VaultCommandBar;
+class VaultNavPane;
+class QHBoxLayout;
+class QVBoxLayout;
 struct RemoteParams;
 
 namespace Ui
@@ -300,6 +305,9 @@ private slots:
 
 private:
     int addChildWidget(QWidget* w);
+    void setupClassicLayout(QHBoxLayout* hbox);
+    void setupVaultLayout(QHBoxLayout* hbox);
+    void updateVaultCommandBar();
     void processAutoOpen();
     void openDatabaseFromEntry(const Entry* entry, bool inBackground = true);
     void performIconDownloads(const QList<Entry*>& entries, bool force = false, bool downloadInBackground = false);
@@ -324,6 +332,12 @@ private:
     QPointer<GroupView> m_groupView;
     QPointer<TagView> m_tagView;
     QPointer<EntryView> m_entryView;
+
+    // Vault Index layout (Fluent-Qt); null in the classic layout
+    bool m_vaultLayout = false;
+    QPointer<VaultNavPane> m_vaultNavPane;
+    QPointer<VaultCommandBar> m_vaultCommandBar;
+    QPointer<EntryDetailCard> m_detailCard;
 
     QScopedPointer<Group> m_newGroup;
     QScopedPointer<Entry> m_newEntry;

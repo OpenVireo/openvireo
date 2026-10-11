@@ -29,7 +29,8 @@ DatabaseWidgetStateSync::DatabaseWidgetStateSync(QObject* parent)
     m_splitterSizes = {
         {Config::GUI_SplitterState, variantToIntList(config()->get(Config::GUI_SplitterState))},
         {Config::GUI_PreviewSplitterState, variantToIntList(config()->get(Config::GUI_PreviewSplitterState))},
-        {Config::GUI_GroupSplitterState, variantToIntList(config()->get(Config::GUI_GroupSplitterState))}};
+        {Config::GUI_GroupSplitterState, variantToIntList(config()->get(Config::GUI_GroupSplitterState))},
+        {Config::GUI_VaultSplitterState, variantToIntList(config()->get(Config::GUI_VaultSplitterState))}};
     m_listViewState = config()->get(Config::GUI_ListViewState).toByteArray();
     m_searchViewState = config()->get(Config::GUI_SearchViewState).toByteArray();
 
@@ -51,6 +52,8 @@ void DatabaseWidgetStateSync::sync()
                   intListToVariant(m_splitterSizes.value(Config::GUI_PreviewSplitterState)));
     config()->set(Config::GUI_GroupSplitterState,
                   intListToVariant(m_splitterSizes.value(Config::GUI_GroupSplitterState)));
+    config()->set(Config::GUI_VaultSplitterState,
+                  intListToVariant(m_splitterSizes.value(Config::GUI_VaultSplitterState)));
     config()->set(Config::GUI_ListViewState, m_listViewState);
     config()->set(Config::GUI_SearchViewState, m_searchViewState);
     config()->sync();
@@ -146,7 +149,11 @@ void DatabaseWidgetStateSync::updateAll(bool forceSync)
 void DatabaseWidgetStateSync::updateSplitterSizes()
 {
     if (!m_blockUpdates) {
-        m_splitterSizes = m_activeDbWidget->splitterSizes();
+        // Merge, since each layout reports only the splitters it uses
+        const auto sizes = m_activeDbWidget->splitterSizes();
+        for (auto itr = sizes.constBegin(); itr != sizes.constEnd(); ++itr) {
+            m_splitterSizes.insert(itr.key(), itr.value());
+        }
         m_syncTimer.start();
     }
 }
@@ -160,10 +167,16 @@ void DatabaseWidgetStateSync::updateViewState()
         return;
     }
 
+    // The Vault Index entry list has no column layout; keep the saved one for the table view
+    const auto state = m_activeDbWidget->entryViewState();
+    if (state.isEmpty()) {
+        return;
+    }
+
     if (m_activeDbWidget->isSearchActive()) {
-        m_searchViewState = m_activeDbWidget->entryViewState();
+        m_searchViewState = state;
     } else {
-        m_listViewState = m_activeDbWidget->entryViewState();
+        m_listViewState = state;
     }
 
     m_syncTimer.start();
