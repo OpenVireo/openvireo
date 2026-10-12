@@ -19,6 +19,8 @@
 #include "EditWidget.h"
 #include "ui_EditWidget.h"
 
+#include "gui/vault/VaultEditShell.h"
+
 #include <QPushButton>
 #include <QScrollArea>
 
@@ -145,6 +147,11 @@ CategoryListWidget* EditWidget::categoryList() const
 QDialogButtonBox* EditWidget::buttonBox() const
 {
     return m_ui->buttonBox;
+}
+
+void EditWidget::applyVaultShell()
+{
+    VaultEditShell::apply(this, m_ui->categoryList, m_ui->stackedWidget, m_ui->buttonBox, m_ui->headerLabel);
 }
 
 void EditWidget::setReadOnly(bool readOnly)

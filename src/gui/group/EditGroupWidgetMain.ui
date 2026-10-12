@@ -57,7 +57,7 @@
      <number>8</number>
     </property>
     <item row="3" column="0">
-     <widget class="QCheckBox" name="expireCheck">
+     <widget class="VaultCheckBox" name="expireCheck">
       <property name="accessibleName">
        <string>Toggle expiration</string>
       </property>
@@ -67,7 +67,7 @@
      </widget>
     </item>
     <item row="0" column="1">
-     <widget class="QLineEdit" name="editName">
+     <widget class="VaultLineEdit" name="editName">
       <property name="accessibleName">
        <string>Name field</string>
       </property>
@@ -87,7 +87,7 @@
      </widget>
     </item>
     <item row="6" column="1">
-     <widget class="QRadioButton" name="autoTypeSequenceInherit">
+     <widget class="fluent::basicinput::RadioButton" name="autoTypeSequenceInherit">
       <property name="text">
        <string>Use default Auto-Type sequence of parent group</string>
       </property>
@@ -114,7 +114,7 @@
      </widget>
     </item>
     <item row="5" column="1">
-     <widget class="QComboBox" name="autotypeComboBox">
+     <widget class="VaultComboBox" name="autotypeComboBox">
       <property name="accessibleName">
        <string>Auto-Type toggle for this and sub groups</string>
       </property>
@@ -166,7 +166,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QLineEdit" name="autoTypeSequenceCustomEdit">
+       <widget class="VaultLineEdit" name="autoTypeSequenceCustomEdit">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -210,14 +210,14 @@
      </widget>
     </item>
     <item row="7" column="1">
-     <widget class="QRadioButton" name="autoTypeSequenceCustomRadio">
+     <widget class="fluent::basicinput::RadioButton" name="autoTypeSequenceCustomRadio">
       <property name="text">
        <string>Set default Auto-Type sequence</string>
       </property>
      </widget>
     </item>
     <item row="4" column="1">
-     <widget class="QComboBox" name="searchComboBox">
+     <widget class="VaultComboBox" name="searchComboBox">
       <property name="accessibleName">
        <string>Search toggle for this and sub groups</string>
       </property>
@@ -250,6 +250,28 @@
   <tabstop>autoTypeSequenceCustomRadio</tabstop>
   <tabstop>autoTypeSequenceCustomEdit</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>fluent::basicinput::RadioButton</class>
+  <extends>QRadioButton</extends>
+  <header>components/basicinput/RadioButton.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
