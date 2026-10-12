@@ -55,7 +55,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showEntriesWithUrlOnlyCheckBox">
+    <widget class="VaultCheckBox" name="showEntriesWithUrlOnlyCheckBox">
      <property name="text">
       <string>Only show entries that have a URL</string>
      </property>
@@ -65,14 +65,14 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showAllowDenyCheckBox">
+    <widget class="VaultCheckBox" name="showAllowDenyCheckBox">
      <property name="text">
       <string>Only show entries that have been explicitly allowed or denied</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showExpired">
+    <widget class="VaultCheckBox" name="showExpired">
      <property name="text">
       <string>Show expired entries</string>
      </property>
@@ -97,6 +97,13 @@
   <tabstop>showEntriesWithUrlOnlyCheckBox</tabstop>
   <tabstop>showAllowDenyCheckBox</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

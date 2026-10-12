@@ -52,7 +52,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QLineEdit" name="dbNameEdit">
+       <widget class="VaultLineEdit" name="dbNameEdit">
         <property name="accessibleName">
          <string>Database name field</string>
         </property>
@@ -66,7 +66,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QLineEdit" name="dbDescriptionEdit">
+       <widget class="VaultLineEdit" name="dbDescriptionEdit">
         <property name="accessibleName">
          <string>Database description field</string>
         </property>
@@ -80,7 +80,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QLineEdit" name="defaultUsernameEdit">
+       <widget class="VaultLineEdit" name="defaultUsernameEdit">
         <property name="enabled">
          <bool>true</bool>
         </property>
@@ -123,7 +123,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="dbPublicName">
+         <widget class="VaultLineEdit" name="dbPublicName">
           <property name="toolTip">
            <string>Publicly visible display name used on the unlock dialog</string>
           </property>
@@ -142,7 +142,7 @@
         <item row="1" column="1">
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
-           <widget class="QPushButton" name="dbPublicColorButton">
+           <widget class="VaultButton" name="dbPublicColorButton">
             <property name="maximumSize">
              <size>
               <width>30</width>
@@ -161,7 +161,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="dbPublicColorClearButton">
+           <widget class="VaultButton" name="dbPublicColorClearButton">
             <property name="text">
              <string>Clear</string>
             </property>
@@ -192,7 +192,7 @@
         <item row="2" column="1">
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
-           <widget class="QPushButton" name="dbPublicIconButton">
+           <widget class="VaultButton" name="dbPublicIconButton">
             <property name="maximumSize">
              <size>
               <width>30</width>
@@ -211,7 +211,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="dbPublicIconClearButton">
+           <widget class="VaultButton" name="dbPublicIconClearButton">
             <property name="text">
              <string>Clear</string>
             </property>
@@ -246,7 +246,7 @@
       <item>
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
-         <widget class="QCheckBox" name="historyMaxItemsCheckBox">
+         <widget class="VaultCheckBox" name="historyMaxItemsCheckBox">
           <property name="toolTip">
            <string>When saving this setting or editing an entry
 the oldest history items of an entry will be
@@ -259,7 +259,7 @@ of entries remain at most.</string>
          </widget>
         </item>
         <item row="2" column="0">
-         <widget class="QCheckBox" name="recycleBinEnabledCheckBox">
+         <widget class="VaultCheckBox" name="recycleBinEnabledCheckBox">
           <property name="toolTip">
            <string>Move entries to a recycle bin group
 instead of deleting them from the database.
@@ -272,7 +272,7 @@ removed from the database.</string>
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QCheckBox" name="historyMaxSizeCheckBox">
+         <widget class="VaultCheckBox" name="historyMaxSizeCheckBox">
           <property name="toolTip">
            <string>When saving this setting or editing an entry
 the oldest history items of an entry will be
@@ -341,7 +341,7 @@ add up to the specified amount at most.</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="compressionCheckbox">
+       <widget class="VaultCheckBox" name="compressionCheckbox">
         <property name="text">
          <string>Enable compression (recommended)</string>
         </property>
@@ -353,7 +353,7 @@ add up to the specified amount at most.</string>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QCheckBox" name="autosaveDelayCheckBox">
+         <widget class="VaultCheckBox" name="autosaveDelayCheckBox">
           <property name="toolTip">
            <string>Autosave delay since last change</string>
           </property>
@@ -420,6 +420,23 @@ add up to the specified amount at most.</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
