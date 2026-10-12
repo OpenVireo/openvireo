@@ -89,11 +89,10 @@ private:
                     Qt::MouseButton button,
                     Qt::KeyboardModifiers stateKey = {});
     void checkSaveDatabase();
-    void checkStatusBarText(const QString& textFragment);
+    void checkEntryCount(int count);
     void prepareAndTriggerRemoteSync();
 
     QScopedPointer<MainWindow> m_mainWindow;
-    QPointer<QLabel> m_statusBarLabel;
     QPointer<DatabaseTabWidget> m_tabWidget;
     QPointer<DatabaseWidget> m_dbWidget;
     QSharedPointer<Database> m_db;

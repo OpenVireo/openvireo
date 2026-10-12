@@ -450,11 +450,6 @@ MainWindow::MainWindow()
     m_actionMultiplexer.connect(SIGNAL(databaseNonDataChanged()), this, SLOT(updateMenuActionState()));
     m_actionMultiplexer.connect(SIGNAL(groupContextMenuRequested(QPoint)), this, SLOT(showGroupContextMenu(QPoint)));
     m_actionMultiplexer.connect(SIGNAL(entryContextMenuRequested(QPoint)), this, SLOT(showEntryContextMenu(QPoint)));
-    m_actionMultiplexer.connect(SIGNAL(groupChanged()), this, SLOT(updateEntryCountLabel()));
-    m_actionMultiplexer.connect(SIGNAL(databaseUnlocked()), this, SLOT(updateEntryCountLabel()));
-    m_actionMultiplexer.connect(SIGNAL(databaseModified()), this, SLOT(updateEntryCountLabel()));
-    m_actionMultiplexer.connect(SIGNAL(searchModeActivated()), this, SLOT(updateEntryCountLabel()));
-    m_actionMultiplexer.connect(SIGNAL(listModeActivated()), this, SLOT(updateEntryCountLabel()));
 
     // Notify search when the active database changes or gets locked
     connect(m_ui->tabWidget,
@@ -669,7 +664,9 @@ MainWindow::MainWindow()
     connect(qApp, SIGNAL(quitSignalReceived()), this, SLOT(appExit()), Qt::DirectConnection);
 
     // Setup the status bar
+    // The status bar only shows progress, so keep it hidden until there is some
     statusBar()->setFixedHeight(24);
+    statusBar()->setVisible(false);
     m_progressBarLabel = new QLabel(statusBar());
     m_progressBarLabel->setVisible(false);
     statusBar()->addPermanentWidget(m_progressBarLabel);
@@ -685,9 +682,6 @@ MainWindow::MainWindow()
     m_actionMultiplexer.connect(SIGNAL(databaseSyncInProgress()), this, SLOT(disableMenuAndToolbar()));
     m_actionMultiplexer.connect(SIGNAL(databaseSyncCompleted(QString)), this, SLOT(enableMenuAndToolbar()));
     m_actionMultiplexer.connect(SIGNAL(databaseSyncFailed(QString, const QString)), this, SLOT(enableMenuAndToolbar()));
-    m_statusBarLabel = new QLabel(statusBar());
-    m_statusBarLabel->setObjectName("statusBarLabel");
-    statusBar()->addPermanentWidget(m_statusBarLabel);
 
     restoreConfigState();
     updateMenuActionState();
@@ -1373,7 +1367,6 @@ void MainWindow::databaseTabChanged(int tabIndex)
     }
 
     m_actionMultiplexer.setCurrentObject(m_ui->tabWidget->currentDatabaseWidget());
-    updateEntryCountLabel();
 
     // Clear the tags menu to prevent re-use between databases
     for (const auto action : m_ui->menuTags->actions()) {
@@ -1669,6 +1662,7 @@ void MainWindow::updateTrayIcon()
 
 void MainWindow::updateProgressBar(int percentage, QString message)
 {
+    statusBar()->setVisible(percentage >= 0);
     if (percentage < 0) {
         m_progressBar->setVisible(false);
         m_progressBarLabel->setVisible(false);
@@ -1677,17 +1671,6 @@ void MainWindow::updateProgressBar(int percentage, QString message)
         m_progressBar->setVisible(true);
         m_progressBarLabel->setText(message);
         m_progressBarLabel->setVisible(true);
-    }
-}
-
-void MainWindow::updateEntryCountLabel()
-{
-    auto dbWidget = m_ui->tabWidget->currentDatabaseWidget();
-    if (dbWidget && dbWidget->currentMode() == DatabaseWidget::Mode::ViewMode) {
-        int numEntries = dbWidget->entryView()->model()->rowCount();
-        m_statusBarLabel->setText(tr("%1 Entry(s)", "", numEntries).arg(numEntries));
-    } else {
-        m_statusBarLabel->setText("");
     }
 }
 
