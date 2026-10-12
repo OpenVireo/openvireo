@@ -253,6 +253,26 @@ VaultMenu* VaultMenu::addMenu(const QIcon& icon, const QString& title)
     return menu;
 }
 
+void VaultMenu::mousePressEvent(QMouseEvent* event)
+{
+    m_pressedAction = actionAt(event->position().toPoint());
+    FluentMenu::mousePressEvent(event);
+}
+
+void VaultMenu::mouseReleaseEvent(QMouseEvent* event)
+{
+    // QMenu only triggers the highlighted item on release, but on macOS the highlight can be lost between press
+    // and release, such as when Fluent raises the menu on press, so a click that doesn't move would only close it.
+    // Highlight the item that was pressed again so the click still goes through.
+    auto* action = actionAt(event->position().toPoint());
+    if (action && action == m_pressedAction && action != activeAction() && action->isEnabled()
+        && !action->isSeparator() && !action->menu()) {
+        setActiveAction(action);
+    }
+    m_pressedAction.clear();
+    FluentMenu::mouseReleaseEvent(event);
+}
+
 void VaultMenu::installTextEditingMenus()
 {
     qApp->installEventFilter(new TextEditingMenuFilter(qApp));
