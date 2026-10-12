@@ -82,6 +82,19 @@ private:
     bool m_hovered = false;
 };
 
+// Title of a section in the navigation pane, with a chevron; checked while the section is expanded
+class VaultSectionHeader : public QAbstractButton
+{
+    Q_OBJECT
+
+public:
+    VaultSectionHeader(const QString& text, QWidget* parent = nullptr);
+    QSize sizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+};
+
 /**
  * Vault Index navigation pane: the database's group tree and tags, and links to the password generator, reports and settings.
  */
