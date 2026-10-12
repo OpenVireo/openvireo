@@ -24,6 +24,8 @@
 #include "gui/databasekey/KeyFileEditWidget.h"
 #include "gui/databasekey/PasswordEditWidget.h"
 #include "gui/databasekey/YubiKeyEditWidget.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "keys/ChallengeResponseKey.h"
 #include "keys/FileKey.h"
 #include "keys/PasswordKey.h"
@@ -34,7 +36,9 @@
 
 DatabaseSettingsWidgetDatabaseKey::DatabaseSettingsWidgetDatabaseKey(QWidget* parent)
     : DatabaseSettingsWidget(parent)
-    , m_additionalKeyOptionsToggle(new QPushButton(tr("Add additional protection…"), this))
+    , m_additionalKeyOptionsToggle(FluentTheme::vaultLayoutEnabled()
+                                       ? new VaultButton(tr("Add additional protection…"), this)
+                                       : new QPushButton(tr("Add additional protection…"), this))
     , m_additionalKeyOptions(new QWidget(this))
     , m_passwordEditWidget(new PasswordEditWidget(this))
     , m_keyFileEditWidget(new KeyFileEditWidget(this))
@@ -60,6 +64,13 @@ DatabaseSettingsWidgetDatabaseKey::DatabaseSettingsWidgetDatabaseKey(QWidget* pa
     m_additionalKeyOptions->setVisible(false);
 
     connect(m_additionalKeyOptionsToggle, SIGNAL(clicked()), SLOT(showAdditionalKeyOptions()));
+
+    // The credentials are settings cards in the Vault Index layout, which sit closer together
+    if (FluentTheme::vaultLayoutEnabled()) {
+        vbox->setSpacing(8);
+        m_additionalKeyOptions->layout()->setSpacing(8);
+        vbox->setAlignment(m_additionalKeyOptionsToggle, Qt::AlignLeft);
+    }
 
     vbox->addStretch();
     setLayout(vbox);

@@ -26,6 +26,7 @@ namespace Ui
     class KeyComponentWidget;
 }
 class CompositeKey;
+class QLabel;
 class QStackedWidget;
 
 class KeyComponentWidget : public QWidget
@@ -95,6 +96,8 @@ protected:
      */
     virtual void initComponent() = 0;
 
+    void showEvent(QShowEvent* event) override;
+
     const QScopedPointer<Ui::KeyComponentWidget> m_ui;
 
 signals:
@@ -112,11 +115,14 @@ private slots:
     void cancelEdit();
     void resetComponentEditWidget();
     void updateSize();
+    void updateVaultCard();
 
 private:
     bool m_isComponentAdded = false;
     Page m_previousPage = Page::AddNew;
     QPointer<QWidget> m_componentWidget;
+    QLabel* m_vaultTitle = nullptr;
+    QLabel* m_vaultDescription = nullptr;
 
     Q_DISABLE_COPY(KeyComponentWidget);
 };

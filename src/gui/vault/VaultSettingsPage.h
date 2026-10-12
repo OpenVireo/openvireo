@@ -43,8 +43,16 @@ struct VaultSettingsCaption
     {
     }
 
+    // Description label kept by the caller, for a description that changes
+    VaultSettingsCaption(QLabel* label, QLabel* description)
+        : label(label)
+        , description(description)
+    {
+    }
+
     QLabel* label = nullptr;
     QString title;
+    QLabel* description = nullptr;
 };
 
 namespace fluent::basicinput

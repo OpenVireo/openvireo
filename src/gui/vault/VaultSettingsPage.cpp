@@ -414,7 +414,6 @@ public:
         , m_controls(new QWidget(this))
         , m_controlLayout(new QHBoxLayout(m_controls))
     {
-        setMinimumHeight(CardMinimumHeight);
         m_grid->setContentsMargins(CardPadding, 8, CardPadding, 8);
         m_grid->setHorizontalSpacing(HeaderSpacing);
         m_grid->setVerticalSpacing(8);
@@ -494,7 +493,8 @@ public:
         if (m_trailing && m_trailing->isVisibleTo(this)) {
             width += HeaderSpacing + m_trailing->sizeHint().width();
         }
-        return {width + margins.left() + margins.right(), CardMinimumHeight};
+        // Tall enough for what the row holds, such as a form, so a scroll area doesn't squeeze it
+        return {width + margins.left() + margins.right(), qMax(CardMinimumHeight, QWidget::minimumSizeHint().height())};
     }
 
 protected:
@@ -671,8 +671,13 @@ void VaultSettingsCard::fillSettingRow(VaultSettingsRow* row,
     texts->setContentsMargins(0, 0, 0, 0);
     texts->setSpacing(2);
     texts->addWidget(label);
-    if (!description.isEmpty()) {
-        auto descriptionLabel = new QLabel(description, row);
+    if (caption.description || !description.isEmpty()) {
+        auto descriptionLabel = caption.description;
+        if (descriptionLabel) {
+            adopt(descriptionLabel, row);
+        } else {
+            descriptionLabel = new QLabel(description, row);
+        }
         descriptionLabel->setWordWrap(true);
         styleLabel(descriptionLabel, Typography::FontRole::Caption, true);
         new EnabledFollower(control, descriptionLabel);

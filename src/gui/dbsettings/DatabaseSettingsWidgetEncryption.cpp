@@ -29,8 +29,6 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
-#include <components/navigation/SelectorBar.h>
-
 #include <QPushButton>
 #include <QTabBar>
 
@@ -104,25 +102,20 @@ void DatabaseSettingsWidgetEncryption::buildVaultPage()
     formatCard->setCollapsible(false);
     formatCard->addWidget(ui->formatCannotBeChanged);
 
-    // A selector between the basic and advanced settings, which keeps the tab widget's current page for the logic
+    // A pivot between the basic and advanced settings, which keeps the tab widget's current page for the logic.
+    // The page's style sheet draws a tab bar as a Fluent pivot that follows the theme.
     auto encryption = page.addSection(tr("Encryption Settings"));
-    auto mode = new fluent::navigation::SelectorBar(this);
+    auto mode = new QTabBar(this);
     mode->setObjectName("encryptionSettingsSelector");
     mode->setAccessibleName(tr("Encryption settings mode"));
+    mode->setDrawBase(false);
+    mode->setExpanding(false);
     for (int i = 0; i < ui->encryptionSettingsTabWidget->count(); ++i) {
-        mode->addItem(ui->encryptionSettingsTabWidget->tabText(i));
+        mode->addTab(ui->encryptionSettingsTabWidget->tabText(i));
     }
-    mode->setSelectedIndex(ui->encryptionSettingsTabWidget->currentIndex());
-    connect(mode, &fluent::navigation::SelectorBar::selectedIndexChanged, this, [ui](int index) {
-        if (index >= 0) {
-            ui->encryptionSettingsTabWidget->setCurrentIndex(index);
-        }
-    });
-    connect(ui->encryptionSettingsTabWidget, &QTabWidget::currentChanged, mode, [mode](int index) {
-        if (mode->selectedIndex() != index) {
-            mode->setSelectedIndex(index);
-        }
-    });
+    mode->setCurrentIndex(ui->encryptionSettingsTabWidget->currentIndex());
+    connect(mode, &QTabBar::currentChanged, ui->encryptionSettingsTabWidget, &QTabWidget::setCurrentIndex);
+    connect(ui->encryptionSettingsTabWidget, &QTabWidget::currentChanged, mode, &QTabBar::setCurrentIndex);
     encryption->addHeaderWidget(mode);
     ui->encryptionSettingsTabWidget->tabBar()->hide();
 

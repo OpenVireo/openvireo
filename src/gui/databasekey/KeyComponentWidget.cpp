@@ -18,6 +18,11 @@
 #include "KeyComponentWidget.h"
 #include "ui_KeyComponentWidget.h"
 
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+
+#include <QLabel>
+#include <QTextDocumentFragment>
 #include <QTimer>
 
 KeyComponentWidget::KeyComponentWidget(QWidget* parent)
@@ -41,6 +46,51 @@ KeyComponentWidget::KeyComponentWidget(QWidget* parent)
     bool prev = m_ui->stackedWidget->blockSignals(true);
     m_ui->stackedWidget->setCurrentIndex(Page::AddNew);
     m_ui->stackedWidget->blockSignals(prev);
+
+    // In the Vault Index layout the component is a settings card: its title and state on the left, the buttons for
+    // the state on the right, and the fields below while editing. The pages keep the logic.
+    if (FluentTheme::vaultLayoutEnabled()) {
+        m_vaultTitle = new QLabel(this);
+        m_vaultDescription = new QLabel(this);
+        auto card = new VaultSettingsCard(this);
+        card->setObjectName("keyComponentCard");
+        card->setSetting({m_vaultTitle, m_vaultDescription},
+                         {m_ui->addButton, m_ui->cancelButton, m_ui->changeButton, m_ui->removeButton},
+                         {});
+        card->setCollapsible(false);
+        card->addWidget(m_ui->stackedWidget);
+        m_ui->groupBox->hide();
+        layout()->addWidget(card);
+
+        connect(m_ui->stackedWidget, &QStackedWidget::currentChanged, this, &KeyComponentWidget::updateVaultCard);
+        updateVaultCard();
+    }
+}
+
+void KeyComponentWidget::showEvent(QShowEvent* event)
+{
+    // The subclasses name the component after this constructor
+    updateVaultCard();
+    QWidget::showEvent(event);
+}
+
+void KeyComponentWidget::updateVaultCard()
+{
+    if (!m_vaultTitle) {
+        return;
+    }
+    const auto page = visiblePage();
+    m_vaultTitle->setText(m_ui->groupBox->title());
+    const auto description =
+        page == Page::LeaveOrRemove ? m_ui->changeOrRemoveLabel->text() : m_ui->componentDescription->text();
+    // The descriptions are paragraphs of rich text; a card shows them as plain lines
+    m_vaultDescription->setText(QTextDocumentFragment::fromHtml(description).toPlainText().trimmed());
+
+    m_ui->addButton->setVisible(page == Page::AddNew);
+    m_ui->cancelButton->setVisible(page == Page::Edit);
+    m_ui->changeButton->setVisible(page == Page::LeaveOrRemove);
+    m_ui->removeButton->setVisible(page == Page::LeaveOrRemove);
+    m_ui->stackedWidget->setVisible(page == Page::Edit);
 }
 
 KeyComponentWidget::~KeyComponentWidget() = default;
@@ -130,5 +180,10 @@ void KeyComponentWidget::updateSize()
             m_ui->stackedWidget->widget(i)->setSizePolicy(
                 m_ui->stackedWidget->widget(i)->sizePolicy().horizontalPolicy(), QSizePolicy::Ignored);
         }
+    }
+    // Let the widgets holding the pages make room for the new page. Qt invalidates only the parent's layout, so the
+    // nested layouts above it, such as the rows of a settings card, would otherwise keep the old page's size.
+    for (QWidget* widget = m_ui->stackedWidget; widget && !widget->isWindow(); widget = widget->parentWidget()) {
+        widget->updateGeometry();
     }
 }
