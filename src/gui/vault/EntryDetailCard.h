@@ -72,8 +72,6 @@ private:
     QLabel* m_icon;
     QLabel* m_title;
     QLabel* m_subtitle;
-    fluent::basicinput::Button* m_autoTypeButton;
-    fluent::basicinput::Button* m_editButton;
 
     QWidget* m_fields;
     VaultFieldRow* m_usernameRow;
