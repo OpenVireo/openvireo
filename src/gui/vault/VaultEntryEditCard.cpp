@@ -160,7 +160,7 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     // The pages are reached from the rows under the Entry page instead of a category list
     m_categories->hide();
 
-    // Header: the headline, the focus mode toggle, then Cancel and Save
+    // Header: the headline and the focus mode toggle
     auto* header = new QWidget(editor);
     header->setObjectName("vaultEditCardHeader");
     auto* headerLayout = new QHBoxLayout(header);
@@ -181,10 +181,12 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     connect(m_focusButton, &QAbstractButton::clicked, this, [this] { emit focusModeRequested(!m_focusMode); });
     headerLayout->addWidget(m_focusButton, 0, Qt::AlignTop);
 
+    // Cancel and Save sit in the command bar instead. The bar keeps the editor's buttons shown, so Enter
+    // and Escape still reach them. Save returns to the entry's details, so there is no need to apply and stay.
     m_buttonBar = new VaultButtonBar(editor->buttonBox(), header);
-    m_buttonBar->setButtonText(QDialogButtonBox::Ok, tr("Save"));
-    // Save returns to the entry's details, so there is no need to apply and stay
-    m_buttonBar->setButtonHidden(QDialogButtonBox::Apply, true);
+    for (auto button : {QDialogButtonBox::Ok, QDialogButtonBox::Cancel, QDialogButtonBox::Close, QDialogButtonBox::Apply}) {
+        m_buttonBar->setButtonHidden(button, true);
+    }
     headerLayout->addWidget(m_buttonBar, 0, Qt::AlignTop);
     qobject_cast<QBoxLayout*>(editor->layout())->insertWidget(0, header);
 
