@@ -30,7 +30,7 @@
     <widget class="MessageWidget" name="messageWidget" native="true"/>
    </item>
    <item>
-    <widget class="QCheckBox" name="enableBrowserSupport">
+    <widget class="VaultCheckBox" name="enableBrowserSupport">
      <property name="toolTip">
       <string>This is required for accessing your databases with KeePassXC-Browser</string>
      </property>
@@ -85,7 +85,7 @@
            <number>40</number>
           </property>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="vivaldiSupport">
+           <widget class="VaultCheckBox" name="vivaldiSupport">
             <property name="text">
              <string>Vivaldi</string>
             </property>
@@ -95,7 +95,7 @@
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QCheckBox" name="edgeSupport">
+           <widget class="VaultCheckBox" name="edgeSupport">
             <property name="text">
              <string>&amp;Edge</string>
             </property>
@@ -105,7 +105,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QCheckBox" name="firefoxSupport">
+           <widget class="VaultCheckBox" name="firefoxSupport">
             <property name="text">
              <string>Firefox</string>
             </property>
@@ -115,7 +115,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QCheckBox" name="torBrowserSupport">
+           <widget class="VaultCheckBox" name="torBrowserSupport">
             <property name="text">
              <string>Tor Browser</string>
             </property>
@@ -125,7 +125,7 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QCheckBox" name="braveSupport">
+           <widget class="VaultCheckBox" name="braveSupport">
             <property name="text">
              <string>Brave</string>
             </property>
@@ -135,7 +135,7 @@
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QCheckBox" name="chromeSupport">
+           <widget class="VaultCheckBox" name="chromeSupport">
             <property name="text">
              <string>Google Chrome</string>
             </property>
@@ -145,7 +145,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="chromiumSupport">
+           <widget class="VaultCheckBox" name="chromiumSupport">
             <property name="text">
              <string>Chromium</string>
             </property>
@@ -187,7 +187,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QCheckBox" name="showNotification">
+        <widget class="VaultCheckBox" name="showNotification">
          <property name="text">
           <string extracomment="Credentials mean login data requested via browser extension">Show a notification when credentials are requested</string>
          </property>
@@ -197,7 +197,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="unlockDatabase">
+        <widget class="VaultCheckBox" name="unlockDatabase">
          <property name="text">
           <string>Request to unlock the database if it is locked</string>
          </property>
@@ -207,7 +207,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="matchUrlScheme">
+        <widget class="VaultCheckBox" name="matchUrlScheme">
          <property name="toolTip">
           <string>Only entries with the same scheme (http://, https://, …) are returned.</string>
          </property>
@@ -217,7 +217,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="bestMatchOnly">
+        <widget class="VaultCheckBox" name="bestMatchOnly">
          <property name="toolTip">
           <string>Only returns the best matches for a specific URL instead of all entries for the whole domain.</string>
          </property>
@@ -227,7 +227,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="allowExpiredCredentials">
+        <widget class="VaultCheckBox" name="allowExpiredCredentials">
          <property name="toolTip">
           <string>Returns expired credentials. String [expired] is added to the title.</string>
          </property>
@@ -237,7 +237,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="searchInAllDatabases">
+        <widget class="VaultCheckBox" name="searchInAllDatabases">
          <property name="toolTip">
           <string>All databases connected to the extension will return matching credentials.</string>
          </property>
@@ -280,28 +280,28 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="alwaysAllowAccess">
+        <widget class="VaultCheckBox" name="alwaysAllowAccess">
          <property name="text">
           <string extracomment="Credentials mean login data requested via browser extension">Never ask before accessing credentials</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="alwaysAllowUpdate">
+        <widget class="VaultCheckBox" name="alwaysAllowUpdate">
          <property name="text">
           <string extracomment="Credentials mean login data requested via browser extension">Never ask before updating credentials</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="httpAuthPermission">
+        <widget class="VaultCheckBox" name="httpAuthPermission">
          <property name="text">
           <string extracomment="An extra HTTP Basic Auth setting">Do not ask permission for HTTP Basic Auth</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="supportKphFields">
+        <widget class="VaultCheckBox" name="supportKphFields">
          <property name="toolTip">
           <string>Automatically creating or updating string fields is not supported.</string>
          </property>
@@ -311,7 +311,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="allowLocalhostWithPasskeys">
+        <widget class="VaultCheckBox" name="allowLocalhostWithPasskeys">
          <property name="toolTip">
           <string>Allows using insecure http://localhost with passkeys for testing purposes.</string>
          </property>
@@ -321,7 +321,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="noMigrationPrompt">
+        <widget class="VaultCheckBox" name="noMigrationPrompt">
          <property name="toolTip">
           <string>Don't display the popup suggesting migration of legacy KeePassHTTP settings.</string>
          </property>
@@ -331,7 +331,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="updateBinaryPath">
+        <widget class="VaultCheckBox" name="updateBinaryPath">
          <property name="toolTip">
           <string>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</string>
          </property>
@@ -341,7 +341,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="allowGetDatabaseEntriesRequest">
+        <widget class="VaultCheckBox" name="allowGetDatabaseEntriesRequest">
          <property name="toolTip">
           <string>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</string>
          </property>
@@ -351,7 +351,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="useCustomProxy">
+        <widget class="VaultCheckBox" name="useCustomProxy">
          <property name="toolTip">
           <string>Use a custom proxy location if you installed a proxy manually.</string>
          </property>
@@ -379,7 +379,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLineEdit" name="customProxyLocation">
+          <widget class="VaultLineEdit" name="customProxyLocation">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -404,7 +404,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="customProxyLocationBrowseButton">
+          <widget class="VaultButton" name="customProxyLocationBrowseButton">
            <property name="accessibleName">
             <string>Browser for custom proxy file</string>
            </property>
@@ -429,7 +429,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QCheckBox" name="customBrowserSupport">
+        <widget class="VaultCheckBox" name="customBrowserSupport">
          <property name="text">
           <string>Use a custom browser configuration location:</string>
          </property>
@@ -515,7 +515,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="customBrowserLocation">
+             <widget class="VaultLineEdit" name="customBrowserLocation">
               <property name="sizePolicy">
                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -543,7 +543,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="customBrowserLocationBrowseButton">
+             <widget class="VaultButton" name="customBrowserLocationBrowseButton">
               <property name="accessibleName">
                <string>Browse for custom browser path</string>
               </property>
@@ -571,7 +571,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="customExtensionId">
+           <widget class="VaultLineEdit" name="customExtensionId">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -631,6 +631,21 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>
