@@ -34,11 +34,17 @@
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QFileInfo>
 #include <QFont>
+#include <QFrame>
+#include <QVBoxLayout>
 
 namespace
 {
     constexpr int clearFormsDelay = 30000;
+    // Vault Index layout: width of the unlock card and of the database tile at its top
+    constexpr int CardWidth = 440;
+    constexpr int TileSize = 56;
 
     bool isQuickUnlockAvailable()
     {
@@ -138,15 +144,92 @@ void DatabaseOpenWidget::setupVaultStyle()
     m_vaultStyle = true;
     Vault::paintCanvas(this);
 
-    // Fluent Close and Unlock buttons in place of the platform button box
-    auto* buttonsLayout = findChild<QHBoxLayout*>("dialogButtonsLayout");
-    buttonsLayout->addWidget(new VaultButtonBar(m_ui->buttonBox), 1);
+    // A compact sign-in card: the database's tile, name and path sit on the card above the form
+    auto* formLayout = qobject_cast<QVBoxLayout*>(m_ui->formContainer->layout());
+    m_ui->horizontalLayout->removeWidget(m_ui->dbIconLabel);
+    m_ui->horizontalLayout->removeWidget(m_ui->labelHeadline);
+    formLayout->removeItem(m_ui->horizontalLayout);
+    delete m_ui->horizontalLayout;
+    formLayout->removeItem(m_ui->verticalSpacer_3);
+    delete m_ui->verticalSpacer_3;
+    formLayout->removeWidget(m_ui->fileNameLabel);
+    const int stackIndex = formLayout->indexOf(m_ui->centralStack);
+    formLayout->removeWidget(m_ui->centralStack);
+
+    m_card = new QFrame(m_ui->formContainer);
+    m_card->setObjectName("unlockCard");
+    m_card->setFixedWidth(CardWidth);
+    auto* cardLayout = new QVBoxLayout(m_card);
+    cardLayout->setContentsMargins(32, 32, 32, 28);
+    cardLayout->setSpacing(0);
+    formLayout->insertWidget(stackIndex, m_card);
+
+    m_ui->dbIconLabel->setFixedSize(TileSize, TileSize);
+    m_ui->dbIconLabel->setScaledContents(false);
+    m_ui->dbIconLabel->setAlignment(Qt::AlignCenter);
+    cardLayout->addWidget(m_ui->dbIconLabel, 0, Qt::AlignHCenter);
+    cardLayout->addSpacing(16);
+    m_ui->labelHeadline->setAlignment(Qt::AlignCenter);
+    m_ui->labelHeadline->setWordWrap(true);
+    cardLayout->addWidget(m_ui->labelHeadline);
+    cardLayout->addSpacing(4);
+    m_ui->fileNameLabel->setAlignment(Qt::AlignCenter);
+    m_ui->fileNameLabel->setElideMode(Qt::ElideMiddle);
+    cardLayout->addWidget(m_ui->fileNameLabel);
+    cardLayout->addSpacing(24);
+    cardLayout->addWidget(m_ui->centralStack);
+
+    // The form fills the card instead of being boxed inside it
+    m_ui->centralStack->setMinimumWidth(0);
+    m_ui->centralStack->setFrameShape(QFrame::NoFrame);
+    m_ui->centralStack->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    m_ui->verticalLayout_6->setContentsMargins(0, 0, 0, 0);
+    m_ui->verticalLayout_6->setSpacing(4);
+    for (auto* layout : {m_ui->enterPasswordComponentLayout, m_ui->selectKeyFileComponentLayout}) {
+        layout->setSpacing(8);
+        layout->setContentsMargins(0, 0, 0, 8);
+    }
+    m_ui->passwordLabel->setText(tr("Password"));
+    m_ui->selectKeyFileLabel->setText(tr("Key file"));
+
+    // The hardware key gets its own row, leaving the key file link and refresh button beneath the fields
+    m_ui->addAdditionalKeysComponentLayout->removeWidget(m_ui->hardwareKeyComponent);
+    m_ui->verticalLayout_6->insertWidget(m_ui->verticalLayout_6->indexOf(m_ui->addAdditionalKeysComponent),
+                                         m_ui->hardwareKeyComponent);
+    m_ui->hardwareKeyComponentLayout->setContentsMargins(0, 0, 0, 8);
+    m_ui->hardwareKeyCombo->setMinimumWidth(0);
+
+    auto* refresh = m_ui->refreshHardwareKeys;
+    refresh->setStyleSheet({});
+    refresh->setIcon({});
+    refresh->setIconGlyph(Typography::Icons::Refresh);
+    refresh->setFluentStyle(fluent::basicinput::Button::Subtle);
+    refresh->setFluentLayout(fluent::basicinput::Button::IconOnly);
+
+    // Close and Unlock share the width beneath the form, with Unlock as the accent button
+    m_ui->dialogButtonsLayout->setContentsMargins(0, 16, 0, 0);
+    auto* buttonBar = new VaultButtonBar(m_ui->buttonBox);
+    buttonBar->setFillWidth(true);
+    m_ui->dialogButtonsLayout->addWidget(buttonBar, 1);
+
+    m_ui->quickUnlockButton->setMinimumHeight(48);
+    m_ui->quickUnlockButton->setIconSize({24, 24});
+    m_ui->resetQuickUnlockButton->setFluentStyle(fluent::basicinput::Button::Subtle);
 
     Vault::followTheme(this, [this] {
         const auto p = FluentTheme::palette();
-        Vault::styleLabel(m_ui->labelHeadline, Typography::FontRole::Title, p.text);
+        Vault::styleLabel(m_ui->labelHeadline, Typography::FontRole::Subtitle, p.text);
         Vault::styleLabel(m_ui->fileNameLabel, Typography::FontRole::Caption, p.textSecondary);
+        Vault::styleLabel(m_ui->passwordLabel, Typography::FontRole::Body, p.text);
+        Vault::styleLabel(m_ui->selectKeyFileLabel, Typography::FontRole::Body, p.text);
+        Vault::styleLabel(m_ui->noHardwareKeysFoundLabel, Typography::FontRole::Caption, p.textSecondary);
+        // The key file link reads as a Fluent hyperlink button: accent text without an underline
+        Vault::styleLabel(m_ui->addKeyFileLinkLabel, Typography::FontRole::Body, p.accentText);
+        m_ui->addKeyFileLinkLabel->setText(QStringLiteral("<a href=\"#\" style=\"color: %1; text-decoration: none\">%2</a>")
+                                               .arg(p.accentText.name(), tr("I have a key file").toHtmlEscaped()));
+        m_ui->quickUnlockButton->setFont(Vault::font(Typography::FontRole::BodyStrong));
         applyCardStyle();
+        updateVaultHeader();
     });
 }
 
@@ -157,9 +240,33 @@ void DatabaseOpenWidget::applyCardStyle()
     const auto color = m_db ? m_db->publicColor() : QString();
     const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(p.stroke.name(QColor::HexArgb))
                                         : QStringLiteral("3px solid %1").arg(color);
-    m_ui->centralStack->setStyleSheet(
-        QStringLiteral("QStackedWidget#centralStack { background-color: %1; border: %2; border-radius: 8px; }")
-            .arg(p.layer.name(QColor::HexArgb), border));
+    m_card->setStyleSheet(QStringLiteral("QFrame#unlockCard { background-color: %1; border: %2; border-radius: 8px; }"
+                                         "QStackedWidget#centralStack { background: transparent; border: none; }")
+                              .arg(p.layer.name(QColor::HexArgb), border));
+}
+
+void DatabaseOpenWidget::updateVaultHeader()
+{
+    const auto p = FluentTheme::palette();
+    // The database's public name, or else its file name, heads the card
+    const auto name = m_db && !m_db->publicName().isEmpty() ? m_db->publicName()
+                                                            : QFileInfo(m_filename).completeBaseName();
+    m_ui->labelHeadline->setText(name.isEmpty() ? tr("Unlock KeePassXC Database") : name);
+
+    // The tile shows the database's public icon, or a lock glyph without one
+    auto* tile = m_ui->dbIconLabel;
+    tile->setVisible(true);
+    tile->setStyleSheet(QStringLiteral("QLabel { background-color: %1; border-radius: 12px; color: %2; }")
+                            .arg(p.accentSubtle.name(QColor::HexArgb), p.accentText.name(QColor::HexArgb)));
+    const auto iconIndex = m_db ? m_db->publicIcon() : -1;
+    if (iconIndex >= 0 && iconIndex < databaseIcons()->count()) {
+        tile->setPixmap(databaseIcons()->icon(iconIndex, IconSize::Large));
+    } else {
+        QFont glyphFont(Typography::FontFamily::FluentIcons);
+        glyphFont.setPixelSize(24);
+        tile->setFont(glyphFont);
+        tile->setText(Typography::Icons::Lock);
+    }
 }
 
 DatabaseOpenWidget::~DatabaseOpenWidget() = default;
@@ -293,24 +400,27 @@ void DatabaseOpenWidget::load(const QString& filename)
     }
     m_ui->labelHeadline->setText(label);
 
-    // Apply the public color to the central unlock stack if defined
-    auto color = m_db->publicColor();
     if (m_vaultStyle) {
         applyCardStyle();
-    } else if (!color.isEmpty()) {
-        m_ui->centralStack->setStyleSheet(QString("QStackedWidget {border: 4px solid %1}").arg(color));
+        updateVaultHeader();
     } else {
-        m_ui->centralStack->setStyleSheet("");
-    }
+        // Apply the public color to the central unlock stack if defined
+        auto color = m_db->publicColor();
+        if (!color.isEmpty()) {
+            m_ui->centralStack->setStyleSheet(QString("QStackedWidget {border: 4px solid %1}").arg(color));
+        } else {
+            m_ui->centralStack->setStyleSheet("");
+        }
 
-    // Show the database icon if defined
-    auto iconIndex = m_db->publicIcon();
-    if (iconIndex >= 0 && iconIndex < databaseIcons()->count()) {
-        m_ui->dbIconLabel->setPixmap(databaseIcons()->icon(iconIndex, IconSize::Large));
-        m_ui->dbIconLabel->setVisible(true);
-    } else {
-        m_ui->dbIconLabel->setPixmap({});
-        m_ui->dbIconLabel->setVisible(false);
+        // Show the database icon if defined
+        auto iconIndex = m_db->publicIcon();
+        if (iconIndex >= 0 && iconIndex < databaseIcons()->count()) {
+            m_ui->dbIconLabel->setPixmap(databaseIcons()->icon(iconIndex, IconSize::Large));
+            m_ui->dbIconLabel->setVisible(true);
+        } else {
+            m_ui->dbIconLabel->setPixmap({});
+            m_ui->dbIconLabel->setVisible(false);
+        }
     }
 
     if (config()->get(Config::RememberLastKeyFiles).toBool()) {

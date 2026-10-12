@@ -30,6 +30,7 @@
 class CompositeKey;
 class Database;
 class QFile;
+class QFrame;
 
 namespace Ui
 {
@@ -86,10 +87,12 @@ private slots:
 private:
     void setupVaultStyle();
     void applyCardStyle();
+    void updateVaultHeader();
 
     QPointer<DeviceListener> m_deviceListener;
     // Vault Index layout: the unlock form is a Fluent card on the window canvas
     bool m_vaultStyle = false;
+    QFrame* m_card = nullptr;
     bool m_pollingHardwareKey = false;
     bool m_manualHardwareKeyRefresh = false;
     bool m_blockQuickUnlock = false;
