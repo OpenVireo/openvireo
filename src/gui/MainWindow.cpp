@@ -58,6 +58,7 @@
 #include "keeshare/KeeShare.h"
 #include "keeshare/SettingsPageKeeShare.h"
 #include "keys/drivers/YubiKey.h"
+#include <components/layout/Card.h>
 
 #ifdef KPXC_FEATURE_UPDATES
 #include "gui/UpdateCheckDialog.h"
@@ -134,6 +135,7 @@ MainWindow::MainWindow()
                 &VaultSyncChip::setDatabaseWidget);
         // Settings open in a modal over the window instead of replacing it
         m_settingsModal = new VaultSettingsModal(this, m_ui->settingsWidget);
+        setupVaultPasswordGenerator();
         Vault::paintCanvas(m_ui->welcomeWidget->parentWidget());
     } else {
         m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
@@ -1199,6 +1201,39 @@ void MainWindow::openOnlineHelp()
 void MainWindow::openKeyboardShortcuts()
 {
     customOpenUrl(QString("file:///%1").arg(resources()->dataPath("docs/KeePassXC_KeyboardShortcuts.html")));
+}
+
+// Vault Index layout: the standalone generator is a Fluent card on the window canvas
+void MainWindow::setupVaultPasswordGenerator()
+{
+    auto* page = m_ui->pagePasswordGenerator;
+    auto* generator = m_ui->passwordGeneratorWidget;
+    Vault::paintCanvas(page);
+
+    auto* card = new fluent::layout::Card(page);
+    card->setObjectName("vaultPasswordGeneratorCard");
+    card->setAppearance(fluent::layout::Card::Layer);
+    card->setBorderVisible(true);
+    card->setMaximumWidth(860);
+    page->layout()->replaceWidget(generator, card);
+    page->layout()->setAlignment(card, Qt::AlignHCenter);
+
+    auto* title = new QLabel(tr("Password Generator"), card);
+    title->setObjectName("vaultPasswordGeneratorTitle");
+    auto* cardLayout = new QVBoxLayout(card);
+    cardLayout->setContentsMargins(28, 22, 28, 20);
+    cardLayout->setSpacing(16);
+    cardLayout->addWidget(title);
+    cardLayout->addWidget(generator);
+
+    if (auto* tabs = generator->findChild<QTabWidget*>("tabWidget")) {
+        tabs->setDocumentMode(true);
+    }
+    Vault::followTheme(card, [card, title] {
+        // Style sheets polish the widgets again and reset their palettes, so set the label colors after
+        card->setStyleSheet(Vault::formStyleSheet());
+        Vault::styleLabel(title, Typography::FontRole::Subtitle, FluentTheme::palette().text);
+    });
 }
 
 void MainWindow::switchToDatabases()

@@ -161,6 +161,7 @@ private slots:
     void clearSSHAgent();
 
 private:
+    void setupVaultPasswordGenerator();
     static const QString BaseWindowTitle;
 
     void saveWindowInformation();
