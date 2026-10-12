@@ -29,6 +29,34 @@
 #include "gui/DatabaseIcons.h"
 #include "gui/IconModels.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+
+#include <components/status_info/InfoBar.h>
+
+#include <QPainter>
+
+namespace
+{
+    constexpr int FieldWidth = 280;
+    constexpr int NumberWidth = 120;
+    constexpr QSize PickerSize(40, 32);
+    constexpr int SwatchSize = 18;
+
+    // Rounded square of the color, outlined so a light color still shows on the card
+    QIcon colorSwatch(const QColor& color, qreal devicePixelRatio)
+    {
+        QPixmap pixmap(QSize(SwatchSize, SwatchSize) * devicePixelRatio);
+        pixmap.setDevicePixelRatio(devicePixelRatio);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(QPen(FluentTheme::palette().strokeStrong, 1));
+        painter.setBrush(color);
+        painter.drawRoundedRect(QRectF(0.5, 0.5, SwatchSize - 1, SwatchSize - 1), 4, 4);
+        return QIcon(pixmap);
+    }
+} // namespace
 
 DatabaseSettingsWidgetGeneral::DatabaseSettingsWidgetGeneral(QWidget* parent)
     : DatabaseSettingsWidget(parent)
@@ -44,6 +72,88 @@ DatabaseSettingsWidgetGeneral::DatabaseSettingsWidgetGeneral(QWidget* parent)
     connect(m_ui->historyMaxItemsCheckBox, SIGNAL(toggled(bool)), m_ui->historyMaxItemsSpinBox, SLOT(setEnabled(bool)));
     connect(m_ui->historyMaxSizeCheckBox, SIGNAL(toggled(bool)), m_ui->historyMaxSizeSpinBox, SLOT(setEnabled(bool)));
     connect(m_ui->autosaveDelayCheckBox, SIGNAL(toggled(bool)), m_ui->autosaveDelaySpinBox, SLOT(setEnabled(bool)));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void DatabaseSettingsWidgetGeneral::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The database settings list already names the page
+    VaultSettingsPage page(this, {});
+
+    auto metadata = page.addSection(ui->groupBox);
+    // Text fields share one width, so their boxes line up down the cards
+    for (auto field : {ui->dbNameEdit, ui->dbDescriptionEdit, ui->defaultUsernameEdit, ui->dbPublicName}) {
+        field->setSizePolicy(QSizePolicy::Fixed, field->sizePolicy().verticalPolicy());
+        field->setFixedWidth(FieldWidth);
+    }
+    for (auto spinBox : {ui->historyMaxItemsSpinBox, ui->historyMaxSizeSpinBox, ui->autosaveDelaySpinBox}) {
+        spinBox->setFixedWidth(NumberWidth);
+    }
+
+    // The color and icon show in their buttons, with a small button to clear them before
+    for (auto picker : {ui->dbPublicColorButton, ui->dbPublicIconButton}) {
+        picker->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        picker->setFixedSize(PickerSize);
+        picker->setIconSize({SwatchSize + 2, SwatchSize + 2});
+    }
+    for (auto clear : {ui->dbPublicColorClearButton, ui->dbPublicIconClearButton}) {
+        const auto text = VaultButton::withoutMnemonic(clear->text());
+        clear->setFluentStyle(fluent::basicinput::Button::Subtle);
+        clear->setFluentLayout(fluent::basicinput::Button::IconOnly);
+        clear->setIconGlyph(Typography::Icons::Dismiss);
+        clear->setFixedSize(PickerSize.height(), PickerSize.height());
+        clear->setToolTip(text);
+        clear->setAccessibleName(text);
+    }
+    ui->dbPublicIconButton->setToolTip(tr("Publicly visible icon used on the unlock dialog"));
+
+    metadata->addSetting(ui->dbNameLabel, ui->dbNameEdit);
+    metadata->addSetting(ui->dbDescriptionLabel, ui->dbDescriptionEdit);
+    metadata->addSetting(ui->defaultUsernameLabel, ui->defaultUsernameEdit);
+
+    // The public metadata is readable without unlocking the database, so warn about it as Fluent does
+    auto publicMetadata = page.addSection(ui->groupBox_4);
+    auto warning = new fluent::status_info::InfoBar(this);
+    warning->setObjectName("publicMetadataWarning");
+    warning->setSeverity(fluent::status_info::InfoBar::Warning);
+    warning->setMessage(ui->warningLabel->text());
+    warning->setIsClosable(false);
+    warning->setIsOpen(true);
+    warning->setSizePolicy(QSizePolicy::Expanding, warning->sizePolicy().verticalPolicy());
+    ui->warningLabel->hide();
+    publicMetadata->addHeaderWidget(warning, {});
+    publicMetadata->addSetting(ui->dbPublicSummaryLabel, ui->dbPublicName, ui->dbPublicName->toolTip());
+    publicMetadata->addSetting(ui->dbPublicColorLabel,
+                               {ui->dbPublicColorClearButton, ui->dbPublicColorButton},
+                               ui->dbPublicColorButton->toolTip());
+    publicMetadata->addSetting(ui->dbPublicIconLabel,
+                               {ui->dbPublicIconClearButton, ui->dbPublicIconButton},
+                               ui->dbPublicIconButton->toolTip());
+    setupPublicColorButton({});
+    setupPublicIconButton(-1);
+
+    // A switch reads as the setting itself, so the limits lose the colon leading into their count
+    for (auto checkBox : {ui->historyMaxItemsCheckBox, ui->historyMaxSizeCheckBox}) {
+        auto text = checkBox->text().trimmed();
+        if (text.endsWith(QLatin1Char(':'))) {
+            text.chop(1);
+        }
+        checkBox->setText(text);
+    }
+    auto history = page.addSection(ui->groupBox_2);
+    history->addToggle(ui->historyMaxItemsCheckBox)->addHeaderControl(ui->historyMaxItemsSpinBox);
+    history->addToggle(ui->historyMaxSizeCheckBox)->addHeaderControl(ui->historyMaxSizeSpinBox);
+
+    auto additional = page.addSection(ui->groupBox_3);
+    additional->addToggle(ui->recycleBinEnabledCheckBox);
+    additional->addToggle(ui->compressionCheckbox);
+    additional->addToggle(ui->autosaveDelayCheckBox)->addHeaderControl(ui->autosaveDelaySpinBox);
+
+    page.finish();
 }
 
 DatabaseSettingsWidgetGeneral::~DatabaseSettingsWidgetGeneral() = default;
@@ -188,6 +298,13 @@ void DatabaseSettingsWidgetGeneral::pickPublicColor()
 void DatabaseSettingsWidgetGeneral::setupPublicColorButton(const QColor& color)
 {
     m_ui->dbPublicColorClearButton->setVisible(color.isValid());
+    if (FluentTheme::vaultLayoutEnabled()) {
+        // A Fluent button draws its own face, so the color shows as a swatch in it, or a palette while unset
+        m_ui->dbPublicColorButton->setIconGlyph(color.isValid() ? QString() : Typography::Icons::Color);
+        m_ui->dbPublicColorButton->setIcon(color.isValid() ? colorSwatch(color, devicePixelRatioF()) : QIcon());
+        m_ui->dbPublicColorButton->setProperty("color", color.isValid() ? color.name() : QVariant());
+        return;
+    }
     if (color.isValid()) {
         m_ui->dbPublicColorButton->setStyleSheet(QString("background-color:%1").arg(color.name()));
         m_ui->dbPublicColorButton->setProperty("color", color.name());
@@ -241,6 +358,10 @@ void DatabaseSettingsWidgetGeneral::setupPublicIconButton(int iconIndex)
 {
     auto valid = iconIndex >= 0 && iconIndex < databaseIcons()->count();
     m_ui->dbPublicIconClearButton->setVisible(valid);
+    if (FluentTheme::vaultLayoutEnabled()) {
+        // While unset, the button shows a plus to pick an icon instead of an empty face
+        m_ui->dbPublicIconButton->setIconGlyph(valid ? QString() : Typography::Icons::Add);
+    }
     if (valid) {
         m_ui->dbPublicIconButton->setIcon(databaseIcons()->icon(iconIndex));
         m_ui->dbPublicIconButton->setProperty("iconIndex", iconIndex);

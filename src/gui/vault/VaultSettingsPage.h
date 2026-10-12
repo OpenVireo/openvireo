@@ -118,7 +118,7 @@ public:
     // Card holding a widget across its full width, such as a table or a row of buttons
     VaultSettingsCard* addWidget(QWidget* widget);
     // Widget between the heading and the cards, outside of a card, such as a selector between sets of cards
-    void addHeaderWidget(QWidget* widget);
+    void addHeaderWidget(QWidget* widget, Qt::Alignment alignment = Qt::AlignLeft);
 
     // Hide and disable the section with a widget of the form, such as the group box it replaces
     void follow(QWidget* source);
