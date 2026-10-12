@@ -18,6 +18,8 @@
 #ifndef KEEPASSXC_VAULTCONTROLS_H
 #define KEEPASSXC_VAULTCONTROLS_H
 
+#include <QPointer>
+
 #include <components/basicinput/Button.h>
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ComboBox.h>
@@ -107,6 +109,13 @@ public:
 
     // Show Fluent editing menus instead of the stock ones for every text field in the application
     static void installTextEditingMenus();
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+
+private:
+    QPointer<QAction> m_pressedAction;
 };
 
 #endif // KEEPASSXC_VAULTCONTROLS_H

@@ -54,6 +54,7 @@ private slots:
     void testPasswordGeneratorModal();
     void testDatabaseModals();
     void testGroupModals();
+    void testMenuClickSurvivesLostHighlight();
     void testAutoTypeSettingsPage();
     void testSidebarListsOnlyTags();
     void testScreenshots();
