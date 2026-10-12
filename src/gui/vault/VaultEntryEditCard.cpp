@@ -46,8 +46,6 @@
 namespace
 {
     constexpr int SectionRowHeight = 40;
-    constexpr int DraftRowHeight = 52;
-    constexpr int DraftTileSize = 32;
 
     // One of the editor's other pages, listed under the Entry page: its name and a chevron
     class SectionRow : public QAbstractButton
@@ -163,6 +161,7 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     // Header: the headline
     auto* header = new QWidget(editor);
     header->setObjectName("vaultEditCardHeader");
+    m_header = header;
     auto* headerLayout = new QHBoxLayout(header);
     headerLayout->setContentsMargins(0, 0, 0, 4);
     headerLayout->setSpacing(8);
@@ -319,6 +318,26 @@ void VaultEntryEditCard::finish()
     }
 }
 
+void VaultEntryEditCard::setInModal(bool inModal)
+{
+    m_inModal = inModal;
+    m_header->setVisible(!inModal);
+    update();
+}
+
+bool VaultEntryEditCard::isInModal() const
+{
+    return m_inModal;
+}
+
+void VaultEntryEditCard::paintEvent(QPaintEvent* event)
+{
+    // The modal's card is the surface
+    if (!m_inModal) {
+        fluent::layout::Card::paintEvent(event);
+    }
+}
+
 void VaultEntryEditCard::onThemeUpdated()
 {
     fluent::layout::Card::onThemeUpdated();
@@ -420,79 +439,6 @@ void VaultEntryEditCard::applyColors()
     Vault::styleLabel(m_headline, Typography::FontRole::Subtitle, p.text);
     Vault::styleLabel(m_pageTitle, Typography::FontRole::BodyStrong, p.text);
     Vault::styleLabel(m_addLabel, Typography::FontRole::Caption, p.textSecondary);
-}
-
-VaultDraftRow::VaultDraftRow(QWidget* parent)
-    : QWidget(parent)
-{
-    setObjectName("vaultDraftRow");
-    setTitle(QString());
-    Vault::followTheme(this, [this] { update(); });
-}
-
-void VaultDraftRow::setTitle(const QString& title)
-{
-    m_title = title.trimmed().isEmpty() ? tr("New entry") : title.trimmed();
-    setAccessibleName(tr("%1, not saved yet").arg(m_title));
-    update();
-}
-
-QString VaultDraftRow::title() const
-{
-    return m_title;
-}
-
-QSize VaultDraftRow::sizeHint() const
-{
-    return {200, DraftRowHeight};
-}
-
-void VaultDraftRow::paintEvent(QPaintEvent* event)
-{
-    Q_UNUSED(event)
-    const auto p = FluentTheme::palette();
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    // Selected like a list row, outlined in the accent while it is a draft
-    const QRectF row = QRectF(rect()).adjusted(1, 1, -1, -1);
-    QPainterPath path;
-    path.addRoundedRect(row, 6, 6);
-    painter.fillPath(path, p.layer);
-    painter.setPen(QPen(p.accent, 1.5));
-    painter.drawPath(path);
-
-    const QRectF tile(row.left() + 11, row.center().y() - DraftTileSize / 2.0, DraftTileSize, DraftTileSize);
-    QPainterPath tilePath;
-    tilePath.addRoundedRect(tile.adjusted(0.5, 0.5, -0.5, -0.5), 7, 7);
-    painter.fillPath(tilePath, p.accentSubtle);
-    painter.setPen(QPen(p.accent, 1, Qt::DashLine));
-    painter.drawPath(tilePath);
-
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(Typography::IconSize::Compact);
-    painter.setFont(iconFont);
-    painter.setPen(p.accentText);
-    painter.drawText(tile, Qt::AlignCenter, Typography::Icons::Add);
-
-    const qreal textLeft = tile.right() + 12;
-    const QRectF textRect(textLeft, row.top(), row.right() - textLeft - 12, row.height());
-    const auto titleFont = Vault::font(Typography::FontRole::BodyStrong);
-    const auto captionFont = Vault::font(Typography::FontRole::Caption);
-    const int titleHeight = QFontMetrics(titleFont).height();
-    const int captionHeight = QFontMetrics(captionFont).height();
-    const qreal top = row.center().y() - (titleHeight + captionHeight) / 2.0;
-
-    painter.setFont(titleFont);
-    painter.setPen(p.text);
-    painter.drawText(QRectF(textRect.left(), top, textRect.width(), titleHeight),
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     QFontMetrics(titleFont).elidedText(m_title, Qt::ElideRight, int(textRect.width())));
-    painter.setFont(captionFont);
-    painter.setPen(p.textSecondary);
-    painter.drawText(QRectF(textRect.left(), top + titleHeight, textRect.width(), captionHeight),
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     tr("Draft · not saved yet"));
 }
 
 VaultDimmer::VaultDimmer(QWidget* pane, std::function<QColor()> color)

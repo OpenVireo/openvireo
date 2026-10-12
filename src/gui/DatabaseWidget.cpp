@@ -22,12 +22,14 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QDesktopServices>
+#include <QDialogButtonBox>
 #include <QHostInfo>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QProcess>
+#include <QPushButton>
 #include <QSplitter>
 #include <QTextDocumentFragment>
 #include <QTextEdit>
@@ -59,6 +61,7 @@
 #include "gui/tag/TagView.h"
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultEntryEditCard.h"
+#include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
@@ -263,7 +266,12 @@ DatabaseWidget::DatabaseWidget(const QString& filePath, QWidget* parent)
 
 DatabaseWidget::~DatabaseWidget()
 {
-    // The modals belong to the window, but their pages are this database's
+    // The modals belong to the window, but their pages are this database's. The entry editor goes back to
+    // its own pane first, since it is deleted with the widget.
+    if (m_vaultEntryEditor && m_vaultEntryEditor->isInModal()) {
+        m_vaultCardStack->addWidget(m_vaultEntryEditor);
+    }
+    delete m_vaultNewEntryModal.data();
     delete m_vaultDatabaseSettingsModal.data();
     delete m_vaultReportsModal.data();
 
@@ -1263,10 +1271,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     auto listLayout = new QVBoxLayout(listHost);
     listLayout->setContentsMargins(6, 0, 0, 14);
     listLayout->setSpacing(2);
-    // A new entry shows as a draft at the top of the list until it is saved
-    m_vaultDraftRow = new VaultDraftRow(listHost);
-    m_vaultDraftRow->hide();
-    listLayout->addWidget(m_vaultDraftRow);
     listLayout->addWidget(m_entryView);
     auto cardHost = new QWidget(m_previewSplitter);
     auto cardLayout = new QVBoxLayout(cardHost);
@@ -1283,9 +1287,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_vaultHistoryEditor->setObjectName("vaultHistoryEditCard");
     for (auto* editor : {m_vaultEntryEditor.data(), m_vaultHistoryEditor.data()}) {
         m_vaultCardStack->addWidget(editor);
-    }
-    if (auto* titleEdit = m_editEntryWidget->findChild<QLineEdit*>("titleEdit")) {
-        connect(titleEdit, &QLineEdit::textChanged, m_vaultDraftRow, &VaultDraftRow::setTitle);
     }
     // Locking or opening another page ends inline editing and closes the modals, before anyone hears of the
     // new mode
@@ -1382,8 +1383,12 @@ void DatabaseWidget::hideVaultEditor()
     m_vaultActiveEditor = nullptr;
     m_vaultEntryEditor->finish();
     m_vaultHistoryEditor->finish();
+    if (m_vaultEntryEditor->isInModal()) {
+        m_vaultNewEntryModal->close();
+        m_vaultEntryEditor->setInModal(false);
+        m_vaultCardStack->addWidget(m_vaultEntryEditor);
+    }
     m_vaultCardStack->setCurrentWidget(m_detailCard);
-    m_vaultDraftRow->hide();
     m_vaultNavPane->setEnabled(true);
     m_vaultCommandBar->setEditorButtons(nullptr);
     m_entryView->setEnabled(true);
@@ -1391,6 +1396,38 @@ void DatabaseWidget::hideVaultEditor()
         delete dimmer.data();
     }
     m_vaultDimmers.clear();
+    emitCurrentModeChanged();
+}
+
+void DatabaseWidget::showVaultNewEntryModal()
+{
+    if (!m_vaultNewEntryModal) {
+        auto* host = new QWidget();
+        auto* hostLayout = new QVBoxLayout(host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        m_vaultNewEntryModal = new VaultModal(window(), host, tr("New Entry"), QStringLiteral("vaultNewEntry"));
+        m_vaultNewEntryModal->setMaximumCardWidth(720);
+
+        // The footer, Escape and Enter go through the editor's own buttons, so its checks still apply
+        auto save = [this] { m_editEntryWidget->buttonBox()->button(QDialogButtonBox::Ok)->click(); };
+        auto cancel = [this] { m_editEntryWidget->buttonBox()->button(QDialogButtonBox::Cancel)->click(); };
+        auto* cancelButton = m_vaultNewEntryModal->addFooterButton(tr("Cancel"), false, QStringLiteral("Cancel"));
+        connect(cancelButton, &QPushButton::clicked, this, cancel);
+        auto* saveButton = m_vaultNewEntryModal->addFooterButton(tr("Save"), true, QStringLiteral("Save"));
+        connect(saveButton, &QPushButton::clicked, this, save);
+        connect(m_vaultNewEntryModal, &VaultModal::accepted, this, save);
+        connect(m_vaultNewEntryModal, &VaultModal::rejected, this, cancel);
+    }
+
+    closeVaultModals();
+    m_vaultEntryEditor->setInModal(true);
+    m_vaultNewEntryModal->content()->layout()->addWidget(m_vaultEntryEditor);
+    m_vaultEntryEditor->show();
+    m_vaultNewEntryModal->setInitialFocus(m_editEntryWidget->findChild<QLineEdit*>("titleEdit"));
+    m_vaultActiveEditor = m_vaultEntryEditor;
+    m_vaultNewEntryModal->open();
+    // The modal gives its content the card's palette, so give the form back its own colors
+    m_vaultEntryEditor->onThemeUpdated();
     emitCurrentModeChanged();
 }
 
@@ -1627,9 +1664,11 @@ void DatabaseWidget::switchToEntryEdit(Entry* entry, bool create)
     m_editEntryWidget->loadEntry(entry, create, false, group->name(), m_db);
     if (m_vaultLayout) {
         m_vaultEntryEditor->prepare(create);
-        m_vaultDraftRow->setTitle(QString());
-        m_vaultDraftRow->setVisible(create);
-        showVaultEditor(m_vaultEntryEditor);
+        if (create) {
+            showVaultNewEntryModal();
+        } else {
+            showVaultEditor(m_vaultEntryEditor);
+        }
         return;
     }
     setCurrentWidget(m_editEntryWidget);
@@ -2336,6 +2375,10 @@ void DatabaseWidget::closeEvent(QCloseEvent* event)
 
 void DatabaseWidget::showEvent(QShowEvent* event)
 {
+    // A new entry set aside while another tab was shown comes back with its database
+    if (m_vaultEntryEditor && m_vaultEntryEditor->isInModal() && !m_vaultNewEntryModal->isOpen()) {
+        m_vaultNewEntryModal->open();
+    }
     if (!m_db->isInitialized() || isLocked()) {
         switchToOpenDatabase();
     }
@@ -2348,6 +2391,10 @@ void DatabaseWidget::hideEvent(QHideEvent* event)
     // Another tab or screen took this database's place, so its modals go too
     if (!event->spontaneous() && closeVaultModals()) {
         emitCurrentModeChanged();
+    }
+    // A new entry stays open in the editor, but its modal steps aside until the database is shown again
+    if (!event->spontaneous() && m_vaultNewEntryModal) {
+        m_vaultNewEntryModal->close();
     }
     QStackedWidget::hideEvent(event);
 }

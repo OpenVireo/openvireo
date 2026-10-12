@@ -42,7 +42,7 @@ private slots:
     void testDetailCardFollowsSelection();
     void testCommandBar();
     void testEditEntryInPlace();
-    void testNewEntryDraft();
+    void testNewEntryModal();
     void testEditorSections();
     void testLeavingViewEndsEditing();
     void testSearchTitle();
