@@ -44,6 +44,8 @@ private slots:
     void showCustomBrowserLocationFileDialog();
 
 private:
+    // Settings cards of the Vault Index layout in place of the form
+    void buildVaultPage();
     QString resolveCustomProxyLocation();
 
     QScopedPointer<Ui::BrowserSettingsWidget> m_ui;

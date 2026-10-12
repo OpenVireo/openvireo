@@ -998,8 +998,11 @@ void TestGuiVault::testFeatureSettingsPages()
     auto* categories = settingsWidget->findChild<QListWidget*>("categoryList");
     auto* pages = settingsWidget->findChild<QStackedWidget*>("stackedWidget");
 
-    // The SSH Agent and KeeShare pages show settings cards in place of their forms
+    // The Browser Integration, SSH Agent and KeeShare pages show settings cards in place of their forms
     const QList<QPair<QString, QString>> features = {
+#ifdef KPXC_FEATURE_BROWSER
+        {"Browser Integration", "enableBrowserSupport"},
+#endif
 #ifdef KPXC_FEATURE_SSHAGENT
         {"SSH Agent", "enableSSHAgentCheckBox"},
 #endif
@@ -1110,7 +1113,7 @@ void TestGuiVault::testScreenshots()
         QVERIFY(m_mainWindow->grab().save(
             QDir(dir).absoluteFilePath(QString("vault-settings-autotype-%1.png").arg(theme))));
         auto* categories = m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList");
-        for (const auto& name : {QStringLiteral("SSH Agent"), QStringLiteral("KeeShare")}) {
+        for (const auto& name : {QStringLiteral("Browser Integration"), QStringLiteral("SSH Agent"), QStringLiteral("KeeShare")}) {
             const auto items = categories->findItems(name, Qt::MatchExactly);
             if (items.isEmpty()) {
                 continue;
