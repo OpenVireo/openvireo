@@ -122,21 +122,21 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QPushButton" name="buttonNewDatabase">
+      <widget class="VaultButton" name="buttonNewDatabase">
        <property name="text">
         <string>Create Database</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="buttonOpenDatabase">
+      <widget class="VaultButton" name="buttonOpenDatabase">
        <property name="text">
         <string>Open Database</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="buttonImport">
+      <widget class="VaultButton" name="buttonImport">
        <property name="text">
         <string>Import File</string>
        </property>
@@ -198,6 +198,13 @@
   <tabstop>buttonImport</tabstop>
   <tabstop>recentListWidget</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

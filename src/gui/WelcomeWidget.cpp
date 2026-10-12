@@ -23,6 +23,80 @@
 #include "config-keepassx.h"
 #include "core/Config.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultWidgets.h"
+
+#include <QDir>
+#include <QFileInfo>
+#include <QPainter>
+#include <QPainterPath>
+#include <QStyledItemDelegate>
+
+namespace
+{
+    // Recent database rows: a database tile, the file name, and its folder beneath
+    class RecentDatabaseDelegate : public QStyledItemDelegate
+    {
+    public:
+        using QStyledItemDelegate::QStyledItemDelegate;
+
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            Q_UNUSED(index)
+            return {option.rect.width(), 56};
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            const auto p = FluentTheme::palette();
+            const bool selected = option.state.testFlag(QStyle::State_Selected);
+            const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
+            const QRectF row = QRectF(option.rect).adjusted(4, 2, -4, -2);
+
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+            if (selected || hovered) {
+                QPainterPath path;
+                path.addRoundedRect(row, 4, 4);
+                painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
+            }
+            if (selected && option.state.testFlag(QStyle::State_HasFocus)) {
+                QPainterPath pill;
+                pill.addRoundedRect(QRectF(row.left(), row.center().y() - 8, 3, 16), 1.5, 1.5);
+                painter->fillPath(pill, p.accent);
+            }
+
+            const QRectF tile(row.left() + 12, row.center().y() - 16, 32, 32);
+            QPainterPath tilePath;
+            tilePath.addRoundedRect(tile, 6, 6);
+            painter->fillPath(tilePath, p.accentSubtle);
+            QFont glyphFont(Typography::FontFamily::FluentIcons);
+            glyphFont.setPixelSize(16);
+            painter->setFont(glyphFont);
+            painter->setPen(p.accentText);
+            painter->drawText(tile, Qt::AlignCenter, Typography::Icons::Storage);
+
+            const QFileInfo file(index.data(Qt::DisplayRole).toString());
+            const QRectF text(tile.right() + 12, row.top() + 8, row.right() - tile.right() - 24, row.height() - 16);
+            const auto nameFont = Vault::font(Typography::FontRole::BodyStrong);
+            const auto folderFont = Vault::font(Typography::FontRole::Caption);
+            painter->setFont(nameFont);
+            painter->setPen(p.text);
+            painter->drawText(text,
+                              Qt::AlignLeft | Qt::AlignTop,
+                              QFontMetrics(nameFont).elidedText(file.fileName(), Qt::ElideRight, int(text.width())));
+            painter->setFont(folderFont);
+            painter->setPen(p.textSecondary);
+            painter->drawText(
+                text,
+                Qt::AlignLeft | Qt::AlignBottom,
+                QFontMetrics(folderFont)
+                    .elidedText(QDir::toNativeSeparators(file.absolutePath()), Qt::ElideMiddle, int(text.width())));
+            painter->restore();
+        }
+    };
+} // namespace
 
 WelcomeWidget::WelcomeWidget(QWidget* parent)
     : QWidget(parent)
@@ -44,6 +118,10 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
     m_ui->buttonImport->setIcon(icons()->icon("document-import"));
     m_ui->buttonImport->setStyleSheet("text-align:center;");
 
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultStyle();
+    }
+
     refreshLastDatabases();
 
     connect(m_ui->buttonNewDatabase, SIGNAL(clicked()), SIGNAL(newDatabase()));
@@ -56,6 +134,44 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
 }
 
 WelcomeWidget::~WelcomeWidget() = default;
+
+void WelcomeWidget::setupVaultStyle()
+{
+    Vault::paintCanvas(this);
+
+    // Fluent glyphs, with creating a database as the primary action
+    const QList<std::pair<VaultButton*, QString>> buttons = {{m_ui->buttonNewDatabase, Typography::Icons::Add},
+                                                             {m_ui->buttonOpenDatabase, Typography::Icons::Folder},
+                                                             {m_ui->buttonImport, Typography::Icons::Download}};
+    for (const auto& [button, glyph] : buttons) {
+        button->setStyleSheet({});
+        button->setIcon({});
+        button->setIconGlyph(glyph);
+        button->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    }
+    m_ui->buttonNewDatabase->setFluentStyle(fluent::basicinput::Button::Accent);
+
+    auto* recent = m_ui->recentListWidget;
+    recent->setItemDelegate(new RecentDatabaseDelegate(recent));
+    recent->setMouseTracking(true);
+    recent->setAttribute(Qt::WA_MacShowFocusRect, false);
+    recent->viewport()->setAttribute(Qt::WA_Hover);
+    recent->viewport()->setAutoFillBackground(false);
+    recent->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_vaultStyle = true;
+
+    Vault::followTheme(this, [this] {
+        const auto p = FluentTheme::palette();
+        Vault::styleLabel(m_ui->welcomeLabel, Typography::FontRole::Title, p.text);
+        Vault::styleLabel(m_ui->startLabel, Typography::FontRole::Body, p.textSecondary);
+        Vault::styleLabel(m_ui->recentLabel, Typography::FontRole::BodyStrong, p.text);
+        // The recent databases sit on a card
+        m_ui->recentListWidget->setStyleSheet(
+            QStringLiteral("QListWidget { background-color: %1; border: 1px solid %2; border-radius: 8px;"
+                           " padding: 4px; }")
+                .arg(p.layer.name(QColor::HexArgb), p.stroke.name(QColor::HexArgb)));
+    });
+}
 
 void WelcomeWidget::openDatabaseFromFile(QListWidgetItem* item)
 {
@@ -87,6 +203,12 @@ void WelcomeWidget::refreshLastDatabases()
         auto itm = new QListWidgetItem;
         itm->setText(database);
         m_ui->recentListWidget->addItem(itm);
+    }
+
+    if (m_vaultStyle) {
+        // Room for up to four databases on the card; more scroll
+        const int rows = qBound(1, m_ui->recentListWidget->count(), 4);
+        m_ui->recentListWidget->setFixedHeight(rows * 56 + 12);
     }
 
     bool recent_visibility = (m_ui->recentListWidget->count() > 0);
