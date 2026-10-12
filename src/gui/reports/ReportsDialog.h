@@ -24,7 +24,9 @@
 
 class Database;
 class Entry;
+class CategoryListWidget;
 class Group;
+class QDialogButtonBox;
 class QTabWidget;
 class ReportsPageHealthcheck;
 class ReportsPageHibp;
@@ -60,8 +62,8 @@ public:
     Q_DISABLE_COPY(ReportsDialog);
 
     void load(const QSharedPointer<Database>& db);
-    // Present the reports in the Vault Index style
-    void applyVaultShell();
+    CategoryListWidget* categoryList() const;
+    QDialogButtonBox* buttonBox() const;
     void addPage(QSharedPointer<IReportsPage> page);
 
 #ifdef KPXC_FEATURE_BROWSER

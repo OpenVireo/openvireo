@@ -431,7 +431,7 @@ void TestGuiVault::testLeavingViewEndsEditing()
     m_dbWidget->switchToEntryEdit();
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
 
-    // Another page replacing the main view, such as the unlock screen, ends inline editing
+    // Opening the database settings ends inline editing, like the pages that replace the main view
     m_dbWidget->switchToDatabaseSettings();
     QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::DatabaseSettingsMode);
     m_dbWidget->switchToMainView();
@@ -692,6 +692,67 @@ void TestGuiVault::testPasswordGeneratorModal()
     QVERIFY(!modal->isOpen());
     QTest::mouseClick(settingsModal->findChild<QPushButton*>("vaultSettingsCancel"), Qt::LeftButton);
     QTRY_VERIFY(!settingsModal->isOpen());
+}
+
+void TestGuiVault::testDatabaseModals()
+{
+    auto* settingsAction = m_mainWindow->findChild<QAction*>("actionDatabaseSettings");
+    auto* reportsAction = m_mainWindow->findChild<QAction*>("actionReports");
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+
+    // Database settings open in a modal over the window, with the database behind it
+    settingsAction->trigger();
+    auto* settingsModal = m_mainWindow->findChild<VaultSettingsModal*>("vaultDatabaseSettingsModal");
+    QVERIFY(settingsModal);
+    QTRY_VERIFY(settingsModal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::DatabaseSettingsMode);
+    QVERIFY(settingsAction->isChecked());
+    QCOMPARE(settingsModal->geometry(), m_mainWindow->rect());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(!m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+    auto* settingsDialog = m_mainWindow->findChild<QWidget*>("databaseSettingsDialog");
+    QVERIFY(settingsModal->card()->isAncestorOf(settingsDialog));
+    // The pages fill the card beside the sidebar
+    QVERIFY(settingsDialog->isVisible());
+    QVERIFY(settingsDialog->width() > settingsModal->card()->width() / 2);
+    QVERIFY(settingsDialog->findChild<QWidget*>("categoryList")->isHidden());
+    QVERIFY(settingsModal->findChild<QPushButton*>("vaultDatabaseSettingsSave"));
+
+    QTest::mouseClick(settingsModal->findChild<QPushButton*>("vaultDatabaseSettingsCancel"), Qt::LeftButton);
+    QTRY_VERIFY(!settingsModal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(!settingsAction->isChecked());
+    QVERIFY(m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+
+    // Reports can only be closed
+    reportsAction->trigger();
+    auto* reportsModal = m_mainWindow->findChild<VaultSettingsModal*>("vaultReportsModal");
+    QVERIFY(reportsModal);
+    QTRY_VERIFY(reportsModal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ReportsMode);
+    QVERIFY(reportsAction->isChecked());
+    auto* reportsDialog = m_mainWindow->findChild<QWidget*>("reportsDialog");
+    QVERIFY(reportsModal->card()->isAncestorOf(reportsDialog));
+    QVERIFY(reportsDialog->isVisible());
+    QVERIFY(reportsDialog->width() > reportsModal->card()->width() / 2);
+    QVERIFY(!reportsModal->findChild<QPushButton*>("vaultReportsSave"));
+    QTest::mouseClick(reportsModal->findChild<QPushButton*>("vaultReportsDone"), Qt::LeftButton);
+    QTRY_VERIFY(!reportsModal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(!reportsAction->isChecked());
+
+    // Escape closes them too, and so does another page taking the main view's place, such as locking
+    reportsAction->trigger();
+    QTRY_VERIFY(reportsModal->isOpen());
+    QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Escape);
+    QTRY_VERIFY(!reportsModal->isOpen());
+    settingsAction->trigger();
+    QTRY_VERIFY(settingsModal->isOpen());
+    m_dbWidget->switchToGroupEdit();
+    QVERIFY(!settingsModal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditGroupMode);
+    m_dbWidget->switchToMainView();
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 }
 
 void TestGuiVault::testAutoTypeSettingsPage()

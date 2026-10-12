@@ -20,22 +20,31 @@
 
 #include "VaultModal.h"
 
+class CategoryListWidget;
 class EditWidget;
+class QDialogButtonBox;
 class QListView;
 
 /**
  * Settings in a modal card over the main window, with a sidebar of categories
- * and Cancel / Save in the footer, after Slack's preferences.
+ * and Cancel / Save in the footer, after Slack's preferences. Pages that can
+ * only be closed, such as reports, get a Close button instead.
  *
- * The settings widget keeps its own pages and logic; the modal only hides its
- * category list and buttons and drives them from its own controls.
+ * The widget keeps its own pages and logic; the modal only hides its category
+ * list and buttons and drives them from its own controls.
  */
 class VaultSettingsModal : public VaultModal
 {
     Q_OBJECT
 
 public:
-    VaultSettingsModal(QWidget* window, EditWidget* settings);
+    VaultSettingsModal(QWidget* window, EditWidget* settings, const QString& title, const QString& namePrefix);
+    VaultSettingsModal(QWidget* window,
+                       QWidget* content,
+                       CategoryListWidget* categories,
+                       QDialogButtonBox* buttons,
+                       const QString& title,
+                       const QString& namePrefix);
 
     QListView* navigation() const;
 
@@ -45,7 +54,8 @@ protected:
     void prepare() override;
 
 private:
-    QPointer<EditWidget> m_settings;
+    QPointer<CategoryListWidget> m_categories;
+    QPointer<QDialogButtonBox> m_buttons;
     QListView* m_navigation;
 };
 

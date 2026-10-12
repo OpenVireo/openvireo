@@ -136,7 +136,8 @@ MainWindow::MainWindow()
                 m_vaultHeader->syncChip(),
                 &VaultSyncChip::setDatabaseWidget);
         // Settings open in a modal over the window instead of replacing it
-        m_settingsModal = new VaultSettingsModal(this, m_ui->settingsWidget);
+        m_settingsModal =
+            new VaultSettingsModal(this, m_ui->settingsWidget, tr("Settings"), QStringLiteral("vaultSettings"));
         setupVaultPasswordGenerator();
         Vault::paintCanvas(m_ui->welcomeWidget->parentWidget());
     } else {
