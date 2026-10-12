@@ -26,8 +26,13 @@
 #include "format/KeePass2.h"
 #include "format/KeePass2Writer.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+
+#include <components/navigation/SelectorBar.h>
 
 #include <QPushButton>
+#include <QTabBar>
 
 const char* DatabaseSettingsWidgetEncryption::CD_DECRYPTION_TIME_PREFERENCE_KEY = "KPXC_DECRYPTION_TIME_PREFERENCE";
 
@@ -81,6 +86,64 @@ DatabaseSettingsWidgetEncryption::DatabaseSettingsWidgetEncryption(QWidget* pare
     connect(m_ui->transformRoundsSpinBox, SIGNAL(valueChanged(int)), SLOT(markDirty()));
     connect(m_ui->memorySpinBox, SIGNAL(valueChanged(int)), SLOT(markDirty()));
     connect(m_ui->parallelismSpinBox, SIGNAL(valueChanged(int)), SLOT(markDirty()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void DatabaseSettingsWidgetEncryption::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The step or tab showing the page already names it
+    VaultSettingsPage page(this, {});
+
+    auto format = page.addSection();
+    auto formatCard =
+        format->addSetting(ui->compatibilityLabel, ui->compatibilitySelection, ui->compatibilitySelection->toolTip());
+    formatCard->setCollapsible(false);
+    formatCard->addWidget(ui->formatCannotBeChanged);
+
+    // A selector between the basic and advanced settings, which keeps the tab widget's current page for the logic
+    auto encryption = page.addSection(tr("Encryption Settings"));
+    auto mode = new fluent::navigation::SelectorBar(this);
+    mode->setObjectName("encryptionSettingsSelector");
+    mode->setAccessibleName(tr("Encryption settings mode"));
+    for (int i = 0; i < ui->encryptionSettingsTabWidget->count(); ++i) {
+        mode->addItem(ui->encryptionSettingsTabWidget->tabText(i));
+    }
+    mode->setSelectedIndex(ui->encryptionSettingsTabWidget->currentIndex());
+    connect(mode, &fluent::navigation::SelectorBar::selectedIndexChanged, this, [ui](int index) {
+        if (index >= 0) {
+            ui->encryptionSettingsTabWidget->setCurrentIndex(index);
+        }
+    });
+    connect(ui->encryptionSettingsTabWidget, &QTabWidget::currentChanged, mode, [mode](int index) {
+        if (mode->selectedIndex() != index) {
+            mode->setSelectedIndex(index);
+        }
+    });
+    encryption->addHeaderWidget(mode);
+    ui->encryptionSettingsTabWidget->tabBar()->hide();
+
+    // Basic: the decryption time, with its slider always shown below it
+    ui->label_2->hide();
+    auto time = encryption->addSetting(ui->decryptionTimeLabel, ui->decryptionTimeValueLabel, ui->label_2->text());
+    time->setCollapsible(false);
+    time->addWidget(ui->decryptionTimeSettings);
+    time->follow(ui->basicTab);
+
+    // Advanced: the cipher and key derivation parameters
+    for (auto card :
+         {encryption->addSetting(ui->algorithmLabel, ui->algorithmComboBox),
+          encryption->addSetting(ui->kdfLabel, ui->kdfComboBox),
+          encryption->addSetting(ui->transformRoundsLabel, {ui->transformRoundsSpinBox, ui->transformBenchmarkButton}),
+          encryption->addSetting(ui->memoryUsageLabel, ui->memorySpinBox),
+          encryption->addSetting(ui->parallelismLabel, ui->parallelismSpinBox)}) {
+        card->follow(ui->advancedTab);
+    }
+
+    page.finish();
 }
 
 DatabaseSettingsWidgetEncryption::~DatabaseSettingsWidgetEncryption() = default;
