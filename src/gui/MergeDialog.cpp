@@ -19,6 +19,7 @@
 #include "ui_MergeDialog.h"
 
 #include "core/Database.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QPushButton>
 #include <QShortcut>
@@ -26,7 +27,7 @@
 MergeDialog::MergeDialog(QSharedPointer<Database> source, QSharedPointer<Database> target, QWidget* parent)
     : QDialog(parent)
     , m_ui(new Ui::MergeDialog())
-    , m_headerContextMenu(new QMenu())
+    , m_headerContextMenu(new VaultMenu())
     , m_sourceDatabase(std::move(source))
     , m_targetDatabase(std::move(target))
 {
@@ -49,7 +50,7 @@ MergeDialog::MergeDialog(QSharedPointer<Database> source, QSharedPointer<Databas
 MergeDialog::MergeDialog(const Merger::ChangeList& changes, QWidget* parent)
     : QDialog(parent)
     , m_ui(new Ui::MergeDialog())
-    , m_headerContextMenu(new QMenu())
+    , m_headerContextMenu(new VaultMenu())
     , m_changes(changes)
 {
     setAttribute(Qt::WA_DeleteOnClose);
@@ -129,7 +130,11 @@ void MergeDialog::setupChangeTable()
 
     m_ui->changeTable->verticalHeader()->setVisible(false);
     m_ui->changeTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::Interactive);
-    m_ui->changeTable->horizontalHeader()->setContextMenuPolicy(Qt::ActionsContextMenu);
+    auto* header = m_ui->changeTable->horizontalHeader();
+    header->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(header, &QWidget::customContextMenuRequested, this, [this, header](const QPoint& pos) {
+        m_headerContextMenu->popup(header->viewport()->mapToGlobal(pos));
+    });
 
     m_ui->changeTable->setShowGrid(false);
     m_ui->changeTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -145,7 +150,7 @@ void MergeDialog::setupChangeTable()
             m_ui->changeTable->setColumnHidden(columnIndex(column), !checked);
             m_ui->changeTable->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
         });
-        m_ui->changeTable->horizontalHeader()->addAction(action);
+        m_headerContextMenu->addAction(action);
     }
 }
 

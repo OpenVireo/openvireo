@@ -32,6 +32,7 @@
 
 #include "gui/Icons.h"
 #include "gui/entry/EntryListItemDelegate.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/SortFilterHideProxyModel.h"
 
 #define ICON_ONLY_SECTION_SIZE 26
@@ -69,7 +70,7 @@ EntryView::EntryView(QWidget* parent)
     , m_sortModel(new SortFilterHideProxyModel(this))
     , m_lastIndex(-1)
     , m_lastOrder(Qt::AscendingOrder)
-    , m_headerMenu(new QMenu(this))
+    , m_headerMenu(new VaultMenu(this))
 {
     m_sortModel->setSourceModel(m_model);
     m_sortModel->setDynamicSortFilter(true);

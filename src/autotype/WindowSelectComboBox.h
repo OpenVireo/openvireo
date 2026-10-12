@@ -18,9 +18,9 @@
 #ifndef KEEPASSX_WINDOWSELECTCOMBOBOX_H
 #define KEEPASSX_WINDOWSELECTCOMBOBOX_H
 
-#include <QComboBox>
+#include "gui/vault/VaultControls.h"
 
-class WindowSelectComboBox : public QComboBox
+class WindowSelectComboBox : public VaultComboBox
 {
     Q_OBJECT
 

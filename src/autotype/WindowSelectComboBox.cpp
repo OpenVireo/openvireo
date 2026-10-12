@@ -22,7 +22,7 @@
 #include "autotype/AutoType.h"
 
 WindowSelectComboBox::WindowSelectComboBox(QWidget* parent)
-    : QComboBox(parent)
+    : VaultComboBox(parent)
 {
     setEditable(true);
     setInsertPolicy(QComboBox::NoInsert);
@@ -50,19 +50,19 @@ void WindowSelectComboBox::showPopup()
 
     refreshWindowList();
 
-    QComboBox::showPopup();
+    VaultComboBox::showPopup();
 }
 
 QSize WindowSelectComboBox::sizeHint() const
 {
     QSize size = lineEdit()->sizeHint();
-    size.setHeight(qMax(size.height(), QComboBox::sizeHint().height()));
+    size.setHeight(qMax(size.height(), VaultComboBox::sizeHint().height()));
     return size;
 }
 
 QSize WindowSelectComboBox::minimumSizeHint() const
 {
     QSize size = lineEdit()->minimumSizeHint();
-    size.setHeight(qMax(size.height(), QComboBox::minimumSizeHint().height()));
+    size.setHeight(qMax(size.height(), VaultComboBox::minimumSizeHint().height()));
     return size;
 }

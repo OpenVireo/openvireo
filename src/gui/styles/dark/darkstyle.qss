@@ -19,6 +19,11 @@ QMenu::separator {
     background-color: #56565A;
 }
 
+/* Fluent menus paint their own border and separators */
+fluent--menus_toolbars--FluentMenu {
+    border: none;
+}
+
 QPushButton:!default:hover {
     /* Using slightly darker shade from palette(button) */
     background: #252528;

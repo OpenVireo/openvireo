@@ -222,16 +222,16 @@
    <property name="contextMenuPolicy">
     <enum>Qt::PreventContextMenu</enum>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="VaultMenu" name="menuFile">
     <property name="title">
      <string>&amp;Database</string>
     </property>
-    <widget class="QMenu" name="menuRecentDatabases">
+    <widget class="VaultMenu" name="menuRecentDatabases">
      <property name="title">
       <string>&amp;Recent Databases</string>
      </property>
     </widget>
-    <widget class="QMenu" name="menuExport">
+    <widget class="VaultMenu" name="menuExport">
      <property name="title">
       <string>&amp;Export</string>
      </property>
@@ -239,7 +239,7 @@
      <addaction name="actionExportHtml"/>
      <addaction name="actionExportXML"/>
     </widget>
-    <widget class="QMenu" name="menuRemoteSync">
+    <widget class="VaultMenu" name="menuRemoteSync">
      <property name="title">
       <string>Remote S&amp;ync…</string>
      </property>
@@ -270,7 +270,7 @@
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuHelp">
+   <widget class="VaultMenu" name="menuHelp">
     <property name="title">
      <string>&amp;Help</string>
     </property>
@@ -285,14 +285,14 @@
     <addaction name="actionBugReport"/>
     <addaction name="actionAbout"/>
    </widget>
-   <widget class="QMenu" name="menuEntries">
+   <widget class="VaultMenu" name="menuEntries">
     <property name="title">
      <string>&amp;Entries</string>
     </property>
     <property name="separatorsCollapsible">
      <bool>true</bool>
     </property>
-    <widget class="QMenu" name="menuEntryCopyAttribute">
+    <widget class="VaultMenu" name="menuEntryCopyAttribute">
      <property name="toolTip">
       <string/>
      </property>
@@ -303,7 +303,7 @@
      <addaction name="actionEntryCopyNotes"/>
      <addaction name="separator"/>
     </widget>
-    <widget class="QMenu" name="menuEntryTotp">
+    <widget class="VaultMenu" name="menuEntryTotp">
      <property name="title">
       <string>TOTP</string>
      </property>
@@ -313,7 +313,7 @@
      <addaction name="actionEntryTotpQRCode"/>
      <addaction name="actionEntrySetupTotp"/>
     </widget>
-    <widget class="QMenu" name="menuTags">
+    <widget class="VaultMenu" name="menuTags">
      <property name="tearOffEnabled">
       <bool>true</bool>
      </property>
@@ -351,7 +351,7 @@
     <addaction name="separator"/>
     <addaction name="actionEntryRestore"/>
    </widget>
-   <widget class="QMenu" name="menuGroups">
+   <widget class="VaultMenu" name="menuGroups">
     <property name="title">
      <string>&amp;Groups</string>
     </property>
@@ -367,7 +367,7 @@
     <addaction name="separator"/>
     <addaction name="actionGroupDownloadFavicons"/>
    </widget>
-   <widget class="QMenu" name="menuTools">
+   <widget class="VaultMenu" name="menuTools">
     <property name="title">
      <string>&amp;Tools</string>
     </property>
@@ -375,11 +375,11 @@
     <addaction name="actionClearSSHAgent"/>
     <addaction name="actionSettings"/>
    </widget>
-   <widget class="QMenu" name="menuView">
+   <widget class="VaultMenu" name="menuView">
     <property name="title">
      <string>View</string>
     </property>
-    <widget class="QMenu" name="menuTheme">
+    <widget class="VaultMenu" name="menuTheme">
      <property name="title">
       <string>Theme</string>
      </property>
@@ -1369,6 +1369,11 @@
   </action>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultMenu</class>
+   <extends>QMenu</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>

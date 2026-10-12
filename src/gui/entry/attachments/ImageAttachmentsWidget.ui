@@ -39,7 +39,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="zoomComboBox">
+      <widget class="VaultComboBox" name="zoomComboBox">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -79,6 +79,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>ImageAttachmentsView</class>
    <extends>QGraphicsView</extends>

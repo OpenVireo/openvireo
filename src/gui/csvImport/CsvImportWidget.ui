@@ -41,7 +41,7 @@
        </property>
        <layout class="QGridLayout" name="gridLayout">
         <item row="4" column="1">
-         <widget class="QComboBox" name="urlCombo">
+         <widget class="VaultComboBox" name="urlCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -54,7 +54,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QComboBox" name="usernameCombo">
+         <widget class="VaultComboBox" name="usernameCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -124,7 +124,7 @@
          </widget>
         </item>
         <item row="3" column="4">
-         <widget class="QComboBox" name="lastModifiedCombo">
+         <widget class="VaultComboBox" name="lastModifiedCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -137,7 +137,7 @@
          </widget>
         </item>
         <item row="2" column="4">
-         <widget class="QComboBox" name="iconCombo">
+         <widget class="VaultComboBox" name="iconCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -150,7 +150,7 @@
          </widget>
         </item>
         <item row="1" column="4">
-         <widget class="QComboBox" name="totpCombo">
+         <widget class="VaultComboBox" name="totpCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -182,7 +182,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="titleCombo">
+         <widget class="VaultComboBox" name="titleCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -195,7 +195,7 @@
          </widget>
         </item>
         <item row="0" column="4">
-         <widget class="QComboBox" name="notesCombo">
+         <widget class="VaultComboBox" name="notesCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -262,7 +262,7 @@
          </widget>
         </item>
         <item row="4" column="4">
-         <widget class="QComboBox" name="createdCombo">
+         <widget class="VaultComboBox" name="createdCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -313,7 +313,7 @@
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QComboBox" name="passwordCombo">
+         <widget class="VaultComboBox" name="passwordCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -364,7 +364,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QComboBox" name="groupCombo">
+         <widget class="VaultComboBox" name="groupCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -393,7 +393,7 @@
          </widget>
         </item>
         <item row="5" column="1">
-         <widget class="QComboBox" name="tagsCombo">
+         <widget class="VaultComboBox" name="tagsCombo">
           <property name="maximumSize">
            <size>
             <width>200</width>
@@ -437,7 +437,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QComboBox" name="comboBoxCodec">
+         <widget class="VaultComboBox" name="comboBoxCodec">
           <property name="font">
            <font>
             <weight>50</weight>
@@ -492,7 +492,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="comboBoxTextQualifier">
+         <widget class="VaultComboBox" name="comboBoxTextQualifier">
           <property name="font">
            <font>
             <weight>50</weight>
@@ -552,7 +552,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QComboBox" name="comboBoxFieldSeparator">
+         <widget class="VaultComboBox" name="comboBoxFieldSeparator">
           <property name="font">
            <font>
             <weight>50</weight>
@@ -617,7 +617,7 @@
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QComboBox" name="comboBoxComment">
+         <widget class="VaultComboBox" name="comboBoxComment">
           <property name="font">
            <font>
             <weight>50</weight>
@@ -801,6 +801,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>comboBoxCodec</tabstop>
   <tabstop>comboBoxTextQualifier</tabstop>
