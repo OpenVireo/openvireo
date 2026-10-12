@@ -51,6 +51,10 @@ namespace FluentTheme
         QColor stroke;
         QColor strokeStrong;
         QColor divider;
+        // Fills of standard controls, such as buttons and fields
+        QColor control;
+        QColor controlHover;
+        QColor controlPressed;
         QColor subtleHover;
         QColor subtlePressed;
         QColor text;

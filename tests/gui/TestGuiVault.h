@@ -49,6 +49,7 @@ private slots:
     void testAutoTypeSettingsPage();
     void testSidebarListsOnlyTags();
     void testScreenshots();
+    void testViewScreenshots();
 
 private:
     void selectGroup(Group* group);

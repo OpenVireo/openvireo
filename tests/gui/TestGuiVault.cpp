@@ -19,6 +19,8 @@
 
 #include "config-keepassx-tests.h"
 #include "core/Config.h"
+#include "core/Database.h"
+#include "core/Group.h"
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
 #include "gui/Application.h"
@@ -26,6 +28,7 @@
 #include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
+#include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
@@ -533,5 +536,78 @@ void TestGuiVault::testScreenshots()
         m_mainWindow->screen()
             ->grabWindow(0, frame.x(), frame.y(), frame.width(), frame.height())
             .save(QDir(dir).absoluteFilePath(QString("vault-window-%1.png").arg(theme)));
+    }
+}
+
+// Screenshots of the views around the main window: editors, generator, reports, unlock and welcome
+void TestGuiVault::testViewScreenshots()
+{
+    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    if (dir.isEmpty()) {
+        QSKIP("Set KPXC_VAULT_SCREENSHOT_DIR to save screenshots");
+    }
+
+    auto save = [this, dir](const QString& name, const QString& theme) {
+        QApplication::processEvents();
+        QTest::qWait(150);
+        QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("view-%1-%2.png").arg(name, theme))));
+    };
+    auto* stack = m_mainWindow->findChild<QStackedWidget*>("stackedWidget");
+    // Locking reloads the database from disk, so keep the example content there
+    QString error;
+    QVERIFY2(m_db->save(Database::Atomic, {}, &error), qPrintable(error));
+    auto reload = [this] {
+        m_db = m_dbWidget->database();
+        m_workGroup = m_db->rootGroup()->findGroupByPath("/Work");
+        QVERIFY(m_workGroup);
+        m_github = m_db->rootGroup()->findEntryByPath("/Work/GitHub");
+        QVERIFY(m_github);
+    };
+
+    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        config()->set(Config::GUI_ApplicationTheme, theme);
+        kpxcApp->applyTheme();
+        selectGroup(m_workGroup);
+        selectEntry(m_github);
+
+        m_dbWidget->switchToEntryEdit();
+        save("entry", theme);
+        auto* entryCategories =
+            m_dbWidget->findChild<QWidget*>("editEntryWidget")->findChild<QListWidget*>("categoryList");
+        entryCategories->setCurrentRow(1);
+        save("entry-advanced", theme);
+        entryCategories->setCurrentRow(0);
+        m_dbWidget->switchToMainView();
+
+        m_dbWidget->switchToGroupEdit();
+        save("group", theme);
+        m_dbWidget->switchToMainView();
+
+        m_dbWidget->switchToDatabaseSettings();
+        save("dbsettings", theme);
+        m_dbWidget->switchToMainView();
+
+        m_dbWidget->switchToDatabaseReports();
+        save("reports", theme);
+        m_dbWidget->switchToMainView();
+
+        m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+        save("generator", theme);
+        m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+
+        QVERIFY(m_dbWidget->lock());
+        save("unlock", theme);
+        auto* editPassword =
+            m_dbWidget->findChild<PasswordWidget*>("editPassword")->findChild<QLineEdit*>("passwordEdit");
+        editPassword->setFocus();
+        QTest::keyClicks(editPassword, "a");
+        QTest::keyClick(editPassword, Qt::Key_Enter);
+        QTRY_VERIFY(!m_dbWidget->isLocked());
+        reload();
+
+        const auto index = stack->currentIndex();
+        stack->setCurrentIndex(MainWindow::WelcomeScreen);
+        save("welcome", theme);
+        stack->setCurrentIndex(index);
     }
 }

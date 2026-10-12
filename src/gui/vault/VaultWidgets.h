@@ -20,6 +20,8 @@
 
 #include <QWidget>
 
+#include <functional>
+
 #include <components/basicinput/Button.h>
 #include <design/Typography.h>
 
@@ -40,6 +42,14 @@ namespace Vault
     // enabled and visible state. Hides the button if the action does not exist.
     void bindAction(QAbstractButton* button, QAction* action);
     void bindAction(QAbstractButton* button, const QString& actionName);
+
+    // Run apply now and again whenever the Fluent theme changes, for as long as owner exists
+    void followTheme(QObject* owner, std::function<void()> apply);
+    // Style sheet for forms on a Vault surface: group boxes as cards, and Fluent shapes and fills
+    // for the controls that have no Fluent-Qt counterpart. Depends on the theme.
+    QString formStyleSheet();
+    // Fill a widget's background with the window canvas, as behind the main window's panes
+    void paintCanvas(QWidget* widget);
 } // namespace Vault
 
 /**
