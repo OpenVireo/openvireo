@@ -136,8 +136,9 @@ EntryDetailCard::EntryDetailCard(QWidget* parent)
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scroll->viewport()->setAutoFillBackground(false);
     auto* content = new QWidget(scroll);
-    content->setAutoFillBackground(false);
     scroll->setWidget(content);
+    // After setWidget(), which turns the fill back on and would paint the window color over the card
+    content->setAutoFillBackground(false);
     m_pages->addWidget(scroll);
 
     auto* layout = new QVBoxLayout(content);
