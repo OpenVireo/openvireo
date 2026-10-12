@@ -58,7 +58,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showExpired">
+    <widget class="VaultCheckBox" name="showExpired">
      <property name="text">
       <string>Show expired entries</string>
      </property>
@@ -67,14 +67,14 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="importButton">
+      <widget class="VaultButton" name="importButton">
        <property name="text">
         <string>Import</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="exportButton">
+      <widget class="VaultButton" name="exportButton">
        <property name="text">
         <string>Export</string>
        </property>
@@ -97,6 +97,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

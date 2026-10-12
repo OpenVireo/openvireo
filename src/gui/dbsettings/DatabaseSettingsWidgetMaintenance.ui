@@ -75,14 +75,14 @@
       <item>
        <layout class="QHBoxLayout" name="customIconButtonsHorizontalLayout">
         <item>
-         <widget class="QPushButton" name="deleteButton">
+         <widget class="VaultButton" name="deleteButton">
           <property name="text">
            <string>Delete selected icon(s)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="purgeButton">
+         <widget class="VaultButton" name="purgeButton">
           <property name="toolTip">
            <string>Delete all custom icons not in use by any entry or group</string>
           </property>
@@ -114,6 +114,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

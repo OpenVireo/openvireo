@@ -89,7 +89,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="addButton">
+           <widget class="VaultButton" name="addButton">
             <property name="text">
              <string notr="true">Add Key Component</string>
             </property>
@@ -154,7 +154,7 @@
              </spacer>
             </item>
             <item>
-             <widget class="QPushButton" name="cancelButton">
+             <widget class="VaultButton" name="cancelButton">
               <property name="text">
                <string>Cancel</string>
               </property>
@@ -197,14 +197,14 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
-             <widget class="QPushButton" name="changeButton">
+             <widget class="VaultButton" name="changeButton">
               <property name="text">
                <string notr="true">Change Key Component</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="removeButton">
+             <widget class="VaultButton" name="removeButton">
               <property name="text">
                <string notr="true">Remove Key Component</string>
               </property>
@@ -221,6 +221,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

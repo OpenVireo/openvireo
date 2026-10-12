@@ -34,7 +34,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QComboBox" name="comboChallengeResponse">
+        <widget class="VaultComboBox" name="comboChallengeResponse">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -73,7 +73,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QPushButton" name="refreshHardwareKeys">
+        <widget class="VaultButton" name="refreshHardwareKeys">
          <property name="toolTip">
           <string>Refresh hardware keys</string>
          </property>
@@ -120,6 +120,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

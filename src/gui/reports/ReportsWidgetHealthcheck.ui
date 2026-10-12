@@ -55,14 +55,14 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showExpired">
+    <widget class="VaultCheckBox" name="showExpired">
      <property name="text">
       <string>Show expired entries</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showExcluded">
+    <widget class="VaultCheckBox" name="showExcluded">
      <property name="text">
       <string>Show entries that have been excluded from reports</string>
      </property>
@@ -86,6 +86,13 @@
   <tabstop>healthcheckTableView</tabstop>
   <tabstop>showExcluded</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
