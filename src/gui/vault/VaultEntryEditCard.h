@@ -63,13 +63,7 @@ public:
     void prepare(bool create);
     // Leave the form as the editor laid it out, once editing ends
     void finish();
-    void setFocusMode(bool focusMode);
-    bool isFocusMode() const;
     void onThemeUpdated() override;
-
-signals:
-    // The user asked to widen the editor over the entry list, or to bring the list back
-    void focusModeRequested(bool focusMode);
 
 private:
     struct OptionalRow
@@ -91,7 +85,6 @@ private:
     QStackedWidget* m_pages;
     QLabel* m_headline;
     VaultButtonBar* m_buttonBar;
-    fluent::basicinput::Button* m_focusButton;
 
     QWidget* m_backRow;
     QLabel* m_pageTitle;
@@ -117,7 +110,6 @@ private:
     QPointer<QLineEdit> m_titleEdit;
     QString m_suggestedTitle;
     bool m_create = false;
-    bool m_focusMode = false;
 };
 
 /**

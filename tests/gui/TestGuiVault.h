@@ -44,7 +44,6 @@ private slots:
     void testEditEntryInPlace();
     void testNewEntryDraft();
     void testEditorSections();
-    void testEditorFocusMode();
     void testLeavingViewEndsEditing();
     void testSearchTitle();
     void testFluentSearchBox();
