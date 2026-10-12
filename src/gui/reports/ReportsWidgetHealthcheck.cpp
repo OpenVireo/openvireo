@@ -28,6 +28,7 @@
 #include "gui/vault/VaultControls.h"
 
 #include <QMenu>
+#include <QPointer>
 #include <QShortcut>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -264,7 +265,12 @@ void ReportsWidgetHealthcheck::calculateHealth()
     m_referencesModel->clear();
 
     // Perform the health check
+    const QPointer<QWidget> self(this);
     const QScopedPointer<Health> health(AsyncTask::runAndWaitForFuture([this] { return new Health(m_db); }));
+    // Waiting runs the event loop, which can close the database and delete this page
+    if (!self) {
+        return;
+    }
 
     // Display the entries
     m_rowToEntry.clear();

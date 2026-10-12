@@ -33,6 +33,7 @@
 #include "gui/vault/VaultControls.h"
 
 #include <QMenu>
+#include <QPointer>
 #include <QShortcut>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -175,8 +176,13 @@ void ReportsWidgetPasskeys::updateEntries()
     m_referencesModel->clear();
 
     // Perform the statistics check
+    const QPointer<QWidget> self(this);
     const QScopedPointer<PasskeyList> browserStatistics(
         AsyncTask::runAndWaitForFuture([this] { return new PasskeyList(m_db); }));
+    // Waiting runs the event loop, which can close the database and delete this page
+    if (!self) {
+        return;
+    }
 
     // Display the entries
     m_rowToEntry.clear();

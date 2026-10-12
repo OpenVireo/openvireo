@@ -29,6 +29,7 @@
 
 #include <QJsonDocument>
 #include <QMenu>
+#include <QPointer>
 #include <QShortcut>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -196,8 +197,13 @@ void ReportsWidgetBrowserStatistics::calculateBrowserStatistics()
     m_referencesModel->clear();
 
     // Perform the statistics check
+    const QPointer<QWidget> self(this);
     const QScopedPointer<BrowserStatistics> browserStatistics(
         AsyncTask::runAndWaitForFuture([this] { return new BrowserStatistics(m_db); }));
+    // Waiting runs the event loop, which can close the database and delete this page
+    if (!self) {
+        return;
+    }
 
     const auto showExpired = m_ui->showExpired->isChecked();
     const auto showEntriesWithUrlOnly = m_ui->showEntriesWithUrlOnlyCheckBox->isChecked();
