@@ -74,6 +74,7 @@ class VaultSettingsPage
     Q_DISABLE_COPY(VaultSettingsPage)
 
 public:
+    // No title heading for an empty title, as on a page whose tab or step already names it
     VaultSettingsPage(QWidget* page, const QString& title);
 
     // Widget between the title and the sections, such as a status message, shown while the widget is
@@ -108,6 +109,8 @@ public:
     addSetting(const VaultSettingsCaption& caption, const QWidgetList& controls, const QString& description = {});
     // Card holding a widget across its full width, such as a table or a row of buttons
     VaultSettingsCard* addWidget(QWidget* widget);
+    // Widget between the heading and the cards, outside of a card, such as a selector between sets of cards
+    void addHeaderWidget(QWidget* widget);
 
     // Hide and disable the section with a widget of the form, such as the group box it replaces
     void follow(QWidget* source);
@@ -121,6 +124,7 @@ private:
 
     QPointer<QWidget> m_source;
     QLabel* m_heading;
+    QVBoxLayout* m_headerWidgets;
     QVBoxLayout* m_cards;
 };
 
@@ -144,6 +148,11 @@ public:
     void addSetting(const VaultSettingsCaption& caption, QWidget* control, const QString& description = {});
     void addSetting(const VaultSettingsCaption& caption, const QWidgetList& controls, const QString& description = {});
     void addWidget(QWidget* widget);
+
+    // Rows that always show, without a chevron to fold them away; set before adding rows
+    void setCollapsible(bool collapsible);
+    // Hide the card with a widget of the form, such as the tab page it replaces
+    void follow(QWidget* source);
 
     bool isExpanded() const;
     void setExpanded(bool expanded);
@@ -182,6 +191,8 @@ private:
     QWidget* m_children;
     QVBoxLayout* m_childLayout;
     QList<Row> m_rows;
+    QPointer<QWidget> m_source;
+    bool m_collapsible = true;
     bool m_expanded = true;
 };
 

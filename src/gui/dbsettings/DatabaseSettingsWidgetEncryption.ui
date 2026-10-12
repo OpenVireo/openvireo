@@ -428,7 +428,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QToolButton" name="transformBenchmarkButton">
+              <widget class="VaultButton" name="transformBenchmarkButton">
                <property name="focusPolicy">
                 <enum>Qt::WheelFocus</enum>
                </property>
@@ -539,6 +539,11 @@
   <tabstop>parallelismSpinBox</tabstop>
  </tabstops>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
  <customwidget>
   <class>VaultComboBox</class>
   <extends>QComboBox</extends>

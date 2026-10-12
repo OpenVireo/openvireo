@@ -56,6 +56,7 @@ private slots:
     void markDirty();
 
 private:
+    void buildVaultPage();
     bool isAdvancedMode();
     void showBasicEncryption(int decryptionMillisecs = Kdf::DEFAULT_ENCRYPTION_TIME);
 

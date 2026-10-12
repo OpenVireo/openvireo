@@ -33,6 +33,7 @@
 #include "core/Database.h"
 #include "core/Global.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
 
 #include <QScrollArea>
 
@@ -68,7 +69,17 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
 
     m_securityTabWidget->setObjectName("securityTabWidget");
     m_securityTabWidget->addTab(scrollArea, tr("Database Credentials"));
-    m_securityTabWidget->addTab(m_encryptionWidget, tr("Encryption Settings"));
+    // As settings cards, the encryption settings lose their own scroll area
+    if (FluentTheme::vaultLayoutEnabled()) {
+        auto* encryptionScrollArea = new QScrollArea(parent);
+        encryptionScrollArea->setFrameShape(QFrame::NoFrame);
+        encryptionScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        encryptionScrollArea->setWidgetResizable(true);
+        encryptionScrollArea->setWidget(m_encryptionWidget);
+        m_securityTabWidget->addTab(encryptionScrollArea, tr("Encryption Settings"));
+    } else {
+        m_securityTabWidget->addTab(m_encryptionWidget, tr("Encryption Settings"));
+    }
 
     m_securityTabWidget->setCurrentIndex(0);
 

@@ -222,11 +222,13 @@ VaultSettingsPage::VaultSettingsPage(QWidget* page, const QString& title)
     m_layout->setContentsMargins(4, 4, 12, 16);
     m_layout->setSpacing(0);
 
-    auto heading = new QLabel(title, m_body);
-    heading->setObjectName(QStringLiteral("vaultSettingsPageTitle"));
-    heading->setAccessibleName(title);
-    styleLabel(heading, Typography::FontRole::Subtitle);
-    m_layout->addWidget(heading);
+    if (!title.isEmpty()) {
+        auto heading = new QLabel(title, m_body);
+        heading->setObjectName(QStringLiteral("vaultSettingsPageTitle"));
+        heading->setAccessibleName(title);
+        styleLabel(heading, Typography::FontRole::Subtitle);
+        m_layout->addWidget(heading);
+    }
 }
 
 void VaultSettingsPage::addWidget(QWidget* widget)
@@ -311,13 +313,17 @@ void VaultSettingsPage::finish()
 VaultSettingsSection::VaultSettingsSection(const QString& title, QWidget* parent)
     : QWidget(parent)
     , m_heading(new QLabel(title, this))
+    , m_headerWidgets(new QVBoxLayout())
     , m_cards(new QVBoxLayout())
 {
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, SectionGap, 0, 0);
     layout->setSpacing(8);
     layout->addWidget(m_heading);
+    layout->addLayout(m_headerWidgets);
     layout->addLayout(m_cards);
+    m_headerWidgets->setContentsMargins(0, 0, 0, 0);
+    m_headerWidgets->setSpacing(8);
     m_cards->setContentsMargins(0, 0, 0, 0);
     m_cards->setSpacing(CardSpacing);
 
@@ -368,6 +374,12 @@ VaultSettingsCard* VaultSettingsSection::addWidget(QWidget* widget)
     auto card = new VaultSettingsCard(this);
     card->setWidget(widget);
     return addCard(card);
+}
+
+void VaultSettingsSection::addHeaderWidget(QWidget* widget)
+{
+    adopt(widget, this);
+    m_headerWidgets->addWidget(widget, 0, Qt::AlignLeft);
 }
 
 VaultSettingsCard* VaultSettingsSection::addCard(VaultSettingsCard* card)
@@ -673,8 +685,27 @@ void VaultSettingsCard::fillSettingRow(VaultSettingsRow* row,
     }
 }
 
+void VaultSettingsCard::setCollapsible(bool collapsible)
+{
+    Q_ASSERT(m_rows.isEmpty());
+    m_collapsible = collapsible;
+}
+
+void VaultSettingsCard::follow(QWidget* source)
+{
+    m_source = source;
+    source->installEventFilter(this);
+    updateRows();
+}
+
 VaultSettingsRow* VaultSettingsCard::addRow()
 {
+    auto row = new VaultSettingsRow(m_children);
+    m_childLayout->addWidget(row);
+    if (!m_collapsible) {
+        return row;
+    }
+
     if (!m_chevron) {
         m_chevron = Vault::iconButton(Typography::Icons::ChevronUp, tr("Hide options"), m_header);
         m_chevron->setObjectName(QStringLiteral("vaultSettingsCardChevron"));
@@ -684,9 +715,7 @@ VaultSettingsRow* VaultSettingsCard::addRow()
     }
 
     // Child rows line up their controls with the header's, which has the chevron after it
-    auto row = new VaultSettingsRow(m_children);
     row->setIndent(ChildIndent, CardPadding + ChevronSize + HeaderSpacing);
-    m_childLayout->addWidget(row);
     return row;
 }
 
@@ -737,7 +766,7 @@ void VaultSettingsCard::updateRows()
         m_chevron->setVisible(anyChild);
     }
 
-    const bool visible = m_controls.isEmpty() || anyShown(m_controls);
+    const bool visible = (m_controls.isEmpty() || anyShown(m_controls)) && !(m_source && explicitlyHidden(m_source));
     if (explicitlyHidden(this) == visible) {
         setVisible(visible);
         emit visibilityChanged();
