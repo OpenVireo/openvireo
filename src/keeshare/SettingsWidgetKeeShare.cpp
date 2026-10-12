@@ -21,6 +21,8 @@
 #include "config-keepassx.h"
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
 #include "keeshare/KeeShare.h"
 
 #include <QStandardItemModel>
@@ -35,10 +37,33 @@ SettingsWidgetKeeShare::SettingsWidgetKeeShare(QWidget* parent)
 
     connect(m_ui->ownCertificateSignerEdit, SIGNAL(textChanged(QString)), SLOT(setVerificationExporter(QString)));
     connect(m_ui->generateOwnCertificateButton, SIGNAL(clicked(bool)), SLOT(generateCertificate()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
 }
 
 SettingsWidgetKeeShare::~SettingsWidgetKeeShare()
 {
+}
+
+void SettingsWidgetKeeShare::buildVaultPage()
+{
+    VaultSettingsPage page(this, tr("KeeShare"));
+
+    auto active = page.addSection(m_ui->activeGroupBox);
+    active->addToggle(m_ui->enableImportCheckBox);
+    active->addToggle(m_ui->enableExportCheckBox);
+    active->addToggle(m_ui->quietSuccessCheckBox);
+
+    auto certificate = page.addSection(m_ui->ownCertificateGroupBox);
+    certificate->addSetting(m_ui->ownCertificateSignerLabel, m_ui->ownCertificateSignerEdit);
+    certificate->addSetting(m_ui->ownCertificateFingerprintLabel, m_ui->ownCertificateFingerprintEdit);
+    certificate->addSetting(m_ui->generateOwnCertificateButton->accessibleName(),
+                            m_ui->generateOwnCertificateButton,
+                            tr("Replaces the signer and fingerprint with a new certificate"));
+
+    page.finish();
 }
 
 void SettingsWidgetKeeShare::loadSettings()
@@ -46,6 +71,7 @@ void SettingsWidgetKeeShare::loadSettings()
     const auto active = KeeShare::active();
     m_ui->enableExportCheckBox->setChecked(active.out);
     m_ui->enableImportCheckBox->setChecked(active.in);
+    m_ui->quietSuccessCheckBox->setChecked(config()->get(Config::KeeShare_QuietSuccess).toBool());
 
     m_own = KeeShare::own();
     updateOwnCertificate();

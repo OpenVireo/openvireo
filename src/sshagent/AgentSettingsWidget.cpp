@@ -20,6 +20,9 @@
 #include "SSHAgent.h"
 #include "ui_AgentSettingsWidget.h"
 
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+
 AgentSettingsWidget::AgentSettingsWidget(QWidget* parent)
     : QWidget(parent)
     , m_ui(new Ui::AgentSettingsWidget())
@@ -36,10 +39,43 @@ AgentSettingsWidget::AgentSettingsWidget(QWidget* parent)
     m_ui->sshAuthSockMessageWidget->setCloseButtonVisible(false);
     m_ui->sshAuthSockMessageWidget->setAutoHideTimeout(-1);
     connect(m_ui->enableSSHAgentCheckBox, SIGNAL(stateChanged(int)), SLOT(toggleSettingsEnabled()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
 }
 
 AgentSettingsWidget::~AgentSettingsWidget()
 {
+}
+
+void AgentSettingsWidget::buildVaultPage()
+{
+    VaultSettingsPage page(this, tr("SSH Agent"));
+    page.addWidget(m_ui->sshAuthSockMessageWidget);
+
+    // The choice of agents only shows on Windows
+    auto agent = page.addSection();
+    auto enable = agent->addToggle(m_ui->enableSSHAgentCheckBox);
+    enable->addWidget(m_ui->usePageantRadioButton);
+    enable->addWidget(m_ui->useOpenSSHRadioButton);
+    enable->addWidget(m_ui->useBothRadioButton);
+
+    auto environment = page.addSection(tr("Environment"));
+    environment->follow(m_ui->agentConfigPageBody);
+    auto authSock = environment->addSetting(m_ui->sshAuthSockValueLabel, m_ui->sshAuthSockLabel);
+    authSock->addSetting(m_ui->sshAuthSockOverrideLabel, m_ui->sshAuthSockOverrideEdit);
+    auto securityKeyProvider =
+        environment->addSetting(m_ui->sshSecurityKeyProviderValueLabel, m_ui->sshSecurityKeyProviderLabel);
+    securityKeyProvider->addSetting(m_ui->sshSecurityKeyProviderOverrideLabel,
+                                    m_ui->sshSecurityKeyProviderOverrideEdit);
+
+    // Long paths are cut off rather than holding the modal wider; they can still be selected in full
+    for (auto value : {m_ui->sshAuthSockLabel, m_ui->sshSecurityKeyProviderLabel}) {
+        value->setMinimumWidth(120);
+    }
+
+    page.finish();
 }
 
 void AgentSettingsWidget::loadSettings()
@@ -103,5 +139,10 @@ void AgentSettingsWidget::saveSettings()
 
 void AgentSettingsWidget::toggleSettingsEnabled()
 {
-    m_ui->agentConfigPageBody->setEnabled(m_ui->enableSSHAgentCheckBox->isChecked());
+    const bool enabled = m_ui->enableSSHAgentCheckBox->isChecked();
+    m_ui->agentConfigPageBody->setEnabled(enabled);
+    // The settings cards move the choice of agents out of the form's frame
+    m_ui->usePageantRadioButton->setEnabled(enabled);
+    m_ui->useOpenSSHRadioButton->setEnabled(enabled);
+    m_ui->useBothRadioButton->setEnabled(enabled);
 }
