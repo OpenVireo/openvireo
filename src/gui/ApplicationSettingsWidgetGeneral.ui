@@ -72,7 +72,7 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <item>
-               <widget class="QCheckBox" name="singleInstanceCheckBox">
+               <widget class="VaultCheckBox" name="singleInstanceCheckBox">
                 <property name="text">
                  <string>Start only a single instance of KeePassXC</string>
                 </property>
@@ -82,21 +82,21 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="launchAtStartup">
+               <widget class="VaultCheckBox" name="launchAtStartup">
                 <property name="text">
                  <string>Automatically launch KeePassXC at system startup</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="systrayMinimizeOnStartup">
+               <widget class="VaultCheckBox" name="systrayMinimizeOnStartup">
                 <property name="text">
                  <string>Minimize window at application startup</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="minimizeAfterUnlockCheckBox">
+               <widget class="VaultCheckBox" name="minimizeAfterUnlockCheckBox">
                 <property name="text">
                  <string>Minimize window after unlocking database</string>
                 </property>
@@ -105,7 +105,7 @@
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
-                 <widget class="QCheckBox" name="rememberLastDatabasesCheckBox">
+                 <widget class="VaultCheckBox" name="rememberLastDatabasesCheckBox">
                   <property name="text">
                    <string>Remember previously used databases</string>
                   </property>
@@ -170,7 +170,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="openPreviousDatabasesOnStartupCheckBox">
+                 <widget class="VaultCheckBox" name="openPreviousDatabasesOnStartupCheckBox">
                   <property name="text">
                    <string>Load previously open databases on startup</string>
                   </property>
@@ -206,7 +206,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="rememberLastKeyFilesCheckBox">
+                 <widget class="VaultCheckBox" name="rememberLastKeyFilesCheckBox">
                   <property name="text">
                    <string>Remember database key files and security dongles</string>
                   </property>
@@ -218,7 +218,7 @@
                </layout>
               </item>
               <item>
-               <widget class="QCheckBox" name="checkForUpdatesOnStartupCheckBox">
+               <widget class="VaultCheckBox" name="checkForUpdatesOnStartupCheckBox">
                 <property name="text">
                  <string>Check for updates at application startup once per week</string>
                 </property>
@@ -246,7 +246,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="checkForUpdatesIncludeBetasCheckBox">
+                 <widget class="VaultCheckBox" name="checkForUpdatesIncludeBetasCheckBox">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -266,7 +266,7 @@
                  <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
                 </property>
                 <item>
-                 <widget class="QCheckBox" name="showExpiredEntriesOnDatabaseUnlockCheckBox">
+                 <widget class="VaultCheckBox" name="showExpiredEntriesOnDatabaseUnlockCheckBox">
                   <property name="text">
                    <string>On database unlock, show entries that will expire within</string>
                   </property>
@@ -322,35 +322,35 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_5">
               <item>
-               <widget class="QCheckBox" name="autoSaveAfterEveryChangeCheckBox">
+               <widget class="VaultCheckBox" name="autoSaveAfterEveryChangeCheckBox">
                 <property name="text">
                  <string>Automatically save after every change</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="autoSaveOnExitCheckBox">
+               <widget class="VaultCheckBox" name="autoSaveOnExitCheckBox">
                 <property name="text">
                  <string>Automatically save when locking database</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="autoSaveNonDataChangesCheckBox">
+               <widget class="VaultCheckBox" name="autoSaveNonDataChangesCheckBox">
                 <property name="text">
                  <string>Automatically save non-data changes when locking database</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="autoReloadOnChangeCheckBox">
+               <widget class="VaultCheckBox" name="autoReloadOnChangeCheckBox">
                 <property name="text">
                  <string>Automatically reload the database when modified externally</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="backupBeforeSaveCheckBox">
+               <widget class="VaultCheckBox" name="backupBeforeSaveCheckBox">
                 <property name="text">
                  <string>Backup database file before saving</string>
                 </property>
@@ -410,7 +410,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLineEdit" name="backupFilePath">
+                 <widget class="VaultLineEdit" name="backupFilePath">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -439,7 +439,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="backupFilePathPicker">
+                 <widget class="VaultButton" name="backupFilePathPicker">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -451,7 +451,7 @@
                </layout>
               </item>
               <item>
-               <widget class="QCheckBox" name="useAlternativeSaveCheckBox">
+               <widget class="VaultCheckBox" name="useAlternativeSaveCheckBox">
                 <property name="text">
                  <string>Use alternative saving method (may solve problems with Dropbox, Google Drive, GVFS, etc.)</string>
                 </property>
@@ -526,28 +526,28 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_6">
               <item>
-               <widget class="QCheckBox" name="autocompleteSuggestionsCheckBox">
+               <widget class="VaultCheckBox" name="autocompleteSuggestionsCheckBox">
                 <property name="text">
                  <string>Show autocomplete suggestions for username and additional attributes</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="ConfirmMoveEntryToRecycleBinCheckBox">
+               <widget class="VaultCheckBox" name="ConfirmMoveEntryToRecycleBinCheckBox">
                 <property name="text">
                  <string>Show confirmation before moving entries to recycle bin</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="autoGeneratePasswordForNewEntriesCheckBox">
+               <widget class="VaultCheckBox" name="autoGeneratePasswordForNewEntriesCheckBox">
                 <property name="text">
                  <string>Auto-generate password for new entries</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="EnableCopyOnDoubleClickCheckBox">
+               <widget class="VaultCheckBox" name="EnableCopyOnDoubleClickCheckBox">
                 <property name="text">
                  <string>Copy data on double clicking field in entry view</string>
                 </property>
@@ -609,7 +609,7 @@
                </layout>
               </item>
               <item>
-               <widget class="QCheckBox" name="useGroupIconOnEntryCreationCheckBox">
+               <widget class="VaultCheckBox" name="useGroupIconOnEntryCreationCheckBox">
                 <property name="text">
                  <string>Use group icon on entry creation</string>
                 </property>
@@ -619,14 +619,14 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="minimizeOnOpenUrlCheckBox">
+               <widget class="VaultCheckBox" name="minimizeOnOpenUrlCheckBox">
                 <property name="text">
                  <string>Minimize when opening a URL</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="hideWindowOnCopyCheckBox">
+               <widget class="VaultCheckBox" name="hideWindowOnCopyCheckBox">
                 <property name="text">
                  <string>Hide window when copying to clipboard</string>
                 </property>
@@ -654,7 +654,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QRadioButton" name="minimizeOnCopyRadioButton">
+                 <widget class="VaultRadioButton" name="minimizeOnCopyRadioButton">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -687,7 +687,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QRadioButton" name="dropToBackgroundOnCopyRadioButton">
+                 <widget class="VaultRadioButton" name="dropToBackgroundOnCopyRadioButton">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -797,7 +797,7 @@
                  </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QCheckBox" name="toolbarMovableCheckBox">
+                 <widget class="VaultCheckBox" name="toolbarMovableCheckBox">
                   <property name="enabled">
                    <bool>true</bool>
                   </property>
@@ -934,14 +934,14 @@
                </layout>
               </item>
               <item>
-               <widget class="QCheckBox" name="toolbarShowCheckBox">
+               <widget class="VaultCheckBox" name="toolbarShowCheckBox">
                 <property name="text">
                  <string>Show toolbar</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="menubarShowCheckBox">
+               <widget class="VaultCheckBox" name="menubarShowCheckBox">
                 <property name="toolTip">
                  <string>Show the menu bar by pressing the Alt key</string>
                 </property>
@@ -951,28 +951,28 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="colorPasswordsCheckBox">
+               <widget class="VaultCheckBox" name="colorPasswordsCheckBox">
                 <property name="text">
                  <string>Show passwords in color</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="monospaceNotesCheckBox">
+               <widget class="VaultCheckBox" name="monospaceNotesCheckBox">
                 <property name="text">
                  <string>Use monospaced font for notes</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="minimizeOnCloseCheckBox">
+               <widget class="VaultCheckBox" name="minimizeOnCloseCheckBox">
                 <property name="text">
                  <string>Minimize instead of app exit</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="systrayShowCheckBox">
+               <widget class="VaultCheckBox" name="systrayShowCheckBox">
                 <property name="text">
                  <string>Show a system tray icon</string>
                 </property>
@@ -1108,7 +1108,7 @@
                     </spacer>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="systrayMinimizeToTrayCheckBox">
+                    <widget class="VaultCheckBox" name="systrayMinimizeToTrayCheckBox">
                      <property name="enabled">
                       <bool>false</bool>
                      </property>
@@ -1140,7 +1140,7 @@
               <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
              </property>
              <item>
-              <widget class="QPushButton" name="resetSettingsButton">
+              <widget class="VaultButton" name="resetSettingsButton">
                <property name="text">
                 <string>Reset settings to default…</string>
                </property>
@@ -1160,14 +1160,14 @@
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="importSettingsButton">
+              <widget class="VaultButton" name="importSettingsButton">
                <property name="text">
                 <string>Import settings…</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="exportSettingsButton">
+              <widget class="VaultButton" name="exportSettingsButton">
                <property name="text">
                 <string>Export settings…</string>
                </property>
@@ -1195,6 +1195,26 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultRadioButton</class>
+   <extends>QRadioButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>

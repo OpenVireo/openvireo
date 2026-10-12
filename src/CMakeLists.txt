@@ -174,6 +174,7 @@ set(gui_SOURCES
         gui/vault/VaultModal.cpp
         gui/vault/VaultNewDatabaseModal.cpp
         gui/vault/VaultSettingsModal.cpp
+        gui/vault/VaultSettingsPage.cpp
         gui/vault/VaultWidgets.cpp
         gui/vault/VaultWindowFrame.cpp
         gui/export/ExportDialog.cpp
