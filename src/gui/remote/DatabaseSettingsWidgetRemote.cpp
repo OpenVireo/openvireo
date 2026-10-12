@@ -24,9 +24,22 @@
 #include "RemoteHandler.h"
 #include "RemoteSettings.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
 
 #include <QFile>
+#include <QHBoxLayout>
+#include <QTabBar>
 #include <QUrl>
+#include <QVBoxLayout>
+
+namespace
+{
+    constexpr int FieldWidth = 320;
+    constexpr int NumberWidth = 140;
+    constexpr int ListHeight = 120;
+    constexpr int InputHeight = 72;
+} // namespace
 
 DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     : DatabaseSettingsWidget(parent)
@@ -65,6 +78,120 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     connect(m_ui->serverTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
 
     updateTypeVisibility();
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void DatabaseSettingsWidgetRemote::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The database settings list already names the page
+    VaultSettingsPage page(this, {});
+    page.addWidget(ui->messageWidget);
+
+    // The saved configurations, with the button to remove the selected one beside them
+    auto configurations = page.addSection(ui->syncCommandsGroupBox);
+    auto list = new QWidget(this);
+    auto listLayout = new QHBoxLayout(list);
+    listLayout->setContentsMargins(0, 0, 0, 0);
+    listLayout->setSpacing(12);
+    ui->settingsListWidget->setFixedHeight(ListHeight);
+    listLayout->addWidget(ui->settingsListWidget, 1);
+    listLayout->addWidget(ui->removeSettingsButton, 0, Qt::AlignTop);
+    configurations->addWidget(list);
+
+    // Fields share one width so they line up down the cards; commands keep the full width for their length
+    for (auto field : {ui->nameLineEdit, ui->serverUrlEdit, ui->serverDatabaseIdEdit, ui->serverTokenEdit}) {
+        field->setSizePolicy(QSizePolicy::Fixed, field->sizePolicy().verticalPolicy());
+        field->setFixedWidth(FieldWidth);
+    }
+    for (auto spinBox : {ui->serverTimeoutSec, ui->downloadTimeoutSec, ui->uploadTimeoutSec}) {
+        spinBox->setFixedWidth(NumberWidth);
+    }
+    for (auto input : {ui->inputForDownload, ui->inputForUpload}) {
+        input->setFixedHeight(InputHeight);
+    }
+
+    auto configuration = page.addSection(ui->commandSettingsGroupBox);
+    configuration->addSetting(ui->label, {ui->nameLineEdit, ui->saveSettingsButton});
+    configuration->addSetting(ui->typeLabel, ui->typeComboBox);
+    // The sync server's settings show while it is the type
+    for (auto card :
+         {configuration->addSetting(ui->serverUrlLabel, ui->serverUrlEdit),
+          configuration->addSetting(
+              ui->serverDatabaseIdLabel, ui->serverDatabaseIdEdit, ui->serverDatabaseIdEdit->placeholderText()),
+          configuration->addSetting(ui->serverTokenLabel, ui->serverTokenEdit, ui->serverTokenEdit->placeholderText()),
+          configuration->addSetting(ui->serverTimeoutLabel, {ui->serverTimeoutSec, ui->testServerButton})}) {
+        card->follow(ui->serverSettingsWidget);
+    }
+    // Their hints show as the cards' descriptions, so the fields don't repeat them
+    ui->serverDatabaseIdEdit->setPlaceholderText({});
+    ui->serverTokenEdit->setPlaceholderText({});
+
+    // The commands show while they are the type, with a pivot between downloading and uploading in place of the tabs
+    auto commands = page.addSection();
+    commands->follow(ui->commandTabWidget);
+    auto direction = new QTabBar(this);
+    direction->setObjectName("commandDirectionSelector");
+    direction->setDrawBase(false);
+    direction->setExpanding(false);
+    for (int i = 0; i < ui->commandTabWidget->count(); ++i) {
+        direction->addTab(ui->commandTabWidget->tabText(i));
+    }
+    direction->setCurrentIndex(ui->commandTabWidget->currentIndex());
+    connect(direction, &QTabBar::currentChanged, ui->commandTabWidget, &QTabWidget::setCurrentIndex);
+    connect(ui->commandTabWidget, &QTabWidget::currentChanged, direction, &QTabBar::setCurrentIndex);
+    commands->addHeaderWidget(direction);
+    ui->commandTabWidget->tabBar()->hide();
+
+    const struct
+    {
+        QWidget* tab;
+        QLabel* commandLabel;
+        QWidget* command;
+        QWidget* test;
+        QLabel* inputLabel;
+        QWidget* input;
+        QLabel* timeoutLabel;
+        QWidget* timeout;
+    } directions[] = {
+        {ui->downloadTab,
+         ui->downloadCommandLabel,
+         ui->downloadCommand,
+         ui->testDownloadCommandButton,
+         ui->downloadCommandInputLabel,
+         ui->inputForDownload,
+         ui->downloadTimeoutLabel,
+         ui->downloadTimeoutSec},
+        {ui->uploadTab,
+         ui->uploadCommandLabel,
+         ui->uploadCommand,
+         nullptr,
+         ui->uploadCommandInputLabel,
+         ui->inputForUpload,
+         ui->uploadTimeoutLabel,
+         ui->uploadTimeoutSec},
+    };
+    for (const auto& d : directions) {
+        QWidgetList commandControls{d.command};
+        if (d.test) {
+            commandControls << d.test;
+        }
+        auto command = commands->addSetting(d.commandLabel, commandControls);
+        // The input is several lines, so it takes the card's width below its caption
+        d.inputLabel->setBuddy(d.input);
+        auto input = commands->addSetting(d.inputLabel, QWidgetList{});
+        input->setCollapsible(false);
+        input->addWidget(d.input);
+        auto timeout = commands->addSetting(d.timeoutLabel, d.timeout);
+        for (auto card : {command, input, timeout}) {
+            card->follow(d.tab);
+        }
+    }
+
+    page.finish();
 }
 
 DatabaseSettingsWidgetRemote::~DatabaseSettingsWidgetRemote() = default;
