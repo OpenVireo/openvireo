@@ -57,6 +57,7 @@ private slots:
     void testNewDatabaseModal();
     void testMenuClickSurvivesLostHighlight();
     void testAutoTypeSettingsPage();
+    void testFeatureSettingsPages();
     void testSidebarListsOnlyTags();
     void testScreenshots();
     void testViewScreenshots();

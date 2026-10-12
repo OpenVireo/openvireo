@@ -160,6 +160,31 @@ namespace
         QWidget* m_target;
     };
 
+    // A widget shows and hides with another one, such as a frame with the widget it holds
+    class VisibilityFollower : public QObject
+    {
+    public:
+        VisibilityFollower(QWidget* source, QWidget* target)
+            : QObject(target)
+            , m_target(target)
+        {
+            source->installEventFilter(this);
+            target->setVisible(!explicitlyHidden(source));
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::ShowToParent || event->type() == QEvent::HideToParent) {
+                m_target->setVisible(!explicitlyHidden(static_cast<QWidget*>(watched)));
+            }
+            return QObject::eventFilter(watched, event);
+        }
+
+    private:
+        QWidget* m_target;
+    };
+
     // Toggle switch that mirrors a check box, which keeps the state for the page's code
     fluent::basicinput::ToggleSwitch* switchFor(QAbstractButton* checkBox, QWidget* parent)
     {
@@ -202,6 +227,18 @@ VaultSettingsPage::VaultSettingsPage(QWidget* page, const QString& title)
     heading->setAccessibleName(title);
     styleLabel(heading, Typography::FontRole::Subtitle);
     m_layout->addWidget(heading);
+}
+
+void VaultSettingsPage::addWidget(QWidget* widget)
+{
+    // The frame keeps the gap below the title only while the widget shows
+    auto frame = new QWidget(m_body);
+    auto layout = new QVBoxLayout(frame);
+    layout->setContentsMargins(0, SectionGap, 0, 0);
+    adopt(widget, frame);
+    layout->addWidget(widget);
+    new VisibilityFollower(widget, frame);
+    m_layout->addWidget(frame);
 }
 
 VaultSettingsSection* VaultSettingsPage::addSection(const QString& title)

@@ -990,6 +990,38 @@ void TestGuiVault::testAutoTypeSettingsPage()
     QTRY_VERIFY(!settingsWidget->isVisible());
 }
 
+void TestGuiVault::testFeatureSettingsPages()
+{
+    m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+    auto* settingsWidget = m_mainWindow->findChild<ApplicationSettingsWidget*>();
+    QTRY_VERIFY(settingsWidget->isVisible());
+    auto* categories = settingsWidget->findChild<QListWidget*>("categoryList");
+    auto* pages = settingsWidget->findChild<QStackedWidget*>("stackedWidget");
+
+    // The SSH Agent and KeeShare pages show settings cards in place of their forms
+    const QList<QPair<QString, QString>> features = {
+#ifdef KPXC_FEATURE_SSHAGENT
+        {"SSH Agent", "enableSSHAgentCheckBox"},
+#endif
+        {"KeeShare", "enableImportCheckBox"},
+    };
+    for (const auto& feature : features) {
+        const auto items = categories->findItems(feature.first, Qt::MatchExactly);
+        QCOMPARE(items.size(), 1);
+        categories->setCurrentItem(items.first());
+        auto* page = pages->currentWidget();
+        auto* toggle = page->findChild<QAbstractButton*>(feature.second);
+        QVERIFY(toggle);
+        QVERIFY(toggle->isVisibleTo(settingsWidget));
+        QVERIFY(page->findChild<QWidget*>(feature.second + "Switch")->isVisibleTo(settingsWidget));
+        QVERIFY(!page->findChild<QWidget*>("vaultSettingsPageForm")->isVisibleTo(settingsWidget));
+    }
+
+    categories->setCurrentRow(0);
+    QTest::keyClick(settingsWidget, Qt::Key_Escape);
+    QTRY_VERIFY(!settingsWidget->isVisible());
+}
+
 void TestGuiVault::testSidebarListsOnlyTags()
 {
     // Searching happens in the header, so the sidebar lists tags without the searches
@@ -1077,6 +1109,17 @@ void TestGuiVault::testScreenshots()
         QApplication::processEvents();
         QVERIFY(m_mainWindow->grab().save(
             QDir(dir).absoluteFilePath(QString("vault-settings-autotype-%1.png").arg(theme))));
+        auto* categories = m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList");
+        for (const auto& name : {QStringLiteral("SSH Agent"), QStringLiteral("KeeShare")}) {
+            const auto items = categories->findItems(name, Qt::MatchExactly);
+            if (items.isEmpty()) {
+                continue;
+            }
+            categories->setCurrentItem(items.first());
+            QApplication::processEvents();
+            const auto file = QString("vault-settings-%1-%2.png").arg(name.toLower().remove(' '), theme);
+            QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(file)));
+        }
         m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList")->setCurrentRow(0);
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();

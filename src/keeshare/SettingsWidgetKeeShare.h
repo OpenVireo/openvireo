@@ -52,6 +52,8 @@ private slots:
     void generateCertificate();
 
 private:
+    // Settings cards of the Vault Index layout in place of the form
+    void buildVaultPage();
     void updateOwnCertificate();
 
     QScopedPointer<Ui::SettingsWidgetKeeShare> m_ui;
