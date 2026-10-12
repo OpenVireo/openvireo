@@ -76,6 +76,9 @@ class VaultSettingsPage
 public:
     VaultSettingsPage(QWidget* page, const QString& title);
 
+    // Widget between the title and the sections, such as a status message, shown while the widget is
+    void addWidget(QWidget* widget);
+
     // A heading followed by cards; no heading for an empty title
     VaultSettingsSection* addSection(const QString& title = {});
     // Section in place of a group box of the form, titled like it and hidden and disabled with it

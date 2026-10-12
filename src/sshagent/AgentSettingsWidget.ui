@@ -45,7 +45,7 @@
     <widget class="MessageWidget" name="sshAuthSockMessageWidget" native="true"/>
    </item>
    <item>
-    <widget class="QCheckBox" name="enableSSHAgentCheckBox">
+    <widget class="VaultCheckBox" name="enableSSHAgentCheckBox">
      <property name="text">
       <string>Enable SSH Agent integration</string>
      </property>
@@ -73,21 +73,21 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QRadioButton" name="usePageantRadioButton">
+       <widget class="VaultRadioButton" name="usePageantRadioButton">
         <property name="text">
          <string>Use Pageant</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="useOpenSSHRadioButton">
+       <widget class="VaultRadioButton" name="useOpenSSHRadioButton">
         <property name="text">
          <string>Use OpenSSH</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="useBothRadioButton">
+       <widget class="VaultRadioButton" name="useBothRadioButton">
         <property name="text">
          <string>Use both agents</string>
         </property>
@@ -141,7 +141,7 @@
          </spacer>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="sshAuthSockOverrideEdit"/>
+         <widget class="VaultLineEdit" name="sshAuthSockOverrideEdit"/>
         </item>
         <item row="0" column="1">
          <widget class="QLabel" name="sshAuthSockLabel">
@@ -194,7 +194,7 @@
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QLineEdit" name="sshSecurityKeyProviderOverrideEdit"/>
+         <widget class="VaultLineEdit" name="sshSecurityKeyProviderOverrideEdit"/>
         </item>
        </layout>
       </item>
@@ -204,6 +204,21 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultRadioButton</class>
+   <extends>QRadioButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>

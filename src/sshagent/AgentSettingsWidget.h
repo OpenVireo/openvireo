@@ -41,6 +41,9 @@ public slots:
     void toggleSettingsEnabled();
 
 private:
+    // Settings cards of the Vault Index layout in place of the form
+    void buildVaultPage();
+
     QScopedPointer<Ui::AgentSettingsWidget> m_ui;
 };
 
