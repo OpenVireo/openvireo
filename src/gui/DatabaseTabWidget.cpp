@@ -17,6 +17,7 @@
 
 #include "DatabaseTabWidget.h"
 
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QTabBar>
 
@@ -33,6 +34,7 @@
 #include "gui/MessageBox.h"
 #include "gui/export/ExportDialog.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultNewDatabaseModal.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
@@ -96,14 +98,35 @@ void DatabaseTabWidget::toggleTabbar()
  */
 QSharedPointer<Database> DatabaseTabWidget::execNewDatabaseWizard()
 {
-    // use QScopedPointer to ensure deletion after scope ends, but still parent
-    // it to this to make it modal and allow easier access in unit tests
-    QScopedPointer<NewDatabaseWizard> wizard(new NewDatabaseWizard(this));
-    if (!wizard->exec()) {
-        return {};
+    QSharedPointer<Database> db;
+    if (FluentTheme::vaultLayoutEnabled()) {
+        // The menus stay usable behind the modal, so don't stack a second one
+        if (window()->findChild<VaultNewDatabaseModal*>()) {
+            return {};
+        }
+        // A modal over the window instead of the wizard. Wait for it like the wizard's exec(),
+        // since callers need the database right away.
+        QPointer<VaultNewDatabaseModal> modal = new VaultNewDatabaseModal(window());
+        QEventLoop loop;
+        connect(modal, &VaultNewDatabaseModal::finished, &loop, [&](QSharedPointer<Database> created) {
+            db = std::move(created);
+            loop.quit();
+        });
+        // The window going away takes the modal with it
+        connect(modal, &QObject::destroyed, &loop, &QEventLoop::quit);
+        modal->open();
+        loop.exec(QEventLoop::DialogExec);
+        delete modal;
+    } else {
+        // use QScopedPointer to ensure deletion after scope ends, but still parent
+        // it to this to make it modal and allow easier access in unit tests
+        QScopedPointer<NewDatabaseWizard> wizard(new NewDatabaseWizard(this));
+        if (!wizard->exec()) {
+            return {};
+        }
+        db = wizard->takeDatabase();
     }
 
-    auto db = wizard->takeDatabase();
     if (!db) {
         return {};
     }

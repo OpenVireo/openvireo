@@ -21,6 +21,7 @@
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Group.h"
+#include "core/Metadata.h"
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
 #include "gui/Application.h"
@@ -42,6 +43,7 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultModal.h"
+#include "gui/vault/VaultNewDatabaseModal.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 
@@ -846,6 +848,100 @@ void TestGuiVault::testGroupModals()
 
     delete created;
     selectGroup(m_workGroup);
+}
+
+void TestGuiVault::testNewDatabaseModal()
+{
+    const int tabsBefore = m_tabWidget->count();
+    auto* newAction = m_mainWindow->findChild<QAction*>("actionDatabaseNew");
+
+    // The modal waits like the wizard did, so drive it from inside its event loop
+    QStringList titles;
+    QList<int> steps;
+    QString lastButton;
+    bool backHiddenOnFirst = false;
+    bool nameKept = false;
+    bool coversWindow = false;
+    QTimer::singleShot(0, this, [&] {
+        auto* modal = m_mainWindow->findChild<VaultNewDatabaseModal*>("vaultNewDatabaseModal");
+        if (!modal || !modal->isOpen()) {
+            return;
+        }
+        coversWindow = modal->geometry() == m_mainWindow->rect();
+        auto* title = modal->findChild<QLabel*>("vaultNewDatabaseStepTitle");
+        auto* back = modal->findChild<QPushButton*>("vaultNewDatabaseBack");
+        auto* next = modal->findChild<QPushButton*>("vaultNewDatabaseContinue");
+        auto* name = modal->findChild<QLineEdit*>("databaseName");
+        backHiddenOnFirst = back->isHidden();
+        titles << title->text();
+        steps << modal->currentStep();
+
+        const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+        QTest::keyClicks(name, "Created in a modal");
+        if (!dir.isEmpty()) {
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-new-database-general.png"));
+        }
+        QTest::mouseClick(next, Qt::LeftButton);
+        titles << title->text();
+        steps << modal->currentStep();
+        if (!dir.isEmpty()) {
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-new-database-encryption.png"));
+        }
+
+        // Back keeps what was entered
+        QTest::mouseClick(back, Qt::LeftButton);
+        steps << modal->currentStep();
+        nameKept = name->text() == "Created in a modal";
+
+        QTest::keyClick(name, Qt::Key_Enter);
+        QTest::mouseClick(next, Qt::LeftButton);
+        titles << title->text();
+        steps << modal->currentStep();
+        lastButton = next->text();
+
+        auto* password = modal->findChild<PasswordWidget*>("enterPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
+        auto* repeat = modal->findChild<PasswordWidget*>("repeatPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
+        QTest::keyClicks(password, "test");
+        QTest::keyClicks(repeat, "test");
+        if (!dir.isEmpty()) {
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-new-database-credentials.png"));
+        }
+        MessageBox::setNextAnswer(MessageBox::ContinueWithWeakPass);
+        QTest::mouseClick(next, Qt::LeftButton);
+    });
+    newAction->trigger();
+
+    QVERIFY(coversWindow);
+    QVERIFY(backHiddenOnFirst);
+    QCOMPARE(titles, QStringList({"General", "Encryption", "Database Credentials"}));
+    QCOMPARE(steps, QList<int>({0, 1, 0, 2}));
+    QVERIFY(nameKept);
+    QCOMPARE(lastButton, QString("Create Database"));
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultNewDatabaseModal*>());
+    QCOMPARE(m_tabWidget->count(), tabsBefore + 1);
+    auto* created = m_tabWidget->currentDatabaseWidget();
+    QCOMPARE(created->database()->metadata()->name(), QString("Created in a modal"));
+    QVERIFY(created->database()->key());
+    QVERIFY(created->database()->kdf());
+
+    MessageBox::setNextAnswer(MessageBox::Discard);
+    QVERIFY(m_tabWidget->closeDatabaseTab(created));
+    QCOMPARE(m_tabWidget->count(), tabsBefore);
+
+    // Escape sets it aside without a new database
+    bool cancelled = false;
+    QTimer::singleShot(0, this, [&] {
+        auto* modal = m_mainWindow->findChild<VaultNewDatabaseModal*>("vaultNewDatabaseModal");
+        if (modal && modal->isOpen()) {
+            QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Escape);
+            cancelled = !modal->isOpen();
+        }
+    });
+    newAction->trigger();
+    QVERIFY(cancelled);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultNewDatabaseModal*>());
+    QCOMPARE(m_tabWidget->count(), tabsBefore);
+    m_tabWidget->setCurrentWidget(m_dbWidget);
 }
 
 void TestGuiVault::testMenuClickSurvivesLostHighlight()
