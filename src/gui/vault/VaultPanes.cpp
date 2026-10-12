@@ -294,8 +294,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
                              QStringLiteral("actionGroupNew"),
                              QStringLiteral("actionGroupEdit"),
                              QString(),
-                             QStringLiteral("actionDatabaseSave"),
-                             QStringLiteral("actionDatabaseSettings")}) {
+                             QStringLiteral("actionDatabaseSave")}) {
         if (name.isEmpty()) {
             menu->addSeparator();
         } else if (auto* action = FluentTheme::action(name)) {
@@ -684,6 +683,10 @@ void VaultDatabasePicker::showDatabaseMenu()
         if (auto* action = FluentTheme::action(name)) {
             menu.addAction(action);
         }
+    }
+    menu.addSeparator();
+    if (auto* action = FluentTheme::action("actionDatabaseSettings")) {
+        menu.addAction(action);
     }
     menu.addSeparator();
     for (const auto* name : {"actionLockAllDatabases", "actionDatabaseClose"}) {
