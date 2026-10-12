@@ -159,7 +159,7 @@ public:
 
     // Rows that always show, without a chevron to fold them away; set before adding rows
     void setCollapsible(bool collapsible);
-    // Hide the card with a widget of the form, such as the tab page it replaces
+    // Hide the card with a widget of the form, such as the tab page it replaces; with several, while any is hidden
     void follow(QWidget* source);
 
     bool isExpanded() const;
@@ -199,7 +199,7 @@ private:
     QWidget* m_children;
     QVBoxLayout* m_childLayout;
     QList<Row> m_rows;
-    QPointer<QWidget> m_source;
+    QList<QPointer<QWidget>> m_sources;
     bool m_collapsible = true;
     bool m_expanded = true;
 };

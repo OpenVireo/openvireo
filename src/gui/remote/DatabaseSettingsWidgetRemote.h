@@ -54,6 +54,7 @@ private slots:
     void updateTypeVisibility();
 
 private:
+    void buildVaultPage();
     RemoteParams* paramsFromFields() const;
     void updateSettingsList();
     QListWidgetItem* findItemByName(const QString& name);
