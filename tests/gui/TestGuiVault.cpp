@@ -546,10 +546,10 @@ void TestGuiVault::testDatabasePicker()
     QApplication::processEvents();
 
     QVERIFY(!firstChecked);
-    QCOMPARE(menuItems.size(), 8);
+    QCOMPARE(menuItems.size(), 10);
     QCOMPARE(menuItems.mid(2),
-             QStringList({"-", "actionDatabaseNew", "actionDatabaseOpen", "-", "actionLockAllDatabases",
-                          "actionDatabaseClose"}));
+             QStringList({"-", "actionDatabaseNew", "actionDatabaseOpen", "-", "actionDatabaseSettings", "-",
+                          "actionLockAllDatabases", "actionDatabaseClose"}));
     QCOMPARE(m_tabWidget->currentDatabaseWidget(), m_dbWidget.data());
     QCOMPARE(picker->text(), m_dbWidget->displayName());
     QVERIFY(header->findChild<SearchWidget*>("SearchWidget")->isVisible());
