@@ -49,6 +49,8 @@ public:
     // Label a standard button differently from the box, or leave it out of the bar
     void setButtonText(QDialogButtonBox::StandardButton button, const QString& text);
     void setButtonHidden(QDialogButtonBox::StandardButton button, bool hidden);
+    // Share the bar's width equally between the buttons, as in a WinUI content dialog
+    void setFillWidth(bool fill);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -61,6 +63,7 @@ private:
     QHash<int, QString> m_texts;
     QSet<int> m_hidden;
     QHBoxLayout* m_layout;
+    bool m_fillWidth = false;
     bool m_rebuildPending = false;
 };
 
