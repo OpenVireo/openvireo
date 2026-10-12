@@ -17,6 +17,8 @@
 
 #include "VaultControls.h"
 
+#include "gui/vault/VaultWidgets.h"
+
 #include <QAbstractSpinBox>
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -172,6 +174,86 @@ VaultCheckBox::VaultCheckBox(const QString& text, QWidget* parent)
 {
 }
 
+namespace
+{
+    constexpr int SwitchStyleMaximumWidth = 480;
+    constexpr int SwitchStyleMinimumWidth = 120;
+    constexpr int DescriptionGap = 2;
+    constexpr int SwitchStyleTextFlags = Qt::TextWordWrap | Qt::TextHideMnemonic;
+} // namespace
+
+void VaultCheckBox::setSwitchStyle(bool switchStyle)
+{
+    if (m_switchStyle == switchStyle) {
+        return;
+    }
+    m_switchStyle = switchStyle;
+    setSizePolicy(switchStyle ? QSizePolicy::Expanding : QSizePolicy::Preferred, QSizePolicy::Preferred);
+    updateGeometry();
+    update();
+}
+
+bool VaultCheckBox::hasSwitchStyle() const
+{
+    return m_switchStyle;
+}
+
+void VaultCheckBox::setDescription(const QString& description)
+{
+    m_description = description;
+    updateGeometry();
+    update();
+}
+
+QString VaultCheckBox::description() const
+{
+    return m_description;
+}
+
+int VaultCheckBox::switchTextHeight(int width) const
+{
+    const QFontMetrics title(Vault::font(Typography::FontRole::Body));
+    int height = title.boundingRect(QRect(0, 0, width, QWIDGETSIZE_MAX), SwitchStyleTextFlags, text()).height();
+    if (!m_description.isEmpty()) {
+        const QFontMetrics caption(Vault::font(Typography::FontRole::Caption));
+        height +=
+            DescriptionGap
+            + caption.boundingRect(QRect(0, 0, width, QWIDGETSIZE_MAX), SwitchStyleTextFlags, m_description).height();
+    }
+    return height;
+}
+
+QSize VaultCheckBox::sizeHint() const
+{
+    if (!m_switchStyle) {
+        return fluent::basicinput::CheckBox::sizeHint();
+    }
+    const QFontMetrics title(Vault::font(Typography::FontRole::Body));
+    const int width = qMin(title.horizontalAdvance(VaultButton::withoutMnemonic(text())) + 1, SwitchStyleMaximumWidth);
+    return {width, heightForWidth(width)};
+}
+
+QSize VaultCheckBox::minimumSizeHint() const
+{
+    if (!m_switchStyle) {
+        return fluent::basicinput::CheckBox::minimumSizeHint();
+    }
+    return {SwitchStyleMinimumWidth, heightForWidth(SwitchStyleMinimumWidth)};
+}
+
+bool VaultCheckBox::hasHeightForWidth() const
+{
+    return m_switchStyle || fluent::basicinput::CheckBox::hasHeightForWidth();
+}
+
+int VaultCheckBox::heightForWidth(int width) const
+{
+    if (!m_switchStyle) {
+        return fluent::basicinput::CheckBox::heightForWidth(width);
+    }
+    return switchTextHeight(width);
+}
+
 bool VaultCheckBox::hitButton(const QPoint& pos) const
 {
     return rect().contains(pos);
@@ -179,6 +261,29 @@ bool VaultCheckBox::hitButton(const QPoint& pos) const
 
 void VaultCheckBox::paintEvent(QPaintEvent* event)
 {
+    if (m_switchStyle) {
+        // The settings card draws the switch and the focus ring around itself
+        const auto& colors = themeColors();
+        QPainter painter(this);
+        const QFont titleFont = Vault::font(Typography::FontRole::Body);
+        const QFont captionFont = Vault::font(Typography::FontRole::Caption);
+        const int textHeight = switchTextHeight(width());
+        QRect area(0, (height() - textHeight) / 2, width(), textHeight);
+
+        painter.setFont(titleFont);
+        painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
+        QRect titleRect;
+        painter.drawText(area, SwitchStyleTextFlags | Qt::AlignLeft | Qt::AlignTop, text(), &titleRect);
+
+        if (!m_description.isEmpty()) {
+            area.setTop(titleRect.bottom() + 1 + DescriptionGap);
+            painter.setFont(captionFont);
+            painter.setPen(isEnabled() ? colors.textSecondary : colors.textDisabled);
+            painter.drawText(area, SwitchStyleTextFlags | Qt::AlignLeft | Qt::AlignTop, m_description);
+        }
+        return;
+    }
+
     fluent::basicinput::CheckBox::paintEvent(event);
     if (!isEnabled() || checkState() != Qt::Unchecked) {
         return;
@@ -191,6 +296,16 @@ void VaultCheckBox::paintEvent(QPaintEvent* event)
     painter.setPen(QPen(themeColors().strokeStrong, 1));
     painter.setBrush(Qt::NoBrush);
     painter.drawRoundedRect(box.adjusted(0.5, 0.5, -0.5, -0.5), themeRadius().control, themeRadius().control);
+}
+
+VaultRadioButton::VaultRadioButton(QWidget* parent)
+    : fluent::basicinput::RadioButton(parent)
+{
+}
+
+VaultRadioButton::VaultRadioButton(const QString& text, QWidget* parent)
+    : fluent::basicinput::RadioButton(text, parent)
+{
 }
 
 VaultComboBox::VaultComboBox(QWidget* parent)
