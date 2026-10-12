@@ -169,6 +169,7 @@ set(gui_SOURCES
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultControls.cpp
         gui/vault/VaultEditShell.cpp
+        gui/vault/VaultEntryEditCard.cpp
         gui/vault/VaultPanes.cpp
         gui/vault/VaultSettingsModal.cpp
         gui/vault/VaultWidgets.cpp

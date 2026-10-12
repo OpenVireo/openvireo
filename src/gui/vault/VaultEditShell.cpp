@@ -141,7 +141,7 @@ bool VaultButtonBar::eventFilter(QObject* watched, QEvent* event)
         if (auto* source = qobject_cast<QAbstractButton*>(watched)) {
             if (auto* proxy = source->property("vaultProxy").value<QAbstractButton*>()) {
                 proxy->setEnabled(source->isEnabled());
-                proxy->setVisible(!source->isHidden());
+                proxy->setVisible(!source->isHidden() && !isHiddenInBar(source));
             }
         }
         break;
@@ -149,6 +149,27 @@ bool VaultButtonBar::eventFilter(QObject* watched, QEvent* event)
         break;
     }
     return QWidget::eventFilter(watched, event);
+}
+
+void VaultButtonBar::setButtonText(QDialogButtonBox::StandardButton button, const QString& text)
+{
+    m_texts.insert(button, text);
+    rebuild();
+}
+
+void VaultButtonBar::setButtonHidden(QDialogButtonBox::StandardButton button, bool hidden)
+{
+    if (hidden) {
+        m_hidden.insert(button);
+    } else {
+        m_hidden.remove(button);
+    }
+    rebuild();
+}
+
+bool VaultButtonBar::isHiddenInBar(QAbstractButton* source) const
+{
+    return m_buttons && m_hidden.contains(m_buttons->standardButton(source));
 }
 
 void VaultButtonBar::rebuild()
@@ -179,12 +200,13 @@ void VaultButtonBar::rebuild()
     }
 
     auto addProxy = [this](QAbstractButton* source, bool accent) {
-        auto* proxy = new VaultButton(VaultButton::withoutMnemonic(source->text()), this);
+        const auto text = m_texts.value(m_buttons->standardButton(source), source->text());
+        auto* proxy = new VaultButton(VaultButton::withoutMnemonic(text), this);
         proxy->setObjectName(source->objectName().isEmpty() ? QString() : "vault_" + source->objectName());
         proxy->setFluentStyle(accent ? fluent::basicinput::Button::Accent : fluent::basicinput::Button::Standard);
         proxy->setMinimumWidth(96);
         proxy->setEnabled(source->isEnabled());
-        proxy->setVisible(!source->isHidden());
+        proxy->setVisible(!source->isHidden() && !isHiddenInBar(source));
         connect(proxy, &QAbstractButton::clicked, source, &QAbstractButton::click);
         source->setProperty("vaultProxy", QVariant::fromValue<QAbstractButton*>(proxy));
         source->setFocusPolicy(Qt::NoFocus);

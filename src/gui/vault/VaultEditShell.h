@@ -18,13 +18,15 @@
 #ifndef KEEPASSXC_VAULTEDITSHELL_H
 #define KEEPASSXC_VAULTEDITSHELL_H
 
+#include <QDialogButtonBox>
+#include <QHash>
 #include <QPointer>
+#include <QSet>
 #include <QWidget>
 
 #include <components/foundation/FluentElement.h>
 
 class CategoryListWidget;
-class QDialogButtonBox;
 class QHBoxLayout;
 class QLabel;
 class QStackedWidget;
@@ -44,13 +46,20 @@ class VaultButtonBar : public QWidget
 public:
     VaultButtonBar(QDialogButtonBox* buttons, QWidget* parent = nullptr);
 
+    // Label a standard button differently from the box, or leave it out of the bar
+    void setButtonText(QDialogButtonBox::StandardButton button, const QString& text);
+    void setButtonHidden(QDialogButtonBox::StandardButton button, bool hidden);
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     void rebuild();
+    bool isHiddenInBar(QAbstractButton* source) const;
 
     QPointer<QDialogButtonBox> m_buttons;
+    QHash<int, QString> m_texts;
+    QSet<int> m_hidden;
     QHBoxLayout* m_layout;
     bool m_rebuildPending = false;
 };

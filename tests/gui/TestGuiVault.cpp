@@ -36,6 +36,8 @@
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
 #include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultEditShell.h"
+#include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
@@ -49,6 +51,7 @@
 #include <QLineEdit>
 #include <QListView>
 #include <QListWidget>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScreen>
 #include <QStackedWidget>
@@ -83,6 +86,19 @@ namespace
             }
         }
         return false;
+    }
+
+    // The buttons a Vault button bar shows, by their text
+    QAbstractButton* barButton(QWidget* bar, const QString& text)
+    {
+        // The bar rebuilds its buttons once the editor has settled on its standard buttons
+        QApplication::processEvents();
+        for (auto* button : bar->findChildren<QAbstractButton*>(Qt::FindDirectChildrenOnly)) {
+            if (button->isVisibleTo(bar) && button->text() == text) {
+                return button;
+            }
+        }
+        return nullptr;
     }
 } // namespace
 
@@ -180,6 +196,11 @@ void TestGuiVault::selectGroup(Group* group)
     QApplication::processEvents();
 }
 
+VaultEntryEditCard* TestGuiVault::entryEditCard() const
+{
+    return m_dbWidget->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
+}
+
 void TestGuiVault::selectEntry(Entry* entry)
 {
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
@@ -246,11 +267,218 @@ void TestGuiVault::testCommandBar()
     QVERIFY(newEntry->isEnabled());
     QTest::mouseClick(newEntry, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    auto* editEntryWidget = m_dbWidget->findChild<QWidget*>("editEntryWidget");
-    auto* buttonBox = editEntryWidget->findChild<QDialogButtonBox*>("buttonBox");
+    auto* buttonBox = entryEditCard()->editor()->buttonBox();
     QVERIFY(buttonBox);
     QTest::mouseClick(buttonBox->button(QDialogButtonBox::Cancel), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+}
+
+void TestGuiVault::testEditEntryInPlace()
+{
+    selectGroup(m_workGroup);
+    selectEntry(m_github);
+    auto* card = entryEditCard();
+    auto* details = m_dbWidget->findChild<EntryDetailCard*>();
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+    auto* navPane = m_dbWidget->findChild<VaultNavPane*>();
+    QVERIFY(card);
+    QVERIFY(!card->isVisible());
+
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    QVERIFY(m_dbWidget->isEntryEditActive());
+    QVERIFY(!m_dbWidget->isEntryViewActive());
+    QCOMPARE(m_dbWidget->currentSelectedEntry(), m_github.data());
+
+    // The editor takes the detail card's place; the groups and the list stay in view but wait
+    QVERIFY(card->isVisible());
+    QVERIFY(!details->isVisible());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(!entryView->isEnabled());
+    QVERIFY(navPane->isVisible());
+    QVERIFY(!navPane->isEnabled());
+    QVERIFY(!m_dbWidget->findChild<VaultDraftRow*>("vaultDraftRow")->isVisible());
+
+    // Save in place of OK, and no Apply since saving returns to the details
+    auto* bar = card->findChild<VaultButtonBar*>();
+    QVERIFY(barButton(bar, "Save"));
+    QVERIFY(barButton(bar, "Cancel"));
+    QVERIFY(!barButton(bar, "Apply"));
+
+    auto* title = card->findChild<QLineEdit*>("titleEdit");
+    title->setText("GitHub Enterprise");
+    QTest::mouseClick(barButton(bar, "Save"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QCOMPARE(m_github->title(), QString("GitHub Enterprise"));
+    QVERIFY(details->isVisible());
+    QVERIFY(!card->isVisible());
+    QVERIFY(entryView->isEnabled());
+    QVERIFY(navPane->isEnabled());
+    QTRY_VERIFY(hasLabelWithText(details, "GitHub Enterprise"));
+    m_github->setTitle("GitHub");
+}
+
+void TestGuiVault::testNewEntryDraft()
+{
+    selectGroup(m_workGroup);
+    const auto entriesBefore = m_workGroup->entries().size();
+    auto* commandBar = m_dbWidget->findChild<VaultCommandBar*>();
+    QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+
+    // The new entry shows as a draft at the top of the list
+    auto* draft = m_dbWidget->findChild<VaultDraftRow*>("vaultDraftRow");
+    QVERIFY(draft->isVisible());
+    QCOMPARE(draft->title(), QString("New entry"));
+
+    // It starts compact: notes, tags and expiry wait behind chips
+    auto* card = entryEditCard();
+    auto* notes = card->findChild<QPlainTextEdit*>("notesEdit");
+    auto* tags = card->findChild<QWidget*>("tagsList");
+    auto* expires = card->findChild<QWidget*>("expireCheck");
+    QVERIFY(!notes->isVisible());
+    QVERIFY(!tags->isVisible());
+    QVERIFY(!expires->isVisible());
+    QVERIFY(card->findChild<QWidget*>("vaultEditAddRow")->isVisible());
+
+    // The title follows the site until the user types one
+    auto* title = card->findChild<QLineEdit*>("titleEdit");
+    auto* url = card->findChild<QLineEdit*>("urlEdit");
+    QTest::keyClicks(url, "https://www.example.org/login");
+    QCOMPARE(title->text(), QString("example.org"));
+    QCOMPARE(draft->title(), QString("example.org"));
+    title->setText("Example");
+    QTest::keyClicks(url, "/");
+    QCOMPARE(title->text(), QString("Example"));
+    QCOMPARE(draft->title(), QString("Example"));
+
+    auto* addNotes = card->findChild<QAbstractButton*>("vaultEditAddnotesEdit");
+    QVERIFY(addNotes->isVisible());
+    QTest::mouseClick(addNotes, Qt::LeftButton);
+    QVERIFY(notes->isVisible());
+    QVERIFY(!addNotes->isVisible());
+    QVERIFY(!tags->isVisible());
+    notes->setPlainText("Created in place");
+
+    auto* bar = card->findChild<VaultButtonBar*>();
+    QVERIFY(barButton(bar, "Save"));
+    QTest::mouseClick(barButton(bar, "Save"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(!draft->isVisible());
+    QCOMPARE(m_workGroup->entries().size(), entriesBefore + 1);
+    auto* created = m_dbWidget->currentSelectedEntry();
+    QVERIFY(created);
+    QCOMPARE(created->title(), QString("Example"));
+    QCOMPARE(created->url(), QString("https://www.example.org/login/"));
+    QCOMPARE(created->notes(), QString("Created in place"));
+
+    // Editing shows every row, whether or not it has a value
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    QVERIFY(notes->isVisible());
+    QVERIFY(tags->isVisible());
+    QVERIFY(expires->isVisible());
+    QVERIFY(!card->findChild<QWidget*>("vaultEditAddRow")->isVisible());
+    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    delete created;
+    QCOMPARE(m_workGroup->entries().size(), entriesBefore);
+
+    // Setting a new entry aside leaves nothing behind
+    QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    QVERIFY(!notes->isVisible());
+    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(!draft->isVisible());
+    QCOMPARE(m_workGroup->entries().size(), entriesBefore);
+}
+
+void TestGuiVault::testEditorSections()
+{
+    selectGroup(m_workGroup);
+    selectEntry(m_github);
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+
+    // The other pages are listed under the Entry page and open in its place
+    auto* card = entryEditCard();
+    auto* sections = card->findChild<QWidget*>("vaultEditSections");
+    QVERIFY(sections->isVisible());
+    QAbstractButton* advanced = nullptr;
+    for (auto* row : sections->findChildren<QAbstractButton*>()) {
+        if (row->text() == "Advanced") {
+            advanced = row;
+        }
+    }
+    QVERIFY(advanced);
+    auto* back = card->findChild<QAbstractButton*>("vaultEditBackButton");
+    QVERIFY(!back->isVisible());
+
+    QTest::mouseClick(advanced, Qt::LeftButton);
+    QCOMPARE(card->editor()->pageStack()->currentIndex(), 1);
+    QVERIFY(back->isVisible());
+    QVERIFY(hasLabelWithText(card, "Advanced"));
+
+    QTest::mouseClick(back, Qt::LeftButton);
+    QCOMPARE(card->editor()->pageStack()->currentIndex(), 0);
+    QVERIFY(!back->isVisible());
+
+    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+}
+
+void TestGuiVault::testEditorFocusMode()
+{
+    selectGroup(m_workGroup);
+    selectEntry(m_github);
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+    auto* listHost = entryView->parentWidget();
+    const int listWidth = listHost->width();
+    QVERIFY(listWidth > 220);
+
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* card = entryEditCard();
+    const int cardWidth = card->width();
+    auto* focusButton = card->findChild<QAbstractButton*>("vaultEditFocusButton");
+
+    // Focus mode narrows the list to its titles and widens the editor
+    QTest::mouseClick(focusButton, Qt::LeftButton);
+    QVERIFY(card->isFocusMode());
+    QTRY_VERIFY(listHost->width() <= 220);
+    QVERIFY(entryView->isVisible());
+    QTRY_VERIFY(card->width() > cardWidth);
+
+    QTest::mouseClick(focusButton, Qt::LeftButton);
+    QVERIFY(!card->isFocusMode());
+    QTRY_COMPARE(listHost->width(), listWidth);
+
+    // Leaving the editor brings the list back too
+    QTest::mouseClick(focusButton, Qt::LeftButton);
+    QTRY_VERIFY(listHost->width() <= 220);
+    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(!card->isFocusMode());
+    QTRY_COMPARE(listHost->width(), listWidth);
+}
+
+void TestGuiVault::testLeavingViewEndsEditing()
+{
+    selectGroup(m_workGroup);
+    selectEntry(m_github);
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+
+    // Another page replacing the main view, such as the unlock screen, ends inline editing
+    m_dbWidget->switchToDatabaseSettings();
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::DatabaseSettingsMode);
+    m_dbWidget->switchToMainView();
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QVERIFY(m_dbWidget->findChild<EntryDetailCard*>()->isVisible());
+    QVERIFY(!entryEditCard()->isVisible());
+    QVERIFY(m_dbWidget->findChild<EntryView*>("entryView")->isEnabled());
+    QVERIFY(m_dbWidget->findChild<VaultNavPane*>()->isEnabled());
 }
 
 void TestGuiVault::testSearchTitle()
@@ -572,11 +800,17 @@ void TestGuiVault::testViewScreenshots()
 
         m_dbWidget->switchToEntryEdit();
         save("entry", theme);
-        auto* entryCategories =
-            m_dbWidget->findChild<QWidget*>("editEntryWidget")->findChild<QListWidget*>("categoryList");
+        auto* entryCategories = entryEditCard()->editor()->findChild<QListWidget*>("categoryList");
         entryCategories->setCurrentRow(1);
         save("entry-advanced", theme);
         entryCategories->setCurrentRow(0);
+        entryEditCard()->findChild<QAbstractButton*>("vaultEditFocusButton")->click();
+        save("entry-focus", theme);
+        m_dbWidget->switchToMainView();
+
+        m_dbWidget->createEntry();
+        QTest::keyClicks(entryEditCard()->findChild<QLineEdit*>("urlEdit"), "https://www.example.org");
+        save("entry-new", theme);
         m_dbWidget->switchToMainView();
 
         m_dbWidget->switchToGroupEdit();
