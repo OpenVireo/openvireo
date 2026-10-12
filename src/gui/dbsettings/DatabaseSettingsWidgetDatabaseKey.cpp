@@ -68,6 +68,8 @@ DatabaseSettingsWidgetDatabaseKey::DatabaseSettingsWidgetDatabaseKey(QWidget* pa
     // The credentials are settings cards in the Vault Index layout, which sit closer together
     if (FluentTheme::vaultLayoutEnabled()) {
         vbox->setSpacing(8);
+        // The same margins as the pages of settings cards, so the cards line up with the encryption settings
+        vbox->setContentsMargins(4, 24, 12, 16);
         m_additionalKeyOptions->layout()->setSpacing(8);
         vbox->setAlignment(m_additionalKeyOptionsToggle, Qt::AlignLeft);
     }
