@@ -26,6 +26,7 @@
 #include "core/PasswordHealth.h"
 #include "gui/Icons.h"
 
+#include <QPointer>
 #include <QStandardItemModel>
 
 ReportsWidgetStatistics::ReportsWidgetStatistics(QWidget* parent)
@@ -80,8 +81,13 @@ void ReportsWidgetStatistics::showEvent(QShowEvent* event)
 
 void ReportsWidgetStatistics::calculateStats()
 {
+    const QPointer<QWidget> self(this);
     const QScopedPointer<DatabaseStats> stats(
         AsyncTask::runAndWaitForFuture([this] { return new DatabaseStats(m_db); }));
+    // Waiting runs the event loop, which can close the database and delete this page
+    if (!self) {
+        return;
+    }
 
     m_referencesModel->clear();
     addStatsRow(tr("Database name"), m_db->metadata()->name());
