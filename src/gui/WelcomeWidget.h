@@ -49,8 +49,11 @@ private slots:
     void openDatabaseFromFile(QListWidgetItem* item);
 
 private:
+    void setupVaultStyle();
+
     const QScopedPointer<Ui::WelcomeWidget> m_ui;
     void removeFromLastDatabases(QListWidgetItem* item);
+    bool m_vaultStyle = false;
 };
 
 #endif // KEEPASSX_WELCOMEWIDGET_H

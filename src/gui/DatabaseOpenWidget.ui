@@ -287,7 +287,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="buttonBrowseFile">
+                  <widget class="VaultButton" name="buttonBrowseFile">
                    <property name="toolTip">
                     <string>Browse for key file</string>
                    </property>
@@ -344,14 +344,14 @@
                    <number>0</number>
                   </property>
                   <item>
-                   <widget class="QCheckBox" name="useHardwareKeyCheckBox">
+                   <widget class="VaultCheckBox" name="useHardwareKeyCheckBox">
                     <property name="text">
                      <string notr="true">Use Hardware Security Key [Serial: 11111111]</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QComboBox" name="hardwareKeyCombo">
+                   <widget class="VaultComboBox" name="hardwareKeyCombo">
                     <property name="enabled">
                      <bool>false</bool>
                     </property>
@@ -408,7 +408,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QPushButton" name="refreshHardwareKeys">
+                <widget class="VaultButton" name="refreshHardwareKeys">
                  <property name="cursor">
                   <cursorShape>PointingHandCursor</cursorShape>
                  </property>
@@ -528,7 +528,7 @@
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="quickUnlockButton">
+               <widget class="VaultButton" name="quickUnlockButton">
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
@@ -551,7 +551,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="resetQuickUnlockButton">
+               <widget class="VaultButton" name="resetQuickUnlockButton">
                 <property name="text">
                  <string>Cancel</string>
                 </property>
@@ -629,6 +629,21 @@
   </layout>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>PasswordWidget</class>
    <extends>QWidget</extends>

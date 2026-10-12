@@ -23,6 +23,9 @@
 #include "gui/Icons.h"
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultEditShell.h"
+#include "gui/vault/VaultWidgets.h"
 #include "keys/ChallengeResponseKey.h"
 #include "keys/FileKey.h"
 #include "keys/drivers/YubiKeyInterfaceUSB.h"
@@ -124,6 +127,39 @@ DatabaseOpenWidget::DatabaseOpenWidget(QWidget* parent)
     connect(m_ui->quickUnlockButton, &QPushButton::pressed, this, [this] { openDatabase(); });
     connect(m_ui->resetQuickUnlockButton, &QPushButton::pressed, this, [this] { resetQuickUnlock(); });
     m_ui->resetQuickUnlockButton->setShortcut(Qt::Key_Escape);
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultStyle();
+    }
+}
+
+void DatabaseOpenWidget::setupVaultStyle()
+{
+    m_vaultStyle = true;
+    Vault::paintCanvas(this);
+
+    // Fluent Close and Unlock buttons in place of the platform button box
+    auto* buttonsLayout = findChild<QHBoxLayout*>("dialogButtonsLayout");
+    buttonsLayout->addWidget(new VaultButtonBar(m_ui->buttonBox), 1);
+
+    Vault::followTheme(this, [this] {
+        const auto p = FluentTheme::palette();
+        Vault::styleLabel(m_ui->labelHeadline, Typography::FontRole::Title, p.text);
+        Vault::styleLabel(m_ui->fileNameLabel, Typography::FontRole::Caption, p.textSecondary);
+        applyCardStyle();
+    });
+}
+
+void DatabaseOpenWidget::applyCardStyle()
+{
+    const auto p = FluentTheme::palette();
+    // A database's public color outlines its card, as it outlines the classic unlock box
+    const auto color = m_db ? m_db->publicColor() : QString();
+    const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(p.stroke.name(QColor::HexArgb))
+                                        : QStringLiteral("3px solid %1").arg(color);
+    m_ui->centralStack->setStyleSheet(
+        QStringLiteral("QStackedWidget#centralStack { background-color: %1; border: %2; border-radius: 8px; }")
+            .arg(p.layer.name(QColor::HexArgb), border));
 }
 
 DatabaseOpenWidget::~DatabaseOpenWidget() = default;
@@ -259,7 +295,9 @@ void DatabaseOpenWidget::load(const QString& filename)
 
     // Apply the public color to the central unlock stack if defined
     auto color = m_db->publicColor();
-    if (!color.isEmpty()) {
+    if (m_vaultStyle) {
+        applyCardStyle();
+    } else if (!color.isEmpty()) {
         m_ui->centralStack->setStyleSheet(QString("QStackedWidget {border: 4px solid %1}").arg(color));
     } else {
         m_ui->centralStack->setStyleSheet("");

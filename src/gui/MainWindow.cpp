@@ -49,6 +49,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/entry/EntryView.h"
@@ -133,6 +134,7 @@ MainWindow::MainWindow()
                 &VaultSyncChip::setDatabaseWidget);
         // Settings open in a modal over the window instead of replacing it
         m_settingsModal = new VaultSettingsModal(this, m_ui->settingsWidget);
+        Vault::paintCanvas(m_ui->welcomeWidget->parentWidget());
     } else {
         m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
     }
