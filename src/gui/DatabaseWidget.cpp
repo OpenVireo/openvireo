@@ -1231,12 +1231,14 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_entryView->setListMode(true);
     m_groupView->setNavigationStyle(true);
 
-    // The editors that replace the main view take the same style
+    // The editors, settings and reports that replace the main view take the same style
     for (EditWidget* editor : {static_cast<EditWidget*>(m_editEntryWidget.data()),
                                static_cast<EditWidget*>(m_historyEditEntryWidget.data()),
-                               static_cast<EditWidget*>(m_editGroupWidget.data())}) {
+                               static_cast<EditWidget*>(m_editGroupWidget.data()),
+                               static_cast<EditWidget*>(m_databaseSettingDialog.data())}) {
         editor->applyVaultShell();
     }
+    m_reportsDialog->applyVaultShell();
 
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
 

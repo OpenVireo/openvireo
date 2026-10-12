@@ -84,7 +84,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QPushButton" name="validationButton">
+          <widget class="VaultButton" name="validationButton">
            <property name="maximumSize">
             <size>
              <width>275</width>
@@ -169,7 +169,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="showKnownBadCheckBox">
+        <widget class="VaultCheckBox" name="showKnownBadCheckBox">
          <property name="text">
           <string>Also show entries that have been excluded from reports</string>
          </property>
@@ -232,6 +232,18 @@
   <tabstop>showKnownBadCheckBox</tabstop>
   <tabstop>validationButton</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

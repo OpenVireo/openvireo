@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <item row="0" column="1">
-    <widget class="QPushButton" name="createKeyFileButton">
+    <widget class="VaultButton" name="createKeyFileButton">
      <property name="accessibleName">
       <string>Generate a new key file</string>
      </property>
@@ -72,14 +72,14 @@
     </spacer>
    </item>
    <item row="1" column="0">
-    <widget class="QLineEdit" name="keyFileLineEdit">
+    <widget class="VaultLineEdit" name="keyFileLineEdit">
      <property name="clearButtonEnabled">
       <bool>true</bool>
      </property>
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QPushButton" name="browseKeyFileButton">
+    <widget class="VaultButton" name="browseKeyFileButton">
      <property name="accessibleName">
       <string>Browse for key file</string>
      </property>
@@ -90,6 +90,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

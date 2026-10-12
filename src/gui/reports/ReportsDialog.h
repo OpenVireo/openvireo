@@ -60,6 +60,8 @@ public:
     Q_DISABLE_COPY(ReportsDialog);
 
     void load(const QSharedPointer<Database>& db);
+    // Present the reports in the Vault Index style
+    void applyVaultShell();
     void addPage(QSharedPointer<IReportsPage> page);
 
 #ifdef KPXC_FEATURE_BROWSER

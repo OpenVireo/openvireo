@@ -57,7 +57,7 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QPushButton" name="removeSettingsButton">
+         <widget class="VaultButton" name="removeSettingsButton">
           <property name="layoutDirection">
            <enum>Qt::LeftToRight</enum>
           </property>
@@ -111,10 +111,10 @@
         <item row="0" column="1">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QLineEdit" name="nameLineEdit"/>
+           <widget class="VaultLineEdit" name="nameLineEdit"/>
           </item>
           <item>
-           <widget class="QPushButton" name="saveSettingsButton">
+           <widget class="VaultButton" name="saveSettingsButton">
             <property name="text">
              <string>Save</string>
             </property>
@@ -133,7 +133,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="typeComboBox">
+         <widget class="VaultComboBox" name="typeComboBox">
           <property name="accessibleName">
            <string>Remote sync type</string>
           </property>
@@ -175,7 +175,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLineEdit" name="serverUrlEdit">
+            <widget class="VaultLineEdit" name="serverUrlEdit">
              <property name="accessibleName">
               <string>Sync server URL field</string>
              </property>
@@ -195,7 +195,7 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QLineEdit" name="serverDatabaseIdEdit">
+            <widget class="VaultLineEdit" name="serverDatabaseIdEdit">
              <property name="accessibleName">
               <string>Sync server database ID field</string>
              </property>
@@ -215,7 +215,7 @@
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QLineEdit" name="serverTokenEdit">
+            <widget class="VaultLineEdit" name="serverTokenEdit">
              <property name="accessibleName">
               <string>Sync server access token field</string>
              </property>
@@ -269,7 +269,7 @@
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="testServerButton">
+              <widget class="VaultButton" name="testServerButton">
                <property name="text">
                 <string>Test Connection</string>
                </property>
@@ -326,7 +326,7 @@ The command has to exit. In case of `sftp` as last command `exit` has to be sent
             <item row="0" column="1">
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <item>
-               <widget class="QLineEdit" name="downloadCommand">
+               <widget class="VaultLineEdit" name="downloadCommand">
                 <property name="accessibleName">
                  <string>Download command field</string>
                 </property>
@@ -336,7 +336,7 @@ The command has to exit. In case of `sftp` as last command `exit` has to be sent
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="testDownloadCommandButton">
+               <widget class="VaultButton" name="testDownloadCommandButton">
                 <property name="text">
                  <string>Test</string>
                 </property>
@@ -401,7 +401,7 @@ The command has to exit. In case of `sftp` as last command `exit` has to be sent
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QLineEdit" name="uploadCommand">
+             <widget class="VaultLineEdit" name="uploadCommand">
               <property name="accessibleName">
                <string>Upload command field</string>
               </property>
@@ -452,6 +452,21 @@ The command has to exit. In case of `sftp` as last command `exit` has to be sent
   </layout>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>
