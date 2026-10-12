@@ -243,7 +243,10 @@ void DatabaseOpenWidget::applyCardStyle()
     const auto p = FluentTheme::palette();
     // A database's public color outlines its card, as it outlines the classic unlock box
     const auto color = m_db ? m_db->publicColor() : QString();
-    const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(p.stroke.name(QColor::HexArgb))
+    // Without one, the outline sits between the card stroke and the strong stroke, so the card reads on the canvas
+    auto stroke = p.strokeStrong;
+    stroke.setAlphaF(stroke.alphaF() * 0.3);
+    const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(stroke.name(QColor::HexArgb))
                                         : QStringLiteral("3px solid %1").arg(color);
     m_card->setStyleSheet(QStringLiteral("QFrame#unlockCard { background-color: %1; border: %2; border-radius: 8px; }"
                                          "QStackedWidget#centralStack { background: transparent; border: none; }")
