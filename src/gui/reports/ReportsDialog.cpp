@@ -18,7 +18,6 @@
 #include "ReportsDialog.h"
 #include "ui_ReportsDialog.h"
 
-#include "gui/vault/VaultEditShell.h"
 
 #include "ReportsPageHealthcheck.h"
 #include "ReportsPageHibp.h"
@@ -111,10 +110,14 @@ void ReportsDialog::load(const QSharedPointer<Database>& db)
     m_db = db;
 }
 
-void ReportsDialog::applyVaultShell()
+CategoryListWidget* ReportsDialog::categoryList() const
 {
-    auto* shell = VaultEditShell::apply(this, m_ui->categoryList, m_ui->stackedWidget, m_ui->buttonBox);
-    shell->setTitle(tr("Database Reports"));
+    return m_ui->categoryList;
+}
+
+QDialogButtonBox* ReportsDialog::buttonBox() const
+{
+    return m_ui->buttonBox;
 }
 
 void ReportsDialog::addPage(QSharedPointer<IReportsPage> page)
