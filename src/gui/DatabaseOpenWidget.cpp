@@ -192,7 +192,7 @@ void DatabaseOpenWidget::setupVaultStyle()
     }
     // The password is the card's main field, so give it more room than a standard text box
     if (auto* passwordEdit = m_ui->editPassword->findChild<VaultLineEdit*>("passwordEdit")) {
-        passwordEdit->setContentMargins({12, 10, 12, 10});
+        passwordEdit->setContentMargins(VaultLineEdit::LargePadding);
     }
     m_ui->passwordLabel->setText(tr("Password"));
     m_ui->selectKeyFileLabel->setText(tr("Key file"));

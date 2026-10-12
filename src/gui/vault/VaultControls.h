@@ -120,6 +120,13 @@ class VaultLineEdit : public fluent::textfields::LineEdit
 
 public:
     explicit VaultLineEdit(QWidget* parent = nullptr);
+
+    // Fields inside a widget with this property set get the roomier padding of the unlock card's password
+    static constexpr const char* LargePaddingProperty = "vaultLineEditLargePadding";
+    static const QMargins LargePadding;
+
+protected:
+    void showEvent(QShowEvent* event) override;
 };
 
 // Fluent menu for context menus, button menus and menu bar menus
