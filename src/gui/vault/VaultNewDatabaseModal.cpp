@@ -23,6 +23,7 @@
 #include "gui/dbsettings/DatabaseSettingsWidgetDatabaseKey.h"
 #include "gui/dbsettings/DatabaseSettingsWidgetEncryption.h"
 #include "gui/dbsettings/DatabaseSettingsWidgetMetaDataSimple.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -214,6 +215,7 @@ VaultNewDatabaseModal::VaultNewDatabaseModal(QWidget* window)
 
     m_stack = new QStackedWidget(content());
     m_stack->setObjectName("vaultNewDatabasePages");
+    m_stack->setProperty(VaultLineEdit::LargePaddingProperty, true);
     for (const auto& step : asConst(m_steps)) {
         auto scroll = new QScrollArea(m_stack);
         scroll->setFrameShape(QFrame::NoFrame);

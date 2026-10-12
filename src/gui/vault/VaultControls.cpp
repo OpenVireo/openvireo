@@ -344,6 +344,20 @@ VaultLineEdit::VaultLineEdit(QWidget* parent)
     setClearButtonEnabled(false);
 }
 
+const QMargins VaultLineEdit::LargePadding(12, 10, 12, 10);
+
+void VaultLineEdit::showEvent(QShowEvent* event)
+{
+    // Checked on show rather than once, since some forms recreate their fields after being set up
+    for (auto ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+        if (ancestor->property(LargePaddingProperty).toBool()) {
+            setContentMargins(LargePadding);
+            break;
+        }
+    }
+    fluent::textfields::LineEdit::showEvent(event);
+}
+
 VaultMenu::VaultMenu(QWidget* parent)
     : VaultMenu({}, parent)
 {
