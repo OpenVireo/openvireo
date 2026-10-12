@@ -211,6 +211,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
         layout->addWidget(button);
         return button;
     };
+    addCommand(Typography::Icons::Keyboard, tr("Perform Auto-Type"), "actionEntryAutoTypeSequence");
     addCommand(Typography::Icons::Edit, tr("Edit entry"), "actionEntryEdit");
     addCommand(Typography::Icons::Delete, tr("Delete entry"), "actionEntryDelete");
 
