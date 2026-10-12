@@ -167,6 +167,12 @@ void VaultButtonBar::setButtonHidden(QDialogButtonBox::StandardButton button, bo
     rebuild();
 }
 
+void VaultButtonBar::setFillWidth(bool fill)
+{
+    m_fillWidth = fill;
+    rebuild();
+}
+
 bool VaultButtonBar::isHiddenInBar(QAbstractButton* source) const
 {
     return m_buttons && m_hidden.contains(m_buttons->standardButton(source));
@@ -211,13 +217,15 @@ void VaultButtonBar::rebuild()
         source->setProperty("vaultProxy", QVariant::fromValue<QAbstractButton*>(proxy));
         source->setFocusPolicy(Qt::NoFocus);
         source->installEventFilter(this);
-        m_layout->addWidget(proxy);
+        m_layout->addWidget(proxy, m_fillWidth ? 1 : 0);
     };
 
     for (auto* source : leading) {
         addProxy(source, false);
     }
-    m_layout->addStretch();
+    if (!m_fillWidth) {
+        m_layout->addStretch();
+    }
     for (auto* source : trailing) {
         addProxy(source, false);
     }
