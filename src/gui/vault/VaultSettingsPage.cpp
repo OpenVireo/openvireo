@@ -376,10 +376,10 @@ VaultSettingsCard* VaultSettingsSection::addWidget(QWidget* widget)
     return addCard(card);
 }
 
-void VaultSettingsSection::addHeaderWidget(QWidget* widget)
+void VaultSettingsSection::addHeaderWidget(QWidget* widget, Qt::Alignment alignment)
 {
     adopt(widget, this);
-    m_headerWidgets->addWidget(widget, 0, Qt::AlignLeft);
+    m_headerWidgets->addWidget(widget, 0, alignment);
 }
 
 VaultSettingsCard* VaultSettingsSection::addCard(VaultSettingsCard* card)
@@ -454,9 +454,10 @@ public:
             control->setMinimumWidth(MinimumFieldWidth);
         }
         // Plain text fields, such as paths, share the row with the caption instead of keeping their short natural
-        // width. Specialized fields, such as a shortcut field, keep their size.
+        // width. Specialized fields, such as a shortcut field, and fields given a fixed width keep their size.
         const auto className = QLatin1String(control->metaObject()->className());
-        if (className == QLatin1String("VaultLineEdit") || className == QLatin1String("QLineEdit")) {
+        if ((className == QLatin1String("VaultLineEdit") || className == QLatin1String("QLineEdit"))
+            && control->sizePolicy().horizontalPolicy() != QSizePolicy::Fixed) {
             control->setSizePolicy(QSizePolicy::Expanding, control->sizePolicy().verticalPolicy());
             m_grid->setColumnStretch(0, 0);
             m_grid->setColumnStretch(1, 1);
