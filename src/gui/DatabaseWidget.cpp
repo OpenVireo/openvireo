@@ -272,6 +272,7 @@ DatabaseWidget::~DatabaseWidget()
         m_vaultCardStack->addWidget(m_vaultEntryEditor);
     }
     delete m_vaultNewEntryModal.data();
+    delete m_vaultGroupModal.data();
     delete m_vaultDatabaseSettingsModal.data();
     delete m_vaultReportsModal.data();
 
@@ -345,14 +346,14 @@ bool DatabaseWidget::isEntryEditActive() const
 
 bool DatabaseWidget::isGroupEditActive() const
 {
-    return currentWidget() == m_editGroupWidget;
+    return activeView() == m_editGroupWidget;
 }
 
 bool DatabaseWidget::isEditWidgetModified() const
 {
     if (activeView() == m_editEntryWidget) {
         return m_editEntryWidget->isModified();
-    } else if (currentWidget() == m_editGroupWidget) {
+    } else if (activeView() == m_editGroupWidget) {
         return m_editGroupWidget->isModified();
     }
     return false;
@@ -1251,9 +1252,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_entryView->setListMode(true);
     m_groupView->setNavigationStyle(true);
 
-    // The group editor that replaces the main view takes the same style; settings and reports open in modals
-    m_editGroupWidget->applyVaultShell();
-
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
     m_vaultNavPane = navPane;
 
@@ -1344,6 +1342,10 @@ QWidget* DatabaseWidget::activeView() const
         if (modal && modal->isOpen()) {
             return modal->content();
         }
+    }
+    // A group stays in its editor while its modal steps aside for another tab
+    if (m_vaultGroupEditing) {
+        return m_editGroupWidget;
     }
     if (m_vaultActiveEditor && currentWidget() == m_mainWidget) {
         return m_vaultActiveEditor->editor();
@@ -1455,14 +1457,37 @@ void DatabaseWidget::showVaultModal(QPointer<VaultSettingsModal>& modal)
     emitCurrentModeChanged();
 }
 
+void DatabaseWidget::showVaultGroupModal(bool create)
+{
+    if (!m_vaultGroupModal) {
+        m_vaultGroupModal =
+            new VaultSettingsModal(window(), m_editGroupWidget, tr("Edit Group"), QStringLiteral("vaultGroup"));
+        m_vaultGroupModal->setInitialFocus(m_editGroupWidget->findChild<QLineEdit*>("editName"));
+    }
+    // Like the page it stands in for, the modal ends inline editing and closes the other modals
+    hideVaultEditor();
+    closeVaultModals();
+    setCurrentWidget(m_mainWidget);
+    m_vaultGroupModal->setTitle(create ? tr("New Group") : tr("Edit Group"));
+    // Loading a group shows the editor's own headline again, which the modal's title stands in for
+    m_editGroupWidget->headlineLabel()->hide();
+    m_vaultGroupEditing = true;
+    m_vaultGroupModal->open();
+    emitCurrentModeChanged();
+}
+
 bool DatabaseWidget::closeVaultModals()
 {
     bool closed = false;
-    for (const auto& modal : {m_vaultDatabaseSettingsModal, m_vaultReportsModal}) {
+    for (const auto& modal : {m_vaultDatabaseSettingsModal, m_vaultReportsModal, m_vaultGroupModal}) {
         if (modal && modal->isOpen()) {
             modal->close();
             closed = true;
         }
+    }
+    if (m_vaultGroupEditing) {
+        m_vaultGroupEditing = false;
+        closed = true;
     }
     return closed;
 }
@@ -1677,6 +1702,10 @@ void DatabaseWidget::switchToEntryEdit(Entry* entry, bool create)
 void DatabaseWidget::switchToGroupEdit(Group* group, bool create)
 {
     m_editGroupWidget->loadGroup(group, create, m_db);
+    if (m_vaultLayout) {
+        showVaultGroupModal(create);
+        return;
+    }
     setCurrentWidget(m_editGroupWidget);
 }
 
@@ -2379,6 +2408,9 @@ void DatabaseWidget::showEvent(QShowEvent* event)
     if (m_vaultEntryEditor && m_vaultEntryEditor->isInModal() && !m_vaultNewEntryModal->isOpen()) {
         m_vaultNewEntryModal->open();
     }
+    if (m_vaultGroupEditing && !m_vaultGroupModal->isOpen()) {
+        m_vaultGroupModal->open();
+    }
     if (!m_db->isInitialized() || isLocked()) {
         switchToOpenDatabase();
     }
@@ -2388,13 +2420,17 @@ void DatabaseWidget::showEvent(QShowEvent* event)
 
 void DatabaseWidget::hideEvent(QHideEvent* event)
 {
-    // Another tab or screen took this database's place, so its modals go too
-    if (!event->spontaneous() && closeVaultModals()) {
-        emitCurrentModeChanged();
-    }
-    // A new entry stays open in the editor, but its modal steps aside until the database is shown again
-    if (!event->spontaneous() && m_vaultNewEntryModal) {
-        m_vaultNewEntryModal->close();
+    if (!event->spontaneous()) {
+        // A new entry or a group stays open in its editor, but its modal steps aside until the database is
+        // shown again. Another tab or screen took this database's place, so the other modals go.
+        if (m_vaultGroupEditing) {
+            m_vaultGroupModal->close();
+        } else if (closeVaultModals()) {
+            emitCurrentModeChanged();
+        }
+        if (m_vaultNewEntryModal) {
+            m_vaultNewEntryModal->close();
+        }
     }
     QStackedWidget::hideEvent(event);
 }

@@ -782,6 +782,71 @@ void TestGuiVault::testDatabaseModals()
     QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 }
 
+void TestGuiVault::testGroupModals()
+{
+    selectGroup(m_workGroup);
+    const auto childrenBefore = m_workGroup->children().size();
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+
+    // A new group opens in a modal over the window, with the database behind it
+    m_mainWindow->findChild<QAction*>("actionGroupNew")->trigger();
+    auto* modal = m_mainWindow->findChild<VaultSettingsModal*>("vaultGroupModal");
+    QVERIFY(modal);
+    QTRY_VERIFY(modal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditGroupMode);
+    QVERIFY(m_dbWidget->isGroupEditActive());
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(!m_mainWindow->findChild<QAction*>("actionGroupNew")->isEnabled());
+    QCOMPARE(modal->findChild<QLabel*>("vaultGroupTitle")->text(), QString("New Group"));
+    auto* editor = m_mainWindow->findChild<QWidget*>("editGroupWidget");
+    QVERIFY(modal->card()->isAncestorOf(editor));
+    QVERIFY(editor->isVisible());
+    QVERIFY(editor->findChild<QWidget*>("categoryList")->isHidden());
+    auto* name = editor->findChild<QLineEdit*>("editName");
+    QTRY_COMPARE(m_mainWindow->focusWidget(), name);
+
+    QTest::keyClicks(name, "Created in a modal");
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultGroupSave"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QCOMPARE(m_workGroup->children().size(), childrenBefore + 1);
+    auto* created = m_dbWidget->currentGroup();
+    QCOMPARE(created->name(), QString("Created in a modal"));
+    QCOMPARE(created->parentGroup(), m_workGroup.data());
+
+    // Editing the group uses the same modal under its own title; Escape sets changes aside
+    m_mainWindow->findChild<QAction*>("actionGroupEdit")->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditGroupMode);
+    QCOMPARE(modal->findChild<QLabel*>("vaultGroupTitle")->text(), QString("Edit Group"));
+    QCOMPARE(name->text(), QString("Created in a modal"));
+    QVERIFY(editor->findChild<QLabel*>("headerLabel")->isHidden());
+    QTest::keyClick(modal, Qt::Key_Escape);
+    QTRY_VERIFY(!modal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+
+    // Renaming saves through the modal too
+    m_mainWindow->findChild<QAction*>("actionGroupEdit")->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    name->setText("Renamed in a modal");
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultGroupSave"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    QCOMPARE(created->name(), QString("Renamed in a modal"));
+
+    // A new group set aside with Cancel leaves nothing behind
+    selectGroup(m_workGroup);
+    m_mainWindow->findChild<QAction*>("actionGroupNew")->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultGroupCancel"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QCOMPARE(m_workGroup->children().size(), childrenBefore + 1);
+
+    delete created;
+    selectGroup(m_workGroup);
+}
+
 void TestGuiVault::testAutoTypeSettingsPage()
 {
     m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
