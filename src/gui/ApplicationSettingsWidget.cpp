@@ -218,6 +218,7 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     m_generalUi->languageComboBox->installEventFilter(mouseWheelFilter);
     m_generalUi->trayIconAppearance->installEventFilter(mouseWheelFilter);
     m_generalUi->fontSizeComboBox->installEventFilter(mouseWheelFilter);
+    m_generalUi->appThemeComboBox->installEventFilter(mouseWheelFilter);
 
 #ifdef Q_OS_MACOS
     // The menubar is always shown on macOS, so hide the option to avoid confusion
@@ -355,6 +356,19 @@ void ApplicationSettingsWidget::loadSettings()
         m_generalUi->fontSizeComboBox->addItem(tr("Custom"), config()->get(Config::GUI_FontSizeOffset).toInt());
         m_generalUi->fontSizeComboBox->setCurrentIndex(m_generalUi->fontSizeComboBox->count() - 1);
     }
+
+    m_generalUi->appThemeComboBox->clear();
+    m_generalUi->appThemeComboBox->addItem(tr("Automatic (follow system)"), QStringLiteral("auto"));
+    m_generalUi->appThemeComboBox->addItem(tr("Light"), QStringLiteral("light"));
+    m_generalUi->appThemeComboBox->addItem(tr("Dark"), QStringLiteral("dark"));
+    auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
+    int appThemeIndex = m_generalUi->appThemeComboBox->findData(appTheme);
+    if (appThemeIndex < 0) {
+        // Keep the classic theme selectable when it is already in use
+        m_generalUi->appThemeComboBox->addItem(tr("Classic"), appTheme);
+        appThemeIndex = m_generalUi->appThemeComboBox->count() - 1;
+    }
+    m_generalUi->appThemeComboBox->setCurrentIndex(appThemeIndex);
 
     m_generalUi->systrayShowCheckBox->setChecked(config()->get(Config::GUI_ShowTrayIcon).toBool());
     systrayToggled(m_generalUi->systrayShowCheckBox->isChecked());
@@ -521,6 +535,7 @@ void ApplicationSettingsWidget::saveSettings()
 
     config()->set(Config::GUI_ToolButtonStyle, m_generalUi->toolButtonStyleComboBox->currentData().toString());
     config()->set(Config::GUI_FontSizeOffset, m_generalUi->fontSizeComboBox->currentData().toInt());
+    config()->set(Config::GUI_ApplicationTheme, m_generalUi->appThemeComboBox->currentData().toString());
 
     config()->set(Config::GUI_ShowTrayIcon, m_generalUi->systrayShowCheckBox->isChecked());
     config()->set(Config::GUI_TrayIconAppearance, m_generalUi->trayIconAppearance->currentData().toString());

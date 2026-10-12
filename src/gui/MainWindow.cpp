@@ -2074,10 +2074,27 @@ void MainWindow::initViewMenu()
         }
     }
 
-    connect(themeActions, &QActionGroup::triggered, this, [this, theme](QAction* action) {
+    connect(themeActions, &QActionGroup::triggered, this, [](QAction* action) {
         config()->set(Config::GUI_ApplicationTheme, action->data());
-        if ((action->data() == "classic" || theme == "classic") && action->data() != theme) {
-            restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
+    });
+
+    // The theme can be changed from this menu or from the application settings
+    connect(config(), &Config::changed, this, [this, theme, themeActions](Config::ConfigKey key) {
+        if (key != Config::GUI_ApplicationTheme) {
+            return;
+        }
+        auto newTheme = config()->get(Config::GUI_ApplicationTheme).toString();
+        for (auto action : themeActions->actions()) {
+            if (action->data() == newTheme) {
+                action->setChecked(true);
+                break;
+            }
+        }
+        if ((newTheme == "classic" || theme == "classic") && newTheme != theme) {
+            QTimer::singleShot(200, this, [this] {
+                restartApp(
+                    tr("You must restart the application to apply this setting. Would you like to restart now?"));
+            });
         } else {
             kpxcApp->applyTheme();
         }
