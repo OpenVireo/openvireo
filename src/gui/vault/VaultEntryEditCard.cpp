@@ -160,7 +160,7 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     // The pages are reached from the rows under the Entry page instead of a category list
     m_categories->hide();
 
-    // Header: the headline and the focus mode toggle
+    // Header: the headline
     auto* header = new QWidget(editor);
     header->setObjectName("vaultEditCardHeader");
     auto* headerLayout = new QHBoxLayout(header);
@@ -175,11 +175,6 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     m_headline->setContentsMargins(0, 0, 0, 0);
     m_headline->setWordWrap(true);
     headerLayout->addWidget(m_headline, 1);
-
-    m_focusButton = Vault::iconButton(Typography::Icons::FullScreen, tr("Expand editor"), header);
-    m_focusButton->setObjectName("vaultEditFocusButton");
-    connect(m_focusButton, &QAbstractButton::clicked, this, [this] { emit focusModeRequested(!m_focusMode); });
-    headerLayout->addWidget(m_focusButton, 0, Qt::AlignTop);
 
     // Cancel and Save sit in the command bar instead. The bar keeps the editor's buttons shown, so Enter
     // and Escape still reach them. Save returns to the entry's details, so there is no need to apply and stay.
@@ -322,20 +317,6 @@ void VaultEntryEditCard::finish()
     for (int i = 0; i < m_optionalRows.size(); ++i) {
         showOptionalRow(i, false);
     }
-    setFocusMode(false);
-}
-
-void VaultEntryEditCard::setFocusMode(bool focusMode)
-{
-    m_focusMode = focusMode;
-    m_focusButton->setIconGlyph(focusMode ? Typography::Icons::BackToWindow : Typography::Icons::FullScreen);
-    m_focusButton->setToolTip(focusMode ? tr("Show the entry list") : tr("Expand editor"));
-    m_focusButton->setAccessibleName(m_focusButton->toolTip());
-}
-
-bool VaultEntryEditCard::isFocusMode() const
-{
-    return m_focusMode;
 }
 
 void VaultEntryEditCard::onThemeUpdated()

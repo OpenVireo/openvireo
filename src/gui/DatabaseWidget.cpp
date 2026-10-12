@@ -1259,7 +1259,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 
     // Entry list and detail card, each with its own breathing room
     auto listHost = new QWidget(m_previewSplitter);
-    m_vaultListHost = listHost;
     auto listLayout = new QVBoxLayout(listHost);
     listLayout->setContentsMargins(6, 0, 0, 14);
     listLayout->setSpacing(2);
@@ -1283,7 +1282,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_vaultHistoryEditor->setObjectName("vaultHistoryEditCard");
     for (auto* editor : {m_vaultEntryEditor.data(), m_vaultHistoryEditor.data()}) {
         m_vaultCardStack->addWidget(editor);
-        connect(editor, &VaultEntryEditCard::focusModeRequested, this, &DatabaseWidget::setVaultEditorFocusMode);
     }
     if (auto* titleEdit = m_editEntryWidget->findChild<QLineEdit*>("titleEdit")) {
         connect(titleEdit, &QLineEdit::textChanged, m_vaultDraftRow, &VaultDraftRow::setTitle);
@@ -1346,9 +1344,7 @@ QWidget* DatabaseWidget::activeView() const
 
 void DatabaseWidget::showVaultEditor(VaultEntryEditCard* card)
 {
-    const bool focusMode = m_vaultActiveEditor && m_vaultActiveEditor->isFocusMode();
     m_vaultActiveEditor = card;
-    card->setFocusMode(focusMode);
     m_vaultCardStack->setCurrentWidget(card);
     // The groups and the list stay in view but wait until the entry is saved or set aside
     m_vaultNavPane->setEnabled(false);
@@ -1375,7 +1371,6 @@ void DatabaseWidget::hideVaultEditor()
     if (!m_vaultActiveEditor) {
         return;
     }
-    setVaultEditorFocusMode(false);
     m_vaultActiveEditor = nullptr;
     m_vaultEntryEditor->finish();
     m_vaultHistoryEditor->finish();
@@ -1389,24 +1384,6 @@ void DatabaseWidget::hideVaultEditor()
     }
     m_vaultDimmers.clear();
     emitCurrentModeChanged();
-}
-
-void DatabaseWidget::setVaultEditorFocusMode(bool focusMode)
-{
-    if (!m_vaultActiveEditor || m_vaultActiveEditor->isFocusMode() == focusMode) {
-        return;
-    }
-    m_vaultActiveEditor->setFocusMode(focusMode);
-    // Focus mode narrows the list to a column of titles, leaving the room to the editor
-    if (focusMode) {
-        m_vaultSizesBeforeFocus = m_previewSplitter->sizes();
-        m_vaultListHost->setMaximumWidth(220);
-    } else {
-        m_vaultListHost->setMaximumWidth(QWIDGETSIZE_MAX);
-        if (!m_vaultSizesBeforeFocus.isEmpty()) {
-            m_previewSplitter->setSizes(m_vaultSizesBeforeFocus);
-        }
-    }
 }
 
 void DatabaseWidget::updateVaultCommandBar()
