@@ -1352,7 +1352,7 @@ void DatabaseWidget::showVaultEditor(VaultEntryEditCard* card)
     m_vaultCardStack->setCurrentWidget(card);
     // The groups and the list stay in view but wait until the entry is saved or set aside
     m_vaultNavPane->setEnabled(false);
-    m_vaultCommandBar->setEnabled(false);
+    m_vaultCommandBar->setEditorButtons(card->editor()->buttonBox());
     m_entryView->setEnabled(false);
     if (!m_vaultDimmers.isEmpty()) {
         // Already editing, as when returning from an entry's history
@@ -1382,7 +1382,7 @@ void DatabaseWidget::hideVaultEditor()
     m_vaultCardStack->setCurrentWidget(m_detailCard);
     m_vaultDraftRow->hide();
     m_vaultNavPane->setEnabled(true);
-    m_vaultCommandBar->setEnabled(true);
+    m_vaultCommandBar->setEditorButtons(nullptr);
     m_entryView->setEnabled(true);
     for (const auto& dimmer : m_vaultDimmers) {
         delete dimmer.data();

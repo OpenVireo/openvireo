@@ -196,36 +196,43 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     layout->addWidget(m_count, 0, Qt::AlignBottom);
     layout->addStretch();
 
-    auto* newEntry = new fluent::basicinput::Button(tr("New Entry"), this);
+    // The entry commands, which Cancel and Save replace while an entry is edited
+    m_commands = new QWidget(this);
+    auto* commandsLayout = new QHBoxLayout(m_commands);
+    commandsLayout->setContentsMargins(0, 0, 0, 0);
+    commandsLayout->setSpacing(4);
+    layout->addWidget(m_commands);
+
+    auto* newEntry = new fluent::basicinput::Button(tr("New Entry"), m_commands);
     newEntry->setObjectName("vaultNewEntryButton");
     newEntry->setFluentStyle(fluent::basicinput::Button::Accent);
     newEntry->setFluentLayout(fluent::basicinput::Button::IconBefore);
     newEntry->setIconGlyph(Typography::Icons::Add);
     Vault::bindAction(newEntry, "actionEntryNew");
-    layout->addWidget(newEntry);
-    layout->addSpacing(4);
+    commandsLayout->addWidget(newEntry);
+    commandsLayout->addSpacing(4);
 
-    auto addCommand = [this, layout](const QString& glyph, const QString& toolTip, const QString& action) {
-        auto* button = Vault::iconButton(glyph, toolTip, this);
+    auto addCommand = [this, commandsLayout](const QString& glyph, const QString& toolTip, const QString& action) {
+        auto* button = Vault::iconButton(glyph, toolTip, m_commands);
         Vault::bindAction(button, action);
-        layout->addWidget(button);
+        commandsLayout->addWidget(button);
         return button;
     };
     addCommand(Typography::Icons::Keyboard, tr("Perform Auto-Type"), "actionEntryAutoTypeSequence");
     addCommand(Typography::Icons::Edit, tr("Edit entry"), "actionEntryEdit");
     addCommand(Typography::Icons::Delete, tr("Delete entry"), "actionEntryDelete");
 
-    auto* separator = new QFrame(this);
+    auto* separator = new QFrame(m_commands);
     separator->setFrameShape(QFrame::VLine);
     separator->setFixedHeight(20);
-    layout->addSpacing(4);
-    layout->addWidget(separator);
-    layout->addSpacing(4);
+    commandsLayout->addSpacing(4);
+    commandsLayout->addWidget(separator);
+    commandsLayout->addSpacing(4);
 
     addCommand(Typography::Icons::Lock, tr("Lock database"), "actionLockDatabase");
 
     // Less frequent commands, all mirrored from the main window menus
-    auto* more = Vault::iconButton(Typography::Icons::More, tr("More commands"), this);
+    auto* more = Vault::iconButton(Typography::Icons::More, tr("More commands"), m_commands);
     auto* menu = new VaultMenu(more);
     for (const auto& name : {QStringLiteral("actionEntryClone"),
                              QStringLiteral("actionEntryDownloadIcon"),
@@ -245,7 +252,39 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
         menu->popup(more->mapToGlobal(QPoint(more->width() - menu->sizeHint().width(), more->height())));
     });
     more->setVisible(!menu->isEmpty());
-    layout->addWidget(more);
+    commandsLayout->addWidget(more);
+
+    // Cancel and Save for the entry being edited, which click the editor's own buttons
+    m_editCommands = new QWidget(this);
+    m_editCommands->hide();
+    auto* editLayout = new QHBoxLayout(m_editCommands);
+    editLayout->setContentsMargins(0, 0, 0, 0);
+    editLayout->setSpacing(4);
+    layout->addWidget(m_editCommands);
+
+    m_cancelButton = new fluent::basicinput::Button(tr("Cancel"), m_editCommands);
+    m_cancelButton->setObjectName("vaultEditCancelButton");
+    m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    m_cancelButton->setIconGlyph(Typography::Icons::Cancel);
+    connect(m_cancelButton, &QAbstractButton::clicked, this, [this] {
+        if (auto* button = editorButton({QDialogButtonBox::Cancel, QDialogButtonBox::Close})) {
+            button->click();
+        }
+    });
+    editLayout->addWidget(m_cancelButton);
+
+    // Save is styled like New Entry, which it stands in for
+    m_saveButton = new fluent::basicinput::Button(tr("Save"), m_editCommands);
+    m_saveButton->setObjectName("vaultEditSaveButton");
+    m_saveButton->setFluentStyle(fluent::basicinput::Button::Accent);
+    m_saveButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    m_saveButton->setIconGlyph(Typography::Icons::Save);
+    connect(m_saveButton, &QAbstractButton::clicked, this, [this] {
+        if (auto* button = editorButton({QDialogButtonBox::Ok})) {
+            button->click();
+        }
+    });
+    editLayout->addWidget(m_saveButton);
 
     onThemeUpdated();
 }
@@ -254,6 +293,34 @@ void VaultCommandBar::setTitle(const QString& title, int entryCount)
 {
     m_title->setText(title);
     m_count->setText(tr("%n entries", "", entryCount));
+}
+
+void VaultCommandBar::setEditorButtons(QDialogButtonBox* buttons)
+{
+    m_editorButtons = buttons;
+    m_commands->setVisible(!buttons);
+    m_editCommands->setVisible(buttons);
+    if (!buttons) {
+        return;
+    }
+    // A read-only entry, such as a history entry, can only be closed
+    const bool readOnly = !buttons->button(QDialogButtonBox::Ok);
+    m_saveButton->setVisible(!readOnly);
+    const auto cancelText = readOnly ? tr("Close") : tr("Cancel");
+    m_cancelButton->setText(cancelText);
+}
+
+QAbstractButton* VaultCommandBar::editorButton(std::initializer_list<QDialogButtonBox::StandardButton> which) const
+{
+    if (!m_editorButtons) {
+        return nullptr;
+    }
+    for (auto standardButton : which) {
+        if (auto* button = m_editorButtons->button(standardButton)) {
+            return button;
+        }
+    }
+    return nullptr;
 }
 
 void VaultCommandBar::onThemeUpdated()
