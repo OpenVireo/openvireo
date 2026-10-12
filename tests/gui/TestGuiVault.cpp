@@ -40,6 +40,7 @@
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
@@ -845,6 +846,26 @@ void TestGuiVault::testGroupModals()
 
     delete created;
     selectGroup(m_workGroup);
+}
+
+void TestGuiVault::testMenuClickSurvivesLostHighlight()
+{
+    VaultMenu menu;
+    menu.addAction("First");
+    auto* second = menu.addAction("Second");
+    int triggered = 0;
+    connect(second, &QAction::triggered, this, [&] { ++triggered; });
+    menu.popup(m_mainWindow->mapToGlobal(QPoint(40, 40)));
+    QTRY_VERIFY(menu.isVisible());
+
+    // On macOS, raising the menu on press sends it a Leave that drops the highlight before the release
+    const auto pos = menu.actionGeometry(second).center();
+    QTest::mouseMove(&menu, pos);
+    QTest::mousePress(&menu, Qt::LeftButton, {}, pos);
+    menu.setActiveAction(nullptr);
+    QTest::mouseRelease(&menu, Qt::LeftButton, {}, pos);
+    QCOMPARE(triggered, 1);
+    QVERIFY(!menu.isVisible());
 }
 
 void TestGuiVault::testAutoTypeSettingsPage()
