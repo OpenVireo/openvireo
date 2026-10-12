@@ -24,6 +24,7 @@
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultWidgets.h"
 #include "keys/ChallengeResponseKey.h"
@@ -188,6 +189,10 @@ void DatabaseOpenWidget::setupVaultStyle()
     for (auto* layout : {m_ui->enterPasswordComponentLayout, m_ui->selectKeyFileComponentLayout}) {
         layout->setSpacing(8);
         layout->setContentsMargins(0, 0, 0, 8);
+    }
+    // The password is the card's main field, so give it more room than a standard text box
+    if (auto* passwordEdit = m_ui->editPassword->findChild<VaultLineEdit*>("passwordEdit")) {
+        passwordEdit->setContentMargins({12, 10, 12, 10});
     }
     m_ui->passwordLabel->setText(tr("Password"));
     m_ui->selectKeyFileLabel->setText(tr("Key file"));
