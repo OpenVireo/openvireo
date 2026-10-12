@@ -661,6 +661,8 @@ void VaultDatabasePicker::showDatabaseMenu()
     }
 
     VaultMenu menu(tr("Databases"), this);
+    // Before adding actions: QMenu sizes its item rects, and so the area it repaints on hover, as they are added
+    menu.setMinimumWidth(width());
     for (int i = 0; i < m_tabs->count(); ++i) {
         auto* dbWidget = m_tabs->databaseWidgetFromIndex(i);
         auto* action = menu.addAction(Tools::escapeAccelerators(m_tabs->tabName(i)));
@@ -692,7 +694,6 @@ void VaultDatabasePicker::showDatabaseMenu()
 
     m_menuOpen = true;
     update();
-    menu.setMinimumWidth(width());
     menu.exec(mapToGlobal(QPoint(0, height() + 2)));
     m_menuOpen = false;
     update();
