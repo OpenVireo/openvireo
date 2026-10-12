@@ -63,7 +63,13 @@ public:
     void prepare(bool create);
     // Leave the form as the editor laid it out, once editing ends
     void finish();
+    // In a modal, which has its own title and buttons, the card drops its headline, buttons and surface
+    void setInModal(bool inModal);
+    bool isInModal() const;
     void onThemeUpdated() override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     struct OptionalRow
@@ -83,6 +89,7 @@ private:
     QPointer<EditWidget> m_editor;
     CategoryListWidget* m_categories;
     QStackedWidget* m_pages;
+    QWidget* m_header;
     QLabel* m_headline;
     VaultButtonBar* m_buttonBar;
 
@@ -110,27 +117,7 @@ private:
     QPointer<QLineEdit> m_titleEdit;
     QString m_suggestedTitle;
     bool m_create = false;
-};
-
-/**
- * Stand-in row at the top of the entry list for an entry that is being created and not saved yet.
- */
-class VaultDraftRow : public QWidget
-{
-    Q_OBJECT
-
-public:
-    explicit VaultDraftRow(QWidget* parent = nullptr);
-
-    void setTitle(const QString& title);
-    QString title() const;
-    QSize sizeHint() const override;
-
-protected:
-    void paintEvent(QPaintEvent* event) override;
-
-private:
-    QString m_title;
+    bool m_inModal = false;
 };
 
 /**

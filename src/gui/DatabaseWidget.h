@@ -48,7 +48,7 @@ class ElidedLabel;
 class RemoteSettings;
 class EntryDetailCard;
 class VaultCommandBar;
-class VaultDraftRow;
+class VaultModal;
 class VaultEntryEditCard;
 class VaultSettingsModal;
 class QHBoxLayout;
@@ -316,6 +316,8 @@ private:
     QWidget* activeView() const;
     void showVaultEditor(VaultEntryEditCard* card);
     void hideVaultEditor();
+    // New entries are created in a modal over the window, holding the same editor card
+    void showVaultNewEntryModal();
     // Database settings and reports open in modals over the window, made once the widget is in one
     void showVaultModal(QPointer<VaultSettingsModal>& modal);
     bool closeVaultModals();
@@ -356,7 +358,7 @@ private:
     QPointer<VaultEntryEditCard> m_vaultActiveEditor;
     QPointer<VaultSettingsModal> m_vaultDatabaseSettingsModal;
     QPointer<VaultSettingsModal> m_vaultReportsModal;
-    QPointer<VaultDraftRow> m_vaultDraftRow;
+    QPointer<VaultModal> m_vaultNewEntryModal;
     QPointer<QWidget> m_vaultNavPane;
     QList<QPointer<QWidget>> m_vaultDimmers;
 

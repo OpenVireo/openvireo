@@ -187,7 +187,8 @@ void TestGuiVault::selectGroup(Group* group)
 
 VaultEntryEditCard* TestGuiVault::entryEditCard() const
 {
-    return m_dbWidget->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
+    // New entries are edited in a modal over the window, so look beyond the database widget
+    return m_mainWindow->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
 }
 
 void TestGuiVault::selectEntry(Entry* entry)
@@ -286,7 +287,10 @@ void TestGuiVault::testEditEntryInPlace()
     QVERIFY(!entryView->isEnabled());
     QVERIFY(navPane->isVisible());
     QVERIFY(!navPane->isEnabled());
-    QVERIFY(!m_dbWidget->findChild<VaultDraftRow*>("vaultDraftRow")->isVisible());
+    QVERIFY(m_dbWidget->isAncestorOf(card));
+    if (auto* newEntryModal = m_mainWindow->findChild<VaultModal*>("vaultNewEntryModal")) {
+        QVERIFY(!newEntryModal->isOpen());
+    }
 
     // Cancel and Save replace the entry commands in the command bar, and there is no Apply since saving
     // returns to the details
@@ -316,21 +320,33 @@ void TestGuiVault::testEditEntryInPlace()
     m_github->setTitle("GitHub");
 }
 
-void TestGuiVault::testNewEntryDraft()
+void TestGuiVault::testNewEntryModal()
 {
     selectGroup(m_workGroup);
     const auto entriesBefore = m_workGroup->entries().size();
+    auto* card = entryEditCard();
+    auto* details = m_dbWidget->findChild<EntryDetailCard*>();
     auto* commandBar = m_dbWidget->findChild<VaultCommandBar*>();
     QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton"), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    QVERIFY(m_dbWidget->isEntryEditActive());
 
-    // The new entry shows as a draft at the top of the list
-    auto* draft = m_dbWidget->findChild<VaultDraftRow*>("vaultDraftRow");
-    QVERIFY(draft->isVisible());
-    QCOMPARE(draft->title(), QString("New entry"));
+    // The new entry opens in a modal over the window, with Cancel and Save in its footer
+    auto* modal = m_mainWindow->findChild<VaultModal*>("vaultNewEntryModal");
+    QVERIFY(modal);
+    QTRY_VERIFY(modal->isOpen());
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    QVERIFY(modal->card()->isAncestorOf(card));
+    QVERIFY(card->isVisible());
+    QVERIFY(details->isVisible());
+    QVERIFY(!card->findChild<QWidget*>("vaultEditCardHeader")->isVisible());
+    QVERIFY(!commandBar->findChild<QAbstractButton*>("vaultEditSaveButton")->isVisible());
+    auto* save = modal->findChild<QPushButton*>("vaultNewEntrySave");
+    auto* cancel = modal->findChild<QPushButton*>("vaultNewEntryCancel");
+    QVERIFY(save && cancel);
+    QTRY_COMPARE(QApplication::focusWidget(), card->findChild<QLineEdit*>("titleEdit"));
 
     // It starts compact: notes, tags and expiry wait behind chips
-    auto* card = entryEditCard();
     auto* notes = card->findChild<QPlainTextEdit*>("notesEdit");
     auto* tags = card->findChild<QWidget*>("tagsList");
     auto* expires = card->findChild<QWidget*>("expireCheck");
@@ -344,11 +360,9 @@ void TestGuiVault::testNewEntryDraft()
     auto* url = card->findChild<QLineEdit*>("urlEdit");
     QTest::keyClicks(url, "https://www.example.org/login");
     QCOMPARE(title->text(), QString("example.org"));
-    QCOMPARE(draft->title(), QString("example.org"));
     title->setText("Example");
     QTest::keyClicks(url, "/");
     QCOMPARE(title->text(), QString("Example"));
-    QCOMPARE(draft->title(), QString("Example"));
 
     auto* addNotes = card->findChild<QAbstractButton*>("vaultEditAddnotesEdit");
     QVERIFY(addNotes->isVisible());
@@ -358,9 +372,9 @@ void TestGuiVault::testNewEntryDraft()
     QVERIFY(!tags->isVisible());
     notes->setPlainText("Created in place");
 
-    QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultEditSaveButton"), Qt::LeftButton);
+    QTest::mouseClick(save, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
-    QVERIFY(!draft->isVisible());
+    QVERIFY(!modal->isOpen());
     QCOMPARE(m_workGroup->entries().size(), entriesBefore + 1);
     auto* created = m_dbWidget->currentSelectedEntry();
     QVERIFY(created);
@@ -368,9 +382,14 @@ void TestGuiVault::testNewEntryDraft()
     QCOMPARE(created->url(), QString("https://www.example.org/login/"));
     QCOMPARE(created->notes(), QString("Created in place"));
 
-    // Editing shows every row, whether or not it has a value
+    // Editing stays in the detail pane, and shows every row whether or not it has a value
     m_dbWidget->switchToEntryEdit();
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    QVERIFY(!modal->isOpen());
+    QVERIFY(m_dbWidget->isAncestorOf(card));
+    QVERIFY(card->isVisible());
+    QVERIFY(!details->isVisible());
+    QVERIFY(card->findChild<QWidget*>("vaultEditCardHeader")->isVisible());
     QVERIFY(notes->isVisible());
     QVERIFY(tags->isVisible());
     QVERIFY(expires->isVisible());
@@ -380,14 +399,22 @@ void TestGuiVault::testNewEntryDraft()
     delete created;
     QCOMPARE(m_workGroup->entries().size(), entriesBefore);
 
-    // Setting a new entry aside leaves nothing behind
-    QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton"), Qt::LeftButton);
-    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    QVERIFY(!notes->isVisible());
-    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
-    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
-    QVERIFY(!draft->isVisible());
-    QCOMPARE(m_workGroup->entries().size(), entriesBefore);
+    // Setting a new entry aside, with Cancel or Escape, leaves nothing behind
+    for (bool escape : {false, true}) {
+        QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton"), Qt::LeftButton);
+        QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+        QTRY_VERIFY(modal->isOpen());
+        QVERIFY(!notes->isVisible());
+        if (escape) {
+            QTest::keyClick(modal, Qt::Key_Escape);
+        } else {
+            QTest::mouseClick(cancel, Qt::LeftButton);
+        }
+        QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+        QVERIFY(!modal->isOpen());
+        QVERIFY(m_dbWidget->isAncestorOf(card));
+        QCOMPARE(m_workGroup->entries().size(), entriesBefore);
+    }
 }
 
 void TestGuiVault::testEditorSections()
