@@ -21,6 +21,7 @@
 #include "gui/ActionCollection.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/widgets/ShortcutWidget.h"
 
 #include <QDebug>
@@ -91,8 +92,8 @@ public:
     explicit ShortcutSettingsWidget(QWidget* parent = nullptr)
         : QWidget(parent)
         , m_tableView(new QTableView(this))
-        , m_filterLineEdit(new QLineEdit(this))
-        , m_resetShortcutsButton(new QPushButton(QObject::tr("Reset Shortcuts"), this))
+        , m_filterLineEdit(new VaultLineEdit(this))
+        , m_resetShortcutsButton(new VaultButton(QObject::tr("Reset Shortcuts"), this))
     {
         auto h = new QHBoxLayout();
         h->addWidget(m_filterLineEdit);
@@ -112,6 +113,8 @@ public:
         m_proxy.setSourceModel(&m_model);
 
         m_filterLineEdit->setPlaceholderText(QObject::tr("Filter..."));
+        m_filterLineEdit->setContentMargins({12, 10, 12, 10});
+        m_resetShortcutsButton->setFixedHeight(m_filterLineEdit->sizeHint().height());
         connect(m_filterLineEdit, &QLineEdit::textChanged, &m_proxy, &QSortFilterProxyModel::setFilterFixedString);
 
         connect(m_resetShortcutsButton, &QPushButton::clicked, this, [this]() {
@@ -247,8 +250,8 @@ private:
     }
 
     QTableView* m_tableView;
-    QLineEdit* m_filterLineEdit;
-    QPushButton* m_resetShortcutsButton;
+    VaultLineEdit* m_filterLineEdit;
+    VaultButton* m_resetShortcutsButton;
     QStandardItemModel m_model;
     QSortFilterProxyModel m_proxy;
     QHash<QAction*, QKeySequence> m_changedActions;
