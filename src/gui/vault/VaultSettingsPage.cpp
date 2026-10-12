@@ -494,8 +494,14 @@ public:
         if (m_trailing && m_trailing->isVisibleTo(this)) {
             width += HeaderSpacing + m_trailing->sizeHint().width();
         }
-        // Tall enough for what the row holds, such as a form, so a scroll area doesn't squeeze it
-        return {width + margins.left() + margins.right(), qMax(CardMinimumHeight, QWidget::minimumSizeHint().height())};
+        // Tall enough for what the row holds, such as a form, so a scroll area doesn't squeeze it. Wrapped text is
+        // measured at the row's width; on its own it asks for the height of its narrowest wrapping, which would leave
+        // the page far taller than its cards.
+        int height = QWidget::minimumSizeHint().height();
+        if (hasHeightForWidth() && this->width() > 0) {
+            height = heightForWidth(this->width());
+        }
+        return {width + margins.left() + margins.right(), qMax(CardMinimumHeight, height)};
     }
 
 protected:

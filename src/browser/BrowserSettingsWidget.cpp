@@ -24,7 +24,10 @@
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultSettingsPage.h"
 
+#include <components/status_info/InfoBar.h>
+
 #include <QFileDialog>
+#include <QTextDocumentFragment>
 
 BrowserSettingsWidget::BrowserSettingsWidget(QWidget* parent)
     : QWidget(parent)
@@ -106,24 +109,34 @@ void BrowserSettingsWidget::buildVaultPage()
         return section->addToggle(checkBox, checkBox->toolTip());
     };
 
+    // The extension it needs, and the browsers it can't reach, belong with the switch itself
     auto integration = page.addSection();
-    integration->addToggle(m_ui->enableBrowserSupport);
+    auto enable = integration->addToggle(m_ui->enableBrowserSupport);
+    enable->setCollapsible(false);
     m_ui->extensionLabel->setWordWrap(true);
-    integration->addWidget(m_ui->extensionLabel);
+    enable->addWidget(m_ui->extensionLabel);
     m_ui->snapWarningLabel->setWordWrap(true);
-    integration->addWidget(m_ui->snapWarningLabel);
+    enable->addWidget(m_ui->snapWarningLabel);
 
     // The sections are disabled with the tabs of the form while browser integration is off.
+    // The browsers fold into one card, as in WinUI's SettingsExpander, rather than a card each.
     // Some browsers share another's settings on Windows and are hidden there.
     auto browsers = page.addSection(tr("Browsers"));
     browsers->follow(m_ui->tabWidget);
-    browsers->addToggle(m_ui->chromeSupport);
-    browsers->addToggle(m_ui->chromiumSupport);
-    browsers->addToggle(m_ui->firefoxSupport);
-    browsers->addToggle(m_ui->edgeSupport);
-    browsers->addToggle(m_ui->braveSupport);
-    browsers->addToggle(m_ui->vivaldiSupport);
-    browsers->addToggle(m_ui->torBrowserSupport);
+    auto browsersTitle = m_ui->browsersGroupBox->title().trimmed();
+    while (browsersTitle.endsWith(QLatin1Char(':')) || browsersTitle.endsWith(QChar(0xff1a))) {
+        browsersTitle.chop(1);
+    }
+    auto browserList = browsers->addSetting(browsersTitle, QWidgetList{});
+    for (auto browser : {m_ui->chromeSupport,
+                         m_ui->chromiumSupport,
+                         m_ui->firefoxSupport,
+                         m_ui->edgeSupport,
+                         m_ui->braveSupport,
+                         m_ui->vivaldiSupport,
+                         m_ui->torBrowserSupport}) {
+        browserList->addToggle(browser);
+    }
 
     auto behavior = page.addSection(tr("Behavior"));
     behavior->follow(m_ui->tabWidget);
@@ -136,7 +149,16 @@ void BrowserSettingsWidget::buildVaultPage()
 
     auto advanced = page.addSection(m_ui->tabWidget->tabText(m_ui->tabWidget->indexOf(m_ui->tab_2)));
     advanced->follow(m_ui->tabWidget);
-    advanced->addWidget(m_ui->advancedMessageWidget);
+    // The warning reads as a Fluent warning over the section, rather than a banner inside a card
+    auto advancedWarning = new fluent::status_info::InfoBar(this);
+    advancedWarning->setObjectName("advancedSettingsWarning");
+    advancedWarning->setSeverity(fluent::status_info::InfoBar::Warning);
+    advancedWarning->setMessage(QTextDocumentFragment::fromHtml(m_ui->advancedMessageWidget->text()).toPlainText());
+    advancedWarning->setIsClosable(false);
+    advancedWarning->setIsOpen(true);
+    advancedWarning->setSizePolicy(QSizePolicy::Expanding, advancedWarning->sizePolicy().verticalPolicy());
+    m_ui->advancedMessageWidget->hide();
+    advanced->addHeaderWidget(advancedWarning, {});
     addToggle(advanced, m_ui->alwaysAllowAccess);
     addToggle(advanced, m_ui->alwaysAllowUpdate);
     addToggle(advanced, m_ui->httpAuthPermission);
@@ -146,10 +168,10 @@ void BrowserSettingsWidget::buildVaultPage()
     addToggle(advanced, m_ui->updateBinaryPath);
     addToggle(advanced, m_ui->allowGetDatabaseEntriesRequest);
 
-    // These lead into fields in the form; a card's caption has no trailing colon
-    for (auto checkBox : {m_ui->useCustomProxy, m_ui->customBrowserSupport}) {
+    // These lead into fields in the form, or end like a sentence; a card's caption has no trailing punctuation
+    for (auto checkBox : {m_ui->useCustomProxy, m_ui->customBrowserSupport, m_ui->noMigrationPrompt}) {
         auto text = checkBox->text().trimmed();
-        while (text.endsWith(QLatin1Char(':')) || text.endsWith(QChar(0xff1a))) {
+        while (text.endsWith(QLatin1Char(':')) || text.endsWith(QChar(0xff1a)) || text.endsWith(QLatin1Char('.'))) {
             text.chop(1);
         }
         checkBox->setText(text);
