@@ -19,13 +19,100 @@
 
 #include "gui/styles/FluentTheme.h"
 
+#include <components/foundation/FluentElement.h>
 #include <components/foundation/ThemeRegistry.h>
 
 #include <QAction>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
+
+namespace
+{
+    class ThemeFollower : public QObject, public fluent::FluentElement
+    {
+    public:
+        ThemeFollower(QObject* owner, std::function<void()> apply)
+            : QObject(owner)
+            , m_apply(std::move(apply))
+        {
+        }
+
+        void onThemeUpdated() override
+        {
+            m_apply();
+        }
+
+    private:
+        std::function<void()> m_apply;
+    };
+
+    class CanvasPainter : public QObject
+    {
+    public:
+        using QObject::QObject;
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::Paint) {
+                auto* widget = static_cast<QWidget*>(watched);
+                QPainter painter(widget);
+                painter.fillRect(widget->rect(), FluentTheme::palette().canvas);
+            }
+            return QObject::eventFilter(watched, event);
+        }
+    };
+} // namespace
+
+void Vault::followTheme(QObject* owner, std::function<void()> apply)
+{
+    apply();
+    new ThemeFollower(owner, std::move(apply));
+}
+
+void Vault::paintCanvas(QWidget* widget)
+{
+    widget->setAutoFillBackground(false);
+    widget->installEventFilter(new CanvasPainter(widget));
+    // Repaint with the new canvas color when the theme changes
+    followTheme(widget, [widget] { widget->update(); });
+}
+
+QString Vault::formStyleSheet()
+{
+    const auto p = FluentTheme::palette();
+    const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
+    return QStringLiteral("QGroupBox { background-color: %1; border: 1px solid %2; border-radius: 8px;"
+                          " margin-top: 30px; padding: 10px 8px 8px 8px; }"
+                          "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left;"
+                          " margin: 0; left: 2px; top: 4px; color: %3; }"
+                          "QPlainTextEdit, QTextEdit { background-color: %4; border: 1px solid %2;"
+                          " border-radius: 4px; padding: 4px 6px; }"
+                          "QToolButton { background-color: %4; border: 1px solid %2; border-radius: 4px;"
+                          " padding: 4px; }"
+                          "QToolButton:hover { background-color: %5; }"
+                          "QToolButton:pressed, QToolButton:checked { background-color: %6; }"
+                          "QAbstractSpinBox { background-color: %4; border: 1px solid %2; border-radius: 4px;"
+                          " padding: 4px 6px; }"
+                          // Tabs read as a Fluent pivot: plain labels with an accent underline on the current one
+                          "QTabWidget::pane { border: none; border-top: 1px solid %7; }"
+                          "QTabBar::tab { background: transparent; border: none; border-bottom: 3px solid transparent;"
+                          " padding: 6px 12px; margin-right: 4px; color: %8; }"
+                          "QTabBar::tab:hover { color: %3; }"
+                          "QTabBar::tab:selected { color: %3; border-bottom-color: %9; }")
+        .arg(argb(p.layer),
+             argb(p.stroke),
+             argb(p.text),
+             argb(p.control),
+             argb(p.controlHover),
+             argb(p.controlPressed),
+             argb(p.divider),
+             argb(p.textSecondary),
+             argb(p.accent));
+}
 
 QFont Vault::font(Typography::FontRole role)
 {
