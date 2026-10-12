@@ -68,6 +68,9 @@ private slots:
     void selectBackupDirectory();
 
 private:
+    // Settings cards of the Vault Index layout in place of the forms
+    void buildVaultGeneralPage();
+
     QWidget* const m_secWidget;
     QWidget* const m_generalWidget;
     QWidget* const m_autoTypeWidget;

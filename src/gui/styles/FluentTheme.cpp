@@ -114,6 +114,7 @@ FluentTheme::Palette FluentTheme::palette()
     p.text = c.textPrimary;
     p.textSecondary = c.textSecondary;
     p.textTertiary = c.textTertiary;
+    p.textDisabled = c.textDisabled;
     p.accent = c.accentDefault;
     p.accentText = c.textAccentPrimary;
     // Selected rows get a quiet accent tint rather than a solid fill

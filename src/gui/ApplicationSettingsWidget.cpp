@@ -37,6 +37,7 @@
 #include "gui/osutils/OSUtils.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
+#include "gui/vault/VaultSettingsPage.h"
 #include "quickunlock/QuickUnlockInterface.h"
 
 #include "FileDialog.h"
@@ -231,6 +232,7 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
         m_generalUi->toolButtonStyleLabel->setVisible(false);
         m_generalUi->toolButtonStyleComboBox->setVisible(false);
         m_generalUi->toolbarMovableCheckBox->setVisible(false);
+        buildVaultGeneralPage();
     }
 
 #ifdef KPXC_FEATURE_UPDATES
@@ -249,6 +251,68 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
 }
 
 ApplicationSettingsWidget::~ApplicationSettingsWidget() = default;
+
+void ApplicationSettingsWidget::buildVaultGeneralPage()
+{
+    auto ui = m_generalUi.data();
+    VaultSettingsPage page(m_generalWidget, tr("General"));
+
+    auto startup = page.addSection(ui->startupGroup->title());
+    startup->addToggle(ui->singleInstanceCheckBox);
+    startup->addToggle(ui->launchAtStartup);
+    startup->addToggle(ui->systrayMinimizeOnStartup);
+    startup->addToggle(ui->minimizeAfterUnlockCheckBox);
+    auto recent = startup->addToggle(ui->rememberLastDatabasesCheckBox);
+    recent->addHeaderControl(ui->rememberLastDatabasesSpinbox);
+    recent->addToggle(ui->openPreviousDatabasesOnStartupCheckBox);
+    recent->addToggle(ui->rememberLastKeyFilesCheckBox);
+    auto updates = startup->addToggle(ui->checkForUpdatesOnStartupCheckBox);
+    updates->addToggle(ui->checkForUpdatesIncludeBetasCheckBox);
+    auto expiring = startup->addToggle(ui->showExpiredEntriesOnDatabaseUnlockCheckBox);
+    expiring->addHeaderControl(ui->showExpiredEntriesOnDatabaseUnlockOffsetSpinBox);
+
+    auto files = page.addSection(ui->saveGroup->title());
+    files->addToggle(ui->autoSaveAfterEveryChangeCheckBox);
+    files->addToggle(ui->autoSaveOnExitCheckBox);
+    files->addToggle(ui->autoSaveNonDataChangesCheckBox);
+    files->addToggle(ui->autoReloadOnChangeCheckBox);
+    auto backup = files->addToggle(ui->backupBeforeSaveCheckBox);
+    backup->addSetting(ui->label, {ui->backupFilePath, ui->backupFilePathPicker});
+    auto alternativeSave = files->addToggle(ui->useAlternativeSaveCheckBox);
+    alternativeSave->addSetting(tr("Saving method"), ui->alternativeSaveComboBox);
+
+    auto entries = page.addSection(ui->entryGroup->title());
+    entries->addToggle(ui->autocompleteSuggestionsCheckBox);
+    entries->addToggle(ui->ConfirmMoveEntryToRecycleBinCheckBox);
+    entries->addToggle(ui->autoGeneratePasswordForNewEntriesCheckBox);
+    entries->addToggle(ui->EnableCopyOnDoubleClickCheckBox);
+    entries->addSetting(ui->urlDoubleClickLabel, ui->urlDoubleClickComboBox);
+    entries->addToggle(ui->useGroupIconOnEntryCreationCheckBox);
+    entries->addToggle(ui->minimizeOnOpenUrlCheckBox);
+    auto hideOnCopy = entries->addToggle(ui->hideWindowOnCopyCheckBox);
+    hideOnCopy->addWidget(ui->minimizeOnCopyRadioButton);
+    hideOnCopy->addWidget(ui->dropToBackgroundOnCopyRadioButton);
+    entries->addSetting(ui->faviconTimeoutLabel, ui->faviconTimeoutSpinBox);
+
+    auto appearance = page.addSection(ui->generalGroup->title());
+    appearance->addSetting(ui->languageLabel_2, ui->languageComboBox, tr("Takes effect after restarting KeePassXC"));
+    appearance->addSetting(ui->appThemeLabel, ui->appThemeComboBox);
+    appearance->addSetting(ui->fontSizeLabel, ui->fontSizeComboBox);
+    appearance->addToggle(ui->menubarShowCheckBox);
+    appearance->addToggle(ui->colorPasswordsCheckBox);
+    appearance->addToggle(ui->monospaceNotesCheckBox);
+    appearance->addToggle(ui->minimizeOnCloseCheckBox);
+    auto tray = appearance->addToggle(ui->systrayShowCheckBox);
+    tray->addSetting(ui->trayIconAppearanceLabel, ui->trayIconAppearance);
+    tray->addToggle(ui->systrayMinimizeToTrayCheckBox);
+
+    auto manage = page.addSection(tr("Manage Settings"));
+    manage->addSetting(tr("Move your settings to another computer"),
+                       {ui->importSettingsButton, ui->exportSettingsButton});
+    manage->addSetting(tr("Return every setting to its default value"), ui->resetSettingsButton);
+
+    page.finish();
+}
 
 void ApplicationSettingsWidget::addSettingsPage(ISettingsPage* page)
 {

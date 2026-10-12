@@ -60,6 +60,7 @@ namespace FluentTheme
         QColor text;
         QColor textSecondary;
         QColor textTertiary;
+        QColor textDisabled;
         QColor accent;
         QColor accentText;
         QColor accentSubtle;

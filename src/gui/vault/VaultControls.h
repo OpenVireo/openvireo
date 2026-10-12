@@ -23,6 +23,7 @@
 #include <components/basicinput/Button.h>
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ComboBox.h>
+#include <components/basicinput/RadioButton.h>
 #include <components/menus_toolbars/Menu.h>
 #include <components/textfields/LineEdit.h>
 
@@ -65,10 +66,38 @@ public:
     explicit VaultCheckBox(QWidget* parent = nullptr);
     explicit VaultCheckBox(const QString& text, QWidget* parent = nullptr);
 
+    // Draw only the text, wrapped, with a description below it and no box, for a settings
+    // card that shows a toggle switch for the box instead
+    void setSwitchStyle(bool switchStyle);
+    bool hasSwitchStyle() const;
+    void setDescription(const QString& description);
+    QString description() const;
+
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+    bool hasHeightForWidth() const override;
+    int heightForWidth(int width) const override;
+
 protected:
     // The whole control toggles the box, as in WinUI, not only the box and its label
     bool hitButton(const QPoint& pos) const override;
     void paintEvent(QPaintEvent* event) override;
+
+private:
+    int switchTextHeight(int width) const;
+
+    bool m_switchStyle = false;
+    QString m_description;
+};
+
+// Radio button for forms, so they can use the Fluent one in place of the stock one
+class VaultRadioButton : public fluent::basicinput::RadioButton
+{
+    Q_OBJECT
+
+public:
+    explicit VaultRadioButton(QWidget* parent = nullptr);
+    explicit VaultRadioButton(const QString& text, QWidget* parent = nullptr);
 };
 
 // Combo box that, like QComboBox, handles keys sent to it while it doesn't have focus
