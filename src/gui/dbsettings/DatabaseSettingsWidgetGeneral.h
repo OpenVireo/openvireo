@@ -52,6 +52,7 @@ private slots:
     void setupPublicIconButton(int iconIndex);
 
 private:
+    void buildVaultPage();
     const QScopedPointer<Ui::DatabaseSettingsWidgetGeneral> m_ui;
 };
 
