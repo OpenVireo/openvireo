@@ -212,7 +212,8 @@ void GroupView::drawRow(QPainter* painter, const QStyleOptionViewItem& option, c
         path.addRoundedRect(row, 4, 4);
         painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
     }
-    if (selected) {
+    // The root's chevron sits where the pill would, so the root shows only the highlight
+    if (selected && index.parent().isValid()) {
         QPainterPath pill;
         pill.addRoundedRect(QRectF(row.left(), row.center().y() - 8, 3, 16), 1.5, 1.5);
         painter->fillPath(pill, p.accent);
