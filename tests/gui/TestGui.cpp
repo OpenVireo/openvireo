@@ -106,7 +106,6 @@ void TestGui::initTestCase()
     config()->set(Config::GUI_VaultLayout, false);
     m_mainWindow.reset(new MainWindow());
     m_tabWidget = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
-    m_statusBarLabel = m_mainWindow->findChild<QLabel*>("statusBarLabel");
     m_mainWindow->show();
     m_mainWindow->resize(1024, 768);
 }
@@ -311,7 +310,7 @@ void TestGui::testCreateDatabase()
 
     QCOMPARE(m_tabWidget->count(), 2);
 
-    checkStatusBarText("0 Ent");
+    checkEntryCount(0);
 
     // there is a new empty db
     m_db = m_tabWidget->currentDatabaseWidget()->database();
@@ -333,14 +332,14 @@ void TestGui::testCreateDatabase()
     compositeKey->addKey(fileKey);
     QCOMPARE(m_db->key()->rawKey(), compositeKey->rawKey());
 
-    checkStatusBarText("0 Ent");
+    checkEntryCount(0);
 
     // Test the switching to other DB tab
     m_tabWidget->setCurrentIndex(0);
-    checkStatusBarText("1 Ent");
+    checkEntryCount(1);
 
     m_tabWidget->setCurrentIndex(1);
-    checkStatusBarText("0 Ent");
+    checkEntryCount(0);
 
     // close the new database
     MessageBox::setNextAnswer(MessageBox::No);
@@ -825,7 +824,7 @@ void TestGui::testAddEntry()
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
 
     // Given the status bar label with initial number of entries.
-    checkStatusBarText("1 Ent");
+    checkEntryCount(1);
 
     // Find the new entry action
     auto* entryNewAction = m_mainWindow->findChild<QAction*>("actionEntryNew");
@@ -862,7 +861,7 @@ void TestGui::testAddEntry()
     m_db->updateCommonUsernames();
 
     // Then the status bar label should be updated with incremented number of entries.
-    checkStatusBarText("2 Ent");
+    checkEntryCount(2);
 
     // Add entry "something 2"
     QTest::mouseClick(entryNewWidget, Qt::LeftButton);
@@ -1391,7 +1390,7 @@ void TestGui::testDeleteEntry()
 {
     // Add canned entries for consistent testing
     addCannedEntries();
-    checkStatusBarText("4 Ent");
+    checkEntryCount(4);
 
     auto* groupView = m_dbWidget->findChild<GroupView*>("groupView");
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
@@ -1421,7 +1420,7 @@ void TestGui::testDeleteEntry()
         QCOMPARE(m_db->metadata()->recycleBin()->entries().size(), 1);
     }
 
-    checkStatusBarText("3 Ent");
+    checkEntryCount(3);
 
     // Select multiple entries and move them to the recycling bin
     clickIndex(entryView->model()->index(1, 1), entryView, Qt::LeftButton);
@@ -2632,12 +2631,11 @@ void TestGui::checkSaveDatabase()
     QFAIL("Could not save database.");
 }
 
-void TestGui::checkStatusBarText(const QString& textFragment)
+void TestGui::checkEntryCount(int count)
 {
     QApplication::processEvents();
-    QVERIFY(m_statusBarLabel->isVisible());
-    QTRY_VERIFY2(m_statusBarLabel->text().startsWith(textFragment),
-                 qPrintable(QString("'%1' doesn't start with '%2'").arg(m_statusBarLabel->text(), textFragment)));
+    auto* entryView = m_tabWidget->currentDatabaseWidget()->entryView();
+    QTRY_COMPARE(entryView->model()->rowCount(), count);
 }
 
 void TestGui::triggerAction(const QString& name)
