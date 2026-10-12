@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QRadioButton" name="defaultIconsRadio">
+    <widget class="fluent::basicinput::RadioButton" name="defaultIconsRadio">
      <property name="text">
       <string>Use default icon</string>
      </property>
@@ -72,7 +72,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QRadioButton" name="customIconsRadio">
+    <widget class="fluent::basicinput::RadioButton" name="customIconsRadio">
      <property name="text">
       <string>Use custom icon</string>
      </property>
@@ -106,7 +106,7 @@
    <item>
     <layout class="QHBoxLayout" name="customIconButtonsHorizontalLayout" stretch="0,0,0,0">
      <item>
-      <widget class="QPushButton" name="addButton">
+      <widget class="VaultButton" name="addButton">
        <property name="text">
         <string>Choose icon…</string>
        </property>
@@ -126,7 +126,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLineEdit" name="faviconURL">
+      <widget class="VaultLineEdit" name="faviconURL">
        <property name="minimumSize">
         <size>
          <width>200</width>
@@ -142,7 +142,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="faviconButton">
+      <widget class="VaultButton" name="faviconButton">
        <property name="toolTip">
         <string>Download favicon for URL</string>
        </property>
@@ -172,7 +172,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="applyIconToPushButton">
+      <widget class="VaultButton" name="applyIconToPushButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -207,6 +207,23 @@
   <tabstop>faviconButton</tabstop>
   <tabstop>applyIconToPushButton</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>fluent::basicinput::RadioButton</class>
+  <extends>QRadioButton</extends>
+  <header>components/basicinput/RadioButton.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

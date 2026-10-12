@@ -61,7 +61,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QPushButton" name="addAttachmentButton">
+       <widget class="VaultButton" name="addAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -74,7 +74,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="editAttachmentButton">
+       <widget class="VaultButton" name="editAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -91,7 +91,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="previewAttachmentButton">
+       <widget class="VaultButton" name="previewAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -101,7 +101,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="openAttachmentButton">
+       <widget class="VaultButton" name="openAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -114,7 +114,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="saveAttachmentButton">
+       <widget class="VaultButton" name="saveAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -137,7 +137,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="removeAttachmentButton">
+       <widget class="VaultButton" name="removeAttachmentButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -170,6 +170,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

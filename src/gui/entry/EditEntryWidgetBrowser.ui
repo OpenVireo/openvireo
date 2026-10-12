@@ -47,21 +47,21 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="hideEntryCheckbox">
+       <widget class="VaultCheckBox" name="hideEntryCheckbox">
         <property name="text">
          <string>Hide this entry from the browser extension</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="skipAutoSubmitCheckbox">
+       <widget class="VaultCheckBox" name="skipAutoSubmitCheckbox">
         <property name="text">
          <string>Skip Auto-Submit for this entry</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="onlyHttpAuthCheckbox">
+       <widget class="VaultCheckBox" name="onlyHttpAuthCheckbox">
         <property name="toolTip">
          <string>Only send this entry to the browser for HTTP Auth dialogs. If enabled, normal login forms will not show this entry for selection.</string>
         </property>
@@ -71,7 +71,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="notHttpAuthCheckbox">
+       <widget class="VaultCheckBox" name="notHttpAuthCheckbox">
         <property name="toolTip">
          <string>Do not send this entry to the browser for HTTP Auth dialogs. If enabled, HTTP Auth dialogs will not show this entry for selection.</string>
         </property>
@@ -108,14 +108,14 @@
       <item>
        <layout class="QVBoxLayout" name="additionalURLsButtonLayout">
         <item>
-         <widget class="QPushButton" name="addURLButton">
+         <widget class="VaultButton" name="addURLButton">
           <property name="text">
            <string>Add</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="removeURLButton">
+         <widget class="VaultButton" name="removeURLButton">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -125,7 +125,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="editURLButton">
+         <widget class="VaultButton" name="editURLButton">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -158,6 +158,16 @@
   </layout>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>

@@ -27,7 +27,7 @@
     <number>0</number>
    </property>
    <item row="1" column="1" colspan="4">
-    <widget class="QCheckBox" name="removeKeyFromAgentCheckBox">
+    <widget class="VaultCheckBox" name="removeKeyFromAgentCheckBox">
      <property name="text">
       <string>Remove key from agent when database is closed/locked</string>
      </property>
@@ -44,7 +44,7 @@
     </widget>
    </item>
    <item row="0" column="1" colspan="4">
-    <widget class="QCheckBox" name="addKeyToAgentCheckBox">
+    <widget class="VaultCheckBox" name="addKeyToAgentCheckBox">
      <property name="text">
       <string>Add key to agent when database is opened/unlocked</string>
      </property>
@@ -63,7 +63,7 @@
     </widget>
    </item>
    <item row="14" column="4">
-    <widget class="QPushButton" name="decryptButton">
+    <widget class="VaultButton" name="decryptButton">
      <property name="text">
       <string>Decrypt</string>
      </property>
@@ -96,7 +96,7 @@
     </widget>
    </item>
    <item row="16" column="3" colspan="2">
-    <widget class="QPushButton" name="copyToClipboardButton">
+    <widget class="VaultButton" name="copyToClipboardButton">
      <property name="text">
       <string>Copy to clipboard</string>
      </property>
@@ -119,7 +119,7 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
-       <widget class="QRadioButton" name="attachmentRadioButton">
+       <widget class="fluent::basicinput::RadioButton" name="attachmentRadioButton">
         <property name="text">
          <string>Attachment</string>
         </property>
@@ -129,7 +129,7 @@
        </widget>
       </item>
       <item row="3" column="3">
-       <widget class="QLineEdit" name="externalFileEdit">
+       <widget class="VaultLineEdit" name="externalFileEdit">
         <property name="focusPolicy">
          <enum>Qt::ClickFocus</enum>
         </property>
@@ -141,21 +141,21 @@
       <item row="4" column="3">
        <layout class="QHBoxLayout" name="agentActionsLayout" stretch="0,0,0">
         <item>
-         <widget class="QPushButton" name="addToAgentButton">
+         <widget class="VaultButton" name="addToAgentButton">
           <property name="text">
            <string>Add to agent</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="removeFromAgentButton">
+         <widget class="VaultButton" name="removeFromAgentButton">
           <property name="text">
            <string>Remove from agent</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="clearAgentButton">
+         <widget class="VaultButton" name="clearAgentButton">
           <property name="text">
            <string>Clear agent</string>
           </property>
@@ -164,14 +164,14 @@
        </layout>
       </item>
       <item row="3" column="0">
-       <widget class="QRadioButton" name="externalFileRadioButton">
+       <widget class="fluent::basicinput::RadioButton" name="externalFileRadioButton">
         <property name="text">
          <string>External file</string>
         </property>
        </widget>
       </item>
       <item row="3" column="4">
-       <widget class="QPushButton" name="browseButton">
+       <widget class="VaultButton" name="browseButton">
         <property name="accessibleName">
          <string>Browser for key file</string>
         </property>
@@ -181,14 +181,14 @@
        </widget>
       </item>
       <item row="0" column="4">
-       <widget class="QPushButton" name="generateButton">
+       <widget class="VaultButton" name="generateButton">
         <property name="text">
          <string>Generate</string>
         </property>
        </widget>
       </item>
       <item row="0" column="3">
-       <widget class="QComboBox" name="attachmentComboBox">
+       <widget class="VaultComboBox" name="attachmentComboBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -207,7 +207,7 @@
     </widget>
    </item>
    <item row="2" column="1" colspan="4">
-    <widget class="QCheckBox" name="requireUserConfirmationCheckBox">
+    <widget class="VaultCheckBox" name="requireUserConfirmationCheckBox">
      <property name="text">
       <string>Require user confirmation when this key is used</string>
      </property>
@@ -248,7 +248,7 @@
    <item row="3" column="1" colspan="4">
     <layout class="QHBoxLayout" name="removeKeyLayout">
      <item>
-      <widget class="QCheckBox" name="lifetimeCheckBox">
+      <widget class="VaultCheckBox" name="lifetimeCheckBox">
        <property name="text">
         <string>Remove key from agent after</string>
        </property>
@@ -347,6 +347,33 @@
   <tabstop>publicKeyEdit</tabstop>
   <tabstop>copyToClipboardButton</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>fluent::basicinput::RadioButton</class>
+  <extends>QRadioButton</extends>
+  <header>components/basicinput/RadioButton.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

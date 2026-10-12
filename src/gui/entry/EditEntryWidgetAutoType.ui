@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QCheckBox" name="enableButton">
+    <widget class="VaultCheckBox" name="enableButton">
      <property name="text">
       <string>Enable Auto-Type for this entry</string>
      </property>
@@ -47,14 +47,14 @@
     </spacer>
    </item>
    <item>
-    <widget class="QRadioButton" name="inheritSequenceButton">
+    <widget class="fluent::basicinput::RadioButton" name="inheritSequenceButton">
      <property name="text">
       <string>Inherit default Auto-Type sequence from the group</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QRadioButton" name="customSequenceButton">
+    <widget class="fluent::basicinput::RadioButton" name="customSequenceButton">
      <property name="text">
       <string>Use custom Auto-Type sequence:</string>
      </property>
@@ -79,7 +79,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLineEdit" name="sequenceEdit">
+      <widget class="VaultLineEdit" name="sequenceEdit">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -260,7 +260,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QCheckBox" name="customWindowSequenceButton">
+         <widget class="VaultCheckBox" name="customWindowSequenceButton">
           <property name="text">
            <string>Use a specific sequence for this association:</string>
           </property>
@@ -285,7 +285,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QLineEdit" name="windowSequenceEdit">
+           <widget class="VaultLineEdit" name="windowSequenceEdit">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -317,6 +317,21 @@
   </layout>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>fluent::basicinput::RadioButton</class>
+  <extends>QRadioButton</extends>
+  <header>components/basicinput/RadioButton.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>WindowSelectComboBox</class>
    <extends>QComboBox</extends>

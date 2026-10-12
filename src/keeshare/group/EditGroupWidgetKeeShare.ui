@@ -38,7 +38,7 @@
       <number>8</number>
      </property>
      <item row="0" column="1">
-      <widget class="QComboBox" name="typeComboBox">
+      <widget class="VaultComboBox" name="typeComboBox">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -108,7 +108,7 @@
         <number>6</number>
        </property>
        <item>
-        <widget class="QLineEdit" name="pathEdit">
+        <widget class="VaultLineEdit" name="pathEdit">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -154,7 +154,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="clearButton">
+        <widget class="VaultButton" name="clearButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -185,7 +185,7 @@
       </spacer>
      </item>
      <item row="3" column="1">
-      <widget class="QCheckBox" name="keepGroupsCheckbox">
+      <widget class="VaultCheckBox" name="keepGroupsCheckbox">
        <property name="toolTip">
         <string>Maintain group structure with shared database</string>
        </property>
@@ -202,6 +202,26 @@
   </layout>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>PasswordWidget</class>
    <extends>QWidget</extends>

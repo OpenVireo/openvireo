@@ -42,7 +42,7 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="createdEdit">
+      <widget class="VaultLineEdit" name="createdEdit">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -68,7 +68,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QLineEdit" name="modifiedEdit">
+      <widget class="VaultLineEdit" name="modifiedEdit">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -94,7 +94,7 @@
       </widget>
      </item>
     <item row="2" column="1">
-      <widget class="QLineEdit" name="uuidEdit">
+      <widget class="VaultLineEdit" name="uuidEdit">
        <property name="accessibleName">
         <string>Unique ID</string>
        </property>
@@ -152,7 +152,7 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QPushButton" name="removeCustomDataButton">
+         <widget class="VaultButton" name="removeCustomDataButton">
           <property name="accessibleName">
            <string>Remove selected plugin data</string>
           </property>
@@ -186,6 +186,18 @@
   <tabstop>modifiedEdit</tabstop>
   <tabstop>uuidEdit</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

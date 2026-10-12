@@ -61,7 +61,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QComboBox" name="browserIntegrationHideEntriesComboBox">
+       <widget class="VaultComboBox" name="browserIntegrationHideEntriesComboBox">
         <property name="accessibleName">
          <string>Hide entries from browser extension toggle for this and sub groups</string>
         </property>
@@ -78,7 +78,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QComboBox" name="browserIntegrationSkipAutoSubmitComboBox">
+       <widget class="VaultComboBox" name="browserIntegrationSkipAutoSubmitComboBox">
         <property name="accessibleName">
          <string>Skip Auto-Submit toggle for this and sub groups</string>
         </property>
@@ -95,7 +95,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QComboBox" name="browserIntegrationOnlyHttpAuthComboBox">
+       <widget class="VaultComboBox" name="browserIntegrationOnlyHttpAuthComboBox">
         <property name="accessibleName">
          <string>Only HTTP Auth toggle for this and sub groups</string>
         </property>
@@ -112,7 +112,7 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QComboBox" name="browserIntegrationNotHttpAuthComboBox">
+       <widget class="VaultComboBox" name="browserIntegrationNotHttpAuthComboBox">
         <property name="accessibleName">
          <string>Do not use HTTP Auth toggle for this and sub groups</string>
         </property>
@@ -129,7 +129,7 @@
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QComboBox" name="browserIntegrationOmitWwwCombobox">
+       <widget class="VaultComboBox" name="browserIntegrationOmitWwwCombobox">
         <property name="accessibleName">
          <string>Omit WWW subdomain from matching toggle for this and sub groups</string>
         </property>
@@ -146,7 +146,7 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QComboBox" name="browserIntegrationRestrictKeyCombobox">
+       <widget class="VaultComboBox" name="browserIntegrationRestrictKeyCombobox">
         <property name="accessibleName">
          <string>Restrict matching to given browser key toggle for this and sub groups</string>
         </property>
@@ -177,6 +177,13 @@
   <tabstop>browserIntegrationOmitWwwCombobox</tabstop>
   <tabstop>browserIntegrationRestrictKeyCombobox</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

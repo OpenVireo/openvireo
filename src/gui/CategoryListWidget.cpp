@@ -62,6 +62,9 @@ QSize CategoryListWidget::sizeHint() const
 
 QSize CategoryListWidget::minimumSizeHint() const
 {
+    if (m_customDelegate) {
+        return {minimumWidth(), m_ui->categoryList->sizeHintForRow(0) * 2};
+    }
     return {m_itemDelegate->minWidth() + m_ui->categoryList->frameWidth() * 2,
             m_ui->categoryList->sizeHintForRow(0) * 2};
 }
@@ -90,6 +93,19 @@ QListWidget* CategoryListWidget::listWidget() const
     return m_ui->categoryList;
 }
 
+void CategoryListWidget::setCustomItemDelegate(QAbstractItemDelegate* delegate, int width)
+{
+    m_customDelegate = delegate;
+    m_ui->categoryList->setItemDelegate(delegate);
+    if (m_itemDelegate) {
+        m_itemDelegate->deleteLater();
+    }
+    setFixedWidth(width);
+    // Compact rows scroll like any list instead of paging with the arrow buttons
+    m_ui->categoryList->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    updateCategoryScrollButtons();
+}
+
 void CategoryListWidget::setCurrentCategory(int index)
 {
     m_ui->categoryList->setCurrentRow(index);
@@ -113,6 +129,10 @@ void CategoryListWidget::showEvent(QShowEvent* event)
 
 void CategoryListWidget::resizeEvent(QResizeEvent* event)
 {
+    if (m_customDelegate) {
+        QWidget::resizeEvent(event);
+        return;
+    }
     auto newDelegate = new CategoryListWidgetDelegate(m_ui->categoryList);
     m_ui->categoryList->setItemDelegate(newDelegate);
     m_itemDelegate->deleteLater();
@@ -127,7 +147,7 @@ void CategoryListWidget::updateCategoryScrollButtons()
     m_ui->scrollDown->setEnabled(m_ui->categoryList->verticalScrollBar()->value()
                                  != m_ui->categoryList->verticalScrollBar()->maximum());
 
-    m_ui->scrollUp->setVisible(m_ui->categoryList->verticalScrollBar()->maximum() > 0);
+    m_ui->scrollUp->setVisible(!m_customDelegate && m_ui->categoryList->verticalScrollBar()->maximum() > 0);
     m_ui->scrollDown->setVisible(m_ui->scrollUp->isVisible());
 }
 

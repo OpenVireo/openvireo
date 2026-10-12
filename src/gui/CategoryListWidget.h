@@ -39,6 +39,8 @@ public:
 
     int currentCategory();
     QListWidget* listWidget() const;
+    // Use a host-provided delegate, such as a navigation pane row, in place of the large icon tiles
+    void setCustomItemDelegate(QAbstractItemDelegate* delegate, int width);
     void setCurrentCategory(int index);
     int addCategory(const QString& labelText, const QIcon& icon);
     void setCategoryHidden(int index, bool hidden);
@@ -62,6 +64,7 @@ protected slots:
 
 private:
     QPointer<CategoryListWidgetDelegate> m_itemDelegate;
+    QPointer<QAbstractItemDelegate> m_customDelegate;
     const QScopedPointer<Ui::CategoryListWidget> m_ui;
 
     Q_DISABLE_COPY(CategoryListWidget)

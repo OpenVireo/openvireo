@@ -42,7 +42,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="showButton">
+      <widget class="VaultButton" name="showButton">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -58,7 +58,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="restoreButton">
+      <widget class="VaultButton" name="restoreButton">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -74,7 +74,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="deleteButton">
+      <widget class="VaultButton" name="deleteButton">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -90,7 +90,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="deleteAllButton">
+      <widget class="VaultButton" name="deleteAllButton">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -116,6 +116,13 @@
   <tabstop>deleteButton</tabstop>
   <tabstop>deleteAllButton</tabstop>
  </tabstops>
+ <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
