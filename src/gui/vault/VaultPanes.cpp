@@ -77,6 +77,60 @@ void VaultSurface::paintEvent(QPaintEvent* event)
     painter.drawPath(path);
 }
 
+VaultSectionHeader::VaultSectionHeader(const QString& text, QWidget* parent)
+    : QAbstractButton(parent)
+{
+    setText(text);
+    setAccessibleName(text);
+    setCheckable(true);
+    setChecked(true);
+    setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::TabFocus);
+    setAttribute(Qt::WA_Hover);
+    Vault::followTheme(this, [this] { update(); });
+}
+
+QSize VaultSectionHeader::sizeHint() const
+{
+    // As tall as the Groups title, which has the same margins
+    const QFontMetrics metrics(Vault::font(Typography::FontRole::Caption));
+    return {metrics.horizontalAdvance(text()) + 52, metrics.height() + 12};
+}
+
+void VaultSectionHeader::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QRectF r = QRectF(rect()).adjusted(4, 2, -4, 0);
+    if (isDown() || underMouse()) {
+        QPainterPath path;
+        path.addRoundedRect(r, 4, 4);
+        painter.fillPath(path, isDown() ? p.subtlePressed : p.subtleHover);
+    }
+    if (hasFocus()) {
+        QPainterPath path;
+        path.addRoundedRect(r, 4, 4);
+        painter.setPen(QPen(p.text, 2));
+        painter.drawPath(path);
+    }
+
+    // The text lines up with the Groups title, the chevron with the group tree's
+    painter.setFont(Vault::font(Typography::FontRole::Caption));
+    painter.setPen(p.textSecondary);
+    const QRectF textRect = QRectF(rect()).adjusted(12, 8, -32, -4);
+    painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, text());
+
+    QFont iconFont(Typography::FontFamily::FluentIcons);
+    iconFont.setPixelSize(Typography::IconSize::Compact);
+    painter.setFont(iconFont);
+    painter.drawText(QRectF(r.right() - 24, textRect.top(), 20, textRect.height()),
+                     Qt::AlignCenter,
+                     isChecked() ? Typography::Icons::ChevronDown : Typography::Icons::ChevronRight);
+}
+
 VaultNavButton::VaultNavButton(const QString& glyph, const QString& text, QWidget* parent)
     : QAbstractButton(parent)
     , m_glyph(glyph)

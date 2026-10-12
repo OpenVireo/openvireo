@@ -888,7 +888,10 @@ void TestGuiVault::testSidebarListsOnlyTags()
     QVERIFY(!tagView->selectionModel()->hasSelection());
 
     auto* tagWidget = m_dbWidget->findChild<QWidget*>("tagWidget");
-    QVERIFY(tagWidget->findChildren<QLabel*>().first()->text() == QString("Tags"));
+    auto* tagsHeader = tagWidget->findChild<QAbstractButton*>("vaultTagsHeader");
+    QVERIFY(tagsHeader);
+    QCOMPARE(tagsHeader->text(), QString("Tags"));
+    QVERIFY(tagsHeader->isChecked());
 
     // Clicking a tag still searches for it
     QTest::mouseClick(tagView->viewport(), Qt::LeftButton, {}, tagView->visualRect(tagView->model()->index(0, 0)).center());
@@ -900,9 +903,37 @@ void TestGuiVault::testSidebarListsOnlyTags()
 
     // The groups get the height the few tags don't need
     auto* groupView = m_dbWidget->findChild<QWidget*>("groupView");
-    QCOMPARE(groupView->height() + tagWidget->height() + groupView->parentWidget()->style()->pixelMetric(
-                 QStyle::PM_SplitterWidth, nullptr, groupView->parentWidget()),
-             groupView->parentWidget()->height());
+    const int splitterWidth =
+        groupView->parentWidget()->style()->pixelMetric(QStyle::PM_SplitterWidth, nullptr, groupView->parentWidget());
+    QCOMPARE(groupView->height() + tagWidget->height() + splitterWidth, groupView->parentWidget()->height());
+
+    // The title folds the tags away, and the groups take their room
+    const int expandedGroupsHeight = groupView->height();
+    QTest::mouseClick(tagsHeader, Qt::LeftButton);
+    QVERIFY(!tagsHeader->isChecked());
+    QVERIFY(config()->get(Config::GUI_VaultTagsCollapsed).toBool());
+    QTRY_VERIFY(!tagView->isVisible());
+    QVERIFY(tagsHeader->isVisible());
+    QTRY_COMPARE(tagWidget->height(), tagsHeader->height());
+    QVERIFY(groupView->height() > expandedGroupsHeight);
+    QCOMPARE(groupView->height() + tagWidget->height() + splitterWidth, groupView->parentWidget()->height());
+
+    // It stays folded when the tags change, and the setting reaches the header too
+    const auto tags = m_github->tags();
+    m_github->setTags(tags + ";folded");
+    QVERIFY(!tagView->isVisible());
+    m_github->setTags(tags);
+    config()->set(Config::GUI_VaultTagsCollapsed, false);
+    QVERIFY(tagsHeader->isChecked());
+    QTRY_VERIFY(tagView->isVisible());
+    QTRY_COMPARE(groupView->height(), expandedGroupsHeight);
+
+    QTest::mouseClick(tagsHeader, Qt::LeftButton);
+    QTRY_VERIFY(!tagView->isVisible());
+    QTest::mouseClick(tagsHeader, Qt::LeftButton);
+    QVERIFY(tagsHeader->isChecked());
+    QVERIFY(!config()->get(Config::GUI_VaultTagsCollapsed).toBool());
+    QTRY_VERIFY(tagView->isVisible());
 }
 
 void TestGuiVault::testScreenshots()
