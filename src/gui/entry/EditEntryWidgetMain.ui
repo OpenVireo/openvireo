@@ -57,7 +57,7 @@
      <number>8</number>
     </property>
     <item row="0" column="1">
-     <widget class="QLineEdit" name="titleEdit">
+     <widget class="VaultLineEdit" name="titleEdit">
       <property name="accessibleName">
        <string>Title field</string>
       </property>
@@ -136,7 +136,7 @@
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QComboBox" name="usernameComboBox">
+     <widget class="VaultComboBox" name="usernameComboBox">
       <property name="focusPolicy">
        <enum>Qt::StrongFocus</enum>
       </property>
@@ -161,7 +161,7 @@
        <number>8</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="expireCheck">
+       <widget class="VaultCheckBox" name="expireCheck">
         <property name="toolTip">
          <string>Toggle expiration</string>
         </property>
@@ -187,7 +187,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="expirePresets">
+       <widget class="VaultButton" name="expirePresets">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -346,6 +346,26 @@
   </widget>
  </widget>
  <customwidgets>
+ <customwidget>
+  <class>VaultButton</class>
+  <extends>QPushButton</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultCheckBox</class>
+  <extends>QCheckBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultComboBox</class>
+  <extends>QComboBox</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
+ <customwidget>
+  <class>VaultLineEdit</class>
+  <extends>QLineEdit</extends>
+  <header>gui/vault/VaultControls.h</header>
+ </customwidget>
   <customwidget>
    <class>TagsEdit</class>
    <extends>QWidget</extends>

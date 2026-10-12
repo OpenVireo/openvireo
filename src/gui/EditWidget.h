@@ -53,6 +53,8 @@ public:
     // For hosts that present the categories and the buttons in their own way
     CategoryListWidget* categoryList() const;
     QDialogButtonBox* buttonBox() const;
+    // Present the editor in the Vault Index style
+    void applyVaultShell();
     void setReadOnly(bool readOnly);
     bool readOnly() const;
     void enableApplyButton(bool enabled);
