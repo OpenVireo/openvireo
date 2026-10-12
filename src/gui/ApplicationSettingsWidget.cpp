@@ -233,6 +233,8 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
         m_generalUi->toolButtonStyleComboBox->setVisible(false);
         m_generalUi->toolbarMovableCheckBox->setVisible(false);
         buildVaultGeneralPage();
+        buildVaultSecurityPage();
+        buildVaultAutoTypePage();
     }
 
 #ifdef KPXC_FEATURE_UPDATES
@@ -257,7 +259,7 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     auto ui = m_generalUi.data();
     VaultSettingsPage page(m_generalWidget, tr("General"));
 
-    auto startup = page.addSection(ui->startupGroup->title());
+    auto startup = page.addSection(ui->startupGroup);
     startup->addToggle(ui->singleInstanceCheckBox);
     startup->addToggle(ui->launchAtStartup);
     startup->addToggle(ui->systrayMinimizeOnStartup);
@@ -271,7 +273,7 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     auto expiring = startup->addToggle(ui->showExpiredEntriesOnDatabaseUnlockCheckBox);
     expiring->addHeaderControl(ui->showExpiredEntriesOnDatabaseUnlockOffsetSpinBox);
 
-    auto files = page.addSection(ui->saveGroup->title());
+    auto files = page.addSection(ui->saveGroup);
     files->addToggle(ui->autoSaveAfterEveryChangeCheckBox);
     files->addToggle(ui->autoSaveOnExitCheckBox);
     files->addToggle(ui->autoSaveNonDataChangesCheckBox);
@@ -281,7 +283,7 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     auto alternativeSave = files->addToggle(ui->useAlternativeSaveCheckBox);
     alternativeSave->addSetting(tr("Saving method"), ui->alternativeSaveComboBox);
 
-    auto entries = page.addSection(ui->entryGroup->title());
+    auto entries = page.addSection(ui->entryGroup);
     entries->addToggle(ui->autocompleteSuggestionsCheckBox);
     entries->addToggle(ui->ConfirmMoveEntryToRecycleBinCheckBox);
     entries->addToggle(ui->autoGeneratePasswordForNewEntriesCheckBox);
@@ -294,7 +296,7 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     hideOnCopy->addWidget(ui->dropToBackgroundOnCopyRadioButton);
     entries->addSetting(ui->faviconTimeoutLabel, ui->faviconTimeoutSpinBox);
 
-    auto appearance = page.addSection(ui->generalGroup->title());
+    auto appearance = page.addSection(ui->generalGroup);
     appearance->addSetting(ui->languageLabel_2, ui->languageComboBox, tr("Takes effect after restarting KeePassXC"));
     appearance->addSetting(ui->appThemeLabel, ui->appThemeComboBox);
     appearance->addSetting(ui->fontSizeLabel, ui->fontSizeComboBox);
@@ -310,6 +312,65 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     manage->addSetting(tr("Move your settings to another computer"),
                        {ui->importSettingsButton, ui->exportSettingsButton});
     manage->addSetting(tr("Return every setting to its default value"), ui->resetSettingsButton);
+
+    page.finish();
+}
+
+void ApplicationSettingsWidget::buildVaultSecurityPage()
+{
+    auto ui = m_secUi.data();
+    VaultSettingsPage page(m_secWidget, tr("Security"));
+
+    auto timeouts = page.addSection(ui->groupBox);
+    timeouts->addToggle(ui->clearClipboardCheckBox)->addHeaderControl(ui->clearClipboardSpinBox);
+    timeouts->addToggle(ui->clearSearchCheckBox)->addHeaderControl(ui->clearSearchSpinBox);
+    timeouts->addToggle(ui->lockDatabaseIdleCheckBox)->addHeaderControl(ui->lockDatabaseIdleSpinBox);
+
+    auto locking = page.addSection(ui->lockOptionsGroup);
+    locking->addToggle(ui->quickUnlockCheckBox);
+    locking->addToggle(ui->lockDatabaseOnScreenLockCheckBox);
+    locking->addToggle(ui->lockDatabasesOnUserSwitchCheckBox);
+    locking->addToggle(ui->lockDatabaseMinimizeCheckBox);
+
+    auto convenience = page.addSection(ui->groupBox_2);
+    convenience->addToggle(ui->passwordShowDotsCheckBox);
+    convenience->addToggle(ui->passwordsHiddenCheckBox);
+    convenience->addToggle(ui->passwordPreviewCleartextCheckBox);
+    convenience->addToggle(ui->hideTotpCheckBox);
+    convenience->addToggle(ui->hideNotesCheckBox);
+
+    auto privacy = page.addSection(ui->privacy);
+    privacy->addToggle(ui->fallbackToSearch);
+
+    page.finish();
+}
+
+void ApplicationSettingsWidget::buildVaultAutoTypePage()
+{
+    auto ui = m_autoTypeUi.data();
+    VaultSettingsPage page(m_autoTypeWidget, tr("Auto-Type"));
+
+    // Only one of the shortcut field and the button for the system's shortcut settings is shown
+    auto global = page.addSection(tr("Global Auto-Type"));
+    global->addSetting(ui->autoTypeShortcutLabel, {ui->autoTypeShortcutWidget, ui->autoTypeShortcutConfigureWidget});
+    global->addToggle(ui->autoTypeEntryTitleMatchCheckBox);
+    global->addToggle(ui->autoTypeEntryURLMatchCheckBox);
+
+    auto behavior = page.addSection(tr("Behavior"));
+    auto ask = behavior->addToggle(ui->autoTypeAskCheckBox);
+    ask->addToggle(ui->autoTypeSkipMainWindowConfirmationCheckBox);
+    behavior->addToggle(ui->autoTypeHideExpiredEntryCheckBox);
+    behavior->addToggle(ui->autoTypeRelockDatabaseCheckBox);
+    behavior->addSetting(ui->autoTypeRetypeLabel, ui->autoTypeRetypeTimeSpinBox);
+    behavior->addSetting(ui->autoTypeStartDelayLabel, ui->autoTypeStartDelaySpinBox);
+    behavior->addSetting(ui->autoTypeDelayLabel, ui->autoTypeDelaySpinBox);
+
+    // Only used with desktop portals on Wayland
+    auto remote = page.addSection(tr("Remote Desktop"));
+    remote->addToggle(ui->autoTypePreferDesktopPortalsCheckBox);
+    remote->addToggle(ui->autoTypeDesktopPortalPersistConnectionCheckBox);
+    remote->addToggle(ui->autoTypeDesktopPortalUseClipboardCheckBox);
+    remote->addSetting(ui->autoTypeDesktopPortalPersistModeLabel, ui->autoTypeDesktopPortalPersistModeComboBox);
 
     page.finish();
 }

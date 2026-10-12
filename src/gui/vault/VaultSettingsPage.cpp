@@ -29,6 +29,7 @@
 #include <QDebug>
 #include <QFocusEvent>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -210,6 +211,13 @@ VaultSettingsSection* VaultSettingsPage::addSection(const QString& title)
     return section;
 }
 
+VaultSettingsSection* VaultSettingsPage::addSection(QGroupBox* group)
+{
+    auto section = addSection(group->title());
+    section->follow(group);
+    return section;
+}
+
 void VaultSettingsPage::finish()
 {
     if (!m_page) {
@@ -230,7 +238,17 @@ void VaultSettingsPage::finish()
     layout->addWidget(m_body);
 
     // Controls for spin boxes and text areas, which have no Fluent-Qt counterpart
-    Vault::followTheme(m_body, [body = m_body] { body->setStyleSheet(Vault::formStyleSheet()); });
+    Vault::followTheme(m_body, [body = m_body] {
+        const auto p = FluentTheme::palette();
+        // Shortcut fields are stock line edits; give them the shape and fill of a Fluent text field
+        const auto shortcutFields = QStringLiteral("ShortcutWidget { background-color: %1; border: 1px solid %2;"
+                                                   " border-bottom-color: %3; border-radius: 4px; padding: 5px 8px;"
+                                                   " min-width: 160px; }")
+                                        .arg(p.control.name(QColor::HexArgb),
+                                             p.stroke.name(QColor::HexArgb),
+                                             p.strokeStrong.name(QColor::HexArgb));
+        body->setStyleSheet(Vault::formStyleSheet() + shortcutFields);
+    });
 
     for (auto widget : form->findChildren<QWidget*>()) {
         const bool input = qobject_cast<QAbstractButton*>(widget) || qobject_cast<QComboBox*>(widget)
@@ -268,6 +286,22 @@ VaultSettingsSection::VaultSettingsSection(const QString& title, QWidget* parent
 
     m_heading->setVisible(!title.isEmpty());
     styleLabel(m_heading, Typography::FontRole::BodyStrong);
+}
+
+void VaultSettingsSection::follow(QWidget* source)
+{
+    m_source = source;
+    source->installEventFilter(this);
+    new EnabledFollower(source, this);
+    updateVisibility();
+}
+
+bool VaultSettingsSection::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_source && (event->type() == QEvent::ShowToParent || event->type() == QEvent::HideToParent)) {
+        updateVisibility();
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 VaultSettingsCard* VaultSettingsSection::addToggle(QAbstractButton* checkBox, const QString& description)
@@ -311,7 +345,7 @@ void VaultSettingsSection::updateVisibility()
 {
     // A section whose settings are all hidden, such as ones that don't apply on this platform, goes with them
     bool visible = false;
-    for (int i = 0; i < m_cards->count() && !visible; ++i) {
+    for (int i = 0; i < m_cards->count() && !visible && !(m_source && explicitlyHidden(m_source)); ++i) {
         auto card = m_cards->itemAt(i)->widget();
         visible = card && !explicitlyHidden(card);
     }
@@ -371,8 +405,10 @@ public:
         if (qobject_cast<QComboBox*>(control) || qobject_cast<QLineEdit*>(control)) {
             control->setMinimumWidth(MinimumFieldWidth);
         }
-        // Text fields share the row with the caption instead of keeping their short natural width
-        if (qobject_cast<QLineEdit*>(control)) {
+        // Plain text fields, such as paths, share the row with the caption instead of keeping their short natural
+        // width. Specialized fields, such as a shortcut field, keep their size.
+        const auto className = QLatin1String(control->metaObject()->className());
+        if (className == QLatin1String("VaultLineEdit") || className == QLatin1String("QLineEdit")) {
             control->setSizePolicy(QSizePolicy::Expanding, control->sizePolicy().verticalPolicy());
             m_grid->setColumnStretch(0, 0);
             m_grid->setColumnStretch(1, 1);
@@ -477,10 +513,10 @@ VaultSettingsCard::VaultSettingsCard(QWidget* parent)
 
 void VaultSettingsCard::setToggle(QAbstractButton* checkBox, const QString& description)
 {
-    m_control = checkBox;
+    m_controls = {checkBox};
     m_toggleHeader = true;
     fillToggleRow(m_header, checkBox, description);
-    watch(checkBox);
+    watch({checkBox});
     updateRows();
 }
 
@@ -488,18 +524,18 @@ void VaultSettingsCard::setSetting(const VaultSettingsCaption& caption,
                                    const QWidgetList& controls,
                                    const QString& description)
 {
-    m_control = controls.value(0);
+    m_controls = {controls.cbegin(), controls.cend()};
     fillSettingRow(m_header, caption, controls, description);
-    watch(m_control);
+    watch(controls);
     updateRows();
 }
 
 void VaultSettingsCard::setWidget(QWidget* widget)
 {
-    m_control = widget;
+    m_controls = {widget};
     adopt(widget, m_header);
     m_header->setWide(widget);
-    watch(widget);
+    watch({widget});
     updateRows();
 }
 
@@ -513,8 +549,8 @@ void VaultSettingsCard::addToggle(QAbstractButton* checkBox, const QString& desc
 {
     auto row = addRow();
     fillToggleRow(row, checkBox, description);
-    m_rows.append(Row{row, checkBox});
-    watch(checkBox);
+    m_rows.append(Row{row, {checkBox}});
+    watch({checkBox});
     updateRows();
 }
 
@@ -529,8 +565,8 @@ void VaultSettingsCard::addSetting(const VaultSettingsCaption& caption,
 {
     auto row = addRow();
     fillSettingRow(row, caption, controls, description);
-    m_rows.append(Row{row, controls.value(0)});
-    watch(controls.value(0));
+    m_rows.append(Row{row, {controls.cbegin(), controls.cend()}});
+    watch(controls);
     updateRows();
 }
 
@@ -539,8 +575,8 @@ void VaultSettingsCard::addWidget(QWidget* widget)
     auto row = addRow();
     adopt(widget, row);
     row->setLead(widget);
-    m_rows.append(Row{row, widget});
-    watch(widget);
+    m_rows.append(Row{row, {widget}});
+    watch({widget});
     updateRows();
 }
 
@@ -637,18 +673,25 @@ void VaultSettingsCard::setExpanded(bool expanded)
     updateRows();
 }
 
-void VaultSettingsCard::watch(QWidget* control)
+void VaultSettingsCard::watch(const QWidgetList& controls)
 {
-    if (control) {
+    for (auto control : controls) {
         control->installEventFilter(this);
     }
+}
+
+bool VaultSettingsCard::anyShown(const QList<QPointer<QWidget>>& controls)
+{
+    return std::any_of(controls.cbegin(), controls.cend(), [](const QPointer<QWidget>& control) {
+        return control && !explicitlyHidden(control);
+    });
 }
 
 void VaultSettingsCard::updateRows()
 {
     bool anyChild = false;
     for (const auto& row : m_rows) {
-        const bool visible = row.control && !explicitlyHidden(row.control);
+        const bool visible = anyShown(row.controls);
         row.row->setVisible(visible);
         anyChild = anyChild || visible;
     }
@@ -657,7 +700,7 @@ void VaultSettingsCard::updateRows()
         m_chevron->setVisible(anyChild);
     }
 
-    const bool visible = !m_control || !explicitlyHidden(m_control);
+    const bool visible = m_controls.isEmpty() || anyShown(m_controls);
     if (explicitlyHidden(this) == visible) {
         setVisible(visible);
         emit visibilityChanged();
@@ -670,10 +713,7 @@ bool VaultSettingsCard::eventFilter(QObject* watched, QEvent* event)
     switch (event->type()) {
     case QEvent::ShowToParent:
     case QEvent::HideToParent:
-        if (watched == m_control
-            || std::any_of(m_rows.cbegin(), m_rows.cend(), [watched](const Row& r) { return r.control == watched; })) {
-            updateRows();
-        }
+        updateRows();
         break;
     case QEvent::FocusIn: {
         const auto reason = static_cast<QFocusEvent*>(event)->reason();

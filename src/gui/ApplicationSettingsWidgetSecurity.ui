@@ -61,14 +61,14 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="QCheckBox" name="clearClipboardCheckBox">
+       <widget class="VaultCheckBox" name="clearClipboardCheckBox">
         <property name="text">
          <string>Clear clipboard after</string>
         </property>
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QCheckBox" name="clearSearchCheckBox">
+       <widget class="VaultCheckBox" name="clearSearchCheckBox">
         <property name="text">
          <string>Clear search query after</string>
         </property>
@@ -144,7 +144,7 @@
        </spacer>
       </item>
       <item row="1" column="0">
-       <widget class="QCheckBox" name="lockDatabaseIdleCheckBox">
+       <widget class="VaultCheckBox" name="lockDatabaseIdleCheckBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -166,28 +166,28 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <item>
-       <widget class="QCheckBox" name="quickUnlockCheckBox">
+       <widget class="VaultCheckBox" name="quickUnlockCheckBox">
         <property name="text">
          <string>Enable database quick unlock (Touch ID / Windows Hello)</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="lockDatabaseOnScreenLockCheckBox">
+       <widget class="VaultCheckBox" name="lockDatabaseOnScreenLockCheckBox">
         <property name="text">
          <string>Lock databases when session is locked or lid is closed</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="lockDatabasesOnUserSwitchCheckBox">
+       <widget class="VaultCheckBox" name="lockDatabasesOnUserSwitchCheckBox">
         <property name="text">
          <string>Lock databases when switching user</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="lockDatabaseMinimizeCheckBox">
+       <widget class="VaultCheckBox" name="lockDatabaseMinimizeCheckBox">
         <property name="text">
          <string>Lock databases after minimizing the window</string>
         </property>
@@ -203,35 +203,35 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="passwordShowDotsCheckBox">
+       <widget class="VaultCheckBox" name="passwordShowDotsCheckBox">
         <property name="text">
          <string>Use placeholder for empty password fields</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="passwordsHiddenCheckBox">
+       <widget class="VaultCheckBox" name="passwordsHiddenCheckBox">
         <property name="text">
          <string>Hide passwords when editing them</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="passwordPreviewCleartextCheckBox">
+       <widget class="VaultCheckBox" name="passwordPreviewCleartextCheckBox">
         <property name="text">
          <string>Hide passwords in the entry preview panel</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="hideTotpCheckBox">
+       <widget class="VaultCheckBox" name="hideTotpCheckBox">
         <property name="text">
          <string>Hide TOTP in the entry preview panel</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="hideNotesCheckBox">
+       <widget class="VaultCheckBox" name="hideNotesCheckBox">
         <property name="text">
          <string>Hide notes in the entry preview panel</string>
         </property>
@@ -247,7 +247,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QCheckBox" name="fallbackToSearch">
+       <widget class="VaultCheckBox" name="fallbackToSearch">
         <property name="text">
          <string>Use DuckDuckGo service to download website icons</string>
         </property>
@@ -274,6 +274,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>clearClipboardCheckBox</tabstop>
   <tabstop>clearClipboardSpinBox</tabstop>
