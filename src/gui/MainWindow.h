@@ -38,6 +38,7 @@ namespace Ui
 class InactivityTimer;
 class SearchWidget;
 class VaultHeaderBar;
+class VaultModal;
 class VaultSettingsModal;
 class VaultWindowFrame;
 class MainWindowEventFilter;
@@ -161,6 +162,7 @@ private slots:
 
 private:
     void setupVaultPasswordGenerator();
+    void closeVaultModals();
     static const QString BaseWindowTitle;
 
     void saveWindowInformation();
@@ -194,6 +196,7 @@ private:
     QPointer<VaultHeaderBar> m_vaultHeader;
     QPointer<VaultWindowFrame> m_vaultFrame;
     QPointer<VaultSettingsModal> m_settingsModal;
+    QPointer<VaultModal> m_passwordGeneratorModal;
     bool m_vaultLayout = false;
     QPointer<QProgressBar> m_progressBar;
     QPointer<QLabel> m_progressBarLabel;

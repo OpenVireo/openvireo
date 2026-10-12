@@ -29,6 +29,7 @@
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/MainWindow.h"
+#include "gui/PasswordGeneratorWidget.h"
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
@@ -39,6 +40,7 @@
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 
@@ -588,11 +590,12 @@ void TestGuiVault::testWindowFrame()
 #endif
 
     // The title bar stays (and can move the window) when no database is shown
-    m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+    auto* stackedWidget = m_mainWindow->centralWidget()->findChild<QStackedWidget*>("stackedWidget");
+    stackedWidget->setCurrentIndex(MainWindow::WelcomeScreen);
     QApplication::processEvents();
     QVERIFY(!header->isVisible());
     QVERIFY(titleBar->isVisible());
-    m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
+    stackedWidget->setCurrentIndex(MainWindow::DatabaseTabScreen);
     QApplication::processEvents();
     QVERIFY(header->isVisible());
 }
@@ -672,6 +675,64 @@ void TestGuiVault::testSettingsModal()
     QTest::mouseClick(modal->findChild<QPushButton*>("vaultSettingsClose"), Qt::LeftButton);
     QTRY_VERIFY(!modal->isOpen());
     categories->setCurrentRow(0);
+}
+
+void TestGuiVault::testPasswordGeneratorModal()
+{
+    auto* modal = m_mainWindow->findChild<VaultModal*>("vaultPasswordGeneratorModal");
+    QVERIFY(modal);
+    QVERIFY(!modal->isOpen());
+    auto* generatorAction = m_mainWindow->findChild<QAction*>("actionPasswordGenerator");
+    auto* stackedWidget = m_mainWindow->centralWidget()->findChild<QStackedWidget*>("stackedWidget");
+    const int screen = stackedWidget->currentIndex();
+
+    generatorAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QVERIFY(generatorAction->isChecked());
+    // Like the settings, the generator sits over the window with the database behind it
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    QCOMPARE(stackedWidget->currentIndex(), screen);
+    QVERIFY(m_dbWidget->isVisible());
+    QVERIFY(!m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+    QVERIFY(m_mainWindow->windowTitle().startsWith("Password Generator"));
+
+    auto* generator = m_mainWindow->findChild<PasswordGeneratorWidget*>("passwordGeneratorWidget");
+    QVERIFY(modal->card()->isAncestorOf(generator));
+    QVERIFY(generator->findChild<QWidget*>("buttonClose")->isHidden());
+    QVERIFY(!generator->getGeneratedPassword().isEmpty());
+    QVERIFY(modal->card()->height() < m_mainWindow->height());
+
+    // Tab stays inside the modal
+    for (int i = 0; i < 30; ++i) {
+        QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Tab);
+        QVERIFY(modal->isAncestorOf(m_mainWindow->focusWidget()));
+    }
+
+    // The footer button, Escape and the close button all close it
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultPasswordGeneratorDone"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+    QVERIFY(!generatorAction->isChecked());
+    QVERIFY(m_mainWindow->findChild<QAction*>("actionEntryNew")->isEnabled());
+    QVERIFY(!m_mainWindow->windowTitle().startsWith("Password Generator"));
+
+    generatorAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Escape);
+    QTRY_VERIFY(!modal->isOpen());
+    generatorAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultPasswordGeneratorClose"), Qt::LeftButton);
+    QTRY_VERIFY(!modal->isOpen());
+
+    // Opening the settings replaces it instead of stacking a second modal
+    generatorAction->trigger();
+    QTRY_VERIFY(modal->isOpen());
+    m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
+    auto* settingsModal = m_mainWindow->findChild<VaultSettingsModal*>("vaultSettingsModal");
+    QTRY_VERIFY(settingsModal->isOpen());
+    QVERIFY(!modal->isOpen());
+    QTest::mouseClick(settingsModal->findChild<QPushButton*>("vaultSettingsCancel"), Qt::LeftButton);
+    QTRY_VERIFY(!settingsModal->isOpen());
 }
 
 void TestGuiVault::testAutoTypeSettingsPage()

@@ -18,59 +18,35 @@
 #ifndef KEEPASSXC_VAULTSETTINGSMODAL_H
 #define KEEPASSXC_VAULTSETTINGSMODAL_H
 
-#include <QPointer>
-#include <QWidget>
+#include "VaultModal.h"
 
 class EditWidget;
-class QLabel;
 class QListView;
-class QPushButton;
 
 /**
- * Presents a settings widget as a modal card over the main window, styled
- * after Slack's preferences: a dimmed backdrop, a rounded card with a title
- * and close button, a sidebar of categories and Cancel / Save in the footer.
+ * Settings in a modal card over the main window, with a sidebar of categories
+ * and Cancel / Save in the footer, after Slack's preferences.
  *
  * The settings widget keeps its own pages and logic; the modal only hides its
  * category list and buttons and drives them from its own controls.
  */
-class VaultSettingsModal : public QWidget
+class VaultSettingsModal : public VaultModal
 {
     Q_OBJECT
 
 public:
     VaultSettingsModal(QWidget* window, EditWidget* settings);
 
-    void open();
-    void close();
-    bool isOpen() const;
-
-    QWidget* card() const;
     QListView* navigation() const;
 
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    bool focusNextPrevChild(bool next) override;
-    void changeEvent(QEvent* event) override;
+    void accept() override;
+    void reject() override;
+    void prepare() override;
 
 private:
-    void accept();
-    void reject();
-    void applyColors();
-    void syncNavigation();
-    void layoutCard();
-
-    QPointer<QWidget> m_window;
     QPointer<EditWidget> m_settings;
-    QPointer<QWidget> m_previousFocus;
-    QWidget* m_card;
-    QLabel* m_title;
     QListView* m_navigation;
-    QPushButton* m_cancelButton;
-    QPushButton* m_saveButton;
-    QList<QWidget*> m_dividers;
 };
 
 #endif // KEEPASSXC_VAULTSETTINGSMODAL_H
