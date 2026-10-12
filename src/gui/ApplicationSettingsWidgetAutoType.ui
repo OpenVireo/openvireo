@@ -16,21 +16,21 @@
         <number>10</number>
        </property>
        <item>
-        <widget class="QCheckBox" name="autoTypeEntryTitleMatchCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeEntryTitleMatchCheckBox">
          <property name="text">
           <string>Use entry title to match windows for global Auto-Type</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypeEntryURLMatchCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeEntryURLMatchCheckBox">
          <property name="text">
           <string>Use entry URL to match windows for global Auto-Type</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypeAskCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeAskCheckBox">
          <property name="text">
           <string>Always ask before performing Auto-Type</string>
          </property>
@@ -61,7 +61,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCheckBox" name="autoTypeSkipMainWindowConfirmationCheckBox">
+          <widget class="VaultCheckBox" name="autoTypeSkipMainWindowConfirmationCheckBox">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -76,35 +76,35 @@
         </layout>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypeHideExpiredEntryCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeHideExpiredEntryCheckBox">
          <property name="text">
           <string>Hide expired entries from Auto-Type</string>
          </property>
        </widget>
       </item>
       <item>
-        <widget class="QCheckBox" name="autoTypeRelockDatabaseCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeRelockDatabaseCheckBox">
          <property name="text">
           <string>Re-lock previously locked database after performing Auto-Type</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypePreferDesktopPortalsCheckBox">
+        <widget class="VaultCheckBox" name="autoTypePreferDesktopPortalsCheckBox">
          <property name="text">
           <string>Experimental: Prefer desktop portals (Wayland implementation)</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypeDesktopPortalPersistConnectionCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeDesktopPortalPersistConnectionCheckBox">
          <property name="text">
           <string>Keep remote desktop connection open after performing Auto-Type</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="autoTypeDesktopPortalUseClipboardCheckBox">
+        <widget class="VaultCheckBox" name="autoTypeDesktopPortalUseClipboardCheckBox">
          <property name="text">
           <string>Use remote desktop for clipboard access</string>
          </property>
@@ -330,7 +330,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="autoTypeShortcutConfigureButton">
+               <widget class="VaultButton" name="autoTypeShortcutConfigureButton">
                 <property name="text">
                  <string>Configure...</string>
                 </property>
@@ -401,6 +401,16 @@
       </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>

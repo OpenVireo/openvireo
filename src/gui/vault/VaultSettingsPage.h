@@ -22,6 +22,7 @@
 #include <QWidget>
 
 class QAbstractButton;
+class QGroupBox;
 class QHBoxLayout;
 class QLabel;
 class QVBoxLayout;
@@ -77,6 +78,8 @@ public:
 
     // A heading followed by cards; no heading for an empty title
     VaultSettingsSection* addSection(const QString& title = {});
+    // Section in place of a group box of the form, titled like it and hidden and disabled with it
+    VaultSettingsSection* addSection(QGroupBox* group);
     // Show the cards in place of the form. Warns about controls of the form left out of the cards.
     void finish();
 
@@ -103,11 +106,17 @@ public:
     // Card holding a widget across its full width, such as a table or a row of buttons
     VaultSettingsCard* addWidget(QWidget* widget);
 
+    // Hide and disable the section with a widget of the form, such as the group box it replaces
+    void follow(QWidget* source);
     void updateVisibility();
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     VaultSettingsCard* addCard(VaultSettingsCard* card);
 
+    QPointer<QWidget> m_source;
     QLabel* m_heading;
     QVBoxLayout* m_cards;
 };
@@ -147,7 +156,8 @@ private:
     struct Row
     {
         VaultSettingsRow* row;
-        QPointer<QWidget> control;
+        // The row shows while any of these does
+        QList<QPointer<QWidget>> controls;
     };
 
     void fillToggleRow(VaultSettingsRow* row, QAbstractButton* checkBox, const QString& description);
@@ -156,12 +166,13 @@ private:
                         const QWidgetList& controls,
                         const QString& description);
     VaultSettingsRow* addRow();
-    void watch(QWidget* control);
+    void watch(const QWidgetList& controls);
+    static bool anyShown(const QList<QPointer<QWidget>>& controls);
     void updateRows();
 
     VaultSettingsRow* m_header;
     bool m_toggleHeader = false;
-    QPointer<QWidget> m_control;
+    QList<QPointer<QWidget>> m_controls;
     QWidget* m_focusRow = nullptr;
     bool m_keyboardFocus = false;
     fluent::basicinput::Button* m_chevron = nullptr;

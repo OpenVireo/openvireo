@@ -70,6 +70,8 @@ private slots:
 private:
     // Settings cards of the Vault Index layout in place of the forms
     void buildVaultGeneralPage();
+    void buildVaultSecurityPage();
+    void buildVaultAutoTypePage();
 
     QWidget* const m_secWidget;
     QWidget* const m_generalWidget;
