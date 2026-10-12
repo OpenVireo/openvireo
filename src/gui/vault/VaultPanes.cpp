@@ -26,9 +26,8 @@
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
-
-#include <components/menus_toolbars/Menu.h>
 
 #include <QDir>
 #include <QFileInfo>
@@ -226,7 +225,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
 
     // Less frequent commands, all mirrored from the main window menus
     auto* more = Vault::iconButton(Typography::Icons::More, tr("More commands"), this);
-    auto* menu = new QMenu(more);
+    auto* menu = new VaultMenu(more);
     for (const auto& name : {QStringLiteral("actionEntryClone"),
                              QStringLiteral("actionEntryDownloadIcon"),
                              QString(),
@@ -539,7 +538,7 @@ void VaultDatabasePicker::showDatabaseMenu()
         return;
     }
 
-    fluent::menus_toolbars::FluentMenu menu(tr("Databases"), this);
+    VaultMenu menu(tr("Databases"), this);
     for (int i = 0; i < m_tabs->count(); ++i) {
         auto* dbWidget = m_tabs->databaseWidgetFromIndex(i);
         auto* action = menu.addAction(Tools::escapeAccelerators(m_tabs->tabName(i)));

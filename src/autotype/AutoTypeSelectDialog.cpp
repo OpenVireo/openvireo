@@ -34,6 +34,7 @@
 #include "gui/Clipboard.h"
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultControls.h"
 
 const auto MENU_FIELD_PROP_NAME = "menu_field";
 enum MENU_FIELD
@@ -305,7 +306,7 @@ void AutoTypeSelectDialog::updateActionMenu(const AutoTypeMatch& match)
 
 void AutoTypeSelectDialog::buildActionMenu()
 {
-    m_actionMenu = new QMenu(this);
+    m_actionMenu = new VaultMenu(this);
     auto typeUsernameAction = new QAction(icons()->icon("auto-type"), tr("Type {USERNAME}"), this);
     auto typePasswordAction = new QAction(icons()->icon("auto-type"), tr("Type {PASSWORD}"), this);
     auto typeTotpAction = new QAction(icons()->icon("auto-type"), tr("Type {TOTP}"), this);

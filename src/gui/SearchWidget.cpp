@@ -29,6 +29,7 @@
 #include "gui/Icons.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultWidgets.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/widgets/PopupHelpWidget.h"
 
 #include <components/textfields/AutoSuggestBox.h>
@@ -68,7 +69,7 @@ SearchWidget::SearchWidget(QWidget* parent)
                                              .arg(QKeySequence(QKeySequence::Find).toString(QKeySequence::NativeText)));
     m_ui->searchEdit->installEventFilter(this);
 
-    m_searchMenu = new QMenu(this);
+    m_searchMenu = new VaultMenu(this);
     m_actionCaseSensitive = m_searchMenu->addAction(tr("Case sensitive"), this, SLOT(updateCaseSensitive()));
     m_actionCaseSensitive->setObjectName("actionSearchCaseSensitive");
     m_actionCaseSensitive->setCheckable(true);

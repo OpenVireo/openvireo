@@ -25,6 +25,7 @@
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
 #include "gui/styles/StateColorPalette.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QMenu>
 #include <QShortcut>
@@ -319,7 +320,7 @@ void ReportsWidgetHealthcheck::customMenuRequested(QPoint pos)
     }
 
     // Create the context menu
-    const auto menu = new QMenu(this);
+    const auto menu = new VaultMenu(this);
 
     // Create the "edit entry" menu item (only if 1 row is selected)
     if (selected.size() == 1) {

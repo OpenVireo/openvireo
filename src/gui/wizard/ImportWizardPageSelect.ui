@@ -162,7 +162,7 @@
          <item row="2" column="1">
           <layout class="QHBoxLayout" name="serverDatabaseIdLayout" stretch="1,0">
            <item>
-            <widget class="QComboBox" name="serverDatabaseIdChoice">
+            <widget class="VaultComboBox" name="serverDatabaseIdChoice">
              <property name="accessibleName">
               <string>Sync server database ID</string>
              </property>
@@ -323,7 +323,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="existingDatabaseChoice">
+            <widget class="VaultComboBox" name="existingDatabaseChoice">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -411,6 +411,11 @@ The command has to exit. In case of `sftp` as last commend `exit` has to be sent
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>PasswordWidget</class>
    <extends>QWidget</extends>

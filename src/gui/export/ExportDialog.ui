@@ -35,7 +35,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QComboBox" name="sortingStrategy">
+    <widget class="VaultComboBox" name="sortingStrategy">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -67,6 +67,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>

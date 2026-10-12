@@ -21,6 +21,7 @@
 #include <components/basicinput/Button.h>
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ComboBox.h>
+#include <components/menus_toolbars/Menu.h>
 #include <components/textfields/LineEdit.h>
 
 /**
@@ -88,6 +89,24 @@ class VaultLineEdit : public fluent::textfields::LineEdit
 
 public:
     explicit VaultLineEdit(QWidget* parent = nullptr);
+};
+
+// Fluent menu for context menus, button menus and menu bar menus
+class VaultMenu : public fluent::menus_toolbars::FluentMenu
+{
+    Q_OBJECT
+
+public:
+    explicit VaultMenu(QWidget* parent = nullptr);
+    explicit VaultMenu(const QString& title, QWidget* parent = nullptr);
+
+    // QMenu::addMenu() with a title creates a stock submenu, so create a Fluent one instead
+    using QMenu::addMenu;
+    VaultMenu* addMenu(const QString& title);
+    VaultMenu* addMenu(const QIcon& icon, const QString& title);
+
+    // Show Fluent editing menus instead of the stock ones for every text field in the application
+    static void installTextEditingMenus();
 };
 
 #endif // KEEPASSXC_VAULTCONTROLS_H

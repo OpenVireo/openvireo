@@ -23,6 +23,7 @@
 #include "gui/Application.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QMenu>
 #include <QPainter>
@@ -89,14 +90,14 @@ void TagView::contextMenuRequested(const QPoint& pos)
     auto type = m_model->itemType(index);
     if (type == TagModel::SAVED_SEARCH) {
         // Allow deleting saved searches
-        QMenu menu;
+        VaultMenu menu;
         auto action = menu.exec({new QAction(icons()->icon("trash"), tr("Remove Search"), nullptr)}, mapToGlobal(pos));
         if (action) {
             m_db->metadata()->deleteSavedSearch(index.data(Qt::DisplayRole).toString());
         }
     } else if (type == TagModel::TAG) {
         // Allow removing tags from all entries in a database
-        QMenu menu;
+        VaultMenu menu;
         auto action = menu.exec({new QAction(icons()->icon("trash"), tr("Remove Tag"), nullptr)}, mapToGlobal(pos));
         if (action) {
             auto tag = index.data(Qt::DisplayRole).toString();
