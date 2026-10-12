@@ -106,6 +106,9 @@ FluentTheme::Palette FluentTheme::palette()
     p.stroke = c.strokeCard;
     p.strokeStrong = c.strokeStrong;
     p.divider = c.strokeDivider;
+    p.control = c.controlDefault;
+    p.controlHover = c.controlSecondary;
+    p.controlPressed = c.controlTertiary;
     p.subtleHover = c.subtleSecondary;
     p.subtlePressed = c.subtleTertiary;
     p.text = c.textPrimary;
