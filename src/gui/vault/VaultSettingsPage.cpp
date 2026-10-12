@@ -451,7 +451,7 @@ public:
         adopt(control, m_controls);
         // Fields keep their natural width where there's room, but don't hold the page wider than the modal
         if (qobject_cast<QComboBox*>(control) || qobject_cast<QLineEdit*>(control)) {
-            control->setMinimumWidth(MinimumFieldWidth);
+            control->setMinimumWidth(qMax(control->minimumWidth(), MinimumFieldWidth));
         }
         // Plain text fields, such as paths, share the row with the caption instead of keeping their short natural
         // width. Specialized fields, such as a shortcut field, and fields given a fixed width keep their size.
@@ -666,7 +666,10 @@ void VaultSettingsCard::fillSettingRow(VaultSettingsRow* row,
     label->setWordWrap(true);
     label->setTextInteractionFlags(Qt::NoTextInteraction);
     styleLabel(label, Typography::FontRole::Body);
-    new EnabledFollower(control, label);
+    // A caption without controls, such as one over a wide field below it, keeps its own state
+    if (control) {
+        new EnabledFollower(control, label);
+    }
 
     auto texts = new QVBoxLayout();
     texts->setContentsMargins(0, 0, 0, 0);
@@ -681,7 +684,9 @@ void VaultSettingsCard::fillSettingRow(VaultSettingsRow* row,
         }
         descriptionLabel->setWordWrap(true);
         styleLabel(descriptionLabel, Typography::FontRole::Caption, true);
-        new EnabledFollower(control, descriptionLabel);
+        if (control) {
+            new EnabledFollower(control, descriptionLabel);
+        }
         texts->addWidget(descriptionLabel);
     }
     row->setLead(texts, label);
@@ -699,7 +704,7 @@ void VaultSettingsCard::setCollapsible(bool collapsible)
 
 void VaultSettingsCard::follow(QWidget* source)
 {
-    m_source = source;
+    m_sources.append(source);
     source->installEventFilter(this);
     updateRows();
 }
@@ -772,7 +777,10 @@ void VaultSettingsCard::updateRows()
         m_chevron->setVisible(anyChild);
     }
 
-    const bool visible = (m_controls.isEmpty() || anyShown(m_controls)) && !(m_source && explicitlyHidden(m_source));
+    const bool sourcesShown = std::none_of(m_sources.cbegin(), m_sources.cend(), [](const QPointer<QWidget>& source) {
+        return source && explicitlyHidden(source);
+    });
+    const bool visible = (m_controls.isEmpty() || anyShown(m_controls)) && sourcesShown;
     if (explicitlyHidden(this) == visible) {
         setVisible(visible);
         emit visibilityChanged();
