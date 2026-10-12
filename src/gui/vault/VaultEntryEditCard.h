@@ -45,9 +45,9 @@ namespace fluent::basicinput
  * Presents an entry editor in the Vault Index detail pane, in place of the entry's detail card, so the
  * groups and the entry list stay in view while editing.
  *
- * The card shows the editor's headline with Cancel and Save, then the Entry page with the other pages
- * listed beneath it as rows; a row opens its page in place, with a way back to the Entry page. New
- * entries start compact: notes, tags and expiry wait behind "add" chips until asked for.
+ * The card shows the editor's headline, with Cancel and Save in the command bar, then the Entry page with
+ * the other pages listed beneath it as rows; a row opens its page in place, with a way back to the Entry
+ * page. New entries start compact: notes, tags and expiry wait behind "add" chips until asked for.
  *
  * Only the presentation changes; the editor's widgets and logic are untouched.
  */

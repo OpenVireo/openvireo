@@ -89,19 +89,6 @@ namespace
         }
         return false;
     }
-
-    // The buttons a Vault button bar shows, by their text
-    QAbstractButton* barButton(QWidget* bar, const QString& text)
-    {
-        // The bar rebuilds its buttons once the editor has settled on its standard buttons
-        QApplication::processEvents();
-        for (auto* button : bar->findChildren<QAbstractButton*>(Qt::FindDirectChildrenOnly)) {
-            if (button->isVisibleTo(bar) && button->text() == text) {
-                return button;
-            }
-        }
-        return nullptr;
-    }
 } // namespace
 
 void TestGuiVault::initTestCase()
@@ -301,21 +288,30 @@ void TestGuiVault::testEditEntryInPlace()
     QVERIFY(!navPane->isEnabled());
     QVERIFY(!m_dbWidget->findChild<VaultDraftRow*>("vaultDraftRow")->isVisible());
 
-    // Save in place of OK, and no Apply since saving returns to the details
+    // Cancel and Save replace the entry commands in the command bar, and there is no Apply since saving
+    // returns to the details
+    auto* commandBar = m_dbWidget->findChild<VaultCommandBar*>();
+    auto* save = commandBar->findChild<QAbstractButton*>("vaultEditSaveButton");
+    QVERIFY(save->isVisible());
+    QVERIFY(commandBar->findChild<QAbstractButton*>("vaultEditCancelButton")->isVisible());
+    QVERIFY(!commandBar->findChild<QAbstractButton*>("vaultNewEntryButton")->isVisible());
+    QApplication::processEvents();
     auto* bar = card->findChild<VaultButtonBar*>();
-    QVERIFY(barButton(bar, "Save"));
-    QVERIFY(barButton(bar, "Cancel"));
-    QVERIFY(!barButton(bar, "Apply"));
+    for (auto* button : bar->findChildren<QAbstractButton*>(Qt::FindDirectChildrenOnly)) {
+        QVERIFY(!button->isVisible());
+    }
 
     auto* title = card->findChild<QLineEdit*>("titleEdit");
     title->setText("GitHub Enterprise");
-    QTest::mouseClick(barButton(bar, "Save"), Qt::LeftButton);
+    QTest::mouseClick(save, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
     QCOMPARE(m_github->title(), QString("GitHub Enterprise"));
     QVERIFY(details->isVisible());
     QVERIFY(!card->isVisible());
     QVERIFY(entryView->isEnabled());
     QVERIFY(navPane->isEnabled());
+    QVERIFY(!save->isVisible());
+    QVERIFY(commandBar->findChild<QAbstractButton*>("vaultNewEntryButton")->isVisible());
     QTRY_VERIFY(hasLabelWithText(details, "GitHub Enterprise"));
     m_github->setTitle("GitHub");
 }
@@ -362,9 +358,7 @@ void TestGuiVault::testNewEntryDraft()
     QVERIFY(!tags->isVisible());
     notes->setPlainText("Created in place");
 
-    auto* bar = card->findChild<VaultButtonBar*>();
-    QVERIFY(barButton(bar, "Save"));
-    QTest::mouseClick(barButton(bar, "Save"), Qt::LeftButton);
+    QTest::mouseClick(commandBar->findChild<QAbstractButton*>("vaultEditSaveButton"), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
     QVERIFY(!draft->isVisible());
     QCOMPARE(m_workGroup->entries().size(), entriesBefore + 1);

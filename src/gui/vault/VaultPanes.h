@@ -20,6 +20,7 @@
 
 #include <QAbstractButton>
 #include <QDateTime>
+#include <QDialogButtonBox>
 #include <QHash>
 #include <QPointer>
 #include <QSharedPointer>
@@ -109,11 +110,21 @@ public:
     explicit VaultCommandBar(QWidget* parent = nullptr);
 
     void setTitle(const QString& title, int entryCount);
+    // Show Cancel and Save for the editor with these buttons in place of the entry commands, or the
+    // entry commands again when null
+    void setEditorButtons(QDialogButtonBox* buttons);
     void onThemeUpdated() override;
 
 private:
+    QAbstractButton* editorButton(std::initializer_list<QDialogButtonBox::StandardButton> which) const;
+
     QLabel* m_title;
     QLabel* m_count;
+    QWidget* m_commands;
+    QWidget* m_editCommands;
+    fluent::basicinput::Button* m_cancelButton;
+    fluent::basicinput::Button* m_saveButton;
+    QPointer<QDialogButtonBox> m_editorButtons;
 };
 
 /**
