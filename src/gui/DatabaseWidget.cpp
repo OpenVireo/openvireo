@@ -25,6 +25,7 @@
 #include <QHostInfo>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QProcess>
 #include <QSplitter>
@@ -57,6 +58,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagView.h"
 #include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/ElidedLabel.h"
@@ -194,11 +196,16 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_databaseOpenWidget->setObjectName("databaseOpenWidget");
 
     addChildWidget(m_mainWidget);
-    addChildWidget(m_editEntryWidget);
+    // The Vault Index layout edits entries in place of the detail card
+    if (!m_vaultLayout) {
+        addChildWidget(m_editEntryWidget);
+    }
     addChildWidget(m_editGroupWidget);
     addChildWidget(m_reportsDialog);
     addChildWidget(m_databaseSettingDialog);
-    addChildWidget(m_historyEditEntryWidget);
+    if (!m_vaultLayout) {
+        addChildWidget(m_historyEditEntryWidget);
+    }
     addChildWidget(m_databaseOpenWidget);
 
     // clang-format off
@@ -272,7 +279,7 @@ QSharedPointer<Database> DatabaseWidget::database() const
 DatabaseWidget::Mode DatabaseWidget::currentMode() const
 {
     auto mode = Mode::None;
-    auto widget = currentWidget();
+    auto widget = activeView();
     if (widget == m_mainWidget) {
         mode = Mode::ViewMode;
     } else if (widget == m_databaseOpenWidget) {
@@ -315,12 +322,12 @@ bool DatabaseWidget::isSearchActive() const
 
 bool DatabaseWidget::isEntryViewActive() const
 {
-    return currentWidget() == m_mainWidget;
+    return activeView() == m_mainWidget;
 }
 
 bool DatabaseWidget::isEntryEditActive() const
 {
-    return currentWidget() == m_editEntryWidget;
+    return activeView() == m_editEntryWidget;
 }
 
 bool DatabaseWidget::isGroupEditActive() const
@@ -330,7 +337,7 @@ bool DatabaseWidget::isGroupEditActive() const
 
 bool DatabaseWidget::isEditWidgetModified() const
 {
-    if (currentWidget() == m_editEntryWidget) {
+    if (activeView() == m_editEntryWidget) {
         return m_editEntryWidget->isModified();
     } else if (currentWidget() == m_editGroupWidget) {
         return m_editGroupWidget->isModified();
@@ -608,7 +615,7 @@ void DatabaseWidget::setupTotp()
 
     auto setupTotpDialog = new TotpSetupDialog(this, currentEntry);
     connect(setupTotpDialog, SIGNAL(totpUpdated()), SIGNAL(entrySelectionChanged()));
-    if (currentWidget() == m_editEntryWidget) {
+    if (activeView() == m_editEntryWidget) {
         // Entry is being edited, tell it when we are finished updating TOTP
         connect(setupTotpDialog, SIGNAL(totpUpdated()), m_editEntryWidget, SLOT(updateTotp()));
     }
@@ -1115,7 +1122,7 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
 
 Entry* DatabaseWidget::currentSelectedEntry() const
 {
-    if (currentWidget() == m_editEntryWidget) {
+    if (activeView() == m_editEntryWidget) {
         return m_editEntryWidget->currentEntry();
     }
 
@@ -1232,15 +1239,14 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_groupView->setNavigationStyle(true);
 
     // The editors, settings and reports that replace the main view take the same style
-    for (EditWidget* editor : {static_cast<EditWidget*>(m_editEntryWidget.data()),
-                               static_cast<EditWidget*>(m_historyEditEntryWidget.data()),
-                               static_cast<EditWidget*>(m_editGroupWidget.data()),
+    for (EditWidget* editor : {static_cast<EditWidget*>(m_editGroupWidget.data()),
                                static_cast<EditWidget*>(m_databaseSettingDialog.data())}) {
         editor->applyVaultShell();
     }
     m_reportsDialog->applyVaultShell();
 
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
+    m_vaultNavPane = navPane;
 
     auto surface = new VaultSurface(m_mainSplitter);
     auto surfaceLayout = new QVBoxLayout(surface);
@@ -1253,14 +1259,41 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 
     // Entry list and detail card, each with its own breathing room
     auto listHost = new QWidget(m_previewSplitter);
+    m_vaultListHost = listHost;
     auto listLayout = new QVBoxLayout(listHost);
     listLayout->setContentsMargins(6, 0, 0, 14);
+    listLayout->setSpacing(2);
+    // A new entry shows as a draft at the top of the list until it is saved
+    m_vaultDraftRow = new VaultDraftRow(listHost);
+    m_vaultDraftRow->hide();
+    listLayout->addWidget(m_vaultDraftRow);
     listLayout->addWidget(m_entryView);
     auto cardHost = new QWidget(m_previewSplitter);
     auto cardLayout = new QVBoxLayout(cardHost);
     cardLayout->setContentsMargins(4, 0, 14, 14);
-    m_detailCard = new EntryDetailCard(cardHost);
-    cardLayout->addWidget(m_detailCard);
+    m_vaultCardStack = new QStackedWidget(cardHost);
+    cardLayout->addWidget(m_vaultCardStack);
+    m_detailCard = new EntryDetailCard(m_vaultCardStack);
+    m_vaultCardStack->addWidget(m_detailCard);
+
+    // Entries are edited in place of their details, with the groups and the list still in view
+    m_vaultEntryEditor = new VaultEntryEditCard(m_editEntryWidget, m_vaultCardStack);
+    m_vaultHistoryEditor = new VaultEntryEditCard(m_historyEditEntryWidget, m_vaultCardStack);
+    m_vaultEntryEditor->setObjectName("vaultEntryEditCard");
+    m_vaultHistoryEditor->setObjectName("vaultHistoryEditCard");
+    for (auto* editor : {m_vaultEntryEditor.data(), m_vaultHistoryEditor.data()}) {
+        m_vaultCardStack->addWidget(editor);
+        connect(editor, &VaultEntryEditCard::focusModeRequested, this, &DatabaseWidget::setVaultEditorFocusMode);
+    }
+    if (auto* titleEdit = m_editEntryWidget->findChild<QLineEdit*>("titleEdit")) {
+        connect(titleEdit, &QLineEdit::textChanged, m_vaultDraftRow, &VaultDraftRow::setTitle);
+    }
+    // Locking or opening another page ends inline editing, before anyone hears of the new mode
+    connect(this, &QStackedWidget::currentChanged, this, [this] {
+        if (currentWidget() != m_mainWidget) {
+            hideVaultEditor();
+        }
+    });
 
     m_previewSplitter->setOrientation(Qt::Horizontal);
     m_previewSplitter->setChildrenCollapsible(false);
@@ -1301,6 +1334,79 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     connect(model, &QAbstractItemModel::rowsInserted, this, &DatabaseWidget::updateVaultCommandBar);
     connect(model, &QAbstractItemModel::rowsRemoved, this, &DatabaseWidget::updateVaultCommandBar);
     connect(model, &QAbstractItemModel::modelReset, this, &DatabaseWidget::updateVaultCommandBar);
+}
+
+QWidget* DatabaseWidget::activeView() const
+{
+    if (m_vaultActiveEditor && currentWidget() == m_mainWidget) {
+        return m_vaultActiveEditor->editor();
+    }
+    return currentWidget();
+}
+
+void DatabaseWidget::showVaultEditor(VaultEntryEditCard* card)
+{
+    const bool focusMode = m_vaultActiveEditor && m_vaultActiveEditor->isFocusMode();
+    m_vaultActiveEditor = card;
+    card->setFocusMode(focusMode);
+    m_vaultCardStack->setCurrentWidget(card);
+    // The groups and the list stay in view but wait until the entry is saved or set aside
+    m_vaultNavPane->setEnabled(false);
+    m_vaultCommandBar->setEnabled(false);
+    m_entryView->setEnabled(false);
+    if (!m_vaultDimmers.isEmpty()) {
+        // Already editing, as when returning from an entry's history
+    } else {
+        m_vaultDimmers << new VaultDimmer(m_vaultNavPane, [] { return FluentTheme::palette().canvas; })
+                       << new VaultDimmer(m_entryView, [] { return FluentTheme::palette().surface; });
+        for (const auto& dimmer : m_vaultDimmers) {
+            dimmer->show();
+        }
+    }
+    if (currentWidget() != m_mainWidget) {
+        setCurrentWidget(m_mainWidget);
+    } else {
+        emitCurrentModeChanged();
+    }
+}
+
+void DatabaseWidget::hideVaultEditor()
+{
+    if (!m_vaultActiveEditor) {
+        return;
+    }
+    setVaultEditorFocusMode(false);
+    m_vaultActiveEditor = nullptr;
+    m_vaultEntryEditor->finish();
+    m_vaultHistoryEditor->finish();
+    m_vaultCardStack->setCurrentWidget(m_detailCard);
+    m_vaultDraftRow->hide();
+    m_vaultNavPane->setEnabled(true);
+    m_vaultCommandBar->setEnabled(true);
+    m_entryView->setEnabled(true);
+    for (const auto& dimmer : m_vaultDimmers) {
+        delete dimmer.data();
+    }
+    m_vaultDimmers.clear();
+    emitCurrentModeChanged();
+}
+
+void DatabaseWidget::setVaultEditorFocusMode(bool focusMode)
+{
+    if (!m_vaultActiveEditor || m_vaultActiveEditor->isFocusMode() == focusMode) {
+        return;
+    }
+    m_vaultActiveEditor->setFocusMode(focusMode);
+    // Focus mode narrows the list to a column of titles, leaving the room to the editor
+    if (focusMode) {
+        m_vaultSizesBeforeFocus = m_previewSplitter->sizes();
+        m_vaultListHost->setMaximumWidth(220);
+    } else {
+        m_vaultListHost->setMaximumWidth(QWIDGETSIZE_MAX);
+        if (!m_vaultSizesBeforeFocus.isEmpty()) {
+            m_previewSplitter->setSizes(m_vaultSizesBeforeFocus);
+        }
+    }
 }
 
 void DatabaseWidget::updateVaultCommandBar()
@@ -1420,6 +1526,7 @@ QList<RemoteParams*> DatabaseWidget::getRemoteParams() const
 
 void DatabaseWidget::switchToMainView(bool previousDialogAccepted)
 {
+    hideVaultEditor();
     setCurrentWidget(m_mainWidget);
 
     if (m_newGroup) {
@@ -1452,11 +1559,21 @@ void DatabaseWidget::switchToHistoryView(Entry* entry)
 {
     auto entryTitle = m_editEntryWidget->currentEntry() ? m_editEntryWidget->currentEntry()->title() : "";
     m_historyEditEntryWidget->loadEntry(entry, false, true, entryTitle, m_db);
+    if (m_vaultLayout) {
+        m_vaultHistoryEditor->prepare(false);
+        showVaultEditor(m_vaultHistoryEditor);
+        return;
+    }
     setCurrentWidget(m_historyEditEntryWidget);
 }
 
 void DatabaseWidget::switchBackToEntryEdit()
 {
+    if (m_vaultLayout) {
+        showVaultEditor(m_vaultEntryEditor);
+        m_vaultHistoryEditor->finish();
+        return;
+    }
     setCurrentWidget(m_editEntryWidget);
 }
 
@@ -1483,6 +1600,13 @@ void DatabaseWidget::switchToEntryEdit(Entry* entry, bool create)
 
     // Setup the entry edit widget and display
     m_editEntryWidget->loadEntry(entry, create, false, group->name(), m_db);
+    if (m_vaultLayout) {
+        m_vaultEntryEditor->prepare(create);
+        m_vaultDraftRow->setTitle(QString());
+        m_vaultDraftRow->setVisible(create);
+        showVaultEditor(m_vaultEntryEditor);
+        return;
+    }
     setCurrentWidget(m_editEntryWidget);
 }
 

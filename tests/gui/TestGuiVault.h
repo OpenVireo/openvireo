@@ -26,6 +26,7 @@ class DatabaseTabWidget;
 class DatabaseWidget;
 class Entry;
 class Group;
+class VaultEntryEditCard;
 
 // Tests for the Vault Index main window layout built on Fluent-Qt
 class TestGuiVault : public QObject
@@ -40,6 +41,11 @@ private slots:
     void testEntryListMode();
     void testDetailCardFollowsSelection();
     void testCommandBar();
+    void testEditEntryInPlace();
+    void testNewEntryDraft();
+    void testEditorSections();
+    void testEditorFocusMode();
+    void testLeavingViewEndsEditing();
     void testSearchTitle();
     void testFluentSearchBox();
     void testDatabasePicker();
@@ -55,6 +61,7 @@ private:
     void selectGroup(Group* group);
     void selectEntry(Entry* entry);
     void populate();
+    VaultEntryEditCard* entryEditCard() const;
 
     QScopedPointer<MainWindow> m_mainWindow;
     QPointer<DatabaseTabWidget> m_tabWidget;

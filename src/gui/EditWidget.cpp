@@ -149,6 +149,11 @@ QDialogButtonBox* EditWidget::buttonBox() const
     return m_ui->buttonBox;
 }
 
+QStackedWidget* EditWidget::pageStack() const
+{
+    return m_ui->stackedWidget;
+}
+
 void EditWidget::applyVaultShell()
 {
     VaultEditShell::apply(this, m_ui->categoryList, m_ui->stackedWidget, m_ui->buttonBox, m_ui->headerLabel);

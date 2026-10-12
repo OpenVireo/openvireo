@@ -29,6 +29,7 @@
 class CategoryListWidget;
 class QDialogButtonBox;
 class QLabel;
+class QStackedWidget;
 
 namespace Ui
 {
@@ -53,6 +54,7 @@ public:
     // For hosts that present the categories and the buttons in their own way
     CategoryListWidget* categoryList() const;
     QDialogButtonBox* buttonBox() const;
+    QStackedWidget* pageStack() const;
     // Present the editor in the Vault Index style
     void applyVaultShell();
     void setReadOnly(bool readOnly);
