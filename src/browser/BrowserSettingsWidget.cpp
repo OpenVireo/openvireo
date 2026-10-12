@@ -20,7 +20,9 @@
 
 #include "BrowserSettings.h"
 #include "config-keepassx.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
+#include "gui/vault/VaultSettingsPage.h"
 
 #include <QFileDialog>
 
@@ -88,6 +90,94 @@ BrowserSettingsWidget::BrowserSettingsWidget(QWidget* parent)
     m_ui->customExtensionId->setVisible(false);
     m_ui->customExtensionLabel->setVisible(false);
 #endif
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void BrowserSettingsWidget::buildVaultPage()
+{
+    VaultSettingsPage page(this, tr("Browser Integration"));
+    page.addWidget(m_ui->messageWidget);
+
+    // The options explain themselves in their tool tips; the cards show them below the option
+    auto addToggle = [](VaultSettingsSection* section, QAbstractButton* checkBox) {
+        return section->addToggle(checkBox, checkBox->toolTip());
+    };
+
+    auto integration = page.addSection();
+    integration->addToggle(m_ui->enableBrowserSupport);
+    m_ui->extensionLabel->setWordWrap(true);
+    integration->addWidget(m_ui->extensionLabel);
+    m_ui->snapWarningLabel->setWordWrap(true);
+    integration->addWidget(m_ui->snapWarningLabel);
+
+    // The sections are disabled with the tabs of the form while browser integration is off.
+    // Some browsers share another's settings on Windows and are hidden there.
+    auto browsers = page.addSection(tr("Browsers"));
+    browsers->follow(m_ui->tabWidget);
+    browsers->addToggle(m_ui->chromeSupport);
+    browsers->addToggle(m_ui->chromiumSupport);
+    browsers->addToggle(m_ui->firefoxSupport);
+    browsers->addToggle(m_ui->edgeSupport);
+    browsers->addToggle(m_ui->braveSupport);
+    browsers->addToggle(m_ui->vivaldiSupport);
+    browsers->addToggle(m_ui->torBrowserSupport);
+
+    auto behavior = page.addSection(tr("Behavior"));
+    behavior->follow(m_ui->tabWidget);
+    addToggle(behavior, m_ui->showNotification);
+    addToggle(behavior, m_ui->unlockDatabase);
+    addToggle(behavior, m_ui->matchUrlScheme);
+    addToggle(behavior, m_ui->bestMatchOnly);
+    addToggle(behavior, m_ui->allowExpiredCredentials);
+    addToggle(behavior, m_ui->searchInAllDatabases);
+
+    auto advanced = page.addSection(m_ui->tabWidget->tabText(m_ui->tabWidget->indexOf(m_ui->tab_2)));
+    advanced->follow(m_ui->tabWidget);
+    advanced->addWidget(m_ui->advancedMessageWidget);
+    addToggle(advanced, m_ui->alwaysAllowAccess);
+    addToggle(advanced, m_ui->alwaysAllowUpdate);
+    addToggle(advanced, m_ui->httpAuthPermission);
+    addToggle(advanced, m_ui->supportKphFields);
+    addToggle(advanced, m_ui->allowLocalhostWithPasskeys);
+    addToggle(advanced, m_ui->noMigrationPrompt);
+    addToggle(advanced, m_ui->updateBinaryPath);
+    addToggle(advanced, m_ui->allowGetDatabaseEntriesRequest);
+
+    // These lead into fields in the form; a card's caption has no trailing colon
+    for (auto checkBox : {m_ui->useCustomProxy, m_ui->customBrowserSupport}) {
+        auto text = checkBox->text().trimmed();
+        while (text.endsWith(QLatin1Char(':')) || text.endsWith(QChar(0xff1a))) {
+            text.chop(1);
+        }
+        checkBox->setText(text);
+    }
+
+    auto customProxy = addToggle(advanced, m_ui->useCustomProxy);
+    customProxy->addSetting(tr("Proxy location"),
+                            {m_ui->customProxyLocation, m_ui->customProxyLocationBrowseButton});
+
+    // The form enables these with the group box they leave behind
+    auto customBrowser = advanced->addToggle(m_ui->customBrowserSupport);
+    customBrowser->addSetting(m_ui->customBrowserLabel, m_ui->browserTypeComboBox);
+    customBrowser->addSetting(m_ui->customBrowserLabel_2,
+                              {m_ui->customBrowserLocation, m_ui->customBrowserLocationBrowseButton});
+    const QWidgetList customBrowserControls = {m_ui->browserTypeComboBox,
+                                               m_ui->customBrowserLocation,
+                                               m_ui->customBrowserLocationBrowseButton};
+    auto enableCustomBrowser = [customBrowserControls](bool enabled) {
+        for (auto control : customBrowserControls) {
+            control->setEnabled(enabled);
+        }
+    };
+    enableCustomBrowser(m_ui->customBrowserSupport->isChecked());
+    connect(m_ui->customBrowserSupport, &QAbstractButton::toggled, this, enableCustomBrowser);
+
+    advanced->addSetting(m_ui->customExtensionLabel, m_ui->customExtensionId);
+
+    page.finish();
 }
 
 BrowserSettingsWidget::~BrowserSettingsWidget()
