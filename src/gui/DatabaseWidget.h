@@ -48,6 +48,8 @@ class ElidedLabel;
 class RemoteSettings;
 class EntryDetailCard;
 class VaultCommandBar;
+class VaultDraftRow;
+class VaultEntryEditCard;
 class QHBoxLayout;
 class QVBoxLayout;
 struct RemoteParams;
@@ -308,6 +310,11 @@ private:
     void setupClassicLayout(QHBoxLayout* hbox);
     void setupVaultLayout(QHBoxLayout* hbox);
     void updateVaultCommandBar();
+    // The view in use: the inline entry editor while the Vault Index layout shows one, else the current page
+    QWidget* activeView() const;
+    void showVaultEditor(VaultEntryEditCard* card);
+    void hideVaultEditor();
+    void setVaultEditorFocusMode(bool focusMode);
     void processAutoOpen();
     void openDatabaseFromEntry(const Entry* entry, bool inBackground = true);
     void performIconDownloads(const QList<Entry*>& entries, bool force = false, bool downloadInBackground = false);
@@ -337,6 +344,17 @@ private:
     bool m_vaultLayout = false;
     QPointer<VaultCommandBar> m_vaultCommandBar;
     QPointer<EntryDetailCard> m_detailCard;
+    // Entry editors shown in place of the detail card, the one showing (null when not editing),
+    // and the list's stand-in row for a new entry
+    QPointer<QStackedWidget> m_vaultCardStack;
+    QPointer<VaultEntryEditCard> m_vaultEntryEditor;
+    QPointer<VaultEntryEditCard> m_vaultHistoryEditor;
+    QPointer<VaultEntryEditCard> m_vaultActiveEditor;
+    QPointer<VaultDraftRow> m_vaultDraftRow;
+    QPointer<QWidget> m_vaultNavPane;
+    QPointer<QWidget> m_vaultListHost;
+    QList<int> m_vaultSizesBeforeFocus;
+    QList<QPointer<QWidget>> m_vaultDimmers;
 
     QScopedPointer<Group> m_newGroup;
     QScopedPointer<Entry> m_newEntry;
