@@ -145,7 +145,7 @@ EntryDetailCard::EntryDetailCard(QWidget* parent)
     layout->setContentsMargins(20, 18, 20, 18);
     layout->setSpacing(14);
 
-    // Header: icon, title, group and modified time, Auto-Type and Edit
+    // Header: icon, title, group and modified time
     auto* header = new QHBoxLayout();
     header->setSpacing(12);
     m_icon->setFixedSize(TileSize, TileSize);
@@ -157,20 +157,6 @@ EntryDetailCard::EntryDetailCard(QWidget* parent)
     titles->addWidget(m_title);
     titles->addWidget(m_subtitle);
     header->addLayout(titles, 1);
-
-    m_autoTypeButton = new fluent::basicinput::Button(tr("Auto-Type"), content);
-    m_autoTypeButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
-    m_autoTypeButton->setFluentSize(fluent::basicinput::Button::Small);
-    m_autoTypeButton->setIconGlyph(Typography::Icons::Keyboard);
-    m_autoTypeButton->setToolTip(tr("Perform Auto-Type"));
-    Vault::bindAction(m_autoTypeButton, "actionEntryAutoTypeSequence");
-    header->addWidget(m_autoTypeButton, 0, Qt::AlignTop);
-
-    m_editButton = Vault::iconButton(Typography::Icons::Edit, tr("Edit entry"), content);
-    m_editButton->setFluentStyle(fluent::basicinput::Button::Standard);
-    m_editButton->setFluentSize(fluent::basicinput::Button::Small);
-    Vault::bindAction(m_editButton, "actionEntryEdit");
-    header->addWidget(m_editButton, 0, Qt::AlignTop);
     layout->addLayout(header);
 
     // Fields
