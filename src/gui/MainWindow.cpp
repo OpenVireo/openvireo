@@ -47,6 +47,7 @@
 #include "gui/MessageBox.h"
 #include "gui/SearchWidget.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
@@ -159,7 +160,7 @@ MainWindow::MainWindow()
 
     m_countDefaultAttributes = m_ui->menuEntryCopyAttribute->actions().size();
 
-    m_entryContextMenu = new QMenu(this);
+    m_entryContextMenu = new VaultMenu(this);
     m_entryContextMenu->setSeparatorsCollapsible(true);
     m_entryContextMenu->addAction(m_ui->actionEntryRestore);
     m_entryContextMenu->addSeparator();
@@ -192,13 +193,13 @@ MainWindow::MainWindow()
     m_entryContextMenu->addAction(m_ui->actionEntryAddToAgent);
     m_entryContextMenu->addAction(m_ui->actionEntryRemoveFromAgent);
 
-    m_entryNewContextMenu = new QMenu(this);
+    m_entryNewContextMenu = new VaultMenu(this);
     m_entryNewContextMenu->addAction(m_ui->actionEntryNew);
 
     connect(m_ui->menuRemoteSync, &QMenu::aboutToShow, this, &MainWindow::updateRemoteSyncMenuEntries);
 
     // Build Entry Level Auto-Type menu
-    auto autotypeMenu = new QMenu({}, this);
+    auto autotypeMenu = new VaultMenu(this);
     autotypeMenu->addAction(m_ui->actionEntryAutoTypeSequence);
     autotypeMenu->addSeparator();
     autotypeMenu->addAction(m_ui->actionEntryAutoTypeUsername);
@@ -214,7 +215,7 @@ MainWindow::MainWindow()
         autoTypeButton->setPopupMode(QToolButton::MenuButtonPopup);
     }
 
-    auto databaseLockMenu = new QMenu({}, this);
+    auto databaseLockMenu = new VaultMenu(this);
     databaseLockMenu->addAction(m_ui->actionLockAllDatabases);
     m_ui->actionLockDatabaseToolbar->setMenu(databaseLockMenu);
     auto databaseLockButton =
@@ -1619,7 +1620,7 @@ void MainWindow::updateTrayIcon()
     if (config()->get(Config::GUI_ShowTrayIcon).toBool()) {
         if (!m_trayIcon) {
             m_trayIcon = new QSystemTrayIcon(this);
-            auto* menu = new QMenu(this);
+            auto* menu = new VaultMenu(this);
 
             auto* actionToggle = new QAction(tr("Toggle window"), menu);
             menu->addAction(actionToggle);

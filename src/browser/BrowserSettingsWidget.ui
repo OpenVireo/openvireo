@@ -463,7 +463,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="browserTypeComboBox">
+             <widget class="VaultComboBox" name="browserTypeComboBox">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -631,6 +631,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>MessageWidget</class>
    <extends>QWidget</extends>

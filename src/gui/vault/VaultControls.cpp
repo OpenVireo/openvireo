@@ -17,13 +17,81 @@
 
 #include "VaultControls.h"
 
+#include <QAbstractSpinBox>
+#include <QApplication>
+#include <QContextMenuEvent>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QScrollBar>
+#include <QTextEdit>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStyle>
+
+#include <components/menus_toolbars/private/TextEditingMenu_p.h>
+
+namespace
+{
+    // Replaces the stock editing menu of text fields that aren't Fluent controls already
+    class TextEditingMenuFilter : public QObject
+    {
+    public:
+        using QObject::QObject;
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() != QEvent::ContextMenu) {
+                return false;
+            }
+            auto* menuEvent = static_cast<QContextMenuEvent*>(event);
+            QWidget* owner = nullptr;
+            QMenu* menu = nullptr;
+
+            if (auto* lineEdit = qobject_cast<QLineEdit*>(watched)) {
+                // Fluent line edits show their own menu, and spin boxes add their own actions
+                if (qobject_cast<fluent::textfields::LineEdit*>(lineEdit)
+                    || qobject_cast<QAbstractSpinBox*>(lineEdit->parentWidget())
+                    || lineEdit->contextMenuPolicy() != Qt::DefaultContextMenu) {
+                    return false;
+                }
+                owner = lineEdit;
+                menu = lineEdit->createStandardContextMenu();
+            } else if (auto* viewport = qobject_cast<QWidget*>(watched)) {
+                // Text edits receive context menu events on their viewport
+                auto* parent = viewport->parentWidget();
+                if (auto* textEdit = qobject_cast<QTextEdit*>(parent); textEdit && textEdit->viewport() == viewport) {
+                    if (textEdit->contextMenuPolicy() != Qt::DefaultContextMenu) {
+                        return false;
+                    }
+                    // The position, in document coordinates, adds link actions over a link
+                    const QPoint offset(textEdit->horizontalScrollBar()->value(),
+                                        textEdit->verticalScrollBar()->value());
+                    owner = textEdit;
+                    menu = textEdit->createStandardContextMenu(menuEvent->pos() + offset);
+                } else if (auto* plainEdit = qobject_cast<QPlainTextEdit*>(parent);
+                           plainEdit && plainEdit->viewport() == viewport) {
+                    if (plainEdit->contextMenuPolicy() != Qt::DefaultContextMenu) {
+                        return false;
+                    }
+                    owner = plainEdit;
+                    menu = plainEdit->createStandardContextMenu();
+                }
+            }
+
+            if (!owner || !menu) {
+                return false;
+            }
+            fluent::menus_toolbars::detail::showTextEditingContextMenu(
+                owner, menu, menuEvent->globalPos(), QStringLiteral("VaultTextEditingMenu"));
+            event->accept();
+            return true;
+        }
+    };
+} // namespace
 
 VaultButton::VaultButton(QWidget* parent)
     : fluent::basicinput::Button(parent)
@@ -159,4 +227,33 @@ VaultLineEdit::VaultLineEdit(QWidget* parent)
     : fluent::textfields::LineEdit(parent)
 {
     setClearButtonEnabled(false);
+}
+
+VaultMenu::VaultMenu(QWidget* parent)
+    : VaultMenu({}, parent)
+{
+}
+
+VaultMenu::VaultMenu(const QString& title, QWidget* parent)
+    : fluent::menus_toolbars::FluentMenu(title, parent)
+{
+}
+
+VaultMenu* VaultMenu::addMenu(const QString& title)
+{
+    auto* menu = new VaultMenu(title, this);
+    QMenu::addMenu(menu);
+    return menu;
+}
+
+VaultMenu* VaultMenu::addMenu(const QIcon& icon, const QString& title)
+{
+    auto* menu = addMenu(title);
+    menu->setIcon(icon);
+    return menu;
+}
+
+void VaultMenu::installTextEditingMenus()
+{
+    qApp->installEventFilter(new TextEditingMenuFilter(qApp));
 }

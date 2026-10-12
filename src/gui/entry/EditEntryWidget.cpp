@@ -63,6 +63,7 @@
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/entry/AutoTypeAssociationsModel.h"
 #include "gui/entry/EntryAttributesModel.h"
 #include "gui/entry/EntryHistoryModel.h"
@@ -1761,7 +1762,7 @@ void EditEntryWidget::deleteAllHistoryEntries()
 
 QMenu* EditEntryWidget::createPresetsMenu()
 {
-    auto* expirePresetsMenu = new QMenu(this);
+    auto* expirePresetsMenu = new VaultMenu(this);
     expirePresetsMenu->addAction(tr("%n hour(s)", "", 12))->setData(QVariant::fromValue(TimeDelta::fromHours(12)));
     expirePresetsMenu->addAction(tr("%n hour(s)", "", 24))->setData(QVariant::fromValue(TimeDelta::fromHours(24)));
     expirePresetsMenu->addSeparator();

@@ -35,6 +35,7 @@
 #include "core/Tools.h"
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultControls.h"
 
 namespace
 {
@@ -103,7 +104,7 @@ EntryAttachmentsWidget::EntryAttachmentsWidget(QWidget* parent)
     connect(m_ui->previewAttachmentButton, SIGNAL(clicked()), SLOT(previewSelectedAttachment()));
     connect(m_ui->removeAttachmentButton, SIGNAL(clicked()), SLOT(removeSelectedAttachments()));
 
-    auto addButtonMenu = new QMenu(this);
+    auto addButtonMenu = new VaultMenu(this);
     addButtonMenu->addAction(tr("New Text Document"), this, &EntryAttachmentsWidget::newAttachments);
     addButtonMenu->addAction(tr("Load from Disk…"), this, QOverload<>::of(&EntryAttachmentsWidget::insertAttachments));
 

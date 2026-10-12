@@ -28,6 +28,7 @@
 #include "gui/IconModels.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultControls.h"
 #ifdef KPXC_FEATURE_NETWORK
 #include "gui/IconDownloader.h"
 #endif
@@ -163,7 +164,7 @@ void EditWidgetIcons::setShowApplyIconToButton(bool state)
 
 QMenu* EditWidgetIcons::createApplyIconToMenu()
 {
-    auto* applyIconToMenu = new QMenu(this);
+    auto* applyIconToMenu = new VaultMenu(this);
     QAction* defaultAction = applyIconToMenu->addAction(tr("Apply to this group only"));
     defaultAction->setData(QVariant::fromValue(ApplyIconToOptions::THIS_ONLY));
     applyIconToMenu->setDefaultAction(defaultAction);

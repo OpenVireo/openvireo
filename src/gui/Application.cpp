@@ -27,6 +27,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/styles/dark/DarkStyle.h"
 #include "gui/styles/light/LightStyle.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QFileInfo>
 #include <QFileOpenEvent>
@@ -65,6 +66,8 @@ Application::Application(int& argc, char** argv)
 #if defined(Q_OS_UNIX)
     registerUnixSignals();
 #endif
+
+    VaultMenu::installTextEditingMenus();
 
     // Build identifier
     auto identifier = QStringLiteral("keepassxc");

@@ -24,7 +24,7 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="1">
-    <widget class="QComboBox" name="typeComboBox">
+    <widget class="VaultComboBox" name="typeComboBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -70,7 +70,7 @@
     </widget>
    </item>
    <item row="0" column="3">
-    <widget class="QComboBox" name="bitsComboBox">
+    <widget class="VaultComboBox" name="bitsComboBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -100,6 +100,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
