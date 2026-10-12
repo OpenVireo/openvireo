@@ -48,6 +48,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
@@ -873,12 +874,14 @@ void MainWindow::updateMenuActionState()
     int currentIndex = m_ui->stackedWidget->currentIndex();
     bool hasLockableDatabase = m_ui->tabWidget->hasLockableDatabases();
     bool inSettingsModal = m_settingsModal && m_settingsModal->isOpen();
+    bool inPasswordGeneratorModal = m_passwordGeneratorModal && m_passwordGeneratorModal->isOpen();
+    bool inModal = (inSettingsModal || inPasswordGeneratorModal);
     bool inAppSettings = (currentIndex == SettingsScreen || inSettingsModal);
-    bool inPasswordGenerator = (currentIndex == PasswordGeneratorScreen);
+    bool inPasswordGenerator = (currentIndex == PasswordGeneratorScreen || inPasswordGeneratorModal);
 
-    // The database stays on screen behind the settings modal, but can't be used
+    // The database stays on screen behind a modal, but can't be used
     auto shownDbWidget = (currentIndex == DatabaseTabScreen ? m_ui->tabWidget->currentDatabaseWidget() : nullptr);
-    auto dbWidget = (inSettingsModal ? nullptr : shownDbWidget);
+    auto dbWidget = (inModal ? nullptr : shownDbWidget);
     auto dbMode = (dbWidget ? dbWidget->currentMode() : DatabaseWidget::Mode::None);
 
     // Database State
@@ -1037,7 +1040,7 @@ void MainWindow::updateMenuActionState()
     m_ui->actionImportPasskey->setEnabled(inDatabase);
 #endif
 
-    if (!inSettingsModal) {
+    if (!inModal) {
         m_searchWidgetAction->setEnabled(inDatabase);
     }
     if (m_vaultHeader) {
@@ -1082,7 +1085,8 @@ void MainWindow::updateWindowTitle()
     }
     if (stackedWidgetIndex == StackedWidgetIndex::SettingsScreen || (m_settingsModal && m_settingsModal->isOpen())) {
         customWindowTitlePart = tr("Settings");
-    } else if (stackedWidgetIndex == StackedWidgetIndex::PasswordGeneratorScreen) {
+    } else if (stackedWidgetIndex == StackedWidgetIndex::PasswordGeneratorScreen
+               || (m_passwordGeneratorModal && m_passwordGeneratorModal->isOpen())) {
         customWindowTitlePart = tr("Password Generator");
     }
 
@@ -1198,47 +1202,43 @@ void MainWindow::openKeyboardShortcuts()
     customOpenUrl(QString("file:///%1").arg(resources()->dataPath("docs/KeePassXC_KeyboardShortcuts.html")));
 }
 
-// Vault Index layout: the standalone generator is a Fluent card on the window canvas
+// Vault Index layout: the standalone generator opens in a modal over the window, like the settings
 void MainWindow::setupVaultPasswordGenerator()
 {
-    auto* page = m_ui->pagePasswordGenerator;
     auto* generator = m_ui->passwordGeneratorWidget;
-    Vault::paintCanvas(page);
+    m_ui->pagePasswordGenerator->layout()->removeWidget(generator);
 
-    auto* card = new fluent::layout::Card(page);
-    card->setObjectName("vaultPasswordGeneratorCard");
-    card->setAppearance(fluent::layout::Card::Layer);
-    card->setBorderVisible(true);
-    card->setMaximumWidth(860);
-    page->layout()->replaceWidget(generator, card);
-    page->layout()->setAlignment(card, Qt::AlignHCenter);
+    m_passwordGeneratorModal =
+        new VaultModal(this, generator, tr("Password Generator"), QStringLiteral("vaultPasswordGenerator"));
+    m_passwordGeneratorModal->setMaximumCardWidth(760);
+    m_passwordGeneratorModal->setFitToContent(true);
+    m_passwordGeneratorModal->setInitialFocus(generator->findChild<QWidget*>("editNewPassword"));
 
-    auto* title = new QLabel(tr("Password Generator"), card);
-    title->setObjectName("vaultPasswordGeneratorTitle");
-    auto* cardLayout = new QVBoxLayout(card);
-    cardLayout->setContentsMargins(28, 22, 28, 20);
-    cardLayout->setSpacing(16);
-    cardLayout->addWidget(title);
-    cardLayout->addWidget(generator);
+    // The modal's close button and footer replace the generator's own Close button
+    generator->findChild<QWidget*>("buttonClose")->hide();
+    auto* closeButton = m_passwordGeneratorModal->addFooterButton(tr("Close"), true, QStringLiteral("Done"));
+    connect(closeButton, &QPushButton::clicked, this, [this] { togglePasswordGenerator(false); });
+    connect(m_passwordGeneratorModal, &VaultModal::accepted, this, [this] { togglePasswordGenerator(false); });
+    connect(m_passwordGeneratorModal, &VaultModal::rejected, this, [this] { togglePasswordGenerator(false); });
+}
 
-    if (auto* tabs = generator->findChild<QTabWidget*>("tabWidget")) {
-        tabs->setDocumentMode(true);
+void MainWindow::closeVaultModals()
+{
+    if (m_passwordGeneratorModal && m_passwordGeneratorModal->isOpen()) {
+        m_ui->passwordGeneratorWidget->saveSettings();
+        m_passwordGeneratorModal->close();
     }
-    Vault::followTheme(card, [card, title] {
-        // Style sheets polish the widgets again and reset their palettes, so set the label colors after
-        card->setStyleSheet(Vault::formStyleSheet());
-        Vault::styleLabel(title, Typography::FontRole::Subtitle, FluentTheme::palette().text);
-    });
+    if (m_settingsModal && m_settingsModal->isOpen()) {
+        m_settingsModal->close();
+    }
+    // The screen behind a modal doesn't change, so refresh what depended on the modal
+    updateMenuActionState();
+    updateWindowTitle();
 }
 
 void MainWindow::switchToDatabases()
 {
-    if (m_settingsModal && m_settingsModal->isOpen()) {
-        m_settingsModal->close();
-        // The screen behind the modal doesn't change, so refresh what depended on the modal
-        updateMenuActionState();
-        updateWindowTitle();
-    }
+    closeVaultModals();
     if (m_ui->tabWidget->currentIndex() == -1) {
         m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
         statusBar()->setAutoFillBackground(false);
@@ -1251,6 +1251,7 @@ void MainWindow::switchToDatabases()
 void MainWindow::switchToSettings(bool enabled)
 {
     if (enabled && m_settingsModal) {
+        closeVaultModals();
         m_ui->settingsWidget->loadSettings();
         m_settingsModal->open();
         updateMenuActionState();
@@ -1266,7 +1267,14 @@ void MainWindow::switchToSettings(bool enabled)
 
 void MainWindow::togglePasswordGenerator(bool enabled)
 {
-    if (enabled) {
+    if (enabled && m_passwordGeneratorModal) {
+        closeVaultModals();
+        m_ui->passwordGeneratorWidget->loadSettings();
+        m_ui->passwordGeneratorWidget->regeneratePassword();
+        m_passwordGeneratorModal->open();
+        updateMenuActionState();
+        updateWindowTitle();
+    } else if (enabled) {
         m_ui->passwordGeneratorWidget->loadSettings();
         m_ui->passwordGeneratorWidget->regeneratePassword();
         m_ui->stackedWidget->setCurrentIndex(PasswordGeneratorScreen);
