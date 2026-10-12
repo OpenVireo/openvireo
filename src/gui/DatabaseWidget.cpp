@@ -60,6 +60,7 @@
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/ElidedLabel.h"
 #include "keeshare/KeeShare.h"
@@ -262,6 +263,10 @@ DatabaseWidget::DatabaseWidget(const QString& filePath, QWidget* parent)
 
 DatabaseWidget::~DatabaseWidget()
 {
+    // The modals belong to the window, but their pages are this database's
+    delete m_vaultDatabaseSettingsModal.data();
+    delete m_vaultReportsModal.data();
+
     // Trigger any Database deletion related signals manually by
     // explicitly clearing the Database pointer, instead of leaving it to ~QSharedPointer.
     // QSharedPointer may behave differently depending on whether it is cleared by the `clear` method
@@ -1238,12 +1243,8 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_entryView->setListMode(true);
     m_groupView->setNavigationStyle(true);
 
-    // The editors, settings and reports that replace the main view take the same style
-    for (EditWidget* editor : {static_cast<EditWidget*>(m_editGroupWidget.data()),
-                               static_cast<EditWidget*>(m_databaseSettingDialog.data())}) {
-        editor->applyVaultShell();
-    }
-    m_reportsDialog->applyVaultShell();
+    // The group editor that replaces the main view takes the same style; settings and reports open in modals
+    m_editGroupWidget->applyVaultShell();
 
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
     m_vaultNavPane = navPane;
@@ -1286,10 +1287,12 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     if (auto* titleEdit = m_editEntryWidget->findChild<QLineEdit*>("titleEdit")) {
         connect(titleEdit, &QLineEdit::textChanged, m_vaultDraftRow, &VaultDraftRow::setTitle);
     }
-    // Locking or opening another page ends inline editing, before anyone hears of the new mode
+    // Locking or opening another page ends inline editing and closes the modals, before anyone hears of the
+    // new mode
     connect(this, &QStackedWidget::currentChanged, this, [this] {
         if (currentWidget() != m_mainWidget) {
             hideVaultEditor();
+            closeVaultModals();
         }
     });
 
@@ -1336,6 +1339,11 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 
 QWidget* DatabaseWidget::activeView() const
 {
+    for (const auto& modal : {m_vaultDatabaseSettingsModal, m_vaultReportsModal}) {
+        if (modal && modal->isOpen()) {
+            return modal->content();
+        }
+    }
     if (m_vaultActiveEditor && currentWidget() == m_mainWidget) {
         return m_vaultActiveEditor->editor();
     }
@@ -1384,6 +1392,42 @@ void DatabaseWidget::hideVaultEditor()
     }
     m_vaultDimmers.clear();
     emitCurrentModeChanged();
+}
+
+void DatabaseWidget::showVaultModal(QPointer<VaultSettingsModal>& modal)
+{
+    if (!modal) {
+        if (&modal == &m_vaultDatabaseSettingsModal) {
+            modal = new VaultSettingsModal(
+                window(), m_databaseSettingDialog, tr("Database Settings"), QStringLiteral("vaultDatabaseSettings"));
+        } else {
+            modal = new VaultSettingsModal(window(),
+                                           m_reportsDialog,
+                                           m_reportsDialog->categoryList(),
+                                           m_reportsDialog->buttonBox(),
+                                           tr("Database Reports"),
+                                           QStringLiteral("vaultReports"));
+        }
+    }
+    // Like the pages they stand in for, the modals end inline editing
+    if (m_vaultActiveEditor || currentWidget() != m_mainWidget) {
+        switchToMainView(false);
+    }
+    closeVaultModals();
+    modal->open();
+    emitCurrentModeChanged();
+}
+
+bool DatabaseWidget::closeVaultModals()
+{
+    bool closed = false;
+    for (const auto& modal : {m_vaultDatabaseSettingsModal, m_vaultReportsModal}) {
+        if (modal && modal->isOpen()) {
+            modal->close();
+            closed = true;
+        }
+    }
+    return closed;
 }
 
 void DatabaseWidget::updateVaultCommandBar()
@@ -1504,6 +1548,10 @@ QList<RemoteParams*> DatabaseWidget::getRemoteParams() const
 void DatabaseWidget::switchToMainView(bool previousDialogAccepted)
 {
     hideVaultEditor();
+    // The main view stays current behind a modal, so closing one changes the mode by itself
+    if (closeVaultModals() && currentWidget() == m_mainWidget) {
+        emitCurrentModeChanged();
+    }
     setCurrentWidget(m_mainWidget);
 
     if (m_newGroup) {
@@ -1887,6 +1935,10 @@ void DatabaseWidget::switchToDatabaseReports()
 {
     if (currentMode() != Mode::ReportsMode) {
         m_reportsDialog->load(m_db);
+        if (m_vaultLayout) {
+            showVaultModal(m_vaultReportsModal);
+            return;
+        }
         setCurrentWidget(m_reportsDialog);
     }
 }
@@ -1895,6 +1947,10 @@ void DatabaseWidget::switchToDatabaseSettings()
 {
     if (currentMode() != Mode::DatabaseSettingsMode) {
         m_databaseSettingDialog->load(m_db);
+        if (m_vaultLayout) {
+            showVaultModal(m_vaultDatabaseSettingsModal);
+            return;
+        }
         setCurrentWidget(m_databaseSettingDialog);
     }
 }
@@ -2285,6 +2341,15 @@ void DatabaseWidget::showEvent(QShowEvent* event)
     }
 
     event->accept();
+}
+
+void DatabaseWidget::hideEvent(QHideEvent* event)
+{
+    // Another tab or screen took this database's place, so its modals go too
+    if (!event->spontaneous() && closeVaultModals()) {
+        emitCurrentModeChanged();
+    }
+    QStackedWidget::hideEvent(event);
 }
 
 bool DatabaseWidget::focusNextPrevChild(bool next)

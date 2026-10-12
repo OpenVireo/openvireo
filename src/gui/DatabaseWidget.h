@@ -50,6 +50,7 @@ class EntryDetailCard;
 class VaultCommandBar;
 class VaultDraftRow;
 class VaultEntryEditCard;
+class VaultSettingsModal;
 class QHBoxLayout;
 class QVBoxLayout;
 struct RemoteParams;
@@ -274,6 +275,7 @@ public slots:
 protected:
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
     bool focusNextPrevChild(bool next) override;
 
 private slots:
@@ -314,6 +316,9 @@ private:
     QWidget* activeView() const;
     void showVaultEditor(VaultEntryEditCard* card);
     void hideVaultEditor();
+    // Database settings and reports open in modals over the window, made once the widget is in one
+    void showVaultModal(QPointer<VaultSettingsModal>& modal);
+    bool closeVaultModals();
     void processAutoOpen();
     void openDatabaseFromEntry(const Entry* entry, bool inBackground = true);
     void performIconDownloads(const QList<Entry*>& entries, bool force = false, bool downloadInBackground = false);
@@ -349,6 +354,8 @@ private:
     QPointer<VaultEntryEditCard> m_vaultEntryEditor;
     QPointer<VaultEntryEditCard> m_vaultHistoryEditor;
     QPointer<VaultEntryEditCard> m_vaultActiveEditor;
+    QPointer<VaultSettingsModal> m_vaultDatabaseSettingsModal;
+    QPointer<VaultSettingsModal> m_vaultReportsModal;
     QPointer<VaultDraftRow> m_vaultDraftRow;
     QPointer<QWidget> m_vaultNavPane;
     QList<QPointer<QWidget>> m_vaultDimmers;

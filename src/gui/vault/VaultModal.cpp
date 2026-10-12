@@ -167,6 +167,8 @@ VaultModal::VaultModal(QWidget* window, QWidget* content, const QString& title, 
     m_body->setContentsMargins(16, 12, 20, 12);
     m_body->setSpacing(16);
     m_body->addWidget(content, 1);
+    // Content taken from a stacked widget keeps the hidden state of a page that wasn't current
+    content->show();
 
     m_footer = new QHBoxLayout();
     m_footer->setContentsMargins(28, 16, 28, 20);
@@ -218,7 +220,8 @@ void VaultModal::close()
 
 bool VaultModal::isOpen() const
 {
-    return isVisible();
+    // Still open while the window itself is hidden, such as when minimized to the tray
+    return !isHidden();
 }
 
 QWidget* VaultModal::card() const

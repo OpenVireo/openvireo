@@ -100,16 +100,31 @@ namespace
     };
 } // namespace
 
-VaultSettingsModal::VaultSettingsModal(QWidget* window, EditWidget* settings)
-    : VaultModal(window, settings, tr("Settings"), QStringLiteral("vaultSettings"))
-    , m_settings(settings)
+VaultSettingsModal::VaultSettingsModal(QWidget* window,
+                                       EditWidget* settings,
+                                       const QString& title,
+                                       const QString& namePrefix)
+    : VaultSettingsModal(window, settings, settings->categoryList(), settings->buttonBox(), title, namePrefix)
 {
-    // The sidebar shares the settings widget's own category model and selection
-    auto categories = settings->categoryList()->listWidget();
+    settings->headlineLabel()->hide();
+}
+
+VaultSettingsModal::VaultSettingsModal(QWidget* window,
+                                       QWidget* content,
+                                       CategoryListWidget* categories,
+                                       QDialogButtonBox* buttons,
+                                       const QString& title,
+                                       const QString& namePrefix)
+    : VaultModal(window, content, title, namePrefix)
+    , m_categories(categories)
+    , m_buttons(buttons)
+{
+    // The sidebar shares the widget's own category model and selection
+    auto list = categories->listWidget();
     m_navigation = new QListView(card());
-    m_navigation->setObjectName("vaultSettingsNavigation");
-    m_navigation->setModel(categories->model());
-    m_navigation->setSelectionModel(categories->selectionModel());
+    m_navigation->setObjectName(namePrefix + "Navigation");
+    m_navigation->setModel(list->model());
+    m_navigation->setSelectionModel(list->selectionModel());
     m_navigation->setItemDelegate(new NavigationDelegate(m_navigation));
     m_navigation->setFrameShape(QFrame::NoFrame);
     m_navigation->setFixedWidth(NavigationWidth);
@@ -120,21 +135,25 @@ VaultSettingsModal::VaultSettingsModal(QWidget* window, EditWidget* settings)
     m_navigation->setAttribute(Qt::WA_MacShowFocusRect, false);
     m_navigation->viewport()->setAutoFillBackground(false);
     m_navigation->viewport()->setCursor(Qt::PointingHandCursor);
-    m_navigation->setAccessibleName(tr("Settings categories"));
+    m_navigation->setAccessibleName(tr("%1 categories").arg(title));
     bodyLayout()->insertWidget(0, m_navigation);
     setInitialFocus(m_navigation);
 
     // The modal provides the title, categories and buttons
-    settings->headlineLabel()->hide();
-    settings->categoryList()->hide();
-    settings->buttonBox()->hide();
+    categories->hide();
+    buttons->hide();
 
-    auto cancelButton = addFooterButton(tr("Cancel"), false, QStringLiteral("Cancel"));
-    connect(cancelButton, &QPushButton::clicked, this, &VaultSettingsModal::reject);
-    auto saveButton = addFooterButton(tr("Save"), true, QStringLiteral("Save"));
-    connect(saveButton, &QPushButton::clicked, this, &VaultSettingsModal::accept);
+    if (buttons->button(QDialogButtonBox::Ok)) {
+        auto cancelButton = addFooterButton(tr("Cancel"), false, QStringLiteral("Cancel"));
+        connect(cancelButton, &QPushButton::clicked, this, &VaultSettingsModal::reject);
+        auto saveButton = addFooterButton(tr("Save"), true, QStringLiteral("Save"));
+        connect(saveButton, &QPushButton::clicked, this, &VaultSettingsModal::accept);
+    } else {
+        auto closeButton = addFooterButton(tr("Close"), true, QStringLiteral("Done"));
+        connect(closeButton, &QPushButton::clicked, this, &VaultSettingsModal::reject);
+    }
 
-    setTabOrder(m_navigation, settings);
+    setTabOrder(m_navigation, content);
 }
 
 QListView* VaultSettingsModal::navigation() const
@@ -144,22 +163,25 @@ QListView* VaultSettingsModal::navigation() const
 
 void VaultSettingsModal::accept()
 {
-    if (auto button = m_settings->buttonBox()->button(QDialogButtonBox::Ok)) {
+    if (auto button = m_buttons->button(QDialogButtonBox::Ok)) {
         button->click();
     }
 }
 
 void VaultSettingsModal::reject()
 {
-    if (auto button = m_settings->buttonBox()->button(QDialogButtonBox::Cancel)) {
-        button->click();
+    for (auto which : {QDialogButtonBox::Cancel, QDialogButtonBox::Close}) {
+        if (auto button = m_buttons->button(which)) {
+            button->click();
+            return;
+        }
     }
 }
 
 void VaultSettingsModal::prepare()
 {
-    // Pages can be hidden on the settings widget's own list, which isn't shared with the sidebar
-    auto categories = m_settings->categoryList()->listWidget();
+    // Pages can be hidden on the widget's own list, which isn't shared with the sidebar
+    auto categories = m_categories->listWidget();
     for (int row = 0; row < categories->count(); ++row) {
         m_navigation->setRowHidden(row, categories->isRowHidden(row));
     }
