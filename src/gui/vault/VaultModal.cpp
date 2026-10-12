@@ -234,6 +234,11 @@ QWidget* VaultModal::content() const
     return m_content;
 }
 
+void VaultModal::setTitle(const QString& title)
+{
+    m_title->setText(title);
+}
+
 QPushButton* VaultModal::addFooterButton(const QString& text, bool primary, const QString& name)
 {
     // Styled and sized like the Close and Unlock buttons of the unlock view

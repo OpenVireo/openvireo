@@ -64,6 +64,8 @@ public:
     QWidget* card() const;
     QWidget* content() const;
 
+    void setTitle(const QString& title);
+
     // Adds a button to the right of the footer, named namePrefix + name
     QPushButton* addFooterButton(const QString& text, bool primary, const QString& name);
     // Widget focused when the modal opens, the content by default
