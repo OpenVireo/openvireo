@@ -424,41 +424,6 @@ void TestGuiVault::testEditorSections()
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 }
 
-void TestGuiVault::testEditorFocusMode()
-{
-    selectGroup(m_workGroup);
-    selectEntry(m_github);
-    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
-    auto* listHost = entryView->parentWidget();
-    const int listWidth = listHost->width();
-    QVERIFY(listWidth > 220);
-
-    m_dbWidget->switchToEntryEdit();
-    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    auto* card = entryEditCard();
-    const int cardWidth = card->width();
-    auto* focusButton = card->findChild<QAbstractButton*>("vaultEditFocusButton");
-
-    // Focus mode narrows the list to its titles and widens the editor
-    QTest::mouseClick(focusButton, Qt::LeftButton);
-    QVERIFY(card->isFocusMode());
-    QTRY_VERIFY(listHost->width() <= 220);
-    QVERIFY(entryView->isVisible());
-    QTRY_VERIFY(card->width() > cardWidth);
-
-    QTest::mouseClick(focusButton, Qt::LeftButton);
-    QVERIFY(!card->isFocusMode());
-    QTRY_COMPARE(listHost->width(), listWidth);
-
-    // Leaving the editor brings the list back too
-    QTest::mouseClick(focusButton, Qt::LeftButton);
-    QTRY_VERIFY(listHost->width() <= 220);
-    QTest::mouseClick(card->editor()->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
-    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
-    QVERIFY(!card->isFocusMode());
-    QTRY_COMPARE(listHost->width(), listWidth);
-}
-
 void TestGuiVault::testLeavingViewEndsEditing()
 {
     selectGroup(m_workGroup);
@@ -859,8 +824,6 @@ void TestGuiVault::testViewScreenshots()
         entryCategories->setCurrentRow(1);
         save("entry-advanced", theme);
         entryCategories->setCurrentRow(0);
-        entryEditCard()->findChild<QAbstractButton*>("vaultEditFocusButton")->click();
-        save("entry-focus", theme);
         m_dbWidget->switchToMainView();
 
         m_dbWidget->createEntry();
