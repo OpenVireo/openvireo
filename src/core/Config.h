@@ -105,6 +105,7 @@ public:
         GUI_ApplicationTheme,
         GUI_CompactMode,
         GUI_VaultLayout,
+        GUI_VaultTagsCollapsed,
         GUI_CheckForUpdates,
         GUI_CheckForUpdatesIncludeBetas,
         GUI_SearchWaitForEnter,

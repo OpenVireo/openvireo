@@ -49,6 +49,7 @@ class RemoteSettings;
 class EntryDetailCard;
 class VaultCommandBar;
 class VaultModal;
+class VaultSectionHeader;
 class VaultEntryEditCard;
 class VaultSettingsModal;
 class QHBoxLayout;
@@ -364,6 +365,7 @@ private:
     QPointer<VaultSettingsModal> m_vaultGroupModal;
     bool m_vaultGroupEditing = false;
     QPointer<QWidget> m_vaultNavPane;
+    QPointer<VaultSectionHeader> m_vaultTagsHeader;
     QList<QPointer<QWidget>> m_vaultDimmers;
 
     QScopedPointer<Group> m_newGroup;

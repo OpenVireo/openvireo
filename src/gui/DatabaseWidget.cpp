@@ -467,9 +467,15 @@ void DatabaseWidget::fitVaultTagList()
     if (rows == 0) {
         return;
     }
-    const auto title = tagsWidget->findChild<QLabel*>();
-    const int listHeight = m_tagView->sizeHintForRow(0) * qMin(rows, 8) + m_tagView->frameWidth() * 2;
-    const int height = title->sizeHint().height() + tagsWidget->layout()->spacing() + listHeight;
+    // Collapsed, only the title stays
+    const bool collapsed = m_vaultTagsHeader && !m_vaultTagsHeader->isChecked();
+    m_tagView->setVisible(!collapsed);
+    const auto title = tagsWidget->layout()->itemAt(0)->widget();
+    int height = title->sizeHint().height();
+    if (!collapsed) {
+        height += tagsWidget->layout()->spacing() + m_tagView->sizeHintForRow(0) * qMin(rows, 8)
+                  + m_tagView->frameWidth() * 2;
+    }
     tagsWidget->setMaximumHeight(height);
     m_groupSplitter->setSizes({qMax(0, m_groupSplitter->height() - height), height});
 }
@@ -480,6 +486,9 @@ void DatabaseWidget::onConfigChanged(Config::ConfigKey key)
         // Toggle the group splitter visibility and reset the size
         m_groupSplitter->setVisible(!config()->get(Config::GUI_HideGroupPanel).toBool());
         setSplitterSizes({{Config::GUI_SplitterState, QList<int>({})}});
+    } else if (key == Config::GUI_VaultTagsCollapsed && m_vaultTagsHeader) {
+        m_vaultTagsHeader->setChecked(!config()->get(Config::GUI_VaultTagsCollapsed).toBool());
+        fitVaultTagList();
     }
 }
 
@@ -1316,11 +1325,20 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
         view->setFrameShape(QFrame::NoFrame);
         view->viewport()->setAutoFillBackground(false);
     }
-    if (auto tagsTitle = m_groupSplitter->findChild<QLabel*>()) {
-        tagsTitle->setProperty("title", false);
-        tagsTitle->setContentsMargins(12, 8, 12, 4);
-        Vault::styleLabel(tagsTitle, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
-    }
+    // The tags fold away under their title, for every database, and stay as the user left them
+    auto tagsWidget = m_groupSplitter->widget(1);
+    auto tagsLayout = tagsWidget->layout();
+    auto tagsHeader = new VaultSectionHeader(tr("Tags"), tagsWidget);
+    tagsHeader->setObjectName("vaultTagsHeader");
+    tagsHeader->setChecked(!config()->get(Config::GUI_VaultTagsCollapsed).toBool());
+    auto tagsTitle = tagsWidget->findChild<QLabel*>();
+    delete tagsLayout->replaceWidget(tagsTitle, tagsHeader);
+    delete tagsTitle;
+    m_vaultTagsHeader = tagsHeader;
+    connect(tagsHeader, &QAbstractButton::toggled, this, [](bool expanded) {
+        config()->set(Config::GUI_VaultTagsCollapsed, !expanded);
+    });
+    fitVaultTagList();
     // Panes are separated by surfaces, not grip lines
     m_mainSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background: transparent; image: none; }"));
 
