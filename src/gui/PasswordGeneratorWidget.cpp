@@ -25,9 +25,11 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QShortcut>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -52,6 +54,76 @@ namespace
     constexpr int SpinBoxWidth = 96;
     // Between the pivot and the first card, closer than between the sections of a settings page
     constexpr int PivotGap = 12;
+
+    /**
+     * Scroll area for the generator's options, as tall as the current page of its tabs.
+     *
+     * QScrollArea keeps the size hint its widget had when it was set, and a tab widget's hint counts its hidden
+     * tab bar and the taller page, so a modal that fits its content would keep room the page doesn't use.
+     */
+    class OptionsScrollArea : public QScrollArea
+    {
+    public:
+        OptionsScrollArea(QTabWidget* tabs, QWidget* parent)
+            : QScrollArea(parent)
+            , m_tabs(tabs)
+        {
+            setFrameShape(QFrame::NoFrame);
+            setWidgetResizable(true);
+            setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+            viewport()->setAutoFillBackground(false);
+            tabs->setAutoFillBackground(false);
+            setWidget(tabs);
+            for (int i = 0; i < tabs->count(); ++i) {
+                tabs->widget(i)->installEventFilter(this);
+            }
+            connect(tabs, &QTabWidget::currentChanged, this, [this] { fit(); });
+            fit();
+        }
+
+        QSize sizeHint() const override
+        {
+            return {QScrollArea::sizeHint().width(), pageHeight() + 2 * frameWidth()};
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            // Cards show and hide on the pages, such as the advanced options
+            if (watched == m_tabs->currentWidget() && event->type() == QEvent::LayoutRequest) {
+                fit();
+            }
+            return QScrollArea::eventFilter(watched, event);
+        }
+
+        void resizeEvent(QResizeEvent* event) override
+        {
+            QScrollArea::resizeEvent(event);
+            // Text on the cards wraps, so the page's height depends on the width
+            fit();
+        }
+
+    private:
+        int pageHeight() const
+        {
+            auto page = m_tabs->currentWidget();
+            if (!page) {
+                return 0;
+            }
+            const int width = viewport()->width();
+            const int height = page->hasHeightForWidth() && width > 0 ? page->heightForWidth(width) : -1;
+            return height > 0 ? height : page->sizeHint().height();
+        }
+
+        void fit()
+        {
+            // The tabs scroll once the area is shorter than the page, rather than squeezing it
+            m_tabs->setMinimumHeight(pageHeight());
+            updateGeometry();
+        }
+
+        QTabWidget* m_tabs;
+    };
 } // namespace
 
 PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
@@ -313,32 +385,13 @@ void PasswordGeneratorWidget::setupVaultPages()
     words->addSetting(ui->labelWordSeparator, ui->editWordSeparator);
     passphrase.finish();
 
-    // The tabs are as tall as the current page, so the generator doesn't keep the room of the taller one
-    auto fitToPage = [tabs = ui->tabWidget] {
-        for (int i = 0; i < tabs->count(); ++i) {
-            const auto policy = i == tabs->currentIndex() ? QSizePolicy::Preferred : QSizePolicy::Ignored;
-            tabs->widget(i)->setSizePolicy(policy, policy);
-        }
-        tabs->updateGeometry();
-    };
-    connect(ui->tabWidget, &QTabWidget::currentChanged, this, fitToPage);
-    fitToPage();
-
     // The options scroll below the password while the window is too short for them all
     auto tabs = ui->tabWidget;
     const int index = ui->verticalLayout_2->indexOf(tabs);
     ui->verticalLayout_2->removeWidget(tabs);
-    m_optionsScroll = new QScrollArea(this);
-    m_optionsScroll->setObjectName("generatorOptions");
-    m_optionsScroll->setFrameShape(QFrame::NoFrame);
-    m_optionsScroll->setWidgetResizable(true);
-    m_optionsScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_optionsScroll->viewport()->setAutoFillBackground(false);
-    m_optionsScroll->setWidget(tabs);
-    tabs->setAutoFillBackground(false);
-    // The modal fits its content, so follow the size of the options as cards show and hide
-    tabs->installEventFilter(this);
-    ui->verticalLayout_2->insertWidget(index, m_optionsScroll, 1);
+    auto optionsArea = new OptionsScrollArea(tabs, this);
+    optionsArea->setObjectName("generatorOptions");
+    ui->verticalLayout_2->insertWidget(index, optionsArea, 1);
 
     // Without the generator's own buttons, as in the modal, their row takes no room
     ui->horizontalSpacer_5->changeSize(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -360,8 +413,6 @@ bool PasswordGeneratorWidget::eventFilter(QObject* watched, QEvent* event)
         const int size = m_ui->editNewPassword->height();
         m_ui->buttonGenerate->setFixedSize(size, size);
         m_ui->buttonCopy->setFixedSize(size, size);
-    } else if (watched == m_ui->tabWidget && event->type() == QEvent::LayoutRequest && m_optionsScroll) {
-        m_optionsScroll->updateGeometry();
     }
     return QWidget::eventFilter(watched, event);
 }
