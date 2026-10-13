@@ -17,18 +17,24 @@
 
 #include "VaultEntryEditCard.h"
 
+#include "core/Entry.h"
 #include "gui/CategoryListWidget.h"
+#include "gui/DatabaseIcons.h"
 #include "gui/EditWidget.h"
+#include "gui/EditWidgetIcons.h"
+#include "gui/Icons.h"
+#include "gui/entry/EditEntryWidget.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagsEdit.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAbstractButton>
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QEvent>
-#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -37,7 +43,6 @@
 #include <QPainterPath>
 #include <QPlainTextEdit>
 #include <QScrollArea>
-#include <QSpacerItem>
 #include <QStackedWidget>
 #include <QTimer>
 #include <QUrl>
@@ -45,16 +50,110 @@
 
 namespace
 {
-    constexpr int SectionRowHeight = 40;
+    constexpr int TileSize = 44;
+    constexpr int SectionRowHeight = 52;
+    constexpr int GroupPadding = 14;
+    constexpr int FieldGap = 12;
+    constexpr int GroupGap = 18;
+    constexpr int NotesMinHeight = 96;
+    constexpr int NotesMaxHeight = 160;
 
-    // One of the editor's other pages, listed under the Entry page: its name and a chevron
+    // The entry's icon on a rounded tile, as on the detail card; it opens the Icon page
+    class IconTile : public QAbstractButton
+    {
+    public:
+        explicit IconTile(QWidget* parent)
+            : QAbstractButton(parent)
+        {
+            setFixedSize(TileSize, TileSize);
+            setCursor(Qt::PointingHandCursor);
+            setFocusPolicy(Qt::StrongFocus);
+            setAttribute(Qt::WA_Hover);
+        }
+
+        void setPixmap(const QPixmap& pixmap)
+        {
+            m_pixmap = pixmap;
+            update();
+        }
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            const auto p = FluentTheme::palette();
+            QPainter painter(this);
+            painter.setRenderHint(QPainter::Antialiasing);
+            QPainterPath path;
+            path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8);
+            painter.fillPath(path, p.inset);
+            if (isEnabled() && (isDown() || underMouse())) {
+                painter.fillPath(path, isDown() ? p.subtlePressed : p.subtleHover);
+            }
+            painter.setPen(QPen(hasFocus() ? p.text : p.stroke, hasFocus() ? 2 : 1));
+            painter.drawPath(path);
+            if (!m_pixmap.isNull()) {
+                const int size = 24;
+                painter.drawPixmap(QRect((width() - size) / 2, (height() - size) / 2, size, size), m_pixmap);
+            }
+        }
+
+    private:
+        QPixmap m_pixmap;
+    };
+
+    // Rounded surface one step quieter than the card, holding fields or rows, as the detail card groups its fields
+    class InsetGroup : public QWidget
+    {
+    public:
+        InsetGroup(QWidget* parent, bool dividers)
+            : QWidget(parent)
+            , m_dividers(dividers)
+        {
+        }
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            const auto p = FluentTheme::palette();
+            QPainter painter(this);
+            painter.setRenderHint(QPainter::Antialiasing);
+            QPainterPath path;
+            path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6);
+            painter.fillPath(path, p.inset);
+            painter.setPen(QPen(p.stroke, 1));
+            painter.drawPath(path);
+            if (!m_dividers) {
+                return;
+            }
+            // Dividers between visible rows
+            painter.setPen(QPen(p.divider, 1));
+            bool first = true;
+            for (auto* child : findChildren<QWidget*>(Qt::FindDirectChildrenOnly)) {
+                if (!child->isVisible()) {
+                    continue;
+                }
+                if (!first) {
+                    painter.drawLine(QPointF(1, child->y() + 0.5), QPointF(width() - 1, child->y() + 0.5));
+                }
+                first = false;
+            }
+        }
+
+    private:
+        bool m_dividers;
+    };
+
+    // One of the editor's other pages: its glyph, its name, what it holds and a chevron
     class SectionRow : public QAbstractButton
     {
     public:
-        SectionRow(const QString& text, QWidget* parent)
+        SectionRow(const QString& glyph, const QString& text, const QString& description, QWidget* parent)
             : QAbstractButton(parent)
+            , m_glyph(glyph)
+            , m_description(description)
         {
             setText(text);
+            setAccessibleDescription(description);
             setCursor(Qt::PointingHandCursor);
             setFocusPolicy(Qt::StrongFocus);
             setAttribute(Qt::WA_Hover);
@@ -62,7 +161,7 @@ namespace
 
         QSize sizeHint() const override
         {
-            return {200, SectionRowHeight};
+            return {200, m_description.isEmpty() ? 40 : SectionRowHeight};
         }
 
     protected:
@@ -72,10 +171,7 @@ namespace
             QPainter painter(this);
             painter.setRenderHint(QPainter::Antialiasing);
 
-            painter.setPen(QPen(p.divider, 1));
-            painter.drawLine(QPointF(0, 0.5), QPointF(width(), 0.5));
-
-            const QRectF row = QRectF(rect()).adjusted(0, 2, 0, -1);
+            const QRectF row = QRectF(rect()).adjusted(3, 3, -3, -3);
             if (isDown() || underMouse()) {
                 QPainterPath path;
                 path.addRoundedRect(row, 4, 4);
@@ -88,19 +184,68 @@ namespace
                 painter.drawPath(path);
             }
 
-            painter.setFont(Vault::font(Typography::FontRole::Body));
-            painter.setPen(p.text);
-            painter.drawText(row.adjusted(8, 0, -32, 0), Qt::AlignLeft | Qt::AlignVCenter, text());
-
             QFont iconFont(Typography::FontFamily::FluentIcons);
+            iconFont.setPixelSize(Typography::IconSize::Standard);
+            painter.setFont(iconFont);
+            painter.setPen(p.text);
+            painter.drawText(QRectF(row.left() + 10, row.top(), 20, row.height()), Qt::AlignCenter, m_glyph);
             iconFont.setPixelSize(Typography::IconSize::Compact);
             painter.setFont(iconFont);
             painter.setPen(p.textSecondary);
-            painter.drawText(QRectF(row.right() - 28, row.top(), 20, row.height()),
+            painter.drawText(QRectF(row.right() - 30, row.top(), 20, row.height()),
                              Qt::AlignCenter,
                              Typography::Icons::ChevronRight);
+
+            const QRectF texts = row.adjusted(44, 0, -40, 0);
+            const auto titleFont = Vault::font(Typography::FontRole::Body);
+            if (m_description.isEmpty()) {
+                painter.setFont(titleFont);
+                painter.setPen(p.text);
+                painter.drawText(texts, Qt::AlignLeft | Qt::AlignVCenter, text());
+                return;
+            }
+            const auto captionFont = Vault::font(Typography::FontRole::Caption);
+            const int titleHeight = QFontMetrics(titleFont).height();
+            const int captionHeight = QFontMetrics(captionFont).height();
+            const qreal top = texts.top() + (texts.height() - titleHeight - captionHeight) / 2;
+            painter.setFont(titleFont);
+            painter.setPen(p.text);
+            painter.drawText(QRectF(texts.left(), top, texts.width(), titleHeight),
+                             Qt::AlignLeft | Qt::AlignVCenter,
+                             text());
+            painter.setFont(captionFont);
+            painter.setPen(p.textSecondary);
+            const auto elided = QFontMetrics(captionFont).elidedText(m_description, Qt::ElideRight, int(texts.width()));
+            painter.drawText(QRectF(texts.left(), top + titleHeight, texts.width(), captionHeight),
+                             Qt::AlignLeft | Qt::AlignVCenter,
+                             elided);
         }
+
+    private:
+        QString m_glyph;
+        QString m_description;
     };
+
+    struct SectionInfo
+    {
+        const char* name;
+        QString glyph;
+        QString description;
+    };
+
+    // Glyph and description of each of the entry editor's pages, matched by the name the editor gives it
+    QList<SectionInfo> sectionInfos()
+    {
+        return {
+            {"Advanced", Typography::Icons::Settings, VaultEntryEditCard::tr("Attributes, attachments and colors")},
+            {"Icon", Typography::Icons::Emoji, VaultEntryEditCard::tr("Choose an icon or use the site's")},
+            {"Auto-Type", Typography::Icons::Keyboard, VaultEntryEditCard::tr("Sequences and window associations")},
+            {"Browser Integration", Typography::Icons::World, VaultEntryEditCard::tr("Site access and extra URLs")},
+            {"SSH Agent", Typography::Icons::Lock, VaultEntryEditCard::tr("Keys to add to the agent")},
+            {"Properties", Typography::Icons::Info, VaultEntryEditCard::tr("Dates, UUID and plugin data")},
+            {"History", Typography::Icons::History, VaultEntryEditCard::tr("Earlier versions of this entry")},
+        };
+    }
 
     // Pages are wrapped in scroll areas that would otherwise paint the window color over the card
     void clearPageBackgrounds(QStackedWidget* pages)
@@ -118,20 +263,31 @@ namespace
         }
     }
 
-    // The form inside the Entry page, where the section rows are added below the fields
+    // The form inside the Entry page
     QWidget* entryPageForm(QStackedWidget* pages)
     {
         auto* scroll = qobject_cast<QScrollArea*>(pages->widget(0));
         return scroll ? scroll->widget() : nullptr;
     }
 
-    void addBelowForm(QWidget* form, QWidget* widget)
+    // Move a widget of the form to a new parent, keeping whether the editor hid it
+    void adopt(QWidget* widget, QWidget* parent)
     {
-        if (auto* grid = qobject_cast<QGridLayout*>(form->layout())) {
-            grid->addWidget(widget, grid->rowCount(), 0, 1, grid->columnCount());
-        } else if (auto* box = qobject_cast<QBoxLayout*>(form->layout())) {
-            box->addWidget(widget);
+        const bool hidden = widget->testAttribute(Qt::WA_WState_Hidden)
+                            && widget->testAttribute(Qt::WA_WState_ExplicitShowHide);
+        widget->setParent(parent);
+        widget->setVisible(!hidden);
+    }
+
+    // Caption of a form label without its trailing colon, read above its field
+    void makeCaption(QLabel* label)
+    {
+        auto text = label->text().trimmed();
+        while (text.endsWith(QLatin1Char(':')) || text.endsWith(QChar(0xff1a))) {
+            text.chop(1);
         }
+        label->setText(text);
+        label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     }
 } // namespace
 
@@ -151,56 +307,31 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     editor->setParent(this);
     outer->addWidget(editor);
     if (auto* layout = editor->layout()) {
-        layout->setContentsMargins(18, 14, 18, 14);
-        layout->setSpacing(10);
+        layout->setContentsMargins(20, 18, 20, 14);
+        layout->setSpacing(14);
     }
 
     // The pages are reached from the rows under the Entry page instead of a category list
     m_categories->hide();
 
-    // Header: the headline
-    auto* header = new QWidget(editor);
-    header->setObjectName("vaultEditCardHeader");
-    m_header = header;
-    auto* headerLayout = new QHBoxLayout(header);
-    headerLayout->setContentsMargins(0, 0, 0, 4);
-    headerLayout->setSpacing(8);
-
-    // Leave an empty, hidden stand-in where the headline was so the form's layout keeps its shape
-    auto* placeholder = new QWidget();
-    placeholder->hide();
-    m_headline->parentWidget()->layout()->replaceWidget(m_headline, placeholder);
-    m_headline->setParent(header);
-    m_headline->setContentsMargins(0, 0, 0, 0);
-    m_headline->setWordWrap(true);
-    headerLayout->addWidget(m_headline, 1);
-
-    // Cancel and Save sit in the command bar instead. The bar keeps the editor's buttons shown, so Enter
-    // and Escape still reach them. Save returns to the entry's details, so there is no need to apply and stay.
-    m_buttonBar = new VaultButtonBar(editor->buttonBox(), header);
-    for (auto button : {QDialogButtonBox::Ok, QDialogButtonBox::Cancel, QDialogButtonBox::Close, QDialogButtonBox::Apply}) {
-        m_buttonBar->setButtonHidden(button, true);
-    }
-    headerLayout->addWidget(m_buttonBar, 0, Qt::AlignTop);
-    qobject_cast<QBoxLayout*>(editor->layout())->insertWidget(0, header);
+    buildHeader();
 
     // Back row above the other pages, which open in place of the Entry page
     auto* pageHost = new QWidget(editor);
     auto* pageHostLayout = new QVBoxLayout(pageHost);
     pageHostLayout->setContentsMargins(0, 0, 0, 0);
-    pageHostLayout->setSpacing(8);
+    pageHostLayout->setSpacing(10);
     m_backRow = new QWidget(pageHost);
     auto* backLayout = new QHBoxLayout(m_backRow);
     backLayout->setContentsMargins(0, 0, 0, 0);
-    backLayout->setSpacing(8);
-    auto* backButton = new fluent::basicinput::Button(QString(), m_backRow);
+    backLayout->setSpacing(6);
+    auto* backButton = Vault::iconButton(Typography::Icons::Back, QString(), m_backRow);
     backButton->setObjectName("vaultEditBackButton");
-    backButton->setFluentStyle(fluent::basicinput::Button::Subtle);
-    backButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
     backButton->setFluentSize(fluent::basicinput::Button::Small);
-    backButton->setIconGlyph(Typography::Icons::ChevronLeft, Typography::IconSize::Compact);
     if (m_categories->listWidget()->count() > 0) {
-        backButton->setText(m_categories->listWidget()->item(0)->text());
+        const auto back = tr("Back to %1").arg(m_categories->listWidget()->item(0)->text());
+        backButton->setToolTip(back);
+        backButton->setAccessibleName(back);
     }
     connect(backButton, &QAbstractButton::clicked, this, [this] { m_categories->setCurrentCategory(0); });
     backLayout->addWidget(backButton);
@@ -212,18 +343,189 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     pageHostLayout->addWidget(m_pages, 1);
     connect(m_pages, &QStackedWidget::currentChanged, this, &VaultEntryEditCard::pageChanged);
 
-    auto* form = entryPageForm(m_pages);
+    buildEntryPage();
 
-    // Chips that bring back the rows a new entry starts without
-    m_optionalRows = {
-        {tr("Notes"), {"notesLabel", "revealNotesButton", "notesEdit"}, "notesEdit"},
-        {tr("Tags"), {"tagsLabel", "tagsList"}, "tagsList"},
-        {tr("Expiry"), {"expireLabel", "expireCheck", "expireDatePicker", "expirePresets"}, "expireCheck"},
+    if (auto* icons = m_pages->findChild<EditWidgetIcons*>()) {
+        connect(icons, &EditWidgetIcons::widgetUpdated, this, &VaultEntryEditCard::updateIdentity);
+    }
+
+    clearPageBackgrounds(m_pages);
+    pageChanged(m_pages->currentIndex());
+    applyColors();
+}
+
+// The entry's icon and title at the top, with where it lives beneath, staying in view on every page
+void VaultEntryEditCard::buildHeader()
+{
+    auto* header = new QWidget(m_editor);
+    header->setObjectName("vaultEditCardHeader");
+    m_header = header;
+    auto* headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(0, 0, 0, 0);
+    headerLayout->setSpacing(12);
+
+    auto* tile = new IconTile(header);
+    tile->setObjectName("vaultEditIconTile");
+    tile->setToolTip(tr("Change icon"));
+    tile->setAccessibleName(tr("Change icon"));
+    connect(tile, &QAbstractButton::clicked, this, [this] {
+        auto* icons = m_pages->findChild<EditWidgetIcons*>();
+        for (int i = 0; icons && i < m_pages->count(); ++i) {
+            if (m_pages->widget(i)->isAncestorOf(icons)) {
+                m_categories->setCurrentCategory(i);
+            }
+        }
+    });
+    m_iconTile = tile;
+    headerLayout->addWidget(tile, 0, Qt::AlignTop);
+
+    auto* titles = new QVBoxLayout();
+    titles->setContentsMargins(0, 0, 0, 0);
+    titles->setSpacing(2);
+    headerLayout->addLayout(titles, 1);
+
+    // The headline stays with the editor, which keeps setting it, but the title field and the subtitle say it
+    auto* placeholder = new QWidget();
+    placeholder->hide();
+    m_headline->parentWidget()->layout()->replaceWidget(m_headline, placeholder);
+    // The editor shows the headline whenever it sets it, so it waits in a hidden holder
+    auto* headlineHolder = new QWidget(header);
+    headlineHolder->hide();
+    m_headline->setParent(headlineHolder);
+
+    auto* form = entryPageForm(m_pages);
+    m_titleEdit = form ? form->findChild<QLineEdit*>("titleEdit") : nullptr;
+    if (m_titleEdit) {
+        adopt(m_titleEdit, header);
+        m_titleEdit->setPlaceholderText(tr("Title"));
+        titles->addWidget(m_titleEdit);
+        if (auto* label = form->findChild<QLabel*>("titleLabel")) {
+            label->hide();
+        }
+    }
+    m_subtitle = new QLabel(header);
+    m_subtitle->setObjectName("vaultEditSubtitle");
+    m_subtitle->setTextFormat(Qt::PlainText);
+    m_subtitle->setContentsMargins(2, 0, 0, 0);
+    titles->addWidget(m_subtitle);
+
+    // Cancel and Save sit in the command bar instead. The bar keeps the editor's buttons shown, so Enter
+    // and Escape still reach them. Save returns to the entry's details, so there is no need to apply and stay.
+    m_buttonBar = new VaultButtonBar(m_editor->buttonBox(), header);
+    for (auto button : {QDialogButtonBox::Ok, QDialogButtonBox::Cancel, QDialogButtonBox::Close, QDialogButtonBox::Apply}) {
+        m_buttonBar->setButtonHidden(button, true);
+    }
+    headerLayout->addWidget(m_buttonBar, 0, Qt::AlignTop);
+    qobject_cast<QBoxLayout*>(m_editor->layout())->insertWidget(0, header);
+}
+
+// Fields with their captions above them, grouped as on the detail card, and the other pages listed beneath
+void VaultEntryEditCard::buildEntryPage()
+{
+    auto* form = entryPageForm(m_pages);
+    if (!form) {
+        return;
+    }
+    auto find = [form](const char* name) { return form->findChild<QWidget*>(QString::fromLatin1(name)); };
+    auto label = [form](const char* name) { return form->findChild<QLabel*>(QString::fromLatin1(name)); };
+
+    auto* body = new QWidget(form);
+    body->setObjectName("vaultEditEntryPage");
+    auto* layout = new QVBoxLayout(body);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(GroupGap);
+
+    // A caption above its field, or above a row of controls
+    auto field = [this](QWidget* parent, QLabel* caption, const QWidgetList& controls, int stretchIndex = 0) {
+        auto* block = new QWidget(parent);
+        auto* blockLayout = new QVBoxLayout(block);
+        blockLayout->setContentsMargins(0, 0, 0, 0);
+        blockLayout->setSpacing(4);
+        if (caption) {
+            makeCaption(caption);
+            adopt(caption, block);
+            blockLayout->addWidget(caption);
+            m_captions << caption;
+        }
+        auto* row = new QHBoxLayout();
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(8);
+        for (int i = 0; i < controls.size(); ++i) {
+            adopt(controls[i], block);
+            row->addWidget(controls[i], i == stretchIndex ? 1 : 0);
+        }
+        blockLayout->addLayout(row);
+        return block;
     };
-    m_addRow = new QWidget(form);
+    auto group = [](QWidget* parent) {
+        auto* box = new InsetGroup(parent, false);
+        auto* boxLayout = new QVBoxLayout(box);
+        boxLayout->setContentsMargins(GroupPadding, GroupPadding - 2, GroupPadding, GroupPadding);
+        boxLayout->setSpacing(FieldGap);
+        return box;
+    };
+
+    // Sign-in: username, password and site
+    auto* signIn = group(body);
+    signIn->setObjectName("vaultEditSignIn");
+    signIn->layout()->addWidget(field(signIn, label("usernameLabel"), {find("usernameComboBox")}));
+    signIn->layout()->addWidget(field(signIn, label("passwordLabel"), {find("passwordEdit")}));
+    signIn->layout()->addWidget(field(signIn, label("urlLabel"), {find("urlEdit"), find("fetchFaviconButton")}));
+    layout->addWidget(signIn);
+
+    // Notes, with the button that reveals them beside their caption, at a height that leaves the rest in view
+    auto* notesBlock = new QWidget(body);
+    notesBlock->setObjectName("vaultEditNotes");
+    auto* notesLayout = new QVBoxLayout(notesBlock);
+    notesLayout->setContentsMargins(0, 0, 0, 0);
+    notesLayout->setSpacing(4);
+    auto* notesHeader = new QHBoxLayout();
+    notesHeader->setContentsMargins(0, 0, 0, 0);
+    auto* notesLabel = label("notesLabel");
+    makeCaption(notesLabel);
+    adopt(notesLabel, notesBlock);
+    m_captions << notesLabel;
+    notesHeader->addWidget(notesLabel);
+    notesHeader->addStretch();
+    auto* revealNotes = find("revealNotesButton");
+    adopt(revealNotes, notesBlock);
+    notesHeader->addWidget(revealNotes);
+    notesLayout->addLayout(notesHeader);
+    auto* notes = find("notesEdit");
+    adopt(notes, notesBlock);
+    notes->setMinimumHeight(NotesMinHeight);
+    notes->setMaximumHeight(NotesMaxHeight);
+    notes->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    notesLayout->addWidget(notes);
+    layout->addWidget(notesBlock);
+
+    // Tags and expiry
+    auto* details = group(body);
+    details->setObjectName("vaultEditDetails");
+    m_detailsGroup = details;
+    auto* tagsBlock = field(details, label("tagsLabel"), {find("tagsList")});
+    details->layout()->addWidget(tagsBlock);
+    // The check box says what it does, so the row needs no caption of its own
+    auto* expireCheck = qobject_cast<QAbstractButton*>(find("expireCheck"));
+    if (auto* expireLabel = label("expireLabel")) {
+        makeCaption(expireLabel);
+        expireCheck->setText(VaultButton::withoutMnemonic(expireLabel->text()));
+        expireLabel->hide();
+    }
+    auto* expiryBlock = field(details, nullptr, {expireCheck, find("expireDatePicker"), find("expirePresets")}, 1);
+    details->layout()->addWidget(expiryBlock);
+    layout->addWidget(details);
+
+    // Chips that bring back the blocks a new entry starts without
+    m_optionalRows = {
+        {tr("Notes"), notesBlock, "notesEdit"},
+        {tr("Tags"), tagsBlock, "tagsList"},
+        {tr("Expiry"), expiryBlock, "expireCheck"},
+    };
+    m_addRow = new QWidget(body);
     m_addRow->setObjectName("vaultEditAddRow");
     m_addLayout = new QHBoxLayout(m_addRow);
-    m_addLayout->setContentsMargins(0, 6, 0, 0);
+    m_addLayout->setContentsMargins(0, 0, 0, 0);
     m_addLayout->setSpacing(8);
     m_addLabel = new QLabel(tr("Add"), m_addRow);
     m_addLayout->addWidget(m_addLabel);
@@ -239,25 +541,36 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     }
     m_addLayout->addStretch();
     m_addRow->hide();
+    layout->addWidget(m_addRow);
 
-    m_sections = new QWidget(form);
+    // The other pages, each with what it holds
+    auto* more = new QWidget(body);
+    auto* moreLayout = new QVBoxLayout(more);
+    moreLayout->setContentsMargins(0, 0, 0, 0);
+    moreLayout->setSpacing(6);
+    m_moreLabel = new QLabel(tr("More"), more);
+    moreLayout->addWidget(m_moreLabel);
+    m_sections = new InsetGroup(more, true);
     m_sections->setObjectName("vaultEditSections");
     m_sectionsLayout = new QVBoxLayout(m_sections);
-    m_sectionsLayout->setContentsMargins(0, 10, 0, 0);
+    m_sectionsLayout->setContentsMargins(0, 0, 0, 0);
     m_sectionsLayout->setSpacing(0);
+    moreLayout->addWidget(m_sections);
+    layout->addWidget(more);
+    layout->addStretch();
 
-    if (form) {
-        addBelowForm(form, m_addRow);
-        addBelowForm(form, m_sections);
-        m_titleEdit = form->findChild<QLineEdit*>("titleEdit");
-        if (auto* urlEdit = form->findChild<QLineEdit*>("urlEdit")) {
-            connect(urlEdit, &QLineEdit::textEdited, this, &VaultEntryEditCard::suggestTitleFromUrl);
-        }
+    // Keep what's left of the form, its labels and layouts, out of sight
+    auto* rest = new QWidget(form);
+    rest->setObjectName("vaultEditFormRest");
+    rest->setLayout(form->layout());
+    rest->hide();
+    auto* formLayout = new QVBoxLayout(form);
+    formLayout->setContentsMargins(0, 0, 0, 0);
+    formLayout->addWidget(body);
+
+    if (auto* urlEdit = qobject_cast<QLineEdit*>(find("urlEdit"))) {
+        connect(urlEdit, &QLineEdit::textEdited, this, &VaultEntryEditCard::suggestTitleFromUrl);
     }
-
-    clearPageBackgrounds(m_pages);
-    pageChanged(m_pages->currentIndex());
-    applyColors();
 }
 
 EditWidget* VaultEntryEditCard::editor() const
@@ -273,38 +586,18 @@ void VaultEntryEditCard::prepare(bool create)
     finish();
     if (create) {
         for (int i = 0; i < m_optionalRows.size(); ++i) {
-            if (!isOptionalRowEmpty(i)) {
-                continue;
+            if (isOptionalRowEmpty(i)) {
+                m_optionalRows[i].block->hide();
+                m_tucked.insert(i);
+                m_chips[i]->show();
             }
-            auto* page = m_pages->widget(0);
-            for (const auto& name : m_optionalRows[i].widgetNames) {
-                auto* widget = page->findChild<QWidget*>(name);
-                if (!widget) {
-                    continue;
-                }
-                m_hiddenBefore.insert(widget, widget->isHidden());
-                widget->hide();
-                // Spacers sharing a layout with the row's widgets would otherwise hold its height
-                for (auto* layout : page->findChildren<QLayout*>()) {
-                    if (layout->indexOf(widget) < 0) {
-                        continue;
-                    }
-                    for (int j = 0; j < layout->count(); ++j) {
-                        auto* spacer = layout->itemAt(j)->spacerItem();
-                        if (spacer && !spacer->sizeHint().isEmpty()) {
-                            m_collapsedSpacers[i].append({spacer, spacer->sizeHint(), spacer->sizePolicy()});
-                            spacer->changeSize(0, 0, QSizePolicy::Fixed, QSizePolicy::Fixed);
-                            layout->invalidate();
-                        }
-                    }
-                }
-            }
-            m_chips[i]->show();
         }
     }
-    m_addRow->setVisible(create && !m_hiddenBefore.isEmpty());
+    m_addRow->setVisible(!m_tucked.isEmpty());
+    updateDetailsGroup();
 
     rebuildSections();
+    updateIdentity();
     pageChanged(m_pages->currentIndex());
     if (m_titleEdit && !m_editor->readOnly()) {
         QTimer::singleShot(0, m_titleEdit, [title = m_titleEdit] { title->setFocus(); });
@@ -321,7 +614,9 @@ void VaultEntryEditCard::finish()
 void VaultEntryEditCard::setInModal(bool inModal)
 {
     m_inModal = inModal;
-    m_header->setVisible(!inModal);
+    // The modal's footer has the buttons and its title says what is being made, so the header keeps only
+    // the icon and the title field
+    m_subtitle->setVisible(!inModal);
     update();
 }
 
@@ -342,6 +637,7 @@ void VaultEntryEditCard::onThemeUpdated()
 {
     fluent::layout::Card::onThemeUpdated();
     applyColors();
+    updateIdentity();
 }
 
 void VaultEntryEditCard::rebuildSections()
@@ -350,16 +646,26 @@ void VaultEntryEditCard::rebuildSections()
         delete item->widget();
         delete item;
     }
+    const auto infos = sectionInfos();
     auto* list = m_categories->listWidget();
     for (int i = 1; i < list->count(); ++i) {
         if (m_categories->isCategoryHidden(i)) {
             continue;
         }
-        auto* row = new SectionRow(list->item(i)->text(), m_sections);
+        const auto text = list->item(i)->text();
+        QString glyph = Typography::Icons::More;
+        QString description;
+        for (const auto& info : infos) {
+            if (text == QCoreApplication::translate("EditEntryWidget", info.name)) {
+                glyph = info.glyph;
+                description = info.description;
+            }
+        }
+        auto* row = new SectionRow(glyph, text, description, m_sections);
         connect(row, &QAbstractButton::clicked, this, [this, i] { m_categories->setCurrentCategory(i); });
         m_sectionsLayout->addWidget(row);
     }
-    m_sections->setVisible(m_sectionsLayout->count() > 0);
+    m_sections->parentWidget()->setVisible(m_sectionsLayout->count() > 0);
 }
 
 void VaultEntryEditCard::pageChanged(int index)
@@ -371,29 +677,16 @@ void VaultEntryEditCard::pageChanged(int index)
 
 void VaultEntryEditCard::showOptionalRow(int row, bool focus)
 {
-    QWidget* focusWidget = nullptr;
-    for (const auto& name : m_optionalRows[row].widgetNames) {
-        auto* widget = m_pages->widget(0)->findChild<QWidget*>(name);
-        if (widget && m_hiddenBefore.contains(widget)) {
-            widget->setHidden(m_hiddenBefore.take(widget));
-        }
-        if (name == m_optionalRows[row].focusName) {
-            focusWidget = widget;
-        }
-    }
-    for (const auto& collapsed : m_collapsedSpacers.take(row)) {
-        collapsed.spacer->changeSize(collapsed.size.width(),
-                                     collapsed.size.height(),
-                                     collapsed.policy.horizontalPolicy(),
-                                     collapsed.policy.verticalPolicy());
-    }
-    if (auto* layout = m_pages->widget(0)->layout()) {
-        layout->invalidate();
+    if (m_tucked.remove(row)) {
+        m_optionalRows[row].block->show();
     }
     m_chips[row]->hide();
-    m_addRow->setVisible(m_create && !m_hiddenBefore.isEmpty());
-    if (focus && focusWidget) {
-        focusWidget->setFocus();
+    m_addRow->setVisible(!m_tucked.isEmpty());
+    updateDetailsGroup();
+    if (focus) {
+        if (auto* widget = m_optionalRows[row].block->findChild<QWidget*>(m_optionalRows[row].focusName)) {
+            widget->setFocus();
+        }
     }
 }
 
@@ -411,6 +704,45 @@ bool VaultEntryEditCard::isOptionalRowEmpty(int row) const
         return !check->isChecked();
     }
     return false;
+}
+
+void VaultEntryEditCard::updateDetailsGroup()
+{
+    // The tags and expiry group goes while both of its blocks wait behind chips
+    if (m_detailsGroup) {
+        m_detailsGroup->setVisible(!m_tucked.contains(1) || !m_tucked.contains(2));
+    }
+}
+
+// The icon the entry has, or the one picked on the Icon page, and where the entry lives
+void VaultEntryEditCard::updateIdentity()
+{
+    auto* entryEditor = qobject_cast<EditEntryWidget*>(m_editor);
+    auto* entry = entryEditor ? entryEditor->currentEntry() : nullptr;
+    QPixmap pixmap;
+    if (auto* icons = m_pages->findChild<EditWidgetIcons*>(); icons && entry) {
+        const auto state = icons->state();
+        if (!state.uuid.isNull() && entry->database()) {
+            pixmap = Icons::customIconPixmap(entry->database(), state.uuid, IconSize::Medium);
+        } else if (state.uuid.isNull() && state.number >= 0) {
+            pixmap = databaseIcons()->icon(state.number, IconSize::Medium);
+        }
+    }
+    if (pixmap.isNull() && entry) {
+        pixmap = Icons::entryIconPixmap(entry, IconSize::Medium);
+    }
+    static_cast<IconTile*>(m_iconTile)->setPixmap(pixmap);
+    m_iconTile->setEnabled(!m_editor->readOnly());
+
+    // The editor's headline starts with the group, as in "Work • GitHub • Edit entry"
+    const auto group = m_headline->text().section(QStringLiteral(" • "), 0, 0);
+    if (m_editor->readOnly()) {
+        m_subtitle->setText(tr("%1 · Earlier version, read-only").arg(group));
+    } else if (m_create) {
+        m_subtitle->setText(tr("New entry in %1").arg(group));
+    } else {
+        m_subtitle->setText(tr("%1 · Editing").arg(group));
+    }
 }
 
 void VaultEntryEditCard::suggestTitleFromUrl(const QString& url)
@@ -436,9 +768,18 @@ void VaultEntryEditCard::applyColors()
     // Style sheets polish the widgets again and reset their palettes, so set the label colors after
     m_editor->setStyleSheet(Vault::formStyleSheet());
     const auto p = FluentTheme::palette();
-    Vault::styleLabel(m_headline, Typography::FontRole::Subtitle, p.text);
-    Vault::styleLabel(m_pageTitle, Typography::FontRole::BodyStrong, p.text);
+    Vault::styleLabel(m_pageTitle, Typography::FontRole::BodyLargeStrong, p.text);
+    Vault::styleLabel(m_subtitle, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_addLabel, Typography::FontRole::Caption, p.textSecondary);
+    if (m_moreLabel) {
+        Vault::styleLabel(m_moreLabel, Typography::FontRole::BodyStrong, p.text);
+    }
+    for (auto* caption : m_captions) {
+        Vault::styleLabel(caption, Typography::FontRole::Caption, p.textSecondary);
+    }
+    if (m_titleEdit) {
+        m_titleEdit->setFont(Vault::font(Typography::FontRole::Subtitle));
+    }
 }
 
 VaultDimmer::VaultDimmer(QWidget* pane, std::function<QColor()> color)
