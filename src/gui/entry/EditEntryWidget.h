@@ -153,6 +153,7 @@ private slots:
 private:
     void setupMain();
     void setupAdvanced();
+    void setupVaultAdvanced();
     void setupIcon();
     void setupAutoType();
 #ifdef KPXC_FEATURE_BROWSER

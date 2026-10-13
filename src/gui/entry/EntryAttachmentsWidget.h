@@ -48,6 +48,8 @@ public slots:
     void unlinkAttachments();
     void setReadOnly(bool readOnly);
     void setButtonsVisible(bool isButtonsVisible);
+    // Put the buttons in a row above the attachments, for a pane too narrow to keep them beside it
+    void setToolbarLayout();
 
 signals:
     void errorOccurred(const QString& error);

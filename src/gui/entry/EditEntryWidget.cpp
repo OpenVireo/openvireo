@@ -27,6 +27,10 @@
 #include <functional>
 
 #include <QColorDialog>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QTableView>
+#include <QVBoxLayout>
 #include <QDesktopServices>
 #include <QLineEdit>
 #include <QSortFilterProxyModel>
@@ -63,7 +67,10 @@
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/entry/AutoTypeAssociationsModel.h"
 #include "gui/entry/EntryAttributesModel.h"
 #include "gui/entry/EntryHistoryModel.h"
@@ -322,6 +329,107 @@ void EditEntryWidget::setupAdvanced()
     connect(m_advancedUi->fgColorButton, SIGNAL(clicked()), SLOT(pickColor()));
     connect(m_advancedUi->bgColorButton, SIGNAL(clicked()), SLOT(pickColor()));
     // clang-format on
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultAdvanced();
+    }
+}
+
+// In the Vault Index layout, the Advanced page fits the narrow detail pane as Fluent settings cards. The attributes
+// stack their list over the value under a row of buttons, the attachments take their buttons above them, and the
+// options are switches.
+void EditEntryWidget::setupVaultAdvanced()
+{
+    auto ui = m_advancedUi.data();
+    // The back row above the page already names it
+    VaultSettingsPage page(m_advancedWidget, {});
+
+    auto attributes = page.addSection(ui->attributesBox);
+    auto* block = new QWidget(m_advancedWidget);
+    block->setObjectName("vaultAttributesBlock");
+    auto* blockLayout = new QVBoxLayout(block);
+    blockLayout->setContentsMargins(0, 0, 0, 0);
+    blockLayout->setSpacing(8);
+
+    auto* toolbar = new QHBoxLayout();
+    toolbar->setContentsMargins(0, 0, 0, 0);
+    toolbar->setSpacing(6);
+    for (auto* button :
+         {ui->addAttributeButton, ui->editAttributeButton, ui->removeAttributeButton, ui->revealAttributeButton}) {
+        button->setFluentSize(fluent::basicinput::Button::Small);
+    }
+    ui->addAttributeButton->setIconGlyph(Typography::Icons::Add, Typography::IconSize::Compact);
+    ui->addAttributeButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    toolbar->addWidget(ui->addAttributeButton);
+    toolbar->addWidget(ui->editAttributeButton);
+    toolbar->addWidget(ui->removeAttributeButton);
+    toolbar->addStretch();
+    blockLayout->addLayout(toolbar);
+
+    // The list over the value, as the pane is too narrow to keep them side by side; the splitter stays behind, empty
+    ui->attributesView->setFixedHeight(112);
+    blockLayout->addWidget(ui->attributesView);
+    ui->attributesEdit->setMinimumHeight(72);
+    ui->attributesEdit->setMaximumHeight(140);
+    blockLayout->addWidget(ui->attributesEdit);
+
+    // Protecting and revealing act on the value, so they sit under it
+    auto* valueActions = new QHBoxLayout();
+    valueActions->setContentsMargins(0, 0, 0, 0);
+    valueActions->setSpacing(6);
+    valueActions->addWidget(ui->protectAttributeButton);
+    valueActions->addStretch();
+    valueActions->addWidget(ui->revealAttributeButton);
+    blockLayout->addLayout(valueActions);
+
+    // While there are none, a note says what attributes are for, with only the button to add one
+    auto* none = new QLabel(tr("No additional attributes. Add one to keep extra fields with this entry, such as a PIN "
+                               "or the answer to a security question."),
+                            block);
+    none->setObjectName("vaultNoAttributesLabel");
+    none->setWordWrap(true);
+    Vault::followTheme(none, [none] {
+        Vault::styleLabel(none, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+    });
+    blockLayout->addWidget(none);
+    auto updateEmptyState = [ui, none, model = m_attributesModel] {
+        const bool empty = model->rowCount() == 0;
+        none->setVisible(empty);
+        for (QWidget* widget : std::initializer_list<QWidget*>{ui->attributesView,
+                                                               ui->attributesEdit,
+                                                               ui->editAttributeButton,
+                                                               ui->removeAttributeButton,
+                                                               ui->protectAttributeButton,
+                                                               ui->revealAttributeButton}) {
+            widget->setVisible(!empty);
+        }
+    };
+    connect(m_attributesModel, &QAbstractItemModel::rowsInserted, block, updateEmptyState);
+    connect(m_attributesModel, &QAbstractItemModel::rowsRemoved, block, updateEmptyState);
+    connect(m_attributesModel, &QAbstractItemModel::modelReset, block, updateEmptyState);
+    updateEmptyState();
+    attributes->addWidget(block);
+
+    auto attachments = page.addSection(ui->attachmentsBox);
+    ui->attachmentsWidget->setToolbarLayout();
+    if (auto* view = ui->attachmentsWidget->findChild<QTableView*>("attachmentsView")) {
+        view->setMinimumHeight(96);
+        view->setMaximumHeight(160);
+    }
+    attachments->addWidget(ui->attachmentsWidget);
+
+    auto options = page.addSection(tr("Options"));
+    const auto excludeDescription = ui->excludeReportsCheckBox->toolTip();
+    ui->excludeReportsCheckBox->setToolTip({});
+    options->addToggle(ui->excludeReportsCheckBox, excludeDescription);
+    ui->fgColorCheckBox->setText(tr("Text color"));
+    options->addToggle(ui->fgColorCheckBox, tr("Color of the entry's title in the list"))
+        ->addHeaderControl(ui->fgColorButton);
+    ui->bgColorCheckBox->setText(tr("Background color"));
+    options->addToggle(ui->bgColorCheckBox, tr("Color behind the entry in the list"))
+        ->addHeaderControl(ui->bgColorButton);
+
+    page.finish();
 }
 
 void EditEntryWidget::setupIcon()
@@ -1126,10 +1234,13 @@ void EditEntryWidget::setForms(Entry* entry, bool restore)
         m_advancedUi->attributesEdit->setEnabled(false);
     }
 
-    QList<int> sizes = m_advancedUi->attributesSplitter->sizes();
-    sizes.replace(0, m_advancedUi->attributesSplitter->width() * 0.3);
-    sizes.replace(1, m_advancedUi->attributesSplitter->width() * 0.7);
-    m_advancedUi->attributesSplitter->setSizes(sizes);
+    // The Vault Index layout stacks the list and the value outside of the splitter
+    if (m_advancedUi->attributesSplitter->count() == 2) {
+        QList<int> sizes = m_advancedUi->attributesSplitter->sizes();
+        sizes.replace(0, m_advancedUi->attributesSplitter->width() * 0.3);
+        sizes.replace(1, m_advancedUi->attributesSplitter->width() * 0.7);
+        m_advancedUi->attributesSplitter->setSizes(sizes);
+    }
 
     IconStruct iconStruct;
     iconStruct.uuid = entry->iconUuid();
