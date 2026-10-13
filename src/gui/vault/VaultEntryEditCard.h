@@ -18,20 +18,19 @@
 #ifndef KEEPASSXC_VAULTENTRYEDITCARD_H
 #define KEEPASSXC_VAULTENTRYEDITCARD_H
 
-#include <QHash>
 #include <QPointer>
-#include <QSizePolicy>
+#include <QSet>
 
 #include <functional>
 
 #include <components/layout/Card.h>
 
 class CategoryListWidget;
+class QAbstractButton;
 class EditWidget;
 class QHBoxLayout;
 class QLabel;
 class QLineEdit;
-class QSpacerItem;
 class QStackedWidget;
 class QVBoxLayout;
 class VaultButtonBar;
@@ -45,9 +44,11 @@ namespace fluent::basicinput
  * Presents an entry editor in the Vault Index detail pane, in place of the entry's detail card, so the
  * groups and the entry list stay in view while editing.
  *
- * The card shows the editor's headline, with Cancel and Save in the command bar, then the Entry page with
- * the other pages listed beneath it as rows; a row opens its page in place, with a way back to the Entry
- * page. New entries start compact: notes, tags and expiry wait behind "add" chips until asked for.
+ * The card reads as the detail card made editable: the entry's icon and its title as a large field at the
+ * top, then the fields with their captions above them, grouped like the detail card's rows. The other pages
+ * are listed under a "More" heading, each with what it holds; a row opens its page in place, with a way
+ * back to the Entry page. Cancel and Save sit in the command bar. New entries start compact: notes, tags
+ * and expiry wait behind "add" chips until asked for.
  *
  * Only the presentation changes; the editor's widgets and logic are untouched.
  */
@@ -63,7 +64,7 @@ public:
     void prepare(bool create);
     // Leave the form as the editor laid it out, once editing ends
     void finish();
-    // In a modal, which has its own title and buttons, the card drops its headline, buttons and surface
+    // In a modal, which has its own title and buttons, the card drops its surface
     void setInModal(bool inModal);
     bool isInModal() const;
     void onThemeUpdated() override;
@@ -75,14 +76,18 @@ private:
     struct OptionalRow
     {
         QString chipText;
-        QStringList widgetNames;
+        QWidget* block;
         QString focusName;
     };
 
+    void buildHeader();
+    void buildEntryPage();
     void rebuildSections();
     void pageChanged(int index);
     void showOptionalRow(int row, bool focus);
     bool isOptionalRowEmpty(int row) const;
+    void updateDetailsGroup();
+    void updateIdentity();
     void suggestTitleFromUrl(const QString& url);
     void applyColors();
 
@@ -92,27 +97,24 @@ private:
     QWidget* m_header;
     QLabel* m_headline;
     VaultButtonBar* m_buttonBar;
+    QAbstractButton* m_iconTile = nullptr;
+    QLabel* m_subtitle = nullptr;
 
     QWidget* m_backRow;
     QLabel* m_pageTitle;
-    QWidget* m_sections;
-    QVBoxLayout* m_sectionsLayout;
+    QWidget* m_sections = nullptr;
+    QVBoxLayout* m_sectionsLayout = nullptr;
+    QLabel* m_moreLabel = nullptr;
+    QWidget* m_detailsGroup = nullptr;
     QWidget* m_addRow;
     QHBoxLayout* m_addLayout;
     QLabel* m_addLabel;
+    QList<QLabel*> m_captions;
 
     QList<OptionalRow> m_optionalRows;
     QList<fluent::basicinput::Button*> m_chips;
-    // Visibility the editor gave each widget of a row before the card tucked it away
-    QHash<QWidget*, bool> m_hiddenBefore;
-    // Spacers beside a tucked-away row, collapsed so the row leaves no gap, with the size they had
-    struct CollapsedSpacer
-    {
-        QSpacerItem* spacer;
-        QSize size;
-        QSizePolicy policy;
-    };
-    QHash<int, QList<CollapsedSpacer>> m_collapsedSpacers;
+    // Blocks the card tucked away for a new entry
+    QSet<int> m_tucked;
 
     QPointer<QLineEdit> m_titleEdit;
     QString m_suggestedTitle;
