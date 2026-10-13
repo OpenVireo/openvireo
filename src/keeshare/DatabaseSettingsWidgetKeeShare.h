@@ -23,6 +23,7 @@
 
 class Database;
 
+class QLabel;
 class QStandardItemModel;
 
 namespace Ui
@@ -41,10 +42,14 @@ public:
     void saveSettings();
 
 private:
+    // Settings cards of the Vault Index layout in place of the form
+    void buildVaultPage();
+
     QScopedPointer<Ui::DatabaseSettingsWidgetKeeShare> m_ui;
 
     QScopedPointer<QStandardItemModel> m_referencesModel;
     QSharedPointer<Database> m_db;
+    QPointer<QLabel> m_noSharesLabel;
 };
 
 #endif // KEEPASSXC_DATABASESETTINGSWIDGETKEESHARE_H

@@ -20,16 +20,66 @@
 #include "ui_DatabaseSettingsWidgetKeeShare.h"
 
 #include "core/Group.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
 #include "keeshare/KeeShare.h"
 #include "keeshare/KeeShareSettings.h"
 
+#include <QHeaderView>
+#include <QLabel>
 #include <QStandardItemModel>
+#include <QVBoxLayout>
+
+namespace
+{
+    constexpr int TableHeight = 180;
+} // namespace
 
 DatabaseSettingsWidgetKeeShare::DatabaseSettingsWidgetKeeShare(QWidget* parent)
     : QWidget(parent)
     , m_ui(new Ui::DatabaseSettingsWidgetKeeShare())
 {
     m_ui->setupUi(this);
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void DatabaseSettingsWidgetKeeShare::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The database settings list already names the page
+    VaultSettingsPage page(this, {});
+    auto sharing = page.addSection(ui->enableGroupBox);
+
+    // The shared groups across the card, or a note while there are none
+    m_noSharesLabel = new QLabel(tr("No groups of this database are shared. A group is shared from the KeeShare "
+                                    "settings of the group."),
+                                 this);
+    m_noSharesLabel->setObjectName("noSharedGroupsLabel");
+    m_noSharesLabel->setWordWrap(true);
+    Vault::followTheme(m_noSharesLabel, [label = m_noSharesLabel] {
+        Vault::styleLabel(label, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+    });
+    m_noSharesLabel->hide();
+
+    auto table = ui->sharedGroupsView;
+    table->setFixedHeight(TableHeight);
+    table->setShowGrid(false);
+    table->setWordWrap(false);
+    table->horizontalHeader()->setHighlightSections(false);
+    table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    auto shares = new QWidget(this);
+    auto sharesLayout = new QVBoxLayout(shares);
+    sharesLayout->setContentsMargins(0, 0, 0, 0);
+    sharesLayout->addWidget(table);
+    sharesLayout->addWidget(m_noSharesLabel);
+    sharing->addWidget(shares);
+
+    page.finish();
 }
 
 DatabaseSettingsWidgetKeeShare::~DatabaseSettingsWidgetKeeShare()
@@ -61,6 +111,21 @@ void DatabaseSettingsWidgetKeeShare::loadSettings(const QSharedPointer<Database>
     }
 
     m_ui->sharedGroupsView->setModel(m_referencesModel.data());
+
+    if (m_noSharesLabel) {
+        const bool empty = m_referencesModel->rowCount() == 0;
+        m_noSharesLabel->setVisible(empty);
+        m_ui->sharedGroupsView->setVisible(!empty);
+
+        // The signer and certificates are never filled in, so the group, type and path get their room
+        auto header = m_ui->sharedGroupsView->horizontalHeader();
+        for (int column = 3; column < m_referencesModel->columnCount(); ++column) {
+            m_ui->sharedGroupsView->setColumnHidden(column, true);
+        }
+        header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+        header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+        header->setStretchLastSection(true);
+    }
 }
 
 void DatabaseSettingsWidgetKeeShare::saveSettings()
