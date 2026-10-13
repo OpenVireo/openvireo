@@ -57,6 +57,8 @@
 #include <QListView>
 #include <QListWidget>
 #include <QPlainTextEdit>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QPushButton>
 #include <QScreen>
 #include <QStackedWidget>
@@ -342,7 +344,10 @@ void TestGuiVault::testNewEntryModal()
     QVERIFY(modal->card()->isAncestorOf(card));
     QVERIFY(card->isVisible());
     QVERIFY(details->isVisible());
-    QVERIFY(!card->findChild<QWidget*>("vaultEditCardHeader")->isVisible());
+    // The icon and the title stay at the top; the modal's own title says where the entry goes
+    QVERIFY(card->findChild<QWidget*>("vaultEditCardHeader")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("vaultEditIconTile")->isVisible());
+    QVERIFY(!card->findChild<QLabel*>("vaultEditSubtitle")->isVisible());
     QVERIFY(!commandBar->findChild<QAbstractButton*>("vaultEditSaveButton")->isVisible());
     auto* save = modal->findChild<QPushButton*>("vaultNewEntrySave");
     auto* cancel = modal->findChild<QPushButton*>("vaultNewEntryCancel");
@@ -393,6 +398,7 @@ void TestGuiVault::testNewEntryModal()
     QVERIFY(card->isVisible());
     QVERIFY(!details->isVisible());
     QVERIFY(card->findChild<QWidget*>("vaultEditCardHeader")->isVisible());
+    QVERIFY(card->findChild<QLabel*>("vaultEditSubtitle")->isVisible());
     QVERIFY(notes->isVisible());
     QVERIFY(tags->isVisible());
     QVERIFY(expires->isVisible());
@@ -1167,6 +1173,10 @@ void TestGuiVault::testViewScreenshots()
 
         m_dbWidget->switchToEntryEdit();
         save("entry", theme);
+        auto* entryPage = qobject_cast<QScrollArea*>(entryEditCard()->editor()->pageStack()->widget(0));
+        entryPage->verticalScrollBar()->setValue(entryPage->verticalScrollBar()->maximum());
+        save("entry-more", theme);
+        entryPage->verticalScrollBar()->setValue(0);
         auto* entryCategories = entryEditCard()->editor()->findChild<QListWidget*>("categoryList");
         entryCategories->setCurrentRow(1);
         save("entry-advanced", theme);
