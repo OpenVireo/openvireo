@@ -30,6 +30,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QTableView>
+#include <QToolButton>
+#include <QTreeView>
 #include <QVBoxLayout>
 #include <QDesktopServices>
 #include <QLineEdit>
@@ -479,6 +481,116 @@ void EditEntryWidget::setupAutoType()
     connect(m_autoTypeUi->customWindowSequenceButton, SIGNAL(toggled(bool)), SLOT(applyCurrentAssoc()));
     connect(m_autoTypeUi->windowSequenceEdit, SIGNAL(textChanged(QString)), SLOT(applyCurrentAssoc()));
     // clang-format on
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultAutoType();
+    }
+}
+
+// In the Vault Index layout, the Auto-Type page fits the narrow detail pane as Fluent settings cards: a switch for
+// Auto-Type, a card for the sequence, and the window associations as a list with the selected one's fields beneath
+// it rather than beside it.
+void EditEntryWidget::setupVaultAutoType()
+{
+    auto ui = m_autoTypeUi.data();
+    // The back row above the page already names it
+    VaultSettingsPage page(m_autoTypeWidget, {});
+    const auto withoutColon = [](const QString& text) {
+        auto plain = text.trimmed();
+        while (plain.endsWith(QLatin1Char(':'))) {
+            plain.chop(1);
+        }
+        return plain;
+    };
+    auto styleNote = [](QLabel* label) {
+        label->setWordWrap(true);
+        Vault::followTheme(label, [label] {
+            Vault::styleLabel(label, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+        });
+    };
+
+    page.addSection()->addToggle(ui->enableButton,
+                                 tr("Type the username and password into another window with a global shortcut"));
+
+    // The group's sequence or one of the entry's own, with help on writing one beside the field
+    auto sequence = page.addSection(tr("Sequence"));
+    auto* sequenceBlock = new QWidget(m_autoTypeWidget);
+    auto* sequenceLayout = new QVBoxLayout(sequenceBlock);
+    sequenceLayout->setContentsMargins(0, 0, 0, 0);
+    sequenceLayout->setSpacing(8);
+    ui->customSequenceButton->setText(withoutColon(ui->customSequenceButton->text()));
+    sequenceLayout->addWidget(ui->inheritSequenceButton);
+    sequenceLayout->addWidget(ui->customSequenceButton);
+    auto* sequenceRow = new QHBoxLayout();
+    sequenceRow->setContentsMargins(28, 0, 0, 0);
+    sequenceRow->setSpacing(6);
+    sequenceRow->addWidget(ui->sequenceEdit, 1);
+    sequenceRow->addWidget(ui->openHelpButton);
+    sequenceLayout->addLayout(sequenceRow);
+    sequence->addWidget(sequenceBlock);
+
+    auto windows = page.addSection(ui->windowsBox);
+    auto* windowsBlock = new QWidget(m_autoTypeWidget);
+    windowsBlock->setObjectName("vaultWindowAssociationsBlock");
+    auto* windowsLayout = new QVBoxLayout(windowsBlock);
+    windowsLayout->setContentsMargins(0, 0, 0, 0);
+    windowsLayout->setSpacing(8);
+
+    // Add and Remove above the list, named rather than signed
+    auto* toolbar = new QHBoxLayout();
+    toolbar->setContentsMargins(0, 0, 0, 0);
+    toolbar->setSpacing(6);
+    ui->assocAddButton->setText(tr("Add"));
+    ui->assocRemoveButton->setText(tr("Remove"));
+    for (auto* button : {ui->assocAddButton, ui->assocRemoveButton}) {
+        button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        toolbar->addWidget(button);
+    }
+    toolbar->addStretch();
+    windowsLayout->addLayout(toolbar);
+
+    ui->assocView->setFixedHeight(112);
+    windowsLayout->addWidget(ui->assocView);
+
+    // The selected association's window and sequence, under the list
+    ui->windowTitleLabel->setText(withoutColon(ui->windowTitleLabel->text()));
+    Vault::followTheme(ui->windowTitleLabel, [label = ui->windowTitleLabel] {
+        Vault::styleLabel(label, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
+    });
+    windowsLayout->addSpacing(4);
+    windowsLayout->addWidget(ui->windowTitleLabel);
+    windowsLayout->addWidget(ui->windowTitleCombo);
+    ui->customWindowSequenceButton->setText(withoutColon(ui->customWindowSequenceButton->text()));
+    windowsLayout->addWidget(ui->customWindowSequenceButton);
+    windowsLayout->addWidget(ui->windowSequenceEdit);
+
+    // While there are none, a note says what associations are for, with only the button to add one
+    auto* none = new QLabel(tr("No window associations. Add one to type this entry only into windows with a "
+                               "matching title, or to use a different sequence for them."),
+                            windowsBlock);
+    none->setObjectName("vaultNoWindowAssociationsLabel");
+    styleNote(none);
+    windowsLayout->addWidget(none);
+    auto updateEmptyState = [ui, none, model = m_autoTypeAssocModel] {
+        const bool empty = model->rowCount() == 0;
+        none->setVisible(empty);
+        for (QWidget* widget : std::initializer_list<QWidget*>{ui->assocView,
+                                                               ui->assocRemoveButton,
+                                                               ui->windowTitleLabel,
+                                                               ui->windowTitleCombo,
+                                                               ui->customWindowSequenceButton,
+                                                               ui->windowSequenceEdit}) {
+            widget->setVisible(!empty);
+        }
+    };
+    connect(m_autoTypeAssocModel, &QAbstractItemModel::rowsInserted, windowsBlock, updateEmptyState);
+    connect(m_autoTypeAssocModel, &QAbstractItemModel::rowsRemoved, windowsBlock, updateEmptyState);
+    connect(m_autoTypeAssocModel, &QAbstractItemModel::modelReset, windowsBlock, updateEmptyState);
+    updateEmptyState();
+    windows->addWidget(windowsBlock);
+
+    page.finish();
 }
 
 #ifdef KPXC_FEATURE_BROWSER
