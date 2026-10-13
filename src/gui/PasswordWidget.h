@@ -40,6 +40,8 @@ public:
     void enablePasswordGenerator();
     void setRepeatPartner(PasswordWidget* repeatPartner);
     void setQualityVisible(bool state);
+    // Show the password in a larger font, as the main content of a view such as the password generator
+    void setLargeFont(bool large);
 
     bool isPasswordVisible() const;
     QString text();
@@ -83,6 +85,7 @@ private:
     QPointer<PasswordWidget> m_parentPasswordWidget;
 
     bool m_capslockState = false;
+    bool m_largeFont = false;
 };
 
 #endif // KEEPASSX_PASSWORDWIDGET_H
