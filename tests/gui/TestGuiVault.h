@@ -45,6 +45,7 @@ private slots:
     void testNewEntryModal();
     void testEditorSections();
     void testAdvancedPage();
+    void testAutoTypePage();
     void testLeavingViewEndsEditing();
     void testSearchTitle();
     void testFluentSearchBox();

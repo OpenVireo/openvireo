@@ -156,6 +156,7 @@ private:
     void setupVaultAdvanced();
     void setupIcon();
     void setupAutoType();
+    void setupVaultAutoType();
 #ifdef KPXC_FEATURE_BROWSER
     void setupBrowser();
 #endif
