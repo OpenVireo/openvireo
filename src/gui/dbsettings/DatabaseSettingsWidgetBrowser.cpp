@@ -19,6 +19,8 @@
 #include "DatabaseSettingsWidgetBrowser.h"
 #include "ui_DatabaseSettingsWidgetBrowser.h"
 
+#include <QHBoxLayout>
+#include <QHeaderView>
 #include <QProgressDialog>
 
 #include "browser/BrowserService.h"
@@ -26,6 +28,16 @@
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+
+#include <components/status_info/InfoBar.h>
+
+namespace
+{
+    constexpr int TableHeight = 200;
+    constexpr int KeyColumnWidth = 160;
+} // namespace
 
 DatabaseSettingsWidgetBrowser::DatabaseSettingsWidgetBrowser(QWidget* parent)
     : DatabaseSettingsWidget(parent)
@@ -36,8 +48,6 @@ DatabaseSettingsWidgetBrowser::DatabaseSettingsWidgetBrowser(QWidget* parent)
     m_ui->setupUi(this);
     m_ui->removeCustomDataButton->setEnabled(false);
     m_ui->customDataTable->setModel(m_customDataModel);
-
-    settingsWarning();
 
     // clang-format off
     connect(m_ui->customDataTable->selectionModel(),
@@ -52,6 +62,73 @@ DatabaseSettingsWidgetBrowser::DatabaseSettingsWidgetBrowser(QWidget* parent)
     connect(m_ui->removeSharedEncryptionKeys, SIGNAL(clicked()), this, SLOT(updateSharedKeyList()));
     connect(m_ui->removeStoredPermissions, SIGNAL(clicked()), this, SLOT(removeStoredPermissions()));
     connect(m_ui->refreshDatabaseID, SIGNAL(clicked()), this, SLOT(refreshDatabaseID()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+    settingsWarning();
+}
+
+void DatabaseSettingsWidgetBrowser::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The database settings list already names the page
+    VaultSettingsPage page(this, {});
+
+    // While browser integration is off, a Fluent warning over the page says why its settings are disabled
+    m_disabledWarning = new fluent::status_info::InfoBar(this);
+    m_disabledWarning->setObjectName("browserDisabledWarning");
+    m_disabledWarning->setSeverity(fluent::status_info::InfoBar::Warning);
+    m_disabledWarning->setMessage(tr("Enable Browser Integration to access these settings."));
+    m_disabledWarning->setIsClosable(false);
+    m_disabledWarning->setSizePolicy(QSizePolicy::Expanding, m_disabledWarning->sizePolicy().verticalPolicy());
+    ui->warningWidget->hide();
+    page.addWidget(m_disabledWarning);
+
+    // Each action is a card that says what it does, with a short button for it, as in Windows Settings
+    const struct
+    {
+        VaultButton* button;
+        QString action;
+        QString description;
+    } actions[] = {
+        {ui->removeSharedEncryptionKeys,
+         tr("Disconnect"),
+         tr("Remove the encryption keys shared with the browser extension. Each browser will need to connect again.")},
+        {ui->removeStoredPermissions,
+         tr("Forget"),
+         tr("Revoke the permissions given to browsers to access entries, and the site-specific settings on them.")},
+        {ui->refreshDatabaseID,
+         tr("Refresh"),
+         tr("Only needed if this database is a copy of another and the browser extension cannot connect.")},
+    };
+    auto connection = page.addSection(ui->groupBox);
+    for (const auto& a : actions) {
+        const auto caption = VaultButton::withoutMnemonic(a.button->text());
+        a.button->setText(a.action);
+        a.button->setAccessibleName(caption);
+        // The tooltip of the form describes another action; the card's description takes its place
+        a.button->setToolTip({});
+        connection->addSetting(caption, a.button, a.description);
+    }
+
+    // The stored keys, with the button to remove the selected ones beside them
+    auto storedKeys = page.addSection(ui->groupBox_2);
+    auto keys = new QWidget(this);
+    auto keysLayout = new QHBoxLayout(keys);
+    keysLayout->setContentsMargins(0, 0, 0, 0);
+    keysLayout->setSpacing(12);
+    ui->customDataTable->setFixedHeight(TableHeight);
+    ui->customDataTable->setShowGrid(false);
+    ui->customDataTable->setWordWrap(false);
+    ui->customDataTable->horizontalHeader()->setDefaultSectionSize(KeyColumnWidth);
+    ui->customDataTable->horizontalHeader()->setHighlightSections(false);
+    ui->customDataTable->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    keysLayout->addWidget(ui->customDataTable, 1);
+    keysLayout->addWidget(ui->removeCustomDataButton, 0, Qt::AlignTop);
+    storedKeys->addWidget(keys);
+
+    page.finish();
 }
 
 DatabaseSettingsWidgetBrowser::~DatabaseSettingsWidgetBrowser()
@@ -139,18 +216,22 @@ void DatabaseSettingsWidgetBrowser::updateModel()
 
 void DatabaseSettingsWidgetBrowser::settingsWarning()
 {
-    if (!browserSettings()->isEnabled()) {
-        m_ui->removeSharedEncryptionKeys->setEnabled(false);
-        m_ui->removeStoredPermissions->setEnabled(false);
-        m_ui->customDataTable->setEnabled(false);
+    const bool enabled = browserSettings()->isEnabled();
+    m_ui->removeSharedEncryptionKeys->setEnabled(enabled);
+    m_ui->removeStoredPermissions->setEnabled(enabled);
+    m_ui->customDataTable->setEnabled(enabled);
+
+    // The vault layout shows a Fluent warning in place of the banner
+    if (m_disabledWarning) {
+        m_disabledWarning->setIsOpen(!enabled);
+        return;
+    }
+    if (!enabled) {
         m_ui->warningWidget->showMessage(tr("Enable Browser Integration to access these settings."),
                                          MessageWidget::Warning);
         m_ui->warningWidget->setCloseButtonVisible(false);
         m_ui->warningWidget->setAutoHideTimeout(-1);
     } else {
-        m_ui->removeSharedEncryptionKeys->setEnabled(true);
-        m_ui->removeStoredPermissions->setEnabled(true);
-        m_ui->customDataTable->setEnabled(true);
         m_ui->warningWidget->hideMessage();
     }
 }
