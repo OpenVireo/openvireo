@@ -30,6 +30,8 @@
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultWidgets.h"
 
+#include <components/textfields/LineEdit.h>
+
 #include <QAbstractButton>
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -398,6 +400,10 @@ void VaultEntryEditCard::buildHeader()
     if (m_titleEdit) {
         adopt(m_titleEdit, header);
         m_titleEdit->setPlaceholderText(tr("Title"));
+        // As a font role, which the field applies again whenever the theme changes
+        if (auto* fluentEdit = qobject_cast<fluent::textfields::LineEdit*>(m_titleEdit.data())) {
+            fluentEdit->setFontRole(Typography::FontRole::Subtitle);
+        }
         titles->addWidget(m_titleEdit);
         if (auto* label = form->findChild<QLabel*>("titleLabel")) {
             label->hide();
@@ -776,9 +782,6 @@ void VaultEntryEditCard::applyColors()
     }
     for (auto* caption : m_captions) {
         Vault::styleLabel(caption, Typography::FontRole::Caption, p.textSecondary);
-    }
-    if (m_titleEdit) {
-        m_titleEdit->setFont(Vault::font(Typography::FontRole::Subtitle));
     }
 }
 
