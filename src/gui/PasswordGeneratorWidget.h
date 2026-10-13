@@ -86,6 +86,7 @@ private slots:
     void updateGenerator();
 
 private:
+    void setupVaultPivot();
     bool m_standalone = false;
     bool m_passwordGenerated = false;
     int m_firstCustomWordlistIndex;

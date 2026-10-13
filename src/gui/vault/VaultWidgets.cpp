@@ -97,21 +97,27 @@ QString Vault::formStyleSheet()
                           "QToolButton:pressed, QToolButton:checked { background-color: %6; }"
                           "QAbstractSpinBox { background-color: %4; border: 1px solid %2; border-radius: 4px;"
                           " padding: 4px 6px; }"
-                          // Tabs read as a Fluent pivot: plain labels with an accent underline on the current one
-                          "QTabWidget::pane { border: none; border-top: 1px solid %7; }"
-                          "QTabBar::tab { background: transparent; border: none; border-bottom: 3px solid transparent;"
-                          " padding: 6px 12px; margin-right: 4px; color: %8; }"
-                          "QTabBar::tab:hover { color: %3; }"
-                          "QTabBar::tab:selected { color: %3; border-bottom-color: %9; }")
-        .arg(argb(p.layer),
-             argb(p.stroke),
-             argb(p.text),
-             argb(p.control),
-             argb(p.controlHover),
-             argb(p.controlPressed),
-             argb(p.divider),
-             argb(p.textSecondary),
-             argb(p.accent));
+                          "QTabWidget::pane { border: none; border-top: 1px solid %7; }")
+               .arg(argb(p.layer),
+                    argb(p.stroke),
+                    argb(p.text),
+                    argb(p.control),
+                    argb(p.controlHover),
+                    argb(p.controlPressed),
+                    argb(p.divider))
+           + pivotStyleSheet();
+}
+
+QString Vault::pivotStyleSheet()
+{
+    const auto p = FluentTheme::palette();
+    const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
+    // Tabs read as a Fluent pivot: plain labels with an accent underline on the current one
+    return QStringLiteral("QTabBar::tab { background: transparent; border: none; border-bottom: 3px solid transparent;"
+                          " padding: 6px 12px; margin-right: 4px; color: %1; }"
+                          "QTabBar::tab:hover { color: %2; }"
+                          "QTabBar::tab:selected { color: %2; border-bottom-color: %3; }")
+        .arg(argb(p.textSecondary), argb(p.text), argb(p.accent));
 }
 
 QFont Vault::font(Typography::FontRole role)

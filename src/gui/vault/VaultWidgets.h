@@ -48,6 +48,9 @@ namespace Vault
     // Style sheet for forms on a Vault surface: group boxes as cards, and Fluent shapes and fills
     // for the controls that have no Fluent-Qt counterpart. Depends on the theme.
     QString formStyleSheet();
+    // Style sheet for a tab bar as a Fluent pivot: plain labels with an accent underline on the current one.
+    // Depends on the theme.
+    QString pivotStyleSheet();
     // Fill a widget's background with the window canvas, as behind the main window's panes
     void paintCanvas(QWidget* widget);
 } // namespace Vault
