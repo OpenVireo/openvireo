@@ -21,9 +21,15 @@
 
 #include <QCloseEvent>
 #include <QDir>
+#include <QFrame>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QScrollArea>
 #include <QShortcut>
 #include <QTabBar>
 #include <QTimer>
+#include <QVBoxLayout>
 
 #include "core/Config.h"
 #include "core/PasswordHealth.h"
@@ -34,7 +40,19 @@
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultSettingsPage.h"
 #include "gui/vault/VaultWidgets.h"
+
+namespace
+{
+    constexpr int SliderWidth = 220;
+    constexpr int SeparatorWidth = 120;
+    constexpr int ChipSpacing = 6;
+    constexpr int SpinBoxWidth = 96;
+    // Between the pivot and the first card, closer than between the sections of a settings page
+    constexpr int PivotGap = 12;
+} // namespace
 
 PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     : QWidget(parent)
@@ -84,10 +102,6 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     connect(m_ui->tabWidget, SIGNAL(currentChanged(int)), SLOT(updateGenerator()));
     connect(m_ui->wordCaseComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateGenerator()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultPivot();
-    }
-
     // set font size of password quality, characters, and entropy labels dynamically to 80% of
     // the default font size, but make it no smaller than 8pt
     QFont defaultFont;
@@ -97,6 +111,12 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
         m_ui->entropyLabel->setFont(defaultFont);
         m_ui->strengthLabel->setFont(defaultFont);
         m_ui->passwordLengthLabel->setFont(defaultFont);
+    }
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultHero();
+        setupVaultPivot();
+        setupVaultPages();
     }
 
     // set default separator to Space
@@ -130,6 +150,77 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     loadSettings();
 }
 
+// In the Vault Index layout, the password is the main content of the generator: a card with the password in a large
+// field, the buttons to regenerate and copy it, and its strength below as a meter and a line of figures.
+void PasswordGeneratorWidget::setupVaultHero()
+{
+    auto ui = m_ui.data();
+    auto hero = new QFrame(this);
+    hero->setObjectName("generatorHero");
+    hero->setProperty(VaultLineEdit::LargePaddingProperty, true);
+    ui->editNewPassword->setLargeFont(true);
+
+    for (auto button : {ui->buttonGenerate, ui->buttonCopy}) {
+        button->setIcon({});
+        button->setFluentLayout(fluent::basicinput::Button::IconOnly);
+        button->setAccessibleName(button->toolTip());
+    }
+    ui->buttonGenerate->setIconGlyph(Typography::Icons::Refresh);
+    ui->buttonCopy->setIconGlyph(Typography::Icons::Copy);
+    ui->buttonCopy->setFluentStyle(fluent::basicinput::Button::Accent);
+
+    auto stats = new QHBoxLayout();
+    stats->setContentsMargins(0, 0, 0, 0);
+    stats->setSpacing(16);
+    stats->addWidget(ui->strengthLabel);
+    stats->addStretch();
+    stats->addWidget(ui->passwordLengthLabel);
+    stats->addWidget(ui->entropyLabel);
+
+    auto layout = new QGridLayout(hero);
+    layout->setContentsMargins(16, 16, 16, 12);
+    layout->setHorizontalSpacing(8);
+    layout->setVerticalSpacing(10);
+    layout->addWidget(ui->editNewPassword, 0, 0);
+    layout->addWidget(ui->buttonGenerate, 0, 1, Qt::AlignVCenter);
+    layout->addWidget(ui->buttonCopy, 0, 2, Qt::AlignVCenter);
+    layout->addWidget(ui->entropyProgressBar, 1, 0, 1, 3);
+    layout->addLayout(stats, 2, 0, 1, 3);
+    layout->setColumnStretch(0, 1);
+
+    // The buttons are as tall as the large field beside them
+    ui->editNewPassword->installEventFilter(this);
+
+    ui->entropyProgressBar->setFixedHeight(4);
+    for (auto label : {ui->strengthLabel, ui->passwordLengthLabel, ui->entropyLabel}) {
+        label->setMargin(0);
+        label->setMinimumWidth(0);
+    }
+
+    Vault::followTheme(hero, [this, hero] {
+        const auto p = FluentTheme::palette();
+        const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
+        hero->setStyleSheet(QStringLiteral("#generatorHero { background-color: %1; border: 1px solid %2;"
+                                           " border-radius: 8px; }")
+                                .arg(argb(p.inset), argb(p.stroke)));
+        // The meter shows its track, so a weak password reads as a short bar rather than a stray line.
+        // updatePasswordStrength() sets the color of the chunk.
+        m_ui->entropyProgressBar->setStyleSheet(
+            QStringLiteral("QProgressBar { border: none; border-radius: 2px; background-color: %1; }"
+                           "QProgressBar::chunk { background-color: %2; border-radius: 2px; }")
+                .arg(argb(p.divider), argb(p.accent)));
+        Vault::styleLabel(m_ui->strengthLabel, Typography::FontRole::BodyStrong, p.text);
+        Vault::styleLabel(m_ui->passwordLengthLabel, Typography::FontRole::Caption, p.textSecondary);
+        Vault::styleLabel(m_ui->entropyLabel, Typography::FontRole::Caption, p.textSecondary);
+        updatePasswordStrength();
+    });
+
+    auto oldLayout = ui->passwordFieldLayout;
+    ui->verticalLayout_2->insertWidget(ui->verticalLayout_2->indexOf(oldLayout), hero);
+    ui->verticalLayout_2->removeItem(oldLayout);
+    delete oldLayout;
+}
+
 // In the Vault Index layout, the password and passphrase tabs read as a Fluent pivot: plain labels with an accent
 // line under the current one. The style draws a tab widget's own bar on a filled base, so a separate tab bar switches
 // the tab widget, which keeps the current page for the generator's logic.
@@ -154,7 +245,126 @@ void PasswordGeneratorWidget::setupVaultPivot()
     m_ui->verticalLayout_2->insertWidget(m_ui->verticalLayout_2->indexOf(tabs), pivot, 0, Qt::AlignLeft);
 }
 
+// In the Vault Index layout, the options of each generator read as Fluent settings cards. The advanced options are a
+// card of their own that a switch opens, in place of the Advanced button.
+void PasswordGeneratorWidget::setupVaultPages()
+{
+    auto ui = m_ui.data();
+
+    VaultSettingsPage password(ui->passwordWidget, {});
+    auto options = password.addSection();
+    options->layout()->setContentsMargins(0, PivotGap, 0, 0);
+    ui->sliderLength->setMinimumWidth(SliderWidth);
+    ui->spinBoxLength->setFixedWidth(SpinBoxWidth);
+    options->addSetting(ui->labelLength, {ui->sliderLength, ui->spinBoxLength});
+
+    // The character groups as a row of chips, with the advanced groups in a second row while they show
+    auto types = new QWidget(this);
+    types->setObjectName("characterTypes");
+    auto typesLayout = new QVBoxLayout(types);
+    typesLayout->setContentsMargins(0, 0, 0, 0);
+    typesLayout->setSpacing(10);
+    auto typesLabel = new QLabel(ui->groupBox->title(), types);
+    Vault::followTheme(typesLabel, [typesLabel] {
+        Vault::styleLabel(typesLabel, Typography::FontRole::Body, FluentTheme::palette().text);
+    });
+    typesLayout->addWidget(typesLabel);
+    const QList<QList<QAbstractButton*>> chipRows{
+        {ui->checkBoxUpper, ui->checkBoxLower, ui->checkBoxNumbers, ui->checkBoxSpecialChars, ui->checkBoxExtASCII},
+        {ui->checkBoxBraces, ui->checkBoxPunctuation, ui->checkBoxQuotes, ui->checkBoxDashes, ui->checkBoxMath}};
+    for (const auto& chips : chipRows) {
+        auto row = new QHBoxLayout();
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(ChipSpacing);
+        for (auto chip : chips) {
+            row->addWidget(chip);
+        }
+        row->addStretch();
+        typesLayout->addLayout(row);
+    }
+    options->addWidget(types);
+
+    auto advancedToggle = new VaultCheckBox(tr("Advanced options"), this);
+    advancedToggle->setObjectName("advancedModeToggle");
+    advancedToggle->setChecked(ui->buttonAdvancedMode->isChecked());
+    connect(advancedToggle, &QAbstractButton::toggled, ui->buttonAdvancedMode, &QAbstractButton::setChecked);
+    connect(ui->buttonAdvancedMode, &QAbstractButton::toggled, advancedToggle, &QAbstractButton::setChecked);
+    ui->buttonAdvancedMode->hide();
+    auto advanced =
+        options->addToggle(advancedToggle, tr("More character groups, and characters to add or leave out"));
+    // The rows show while advanced mode is on, so there's no chevron to fold them away
+    advanced->setCollapsible(false);
+    advanced->addSetting(ui->label, ui->editAdditionalChars);
+    advanced->addSetting(ui->labelExcludedChars, {ui->editExcludedChars, ui->buttonAddHex});
+    advanced->addToggle(ui->checkBoxExcludeAlike, ui->checkBoxExcludeAlike->toolTip());
+    advanced->addToggle(ui->checkBoxEnsureEvery);
+    password.finish();
+
+    VaultSettingsPage passphrase(ui->dicewareWidget, {});
+    passphrase.addWidget(ui->labelWordListWarning);
+    auto words = passphrase.addSection();
+    words->layout()->setContentsMargins(0, PivotGap, 0, 0);
+    ui->sliderWordCount->setMinimumWidth(SliderWidth);
+    ui->spinBoxWordCount->setFixedWidth(SpinBoxWidth);
+    words->addSetting(ui->labelWordCount, {ui->sliderWordCount, ui->spinBoxWordCount});
+    words->addSetting(ui->labelWordList, {ui->comboBoxWordList, ui->buttonDeleteWordList, ui->buttonAddWordList});
+    words->addSetting(ui->wordCaseLabel, ui->wordCaseComboBox);
+    ui->editWordSeparator->setFixedWidth(SeparatorWidth);
+    words->addSetting(ui->labelWordSeparator, ui->editWordSeparator);
+    passphrase.finish();
+
+    // The tabs are as tall as the current page, so the generator doesn't keep the room of the taller one
+    auto fitToPage = [tabs = ui->tabWidget] {
+        for (int i = 0; i < tabs->count(); ++i) {
+            const auto policy = i == tabs->currentIndex() ? QSizePolicy::Preferred : QSizePolicy::Ignored;
+            tabs->widget(i)->setSizePolicy(policy, policy);
+        }
+        tabs->updateGeometry();
+    };
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, fitToPage);
+    fitToPage();
+
+    // The options scroll below the password while the window is too short for them all
+    auto tabs = ui->tabWidget;
+    const int index = ui->verticalLayout_2->indexOf(tabs);
+    ui->verticalLayout_2->removeWidget(tabs);
+    m_optionsScroll = new QScrollArea(this);
+    m_optionsScroll->setObjectName("generatorOptions");
+    m_optionsScroll->setFrameShape(QFrame::NoFrame);
+    m_optionsScroll->setWidgetResizable(true);
+    m_optionsScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_optionsScroll->viewport()->setAutoFillBackground(false);
+    m_optionsScroll->setWidget(tabs);
+    tabs->setAutoFillBackground(false);
+    // The modal fits its content, so follow the size of the options as cards show and hide
+    tabs->installEventFilter(this);
+    ui->verticalLayout_2->insertWidget(index, m_optionsScroll, 1);
+
+    // Without the generator's own buttons, as in the modal, their row takes no room
+    ui->horizontalSpacer_5->changeSize(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
+    ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+    // The cards line up with the password card above them
+    for (auto page : {ui->passwordWidget, ui->dicewareWidget}) {
+        if (auto cards = page->findChild<QWidget*>(page->objectName() + "Cards")) {
+            cards->layout()->setContentsMargins(0, 0, 0, 0);
+        }
+    }
+}
+
 PasswordGeneratorWidget::~PasswordGeneratorWidget() = default;
+
+bool PasswordGeneratorWidget::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_ui->editNewPassword && event->type() == QEvent::Resize) {
+        const int size = m_ui->editNewPassword->height();
+        m_ui->buttonGenerate->setFixedSize(size, size);
+        m_ui->buttonCopy->setFixedSize(size, size);
+    } else if (watched == m_ui->tabWidget && event->type() == QEvent::LayoutRequest && m_optionsScroll) {
+        m_optionsScroll->updateGeometry();
+    }
+    return QWidget::eventFilter(watched, event);
+}
 
 void PasswordGeneratorWidget::closeEvent(QCloseEvent* event)
 {
@@ -503,6 +713,12 @@ void PasswordGeneratorWidget::setAdvancedMode(bool advanced)
     }
 
     m_ui->advancedContainer->setVisible(advanced);
+    // The Vault Index layout shows these on cards of their own, outside of the advanced container
+    m_ui->editAdditionalChars->setVisible(advanced);
+    m_ui->editExcludedChars->setVisible(advanced);
+    m_ui->buttonAddHex->setVisible(advanced);
+    m_ui->checkBoxExcludeAlike->setVisible(advanced);
+    m_ui->checkBoxEnsureEvery->setVisible(advanced);
     m_ui->checkBoxBraces->setVisible(advanced);
     m_ui->checkBoxPunctuation->setVisible(advanced);
     m_ui->checkBoxQuotes->setVisible(advanced);

@@ -109,6 +109,11 @@ void PasswordWidget::setQualityVisible(bool state)
     m_ui->qualityProgressBar->setVisible(state);
 }
 
+void PasswordWidget::setLargeFont(bool large)
+{
+    m_largeFont = large;
+}
+
 QString PasswordWidget::text()
 {
     return m_ui->passwordEdit->text();
@@ -246,6 +251,9 @@ void PasswordWidget::showEvent(QShowEvent* event)
     // use a monospace font for the password field
     QFont passwordFont = Font::fixedFont();
     passwordFont.setLetterSpacing(QFont::PercentageSpacing, 110);
+    if (m_largeFont) {
+        passwordFont.setPointSizeF(passwordFont.pointSizeF() * 1.4);
+    }
     m_ui->passwordEdit->setFont(passwordFont);
 }
 
