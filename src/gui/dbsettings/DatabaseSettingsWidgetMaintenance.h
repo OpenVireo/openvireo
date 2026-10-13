@@ -20,7 +20,10 @@
 
 #include "DatabaseSettingsWidget.h"
 
+#include <QPointer>
+
 class QItemSelection;
+class QLabel;
 class CustomIconModel;
 class Database;
 namespace Ui
@@ -51,6 +54,8 @@ private slots:
     void purgeUnusedCustomIcons();
 
 private:
+    void buildVaultPage();
+    void updateEmptyState();
     void populateIcons(QSharedPointer<Database> db);
     void removeSingleCustomIcon(QSharedPointer<Database> database, QModelIndex index);
 
@@ -60,6 +65,7 @@ protected:
 private:
     CustomIconModel* const m_customIconModel;
     uint64_t m_deletionDecision;
+    QPointer<QLabel> m_noIconsLabel;
 };
 
 #endif // KEEPASSXC_DATABASESETTINGSWIDGETMAINTENANCE_H
