@@ -78,7 +78,8 @@ namespace
 
     /**
      * Keeps a label in a Fluent font and text color. The settings modal resets the palettes of its
-     * content when it opens, so the color is put back whenever the palette changes.
+     * content when it opens, and a style sheet set on an ancestor, as the entry editor's, resets its
+     * font, so both are put back whenever they change.
      */
     class LabelStyle : public QObject
     {
@@ -96,7 +97,8 @@ namespace
     protected:
         bool eventFilter(QObject* watched, QEvent* event) override
         {
-            if (watched == m_label && event->type() == QEvent::PaletteChange) {
+            if (watched == m_label
+                && (event->type() == QEvent::PaletteChange || event->type() == QEvent::FontChange)) {
                 apply();
             }
             return QObject::eventFilter(watched, event);
