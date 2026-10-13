@@ -1192,6 +1192,14 @@ void TestGuiVault::testViewScreenshots()
 
         m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
         save("generator", theme);
+        auto* generator = m_mainWindow->findChild<PasswordGeneratorWidget*>("passwordGeneratorWidget");
+        auto* advancedToggle = generator->findChild<QAbstractButton*>("advancedModeToggle");
+        advancedToggle->setChecked(true);
+        save("generator-advanced", theme);
+        advancedToggle->setChecked(false);
+        generator->findChild<QTabWidget*>("tabWidget")->setCurrentIndex(PasswordGeneratorWidget::Diceware);
+        save("generator-passphrase", theme);
+        generator->findChild<QTabWidget*>("tabWidget")->setCurrentIndex(PasswordGeneratorWidget::Password);
         m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
 
         QVERIFY(m_dbWidget->lock());

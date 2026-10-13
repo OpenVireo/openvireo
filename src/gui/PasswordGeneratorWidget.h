@@ -31,6 +31,7 @@ namespace Ui
 }
 
 class PasswordGenerator;
+class QScrollArea;
 class PasswordHealth;
 class PassphraseGenerator;
 
@@ -72,6 +73,7 @@ public slots:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:
     void updateButtonsEnabled(const QString& password);
@@ -86,8 +88,11 @@ private slots:
     void updateGenerator();
 
 private:
+    void setupVaultHero();
     void setupVaultPivot();
+    void setupVaultPages();
     bool m_standalone = false;
+    QScrollArea* m_optionsScroll = nullptr;
     bool m_passwordGenerated = false;
     int m_firstCustomWordlistIndex;
 
