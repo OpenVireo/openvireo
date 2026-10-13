@@ -31,7 +31,6 @@ namespace Ui
 }
 
 class PasswordGenerator;
-class QScrollArea;
 class PasswordHealth;
 class PassphraseGenerator;
 
@@ -92,7 +91,6 @@ private:
     void setupVaultPivot();
     void setupVaultPages();
     bool m_standalone = false;
-    QScrollArea* m_optionsScroll = nullptr;
     bool m_passwordGenerated = false;
     int m_firstCustomWordlistIndex;
 
