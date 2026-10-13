@@ -56,6 +56,7 @@
 #include <QLineEdit>
 #include <QListView>
 #include <QListWidget>
+#include <QComboBox>
 #include <QPlainTextEdit>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -496,6 +497,50 @@ void TestGuiVault::testAdvancedPage()
     QCOMPARE(addFile->mapTo(card, QPoint()).y(), removeFile->mapTo(card, QPoint()).y());
 
     // Adding the attribute changed the entry, so save it rather than answer the prompt to discard it
+    const auto entriesBefore = m_workGroup->entries().size();
+    QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QCOMPARE(m_workGroup->entries().size(), entriesBefore + 1);
+    delete m_dbWidget->currentSelectedEntry();
+}
+
+void TestGuiVault::testAutoTypePage()
+{
+    selectGroup(m_workGroup);
+    m_dbWidget->createEntry();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* card = entryEditCard();
+    auto* categories = card->editor()->findChild<QListWidget*>("categoryList");
+    categories->setCurrentItem(categories->findItems("Auto-Type", Qt::MatchExactly).first());
+
+    // Auto-Type is a switch, and the sequence fields stay in the page
+    auto* autoType = card->findChild<QWidget*>("EditEntryWidgetAutoType");
+    QVERIFY(!autoType->findChild<QWidget*>("vaultSettingsPageForm")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("enableButton")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("sequenceEdit")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("openHelpButton")->isVisible());
+
+    // Without associations, a note stands in for the list and the association's fields until one is added
+    auto* none = card->findChild<QLabel*>("vaultNoWindowAssociationsLabel");
+    auto* view = card->findChild<QAbstractItemView*>("assocView");
+    auto* title = card->findChild<QComboBox*>("windowTitleCombo");
+    auto* remove = card->findChild<QAbstractButton*>("assocRemoveButton");
+    QVERIFY(none->isVisible());
+    QVERIFY(!view->isVisible());
+    QVERIFY(!title->isVisible());
+    QVERIFY(!remove->isVisible());
+    QTest::mouseClick(card->findChild<QAbstractButton*>("assocAddButton"), Qt::LeftButton);
+    QVERIFY(!none->isVisible());
+    QVERIFY(view->isVisible());
+    QVERIFY(title->isVisible());
+    QVERIFY(remove->isVisible());
+    // The association's fields sit under the list rather than beside it
+    QTRY_VERIFY(title->mapTo(card, QPoint()).y() > view->mapTo(card, QPoint()).y() + view->height());
+    QTest::mouseClick(remove, Qt::LeftButton);
+    QVERIFY(none->isVisible());
+    QVERIFY(!view->isVisible());
+
+    // The association came and went, which still counts as a change, so save rather than discard
     const auto entriesBefore = m_workGroup->entries().size();
     QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
@@ -1228,6 +1273,15 @@ void TestGuiVault::testViewScreenshots()
         save("entry-advanced-more", theme);
         advancedPage->ensureWidgetVisible(advancedPage->findChild<QWidget*>("attachmentsWidget"));
         save("entry-advanced-attachments", theme);
+        entryCategories->setCurrentRow(3);
+        save("entry-autotype", theme);
+        QTest::mouseClick(entryEditCard()->findChild<QAbstractButton*>("assocAddButton"), Qt::LeftButton);
+        entryEditCard()->findChild<QComboBox*>("windowTitleCombo")->setEditText("*GitHub*");
+        auto* autoTypePage = qobject_cast<QScrollArea*>(entryEditCard()->editor()->pageStack()->widget(3));
+        // Let the page grow by the association's fields before scrolling to them
+        QApplication::processEvents();
+        autoTypePage->verticalScrollBar()->setValue(autoTypePage->verticalScrollBar()->maximum());
+        save("entry-autotype-window", theme);
         entryCategories->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 
