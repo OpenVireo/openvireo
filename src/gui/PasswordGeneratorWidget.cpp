@@ -22,6 +22,7 @@
 #include <QCloseEvent>
 #include <QDir>
 #include <QShortcut>
+#include <QTabBar>
 #include <QTimer>
 
 #include "core/Config.h"
@@ -31,7 +32,9 @@
 #include "gui/FileDialog.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
+#include "gui/vault/VaultWidgets.h"
 
 PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     : QWidget(parent)
@@ -81,6 +84,10 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     connect(m_ui->tabWidget, SIGNAL(currentChanged(int)), SLOT(updateGenerator()));
     connect(m_ui->wordCaseComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateGenerator()));
 
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultPivot();
+    }
+
     // set font size of password quality, characters, and entropy labels dynamically to 80% of
     // the default font size, but make it no smaller than 8pt
     QFont defaultFont;
@@ -121,6 +128,30 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     m_ui->labelWordListWarning->setStyleSheet(QString("QLabel { color: %1; }").arg(color.name()));
 
     loadSettings();
+}
+
+// In the Vault Index layout, the password and passphrase tabs read as a Fluent pivot: plain labels with an accent
+// line under the current one. The style draws a tab widget's own bar on a filled base, so a separate tab bar switches
+// the tab widget, which keeps the current page for the generator's logic.
+void PasswordGeneratorWidget::setupVaultPivot()
+{
+    auto tabs = m_ui->tabWidget;
+    auto pivot = new QTabBar(this);
+    pivot->setObjectName("generatorTypeSelector");
+    pivot->setAccessibleName(tr("Generator type"));
+    pivot->setDrawBase(false);
+    pivot->setExpanding(false);
+    for (int i = 0; i < tabs->count(); ++i) {
+        pivot->addTab(tabs->tabText(i));
+    }
+    pivot->setCurrentIndex(tabs->currentIndex());
+    connect(pivot, &QTabBar::currentChanged, tabs, &QTabWidget::setCurrentIndex);
+    connect(tabs, &QTabWidget::currentChanged, pivot, &QTabBar::setCurrentIndex);
+    tabs->tabBar()->hide();
+    tabs->setDocumentMode(true);
+    Vault::followTheme(pivot, [pivot] { pivot->setStyleSheet(Vault::pivotStyleSheet()); });
+
+    m_ui->verticalLayout_2->insertWidget(m_ui->verticalLayout_2->indexOf(tabs), pivot, 0, Qt::AlignLeft);
 }
 
 PasswordGeneratorWidget::~PasswordGeneratorWidget() = default;
