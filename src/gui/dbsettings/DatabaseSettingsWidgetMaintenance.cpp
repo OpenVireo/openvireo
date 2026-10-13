@@ -23,6 +23,18 @@
 #include "gui/IconModels.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
+
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
+
+namespace
+{
+    constexpr int IconGridHeight = 140;
+} // namespace
 
 DatabaseSettingsWidgetMaintenance::DatabaseSettingsWidgetMaintenance(QWidget* parent)
     : DatabaseSettingsWidget(parent)
@@ -40,6 +52,66 @@ DatabaseSettingsWidgetMaintenance::DatabaseSettingsWidgetMaintenance(QWidget* pa
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
             this,
             SLOT(selectionChanged()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        buildVaultPage();
+    }
+}
+
+void DatabaseSettingsWidgetMaintenance::buildVaultPage()
+{
+    auto ui = m_ui.data();
+    // The database settings list already names the page
+    VaultSettingsPage page(this, {});
+    auto icons = page.addSection(ui->groupBox);
+
+    // The icons, with the button to delete the selected ones beside them, or a note while there are none
+    m_noIconsLabel = new QLabel(tr("This database has no custom icons."), this);
+    m_noIconsLabel->setObjectName("noCustomIconsLabel");
+    m_noIconsLabel->setWordWrap(true);
+    Vault::followTheme(m_noIconsLabel, [label = m_noIconsLabel] {
+        Vault::styleLabel(label, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+    });
+    m_noIconsLabel->hide();
+
+    const auto deleteText = VaultButton::withoutMnemonic(ui->deleteButton->text());
+    ui->deleteButton->setText(tr("Delete"));
+    ui->deleteButton->setAccessibleName(deleteText);
+    ui->deleteButton->setToolTip(deleteText);
+    ui->customIconsView->setFixedHeight(IconGridHeight);
+
+    auto grid = new QWidget(this);
+    auto gridLayout = new QHBoxLayout(grid);
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+    gridLayout->setSpacing(12);
+    auto views = new QVBoxLayout();
+    views->setContentsMargins(0, 0, 0, 0);
+    views->addWidget(ui->customIconsView);
+    views->addWidget(m_noIconsLabel);
+    gridLayout->addLayout(views, 1);
+    gridLayout->addWidget(ui->deleteButton, 0, Qt::AlignTop);
+    icons->addWidget(grid);
+
+    // Purging is an action of its own, so it says what it does on its card, as in Windows Settings
+    const auto purgeText = VaultButton::withoutMnemonic(ui->purgeButton->text());
+    const auto purgeDescription = ui->purgeButton->toolTip();
+    ui->purgeButton->setText(tr("Purge"));
+    ui->purgeButton->setAccessibleName(purgeText);
+    ui->purgeButton->setToolTip({});
+    icons->addSetting(purgeText, ui->purgeButton, purgeDescription);
+
+    page.finish();
+}
+
+void DatabaseSettingsWidgetMaintenance::updateEmptyState()
+{
+    if (!m_noIconsLabel) {
+        return;
+    }
+    const bool empty = m_customIconModel->rowCount() == 0;
+    m_noIconsLabel->setVisible(empty);
+    m_ui->customIconsView->setVisible(!empty);
+    m_ui->deleteButton->setVisible(!empty);
 }
 
 DatabaseSettingsWidgetMaintenance::~DatabaseSettingsWidgetMaintenance() = default;
@@ -49,6 +121,7 @@ void DatabaseSettingsWidgetMaintenance::populateIcons(QSharedPointer<Database> d
     m_customIconModel->setIcons(Icons::customIconsPixmaps(db.data(), IconSize::Default),
                                 db->metadata()->customIconsOrder());
     m_ui->deleteButton->setEnabled(false);
+    updateEmptyState();
 }
 
 void DatabaseSettingsWidgetMaintenance::initialize()
