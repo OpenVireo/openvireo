@@ -28,6 +28,11 @@
 class CustomData;
 class Database;
 
+namespace fluent::status_info
+{
+    class InfoBar;
+}
+
 namespace Ui
 {
     class DatabaseSettingsWidgetBrowser;
@@ -60,6 +65,7 @@ private slots:
     void editFinished(QStandardItem* item);
 
 private:
+    void buildVaultPage();
     void updateModel();
     void settingsWarning();
     void replaceKey(const QString& prefix, const QString& oldName, const QString& newName) const;
@@ -73,6 +79,7 @@ private:
     QPointer<CustomData> m_customData;
     QPointer<QStandardItemModel> m_customDataModel;
     QString m_valueInEdit;
+    QPointer<fluent::status_info::InfoBar> m_disabledWarning;
 };
 
 #endif // KEEPASSXC_DATABASESETTINGSWIDGETBROWSER_H
