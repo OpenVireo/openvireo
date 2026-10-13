@@ -460,6 +460,49 @@ void TestGuiVault::testEditorSections()
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 }
 
+void TestGuiVault::testAdvancedPage()
+{
+    selectGroup(m_workGroup);
+    m_dbWidget->createEntry();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* card = entryEditCard();
+    card->editor()->findChild<QListWidget*>("categoryList")->setCurrentRow(1);
+
+    // The page reads as settings cards, with the options as switches
+    auto* advanced = card->findChild<QWidget*>("EditEntryWidgetAdvanced");
+    QVERIFY(advanced->findChild<QWidget*>("vaultSettingsPageForm"));
+    QVERIFY(!advanced->findChild<QWidget*>("vaultSettingsPageForm")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("excludeReportsCheckBox")->isVisible());
+    QVERIFY(card->findChild<QWidget*>("fgColorButton")->isVisible());
+
+    // A new entry has no attributes: a note stands in for the empty list and value until one is added
+    auto* none = card->findChild<QLabel*>("vaultNoAttributesLabel");
+    auto* view = card->findChild<QAbstractItemView*>("attributesView");
+    auto* value = card->findChild<QPlainTextEdit*>("attributesEdit");
+    QVERIFY(none->isVisible());
+    QVERIFY(!view->isVisible());
+    QVERIFY(!value->isVisible());
+    QTest::mouseClick(card->findChild<QAbstractButton*>("addAttributeButton"), Qt::LeftButton);
+    QVERIFY(!none->isVisible());
+    QVERIFY(view->isVisible());
+    QVERIFY(value->isVisible());
+    QVERIFY(view->y() < value->y());
+
+    // The attachment buttons sit in a row above the attachments
+    auto* attachments = card->findChild<QWidget*>("attachmentsView");
+    auto* addFile = card->findChild<QWidget*>("addAttachmentButton");
+    auto* removeFile = card->findChild<QWidget*>("removeAttachmentButton");
+    QVERIFY(addFile->mapTo(card, QPoint()).y() < attachments->mapTo(card, QPoint()).y());
+    QCOMPARE(addFile->mapTo(card, QPoint()).y(), removeFile->mapTo(card, QPoint()).y());
+
+    // Adding the attribute changed the entry, so save it rather than answer the prompt to discard it
+    const auto entriesBefore = m_workGroup->entries().size();
+    QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+    QCOMPARE(m_workGroup->entries().size(), entriesBefore + 1);
+    delete m_dbWidget->currentSelectedEntry();
+}
+
 void TestGuiVault::testLeavingViewEndsEditing()
 {
     selectGroup(m_workGroup);
@@ -1180,6 +1223,11 @@ void TestGuiVault::testViewScreenshots()
         auto* entryCategories = entryEditCard()->editor()->findChild<QListWidget*>("categoryList");
         entryCategories->setCurrentRow(1);
         save("entry-advanced", theme);
+        auto* advancedPage = qobject_cast<QScrollArea*>(entryEditCard()->editor()->pageStack()->widget(1));
+        advancedPage->verticalScrollBar()->setValue(advancedPage->verticalScrollBar()->maximum());
+        save("entry-advanced-more", theme);
+        advancedPage->ensureWidgetVisible(advancedPage->findChild<QWidget*>("attachmentsWidget"));
+        save("entry-advanced-attachments", theme);
         entryCategories->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 

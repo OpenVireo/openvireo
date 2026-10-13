@@ -176,6 +176,31 @@ void EntryAttachmentsWidget::setButtonsVisible(bool buttonsVisible)
     emit buttonsVisibleChanged(m_buttonsVisible);
 }
 
+void EntryAttachmentsWidget::setToolbarLayout()
+{
+    // The actions come second in the form, so laying it out from the bottom puts them on top
+    auto* outer = qobject_cast<QBoxLayout*>(layout());
+    outer->setDirection(QBoxLayout::BottomToTop);
+    outer->setSpacing(8);
+
+    auto* actions = qobject_cast<QBoxLayout*>(m_ui->actionsWidget->layout());
+    actions->setDirection(QBoxLayout::LeftToRight);
+    actions->setContentsMargins(0, 0, 0, 0);
+    actions->setSpacing(6);
+    for (int i = 0; i < actions->count(); ++i) {
+        if (auto* spacer = actions->itemAt(i)->spacerItem()) {
+            spacer->changeSize(0, 0, QSizePolicy::Fixed, QSizePolicy::Fixed);
+        }
+    }
+    actions->addStretch(1);
+    for (auto* line : {m_ui->editPreviewLine, m_ui->previewRemoveLine}) {
+        line->setFrameShape(QFrame::VLine);
+    }
+    for (auto* button : m_ui->actionsWidget->findChildren<VaultButton*>()) {
+        button->setFluentSize(fluent::basicinput::Button::Small);
+    }
+}
+
 void EntryAttachmentsWidget::insertAttachments()
 {
     Q_ASSERT(m_entryAttachments);
