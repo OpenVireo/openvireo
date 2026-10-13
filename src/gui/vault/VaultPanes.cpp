@@ -18,19 +18,20 @@
 #include "VaultPanes.h"
 
 #include "core/Database.h"
+#include "core/Group.h"
+#include "core/Metadata.h"
 #include "core/Tools.h"
 #include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/Icons.h"
 #include "gui/remote/RemoteSettings.h"
-#include "core/Group.h"
-#include "core/Metadata.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -244,10 +245,17 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     layout->setContentsMargins(14, 10, 14, 10);
     layout->setSpacing(4);
 
+    // The title and count share a baseline; onThemeUpdated() lowers the count by the difference in their ascents
+    auto* heading = new QWidget(this);
+    auto* headingLayout = new QHBoxLayout(heading);
+    headingLayout->setContentsMargins(0, 0, 0, 0);
+    headingLayout->setSpacing(10);
     m_title->setMinimumWidth(0);
-    layout->addWidget(m_title);
-    layout->addSpacing(10);
-    layout->addWidget(m_count, 0, Qt::AlignBottom);
+    m_title->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    m_count->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    headingLayout->addWidget(m_title, 0, Qt::AlignTop);
+    headingLayout->addWidget(m_count, 0, Qt::AlignTop);
+    layout->addWidget(heading, 0, Qt::AlignVCenter);
     layout->addStretch();
 
     // The entry commands, which Cancel and Save replace while an entry is edited
@@ -381,6 +389,8 @@ void VaultCommandBar::onThemeUpdated()
     const auto p = FluentTheme::palette();
     Vault::styleLabel(m_title, Typography::FontRole::Subtitle, p.text);
     Vault::styleLabel(m_count, Typography::FontRole::Caption, p.textSecondary);
+    const int baselineOffset = QFontMetrics(m_title->font()).ascent() - QFontMetrics(m_count->font()).ascent();
+    m_count->setContentsMargins(0, qMax(0, baselineOffset), 0, 0);
 }
 
 VaultSyncChip::VaultSyncChip(QWidget* parent)
