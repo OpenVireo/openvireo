@@ -66,6 +66,21 @@ struct AttestationKeyPair
     QByteArray spkiPublicKey;
 };
 
+// Assertion signed over a client data hash, without the client data itself
+struct PasskeyAssertion
+{
+    QByteArray authenticatorData;
+    QByteArray signature;
+};
+
+// New credential made from a client data hash, without the client data itself
+struct PasskeyRegistration
+{
+    QString credentialId;
+    QByteArray attestationObject;
+    QByteArray privateKeyPem;
+};
+
 // Predefined variables used for testing the class
 struct TestingVariables
 {
@@ -92,6 +107,16 @@ public:
                                             const QString& privateKeyPem,
                                             const bool beFlag = DEFAULT_BE_FLAG,
                                             const bool bsFlag = DEFAULT_BE_FLAG);
+
+    // The macOS AutoFill provider gets only the hash of the client data from the system, so these sign over it
+    PasskeyAssertion buildAssertionWithClientDataHash(const QString& rpId,
+                                                      const QByteArray& clientDataHash,
+                                                      const QString& privateKeyPem,
+                                                      const bool beFlag = DEFAULT_BE_FLAG,
+                                                      const bool bsFlag = DEFAULT_BS_FLAG);
+    PasskeyRegistration buildRegistrationWithClientDataHash(const QString& rpId,
+                                                            const QList<int>& algorithms,
+                                                            const TestingVariables& testingVariables = {});
 
     static const QString AAGUID;
 
@@ -124,6 +149,9 @@ private:
     AttestationKeyPair buildCredentialPrivateKey(int alg, const TestingVariables& testingVariables = {});
     QByteArray
     buildSignature(const QByteArray& authenticatorData, const QByteArray& clientData, const QString& privateKeyPem);
+    QByteArray buildSignatureWithClientDataHash(const QByteArray& authenticatorData,
+                                                const QByteArray& clientDataHash,
+                                                const QString& privateKeyPem);
     QJsonObject parseAuthData(const QByteArray& authData) const;
     QJsonObject parseFlags(const QByteArray& flags) const;
     char setFlagsFromJson(const QJsonObject& flags) const;
