@@ -169,7 +169,7 @@ other `KPXC_FEATURE_*` options)
   - [x] Locked database: unlock in KeePassXC, then fill.
   - [x] KeePassXC not running: "Open KeePassXC". The sandboxed extension can launch the app (Q4).
   - [ ] Native app login.
-  - [ ] Passkey registration and sign-in on webauthn.io.
+  - [x] Passkeys: registration and sign-in, with the app signing over the system's client data hash.
   - [ ] One-time code (macOS 15+).
   - [ ] Settings → AutoFill page and the extension's configuration screen.
 - [ ] User docs in `docs/topics/`.
