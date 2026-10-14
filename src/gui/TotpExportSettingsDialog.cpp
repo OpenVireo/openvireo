@@ -20,6 +20,7 @@
 #include "core/Totp.h"
 #include "gui/Clipboard.h"
 #include "gui/MainWindow.h"
+#include "gui/MessageBox.h"
 #include "gui/SquareSvgWidget.h"
 #include "qrcode/QrCode.h"
 
@@ -27,7 +28,6 @@
 #include <QBuffer>
 #include <QDialogButtonBox>
 #include <QLabel>
-#include <QMessageBox>
 #include <QPushButton>
 #include <QShortcut>
 #include <QStackedWidget>
@@ -90,11 +90,7 @@ TotpExportSettingsDialog::TotpExportSettingsDialog(DatabaseWidget* parent, Entry
         const auto minsize = static_cast<int>(logicalDpiX() * 2.5);
         m_totpSvgWidget->setMinimumSize(minsize, minsize);
     } else {
-        auto errorBox = new QMessageBox(parent);
-        errorBox->setAttribute(Qt::WA_DeleteOnClose);
-        errorBox->setIcon(QMessageBox::Warning);
-        errorBox->setText(tr("There was an error creating the QR code."));
-        errorBox->exec();
+        MessageBox::warning(parent, {}, tr("There was an error creating the QR code."));
         close();
     }
 }

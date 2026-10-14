@@ -354,31 +354,27 @@ bool DatabaseSettingsWidgetEncryption::saveSettings()
 
     // first perform safety check for KDF rounds
     if (IS_ARGON2(kdfChoice) && m_ui->transformRoundsSpinBox->value() > 10000) {
-        QMessageBox warning;
-        warning.setIcon(QMessageBox::Warning);
-        warning.setWindowTitle(tr("Number of rounds too high", "Key transformation rounds"));
-        warning.setText(tr("You are using a very high number of key transform rounds with Argon2.\n\n"
-                           "If you keep this number, your database may take hours, days, or even longer to open."));
-        auto ok = warning.addButton(tr("Understood, keep number"), QMessageBox::ButtonRole::AcceptRole);
-        auto cancel = warning.addButton(tr("Cancel"), QMessageBox::ButtonRole::RejectRole);
-        warning.setDefaultButton(cancel);
-        warning.layout()->setSizeConstraint(QLayout::SetMinimumSize);
-        warning.exec();
-        if (warning.clickedButton() != ok) {
+        MessageBox::OverrideButtonText keepNumber(MessageBox::Ok, tr("Understood, keep number"));
+        auto result = MessageBox::warning(
+            this,
+            tr("Number of rounds too high", "Key transformation rounds"),
+            tr("You are using a very high number of key transform rounds with Argon2.\n\n"
+               "If you keep this number, your database may take hours, days, or even longer to open."),
+            MessageBox::Ok | MessageBox::Cancel,
+            MessageBox::Cancel);
+        if (result != MessageBox::Ok) {
             return false;
         }
     } else if (IS_AES_KDF(kdfChoice) && m_ui->transformRoundsSpinBox->value() < 100000) {
-        QMessageBox warning;
-        warning.setIcon(QMessageBox::Warning);
-        warning.setWindowTitle(tr("Number of rounds too low", "Key transformation rounds"));
-        warning.setText(tr("You are using a very low number of key transform rounds with AES-KDF.\n\n"
-                           "If you keep this number, your database will not be protected from brute force attacks."));
-        auto ok = warning.addButton(tr("Understood, keep number"), QMessageBox::ButtonRole::AcceptRole);
-        auto cancel = warning.addButton(tr("Cancel"), QMessageBox::ButtonRole::RejectRole);
-        warning.setDefaultButton(cancel);
-        warning.layout()->setSizeConstraint(QLayout::SetMinimumSize);
-        warning.exec();
-        if (warning.clickedButton() != ok) {
+        MessageBox::OverrideButtonText keepNumber(MessageBox::Ok, tr("Understood, keep number"));
+        auto result = MessageBox::warning(
+            this,
+            tr("Number of rounds too low", "Key transformation rounds"),
+            tr("You are using a very low number of key transform rounds with AES-KDF.\n\n"
+               "If you keep this number, your database will not be protected from brute force attacks."),
+            MessageBox::Ok | MessageBox::Cancel,
+            MessageBox::Cancel);
+        if (result != MessageBox::Ok) {
             return false;
         }
     }
@@ -405,10 +401,8 @@ bool DatabaseSettingsWidgetEncryption::saveSettings()
     QApplication::restoreOverrideCursor();
 
     if (!ok) {
-        MessageBox::warning(this,
-                            tr("KDF unchanged"),
-                            tr("Failed to transform key with new KDF parameters; KDF unchanged."),
-                            QMessageBox::Ok);
+        MessageBox::warning(
+            this, tr("KDF unchanged"), tr("Failed to transform key with new KDF parameters; KDF unchanged."));
     }
 
     return ok;
