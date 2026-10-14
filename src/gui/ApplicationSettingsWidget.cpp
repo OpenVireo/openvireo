@@ -45,6 +45,9 @@
 #ifdef KPXC_FEATURE_BROWSER
 #include "browser/BrowserSettingsPage.h"
 #endif
+#ifdef KPXC_FEATURE_AUTOFILL
+#include "autofill/AutofillSettingsPage.h"
+#endif
 
 class ApplicationSettingsWidget::ExtraPage
 {
@@ -97,6 +100,9 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     }
 #ifdef KPXC_FEATURE_BROWSER
     addSettingsPage(new BrowserSettingsPage());
+#endif
+#ifdef KPXC_FEATURE_AUTOFILL
+    addSettingsPage(new AutofillSettingsPage());
 #endif
 
     const bool showDesktopPortalsPreference =

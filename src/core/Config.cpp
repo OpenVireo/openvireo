@@ -202,6 +202,11 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::SSHAgent_AuthSockOverride, {QS("SSHAgent/AuthSockOverride"), Local, {}}},
     {Config::SSHAgent_SecurityKeyProviderOverride, {QS("SSHAgent/SecurityKeyProviderOverride"), Local, {}}},
 
+    // AutoFill
+    {Config::Autofill_Enabled, {QS("Autofill/Enabled"), Roaming, false}},
+    {Config::Autofill_KeepIdentitiesWhenLocked, {QS("Autofill/KeepIdentitiesWhenLocked"), Roaming, false}},
+    {Config::Autofill_ExcludedDatabases, {QS("Autofill/ExcludedDatabases"), Local, {}}},
+
     // FdoSecrets
     {Config::FdoSecrets_Enabled, {QS("FdoSecrets/Enabled"), Roaming, false}},
     {Config::FdoSecrets_ShowNotification, {QS("FdoSecrets/ShowNotification"), Roaming, true}},

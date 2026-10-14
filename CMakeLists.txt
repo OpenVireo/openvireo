@@ -53,12 +53,15 @@ option(KPXC_MINIMAL "Build KeePassXC with the minimal feature set required for b
 option(KPXC_FEATURE_BROWSER "Browser integration and passkeys support" ON)
 option(KPXC_FEATURE_SSHAGENT "SSH Agent integration" ON)
 option(KPXC_FEATURE_FDOSECRETS "freedesktop.org Secret Service integration; replace system keyring" ON)
+# Off by default: a signed build only launches once its provisioning profiles grant the AutoFill entitlement
+option(KPXC_FEATURE_AUTOFILL "macOS AutoFill credential provider; requires matching provisioning profiles" OFF)
 
 if(KPXC_MINIMAL)
     # Disable advanced features in minimal mode
     set(KPXC_FEATURE_BROWSER OFF)
     set(KPXC_FEATURE_SSHAGENT OFF)
     set(KPXC_FEATURE_FDOSECRETS OFF)
+    set(KPXC_FEATURE_AUTOFILL OFF)
 endif()
 
 # Minor Feature Flags
@@ -77,11 +80,20 @@ if(NOT UNIX OR APPLE OR HAIKU)
 	set(KPXC_FEATURE_FDOSECRETS OFF)
 endif()
 
+# The AutoFill provider is an app extension embedded in the macOS bundle, and it shares the browser's entry matching
+if(KPXC_FEATURE_AUTOFILL AND (NOT APPLE OR NOT WITH_APP_BUNDLE OR NOT KPXC_FEATURE_BROWSER))
+    message(STATUS "Disabling KPXC_FEATURE_AUTOFILL: it needs macOS, WITH_APP_BUNDLE and KPXC_FEATURE_BROWSER")
+    set(KPXC_FEATURE_AUTOFILL OFF)
+endif()
+
 # Define feature summaries
 add_feature_info("Browser" KPXC_FEATURE_BROWSER "Browser integration and passkeys support")
 add_feature_info("SSH Agent" KPXC_FEATURE_SSHAGENT "SSH Agent integration")
 if(UNIX AND NOT APPLE)
     add_feature_info("Secret Service" KPXC_FEATURE_FDOSECRETS "Replace system keyring with freedesktop.org Secret Service integration")
+endif()
+if(APPLE)
+    add_feature_info("AutoFill" KPXC_FEATURE_AUTOFILL "macOS AutoFill credential provider for passwords, passkeys and one-time codes")
 endif()
 add_feature_info("Networking" KPXC_FEATURE_NETWORK "Code that can reach out to external networks is included (e.g. downloading icons)")
 add_feature_info("Update Checks" KPXC_FEATURE_UPDATES "Periodic update checks can be performed")
@@ -96,6 +108,9 @@ endif()
 # Initialize project
 project(KeePassXC)
 set(APP_ID "com.bonganimbigi.${PROJECT_NAME}")
+# macOS signing identity of the bundle; the AutoFill extension and its App Group derive from these
+set(MACOS_BUNDLE_IDENTIFIER "com.bonganimbigi.keepassxc")
+set(MACOS_TEAM_IDENTIFIER "DP5U2UP42V")
 
 # Retrieve git HEAD revision hash
 set(GIT_HEAD_OVERRIDE "" CACHE STRING "Manually set the Git HEAD hash when missing (eg, when no .git folder exists)")
