@@ -107,7 +107,7 @@ MainWindow::MainWindow()
     new MainWindowAdaptor(this);
     QDBusConnection dbus = QDBusConnection::sessionBus();
     dbus.registerObject("/keepassxc", this);
-    dbus.registerService("org.keepassxc.KeePassXC.MainWindow");
+    dbus.registerService("com.bonganimbigi.KeePassXC.MainWindow");
 #endif
 
     setAcceptDrops(true);

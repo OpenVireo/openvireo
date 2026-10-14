@@ -159,7 +159,7 @@ bool Polkit::getKey(const QUuid& dbUuid, QByteArray& key)
 
     auto result = m_polkit->CheckAuthorization(
         subject,
-        "org.keepassxc.KeePassXC.unlockDatabase",
+        "com.bonganimbigi.KeePassXC.unlockDatabase",
         details,
         0x00000001,
         // AllowUserInteraction - wait for user to authenticate

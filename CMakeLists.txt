@@ -95,7 +95,7 @@ endif()
 
 # Initialize project
 project(KeePassXC)
-set(APP_ID "org.keepassxc.${PROJECT_NAME}")
+set(APP_ID "com.bonganimbigi.${PROJECT_NAME}")
 
 # Retrieve git HEAD revision hash
 set(GIT_HEAD_OVERRIDE "" CACHE STRING "Manually set the Git HEAD hash when missing (eg, when no .git folder exists)")

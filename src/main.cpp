@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-    QGuiApplication::setDesktopFileName("org.keepassxc.KeePassXC");
+    QGuiApplication::setDesktopFileName("com.bonganimbigi.KeePassXC");
 #if defined(Q_OS_WIN)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     // QStandardPaths::writableLocation(QDesktopServices::DataLocation)
     Application::setApplicationName("KeePassXC");
     Application::setApplicationVersion(KEEPASSXC_VERSION);
-    app.setProperty("KPXC_QUALIFIED_APPNAME", "org.keepassxc.KeePassXC");
+    app.setProperty("KPXC_QUALIFIED_APPNAME", "com.bonganimbigi.KeePassXC");
 
     // HACK: Prevent long-running threads from deadlocking the program with only 1 CPU
     // See https://github.com/keepassxreboot/keepassxc/issues/10391

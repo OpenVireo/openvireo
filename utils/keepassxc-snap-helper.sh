@@ -21,7 +21,7 @@ set -e
 JSON_OUT=""
 BASE_DIR="."
 INSTALL_DIR=""
-INSTALL_FILE="org.keepassxc.keepassxc_browser.json"
+INSTALL_FILE="com.bonganimbigi.keepassxc_browser.json"
 
 # Early out if the keepassxc.proxy executable cannot be found
 if ! command -v keepassxc.proxy; then
@@ -33,12 +33,12 @@ PROXY_PATH=$(command -v keepassxc.proxy)
 
 JSON_FIREFOX=$(cat << EOF
 {
-    "name": "org.keepassxc.keepassxc_browser",
+    "name": "com.bonganimbigi.keepassxc_browser",
     "description": "KeePassXC integration with native messaging support",
     "path": "${PROXY_PATH}",
     "type": "stdio",
     "allowed_extensions": [
-        "keepassxc-browser@keepassxc.org"
+        "keepassxc-browser@bonganimbigi.com"
     ]
 }
 EOF
@@ -46,14 +46,12 @@ EOF
 
 JSON_CHROME=$(cat << EOF
 {
-    "name": "org.keepassxc.keepassxc_browser",
+    "name": "com.bonganimbigi.keepassxc_browser",
     "description": "KeePassXC integration with native messaging support",
     "path": "${PROXY_PATH}",
     "type": "stdio",
     "allowed_origins": [
-        "chrome-extension://iopaggbpplllidnfmcghoonnokmjoicf/",
-        "chrome-extension://oboonakemofpalcgghocfoadofidjkkk/",
-        "chrome-extension://pdffhmdngciaglkoonimfcmckehcpafo/"
+        "chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/"
     ]
 }
 EOF

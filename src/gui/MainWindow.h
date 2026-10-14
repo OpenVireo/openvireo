@@ -48,7 +48,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS) && !defined(QT_NO_DBUS)
-    Q_CLASSINFO("D-Bus Interface", "org.keepassxc.KeePassXC.MainWindow")
+    Q_CLASSINFO("D-Bus Interface", "com.bonganimbigi.KeePassXC.MainWindow")
 #endif
 
 public:
