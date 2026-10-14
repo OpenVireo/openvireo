@@ -166,8 +166,8 @@ other `KPXC_FEATURE_*` options)
       (no hardened runtime, Homebrew Qt) on 2026-10-14:
   - [x] The extension registers with `pluginkit` and shows in System Settings.
   - [x] Safari fills a password with the database unlocked.
-  - [ ] Locked database: unlock in KeePassXC, then fill.
-  - [ ] KeePassXC not running: "Open KeePassXC".
+  - [x] Locked database: unlock in KeePassXC, then fill.
+  - [x] KeePassXC not running: "Open KeePassXC". The sandboxed extension can launch the app (Q4).
   - [ ] Native app login.
   - [ ] Passkey registration and sign-in on webauthn.io.
   - [ ] One-time code (macOS 15+).
@@ -224,7 +224,7 @@ The planned `databaseUnlocked` / `databaseLocked` push events turned out unneces
 | Q1 | Clear identities on lock, or keep them so usernames still show while locked? | **Decided:** configurable, default clear |
 | Q2 | Does the app's minimum macOS version allow phase 1 without `@available` sprawl? | **Decided:** the app keeps its 10.15 target and weak-links AuthenticationServices; the platform layer gates per API. The extension sets `LSMinimumSystemVersion` 11.0 |
 | Q3 | How do the browser access-control rules apply to native-app requests (bundle IDs)? | **Decided:** apps arrive as their associated domains, so they're matched as sites, and deny lists apply |
-| Q4 | Should KeePassXC auto-launch when the extension needs it? | **Decided:** on the user's click, via `NSWorkspace`. Still to confirm that the sandbox allows it on a signed build |
+| Q4 | Should KeePassXC auto-launch when the extension needs it? | **Decided:** on the user's click, via `NSWorkspace`; confirmed working from the sandbox on a signed build |
 | Q5 | Build the appex with CMake or an Xcode sub-project? | **Decided:** CMake |
 | Q6 | Is there upstream appetite? This may need to stay a fork feature | The build already ships under fork identifiers and team `DP5U2UP42V`; upstreaming would mean re-signing under `G2S7P7J672` and `org.keepassxc`. Ask maintainers before phase 1 |
 
