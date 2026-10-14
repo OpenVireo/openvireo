@@ -155,7 +155,8 @@ other `KPXC_FEATURE_*` options)
 - [x] `excludedCredentials` (macOS 15): the extension passes the site's existing credential ids, and when one of
       them is already in an AutoFill database the app refuses with `excluded`. The extension then cancels with
       `ASExtensionErrorCodeMatchedExcludedCredential`, so the system tells the user the account already has a passkey.
-      The check runs after the user confirms saving, not before.
+      The extension checks with `passkeyCheckExcluded` before asking the user to confirm, and the app checks again
+      when saving, which covers a database that was locked during the first check.
 - [ ] Not handled yet: passkey extensions such as PRF and large blobs.
 
 ### Phase 3: One-time codes (macOS 15+)
@@ -195,6 +196,7 @@ Responses carry `ok`, and `error` when it's false: `locked`, `notFound`, `denied
 | `getOneTimeCode` | `recordId` | `{ code }` |
 | `passkeyAssert` | `rpId, clientDataHash` and `recordId` or `credentialId` | `{ credentialId, userHandle, authenticatorData, signature }` |
 | `passkeyRegister` | `rpId, userName, userHandle, clientDataHash, algorithms, excludedCredentials` | `{ credentialId, attestationObject }`, or `excluded` when the account already has one of the excluded passkeys |
+| `passkeyCheckExcluded` | `rpId, excludedCredentials` | `{ ok }`, or `excluded`. Saves nothing |
 | `requestUnlock` | — | Raises KeePassXC's unlock dialog and answers `{ ok }` once a database unlocks, or `canceled` |
 
 The planned `databaseUnlocked` / `databaseLocked` push events turned out unnecessary: `requestUnlock` simply answers late.

@@ -95,6 +95,7 @@ private:
     QJsonObject getOneTimeCode(const QJsonObject& request);
     QJsonObject passkeyAssert(const QJsonObject& request);
     QJsonObject passkeyRegister(const QJsonObject& request);
+    QJsonObject passkeyCheckExcluded(const QJsonObject& request);
     QJsonObject startUnlock(QLocalSocket* socket);
 
     QPointer<AutofillHost> m_host;
