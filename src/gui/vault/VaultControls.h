@@ -18,6 +18,7 @@
 #ifndef KEEPASSXC_VAULTCONTROLS_H
 #define KEEPASSXC_VAULTCONTROLS_H
 
+#include <QDateTimeEdit>
 #include <QPlainTextEdit>
 #include <QPointer>
 
@@ -131,9 +132,32 @@ protected:
     void showEvent(QShowEvent* event) override;
 };
 
-// Multi-line text field framed like the Fluent line edit. It stays a QPlainTextEdit, rather than Fluent-Qt's
-// TextEdit, so forms keep its API, the font they set and the height their layout gives it.
-class VaultPlainTextEdit : public QPlainTextEdit, public fluent::FluentElement
+// Paints the Fluent line edit's fill, border and focus underline behind a stock field, and gives it Fluent text
+// colors, so fields Fluent-Qt has no drop-in replacement for still match the Fluent ones beside them. The field
+// must not paint its own frame or background.
+class VaultFieldFrame : public QObject, public fluent::FluentElement
+{
+    Q_OBJECT
+
+public:
+    static void install(QWidget* field);
+
+    void onThemeUpdated() override;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+private:
+    explicit VaultFieldFrame(QWidget* field);
+    void applyPalette();
+    void paint();
+
+    QWidget* m_field;
+};
+
+// Multi-line text field with the Fluent frame. It stays a QPlainTextEdit, rather than Fluent-Qt's TextEdit, so
+// forms keep its API, the font they set and the height their layout gives it.
+class VaultPlainTextEdit : public QPlainTextEdit
 {
     Q_OBJECT
 
@@ -143,16 +167,27 @@ public:
     QMargins contentMargins() const;
     void setContentMargins(const QMargins& margins);
 
-    void onThemeUpdated() override;
+private:
+    QMargins m_contentMargins;
+};
+
+// Date and time field with the Fluent frame and a Fluent chevron for its calendar. Fluent-Qt's date picker has no
+// time, so this stays a QDateTimeEdit.
+class VaultDateTimeEdit : public QDateTimeEdit
+{
+    Q_OBJECT
+
+public:
+    explicit VaultDateTimeEdit(QWidget* parent = nullptr);
+
+    QMargins contentMargins() const;
+    void setContentMargins(const QMargins& margins);
 
 protected:
-    bool event(QEvent* event) override;
-    void focusInEvent(QFocusEvent* event) override;
-    void focusOutEvent(QFocusEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private:
-    void applyThemeStyle();
-    void paintFrame();
+    void applyStyleSheet();
 
     QMargins m_contentMargins;
 };

@@ -34,6 +34,7 @@
 class TagsEdit : public QAbstractScrollArea
 {
     Q_OBJECT
+    Q_PROPERTY(bool readOnly READ isReadOnly WRITE setReadOnly)
 
 public:
     explicit TagsEdit(QWidget* parent = nullptr);
@@ -54,6 +55,10 @@ public:
     QStringList tags() const;
 
     void setReadOnly(bool readOnly);
+    bool isReadOnly() const;
+
+    /// Set the space between the tags and the edge of the field
+    void setPadding(const QMargins& padding);
 
 signals:
     void tagsEdited();

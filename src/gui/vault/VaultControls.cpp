@@ -17,6 +17,7 @@
 
 #include "VaultControls.h"
 
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAbstractSpinBox>
@@ -358,53 +359,54 @@ void VaultLineEdit::showEvent(QShowEvent* event)
     fluent::textfields::LineEdit::showEvent(event);
 }
 
-VaultPlainTextEdit::VaultPlainTextEdit(QWidget* parent)
-    : QPlainTextEdit(parent)
-    , m_contentMargins(::Spacing::Padding::TextFieldHorizontal,
-                       ::Spacing::Padding::TextFieldVertical,
-                       ::Spacing::Padding::TextFieldHorizontal,
-                       ::Spacing::Padding::TextFieldVertical)
+namespace
 {
-    setAttribute(Qt::WA_Hover);
-    setFrameShape(QFrame::NoFrame);
-    viewport()->setAutoFillBackground(false);
-    applyThemeStyle();
-}
+    const QMargins FieldContentMargins(::Spacing::Padding::TextFieldHorizontal,
+                                       ::Spacing::Padding::TextFieldVertical,
+                                       ::Spacing::Padding::TextFieldHorizontal,
+                                       ::Spacing::Padding::TextFieldVertical);
 
-QMargins VaultPlainTextEdit::contentMargins() const
-{
-    return m_contentMargins;
-}
-
-void VaultPlainTextEdit::setContentMargins(const QMargins& margins)
-{
-    if (m_contentMargins == margins) {
-        return;
+    // Style sheet padding for a framed field, inside the 1px the frame's border takes
+    QString fieldPadding(const QMargins& margins)
+    {
+        return QStringLiteral("padding: %1px %2px %3px %4px;")
+            .arg(qMax(0, margins.top() - 1))
+            .arg(qMax(0, margins.right() - 1))
+            .arg(qMax(0, margins.bottom() - 1))
+            .arg(qMax(0, margins.left() - 1));
     }
-    m_contentMargins = margins;
-    applyThemeStyle();
+} // namespace
+
+void VaultFieldFrame::install(QWidget* field)
+{
+    if (!field->findChild<VaultFieldFrame*>(QString(), Qt::FindDirectChildrenOnly)) {
+        new VaultFieldFrame(field);
+    }
 }
 
-void VaultPlainTextEdit::onThemeUpdated()
+VaultFieldFrame::VaultFieldFrame(QWidget* field)
+    : QObject(field)
+    , m_field(field)
 {
-    applyThemeStyle();
-    update();
+    field->setAttribute(Qt::WA_Hover);
+    if (auto* area = qobject_cast<QAbstractScrollArea*>(field)) {
+        area->setFrameShape(QFrame::NoFrame);
+        area->viewport()->setAutoFillBackground(false);
+    }
+    field->installEventFilter(this);
+    applyPalette();
 }
 
-void VaultPlainTextEdit::applyThemeStyle()
+void VaultFieldFrame::onThemeUpdated()
 {
-    // The transparent border keeps the text and scroll bar inside the painted frame. This sheet also wins over
-    // the forms' own QPlainTextEdit rules, which would draw a stock frame over the Fluent one.
-    setStyleSheet(QStringLiteral("QPlainTextEdit { background: transparent; border: 1px solid transparent;"
-                                 " padding: %1px %2px %3px %4px; }")
-                      .arg(qMax(0, m_contentMargins.top() - 1))
-                      .arg(qMax(0, m_contentMargins.right() - 1))
-                      .arg(qMax(0, m_contentMargins.bottom() - 1))
-                      .arg(qMax(0, m_contentMargins.left() - 1)));
+    applyPalette();
+    m_field->update();
+}
 
-    // Applying the sheet repolishes the field, so set the colors after it
+void VaultFieldFrame::applyPalette()
+{
     const auto& c = themeColorsRef();
-    QPalette pal = palette();
+    QPalette pal = m_field->palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
     pal.setColor(QPalette::Text, c.textPrimary);
@@ -414,64 +416,61 @@ void VaultPlainTextEdit::applyThemeStyle()
     pal.setColor(QPalette::Inactive, QPalette::Highlight, c.accentDefault);
     pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textOnAccent);
     pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
-    if (pal != palette()) {
-        setPalette(pal);
+    if (pal != m_field->palette()) {
+        m_field->setPalette(pal);
     }
 }
 
-bool VaultPlainTextEdit::event(QEvent* event)
+bool VaultFieldFrame::eventFilter(QObject* watched, QEvent* event)
 {
-    switch (event->type()) {
-    case QEvent::Paint:
-        // The text is painted on the viewport, so the frame goes on the field behind it
-        paintFrame();
-        break;
-    case QEvent::Enter:
-    case QEvent::Leave:
-    case QEvent::EnabledChange:
-    case QEvent::ReadOnlyChange:
-        update();
-        break;
-    default:
-        break;
+    if (watched == m_field) {
+        switch (event->type()) {
+        case QEvent::Paint:
+            // Runs before the field paints, so its text lands on the frame
+            paint();
+            break;
+        case QEvent::StyleChange:
+            // A style sheet repolishes the field and can bring back the stock colors
+            applyPalette();
+            break;
+        case QEvent::Enter:
+        case QEvent::Leave:
+        case QEvent::FocusIn:
+        case QEvent::FocusOut:
+        case QEvent::EnabledChange:
+        case QEvent::ReadOnlyChange:
+            m_field->update();
+            break;
+        default:
+            break;
+        }
     }
-    return QPlainTextEdit::event(event);
-}
-
-void VaultPlainTextEdit::focusInEvent(QFocusEvent* event)
-{
-    QPlainTextEdit::focusInEvent(event);
-    update();
-}
-
-void VaultPlainTextEdit::focusOutEvent(QFocusEvent* event)
-{
-    QPlainTextEdit::focusOutEvent(event);
-    update();
+    return QObject::eventFilter(watched, event);
 }
 
 // Same fill, border and focus underline as fluent::textfields::LineEdit
-void VaultPlainTextEdit::paintFrame()
+void VaultFieldFrame::paint()
 {
     const auto& colors = themeColorsRef();
+    const bool readOnly = m_field->property("readOnly").toBool();
     QColor fill;
     QColor border;
     QColor underline;
     int underlineWidth = ::Spacing::Border::Normal;
-    if (!isEnabled()) {
+    if (!m_field->isEnabled()) {
         fill = colors.controlDisabled;
         border = colors.strokeDivider;
         underline = border;
-    } else if (isReadOnly()) {
+    } else if (readOnly) {
         fill = colors.controlAltSecondary;
         border = colors.strokeDefault;
         underline = colors.strokeDivider;
-    } else if (hasFocus()) {
+    } else if (m_field->hasFocus()) {
         fill = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
         border = colors.strokeSecondary;
         underline = colors.accentDefault;
         underlineWidth = ::Spacing::Border::Focused;
-    } else if (underMouse()) {
+    } else if (m_field->underMouse()) {
         fill = colors.controlSecondary;
         border = colors.strokeSecondary;
         underline = colors.strokeSecondary;
@@ -481,21 +480,91 @@ void VaultPlainTextEdit::paintFrame()
         underline = colors.strokeDivider;
     }
 
-    QPainter painter(this);
+    QPainter painter(m_field);
     painter.setRenderHint(QPainter::Antialiasing);
     const qreal radius = themeRadius().control;
-    const QRectF frame = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const QRectF frame = QRectF(m_field->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
     painter.setPen(QPen(border, 1.0));
     painter.setBrush(fill);
     painter.drawRoundedRect(frame, radius, radius);
 
-    if (isEnabled() && !isReadOnly()) {
+    if (m_field->isEnabled() && !readOnly) {
         QPen pen(underline, underlineWidth);
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
-        const qreal y = rect().bottom() + 1 - underlineWidth / 2.0;
+        const qreal y = m_field->rect().bottom() + 1 - underlineWidth / 2.0;
         painter.drawLine(QPointF(frame.left() + radius, y), QPointF(frame.right() - radius, y));
     }
+}
+
+VaultPlainTextEdit::VaultPlainTextEdit(QWidget* parent)
+    : QPlainTextEdit(parent)
+{
+    setContentMargins(FieldContentMargins);
+    VaultFieldFrame::install(this);
+}
+
+QMargins VaultPlainTextEdit::contentMargins() const
+{
+    return m_contentMargins;
+}
+
+void VaultPlainTextEdit::setContentMargins(const QMargins& margins)
+{
+    m_contentMargins = margins;
+    // The transparent border keeps the text and scroll bar inside the painted frame. This sheet also wins over
+    // the forms' own QPlainTextEdit rules, which would draw a stock frame over the Fluent one.
+    setStyleSheet(QStringLiteral("QPlainTextEdit { background: transparent; border: 1px solid transparent; %1 }")
+                      .arg(fieldPadding(margins)));
+}
+
+VaultDateTimeEdit::VaultDateTimeEdit(QWidget* parent)
+    : QDateTimeEdit(parent)
+    , m_contentMargins(FieldContentMargins)
+{
+    applyStyleSheet();
+    VaultFieldFrame::install(this);
+}
+
+QMargins VaultDateTimeEdit::contentMargins() const
+{
+    return m_contentMargins;
+}
+
+void VaultDateTimeEdit::setContentMargins(const QMargins& margins)
+{
+    m_contentMargins = margins;
+    applyStyleSheet();
+}
+
+void VaultDateTimeEdit::applyStyleSheet()
+{
+    // The drop-down keeps its room and click target, but its arrow is painted as a Fluent chevron instead
+    setStyleSheet(QStringLiteral("QDateTimeEdit { background: transparent; border: 1px solid transparent; %1 }"
+                                 "QDateTimeEdit::drop-down { subcontrol-origin: border; subcontrol-position: center right;"
+                                 " width: 32px; border: none; background: transparent; }"
+                                 "QDateTimeEdit::down-arrow { image: none; width: 0; height: 0; }")
+                      .arg(fieldPadding(m_contentMargins)));
+}
+
+void VaultDateTimeEdit::paintEvent(QPaintEvent* event)
+{
+    QDateTimeEdit::paintEvent(event);
+    if (!calendarPopup()) {
+        return;
+    }
+
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
+    iconFont.setPixelSize(Typography::IconSize::Compact);
+    painter.setFont(iconFont);
+    painter.setPen(isEnabled() && !isReadOnly() ? p.textSecondary : p.textDisabled);
+    const QRect logical(width() - 32, 0, 32, height());
+    painter.drawText(QStyle::visualRect(layoutDirection(), rect(), logical),
+                     Qt::AlignCenter,
+                     Typography::Icons::ChevronDownMed);
 }
 
 VaultMenu::VaultMenu(QWidget* parent)
