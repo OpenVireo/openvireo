@@ -57,6 +57,7 @@ private slots:
     void testDatabaseModals();
     void testGroupModals();
     void testTotpSetupModal();
+    void testFluentMessageBox();
     void testNewDatabaseModal();
     void testMenuClickSurvivesLostHighlight();
     void testAutoTypeSettingsPage();

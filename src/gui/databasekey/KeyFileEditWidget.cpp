@@ -44,12 +44,11 @@ bool KeyFileEditWidget::addToCompositeKey(QSharedPointer<CompositeKey> key)
     }
 
     if (fileKey->type() != FileKey::KeePass2XMLv2 && fileKey->type() != FileKey::Hashed) {
-        QMessageBox::warning(getMainWindow(),
-                             tr("Old key file format"),
-                             tr("You selected a key file in an old format which KeePassXC<br>"
-                                "may stop supporting in the future.<br><br>"
-                                "Please consider generating a new key file instead."),
-                             QMessageBox::Ok);
+        MessageBox::warning(getMainWindow(),
+                            tr("Old key file format"),
+                            tr("You selected a key file in an old format which KeePassXC<br>"
+                               "may stop supporting in the future.<br><br>"
+                               "Please consider generating a new key file instead."));
     }
 
     key->addKey(fileKey);
@@ -113,10 +112,8 @@ void KeyFileEditWidget::createKeyFile()
         QString errorMsg;
         bool created = FileKey::create(fileName, &errorMsg);
         if (!created) {
-            MessageBox::critical(getMainWindow(),
-                                 tr("Error creating key file"),
-                                 tr("Unable to create key file: %1").arg(errorMsg),
-                                 QMessageBox::Button::Ok);
+            MessageBox::critical(
+                getMainWindow(), tr("Error creating key file"), tr("Unable to create key file: %1").arg(errorMsg));
         } else {
             m_compUi->keyFileLineEdit->setText(fileName);
         }

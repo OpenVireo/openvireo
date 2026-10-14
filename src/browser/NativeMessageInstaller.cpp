@@ -19,6 +19,8 @@
 #include "BrowserSettings.h"
 #include "config-keepassx.h"
 #include "core/Config.h"
+#include "gui/MainWindow.h"
+#include "gui/MessageBox.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -26,7 +28,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMessageBox>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSettings>
@@ -105,11 +106,10 @@ void NativeMessageInstaller::setBrowserEnabled(SupportedBrowsers browser, bool e
 #endif
         // Always create the script file
         if (!createNativeMessageFile(browser)) {
-            QMessageBox::critical(
-                nullptr,
+            MessageBox::critical(
+                getMainWindow(),
                 QObject::tr("Browser Plugin Failure"),
-                QObject::tr("Could not save the native messaging script file for %1.").arg(getBrowserName(browser)),
-                QMessageBox::Ok);
+                QObject::tr("Could not save the native messaging script file for %1.").arg(getBrowserName(browser)));
         }
     } else {
         // Remove the script file

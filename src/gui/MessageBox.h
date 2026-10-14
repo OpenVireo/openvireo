@@ -115,6 +115,18 @@ public:
         QWindow* m_oldParent;
     };
 
+    // Relabels a button in the message boxes shown while it exists, such as Ok as "Open database anyway"
+    class OverrideButtonText
+    {
+    public:
+        OverrideButtonText(Button button, const QString& text);
+        ~OverrideButtonText();
+
+    private:
+        Button m_button;
+        QString m_oldText;
+    };
+
 private:
     static QWindow* m_overrideParent;
     static Button m_nextAnswer;
@@ -129,6 +141,17 @@ private:
                              Button defaultButton = MessageBox::NoButton,
                              Action action = MessageBox::None,
                              QCheckBox* checkbox = nullptr);
+
+    // Shows the message as a Fluent content dialog in the Vault Index layout. Returns false, without showing
+    // anything, when the message needs a native message box instead.
+    static bool fluentMessageBox(QWidget* parent,
+                                 const QString& title,
+                                 const QString& text,
+                                 Buttons buttons,
+                                 Button defaultButton,
+                                 Action action,
+                                 QCheckBox* checkbox,
+                                 Button& answer);
 
     static QString stdButtonText(QMessageBox::StandardButton button);
 };

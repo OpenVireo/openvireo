@@ -506,20 +506,17 @@ void DatabaseOpenWidget::openDatabase()
     if (ok) {
         // Warn user about minor version mismatch to halt loading if necessary
         if (m_db->hasMinorVersionMismatch()) {
-            QScopedPointer<QMessageBox> msgBox(new QMessageBox(this));
-            msgBox->setIcon(QMessageBox::Warning);
-            msgBox->setWindowTitle(tr("Database Version Mismatch"));
-            msgBox->setText(tr("The database you are trying to open was most likely\n"
-                               "created by a newer version of KeePassXC.\n\n"
-                               "You can try to open it anyway, but it may be incomplete\n"
-                               "and saving any changes may incur data loss.\n\n"
-                               "We recommend you update your KeePassXC installation."));
-            auto btn = msgBox->addButton(tr("Open database anyway"), QMessageBox::ButtonRole::AcceptRole);
-            msgBox->setDefaultButton(btn);
-            msgBox->addButton(QMessageBox::Cancel);
-            msgBox->layout()->setSizeConstraint(QLayout::SetMinimumSize);
-            msgBox->exec();
-            if (msgBox->clickedButton() != btn) {
+            MessageBox::OverrideButtonText openAnyway(MessageBox::Ok, tr("Open database anyway"));
+            auto result = MessageBox::warning(this,
+                                              tr("Database Version Mismatch"),
+                                              tr("The database you are trying to open was most likely\n"
+                                                 "created by a newer version of KeePassXC.\n\n"
+                                                 "You can try to open it anyway, but it may be incomplete\n"
+                                                 "and saving any changes may incur data loss.\n\n"
+                                                 "We recommend you update your KeePassXC installation."),
+                                              MessageBox::Ok | MessageBox::Cancel,
+                                              MessageBox::Ok);
+            if (result != MessageBox::Ok) {
                 m_db.reset(new Database());
                 m_db->open(m_filename, nullptr, &error);
 
@@ -540,19 +537,17 @@ void DatabaseOpenWidget::openDatabase()
         clearForms();
     } else {
         if (!isOnQuickUnlockScreen() && m_ui->editPassword->text().isEmpty() && !m_retryUnlockWithEmptyPassword) {
-            QScopedPointer<QMessageBox> msgBox(new QMessageBox(this));
-            msgBox->setIcon(QMessageBox::Critical);
-            msgBox->setWindowTitle(tr("Unlock failed and no password given"));
-            msgBox->setText(tr("Unlocking the database failed and you did not enter a password.\n"
-                               "Do you want to retry with an \"empty\" password instead?\n\n"
-                               "To prevent this error from appearing, you must go to "
-                               "\"Database Settings / Security\" and reset your password."));
-            auto btn = msgBox->addButton(tr("Retry with empty password"), QMessageBox::ButtonRole::AcceptRole);
-            msgBox->setDefaultButton(btn);
-            msgBox->addButton(QMessageBox::Cancel);
-            msgBox->exec();
+            MessageBox::OverrideButtonText retry(MessageBox::Ok, tr("Retry with empty password"));
+            auto result = MessageBox::critical(this,
+                                               tr("Unlock failed and no password given"),
+                                               tr("Unlocking the database failed and you did not enter a password.\n"
+                                                  "Do you want to retry with an \"empty\" password instead?\n\n"
+                                                  "To prevent this error from appearing, you must go to "
+                                                  "\"Database Settings / Security\" and reset your password."),
+                                               MessageBox::Ok | MessageBox::Cancel,
+                                               MessageBox::Ok);
 
-            if (msgBox->clickedButton() == btn) {
+            if (result == MessageBox::Ok) {
                 m_retryUnlockWithEmptyPassword = true;
                 setUserInteractionLock(false);
                 openDatabase();
@@ -607,22 +602,22 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
         }
         if (key->type() != FileKey::KeePass2XMLv2 && key->type() != FileKey::Hashed
             && !config()->get(Config::Messages_NoLegacyKeyFileWarning).toBool()) {
-            QMessageBox legacyWarning;
-            legacyWarning.setWindowTitle(tr("Old key file format"));
-            legacyWarning.setText(tr("You are using an old key file format which KeePassXC may<br>"
-                                     "stop supporting in the future.<br><br>"
-                                     "Please consider generating a new key file by going to:<br>"
-                                     "<strong>Database &gt; Database Security &gt; Change Key File.</strong><br>"));
-            legacyWarning.setIcon(QMessageBox::Icon::Warning);
-            legacyWarning.addButton(QMessageBox::Ok);
-            legacyWarning.setDefaultButton(QMessageBox::Ok);
-            legacyWarning.setCheckBox(new QCheckBox(tr("Don't show this warning again")));
-
-            connect(legacyWarning.checkBox(), &QCheckBox::stateChanged, this, [](int state) {
+            // The message box owns the checkbox and deletes it on closing
+            auto dontShowAgain = new QCheckBox(tr("Don't show this warning again"));
+            connect(dontShowAgain, &QCheckBox::stateChanged, this, [](int state) {
                 config()->set(Config::Messages_NoLegacyKeyFileWarning, state == Qt::CheckState::Checked);
             });
 
-            legacyWarning.exec();
+            MessageBox::warning(this,
+                                tr("Old key file format"),
+                                tr("You are using an old key file format which KeePassXC may<br>"
+                                   "stop supporting in the future.<br><br>"
+                                   "Please consider generating a new key file by going to:<br>"
+                                   "<strong>Database &gt; Database Security &gt; Change Key File.</strong><br>"),
+                                MessageBox::Ok,
+                                MessageBox::Ok,
+                                MessageBox::None,
+                                dontShowAgain);
         }
         databaseKey->addKey(key);
         lastKeyFiles.insert(m_filename, keyFilename);
