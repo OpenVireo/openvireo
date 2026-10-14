@@ -48,6 +48,7 @@
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 
+#include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/textfields/AutoSuggestBox.h>
 #include <components/windowing/TitleBar.h>
 
@@ -1011,6 +1012,126 @@ void TestGuiVault::testTotpSetupModal()
 
     delete entry;
     selectGroup(m_workGroup);
+}
+
+void TestGuiVault::testFluentMessageBox()
+{
+    using fluent::dialogs_flyouts::ContentDialog;
+    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+
+    // A question shows as a content dialog over the window, with the rejecting button as its close command
+    bool shown = false;
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->isVisible());
+        shown = true;
+        QCOMPARE(dialog->title(), QStringLiteral("Delete entry?"));
+        QCOMPARE(dialog->primaryButtonText(), QMessageBox::tr("Delete"));
+        QCOMPARE(dialog->secondaryButtonText(), QString());
+        QVERIFY(!dialog->closeButtonText().isEmpty());
+        QCOMPARE(dialog->defaultButton(), int(ContentDialog::Close));
+        if (!dir.isEmpty()) {
+            QTest::qWait(300);
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-message-box.png"));
+        }
+        // Escape answers with the rejecting button
+        QTest::keyClick(dialog, Qt::Key_Escape);
+    });
+    auto answer = MessageBox::question(m_dbWidget,
+                                       "Delete entry?",
+                                       "Do you really want to delete the entry \"GitHub\" for good?",
+                                       MessageBox::Delete | MessageBox::Cancel,
+                                       MessageBox::Cancel);
+    QVERIFY(shown);
+    QCOMPARE(answer, MessageBox::Cancel);
+    QTRY_VERIFY(!m_mainWindow->findChild<ContentDialog*>());
+
+    // Primary and secondary commands answer with their buttons
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        QVERIFY(dialog);
+        QCOMPARE(dialog->primaryButtonText(), QMessageBox().addButton(QMessageBox::Yes)->text());
+        QCOMPARE(dialog->secondaryButtonText(), QMessageBox().addButton(QMessageBox::No)->text());
+        emit dialog->secondaryButtonClicked();
+        dialog->done(ContentDialog::ResultSecondary);
+    });
+    answer = MessageBox::question(
+        m_dbWidget, "Save?", "Save changes?", MessageBox::Yes | MessageBox::No | MessageBox::Cancel);
+    QCOMPARE(answer, MessageBox::No);
+
+    // Enter presses the default button
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->isVisible());
+        QTest::keyClick(dialog, Qt::Key_Return);
+    });
+    answer = MessageBox::warning(m_dbWidget, "Warning", "Something happened.");
+    QCOMPARE(answer, MessageBox::Ok);
+
+    // Four buttons: the third command joins the bar between secondary and close, and answers with its button
+    QString primaryText;
+    int defaultCommand = -1;
+    bool ignoreVisible = false;
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        if (!dialog) {
+            return;
+        }
+        static_cast<void>(QTest::qWaitFor([dialog] { return dialog->isVisible(); }));
+        primaryText = dialog->primaryButtonText();
+        defaultCommand = dialog->defaultButton();
+        QPushButton* ignore = nullptr;
+        for (auto* button : dialog->findChildren<QPushButton*>()) {
+            if (button->text() == QMessageBox().addButton(QMessageBox::Ignore)->text()) {
+                ignore = button;
+            }
+        }
+        if (!dir.isEmpty()) {
+            QTest::qWait(300);
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-message-box-four.png"));
+        }
+        if (!ignore) {
+            dialog->done(ContentDialog::ResultNone);
+            return;
+        }
+        ignoreVisible = ignore->isVisible();
+        ignore->click();
+    });
+    answer = MessageBox::question(m_dbWidget,
+                                  "Reload database",
+                                  "The database file was modified externally.<br>How would you like to proceed?",
+                                  MessageBox::Merge | MessageBox::Discard | MessageBox::Ignore | MessageBox::Cancel,
+                                  MessageBox::Merge);
+    QCOMPARE(primaryText, QMessageBox::tr("Merge"));
+    QCOMPARE(defaultCommand, int(ContentDialog::Primary));
+    QVERIFY(ignoreVisible);
+    QCOMPARE(answer, MessageBox::Ignore);
+
+    // A relabelled button keeps its label only while the override exists
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        primaryText = dialog ? dialog->primaryButtonText() : QString();
+        if (dialog) {
+            dialog->done(ContentDialog::ResultPrimary);
+        }
+    });
+    {
+        MessageBox::OverrideButtonText openAnyway(MessageBox::Ok, "Open database anyway");
+        answer = MessageBox::warning(m_dbWidget, "Version", "Newer version.", MessageBox::Ok | MessageBox::Cancel);
+    }
+    QCOMPARE(primaryText, QStringLiteral("Open database anyway"));
+    QCOMPARE(answer, MessageBox::Ok);
+    QTimer::singleShot(0, this, [&] {
+        auto* dialog = m_mainWindow->findChild<ContentDialog*>();
+        primaryText = dialog ? dialog->primaryButtonText() : QString();
+        if (dialog) {
+            dialog->done(ContentDialog::ResultPrimary);
+        }
+    });
+    MessageBox::warning(m_dbWidget, "Warning", "Something happened.");
+    QCOMPARE(primaryText, QMessageBox().addButton(QMessageBox::Ok)->text());
 }
 
 void TestGuiVault::testNewDatabaseModal()
