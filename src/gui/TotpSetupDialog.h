@@ -29,6 +29,11 @@ namespace Ui
     class TotpSetupDialog;
 }
 
+namespace fluent::status_info
+{
+    class InfoBar;
+}
+
 class TotpSetupDialog : public QDialog
 {
     Q_OBJECT
@@ -46,8 +51,13 @@ private slots:
     void saveSettings();
 
 private:
+    void setupVaultLayout();
+    void showError(const QString& message);
+
     QScopedPointer<Ui::TotpSetupDialog> m_ui;
     Entry* m_entry;
+    // In the Vault Index layout, problems with the key show here instead of in a message box
+    fluent::status_info::InfoBar* m_errorBar = nullptr;
 };
 
 #endif // KEEPASSX_SETUPTOTPDIALOG_H

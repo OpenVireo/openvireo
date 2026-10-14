@@ -34,6 +34,7 @@
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
+#include "gui/TotpSetupDialog.h"
 #include "gui/entry/EntryView.h"
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
@@ -61,6 +62,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QScreen>
 #include <QStackedWidget>
 #include <QMenu>
@@ -944,6 +946,73 @@ void TestGuiVault::testGroupModals()
     selectGroup(m_workGroup);
 }
 
+void TestGuiVault::testTotpSetupModal()
+{
+    auto* entry = new Entry();
+    entry->setUuid(QUuid::createUuid());
+    entry->setTitle("TOTP setup");
+    entry->setGroup(m_workGroup);
+    selectGroup(m_workGroup);
+    selectEntry(entry);
+
+    // Setting up TOTP opens a modal over the window, with Cancel and Save in its footer
+    m_mainWindow->findChild<QAction*>("actionEntrySetupTotp")->trigger();
+    auto* modal = m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal");
+    QVERIFY(modal);
+    QTRY_VERIFY(modal->isOpen());
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    auto* dialog = modal->findChild<TotpSetupDialog*>();
+    QVERIFY(dialog);
+    QVERIFY(!dialog->isWindow());
+    QVERIFY(dialog->findChild<QDialogButtonBox*>("buttonBox")->isHidden());
+    auto* seedEdit = dialog->findChild<QLineEdit*>("seedEdit");
+    QTRY_COMPARE(m_mainWindow->focusWidget(), seedEdit);
+
+    // Custom settings only show while they apply
+    auto* customSettings = dialog->findChild<QWidget*>("customSettingsGroup");
+    auto* algorithm = dialog->findChild<QWidget*>("algorithmComboBox");
+    QVERIFY(!algorithm->isVisible());
+    dialog->findChild<QRadioButton*>("radioCustom")->setChecked(true);
+    QTRY_VERIFY(algorithm->isVisible());
+    QVERIFY(customSettings->isEnabled());
+    dialog->findChild<QRadioButton*>("radioDefault")->setChecked(true);
+    QTRY_VERIFY(!algorithm->isVisible());
+
+    // An invalid key shows an error in the modal instead of a message box, and keeps it open
+    auto* errorBar = dialog->findChild<QWidget*>("totpErrorBar");
+    QVERIFY(!errorBar->isVisible());
+    QTest::keyClicks(seedEdit, "not base32!");
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultTotpSetupSave"), Qt::LeftButton);
+    QTRY_VERIFY(errorBar->isVisible());
+    QVERIFY(modal->isOpen());
+    QVERIFY(!entry->hasTotp());
+    // Editing the key clears the error
+    QTest::keyClick(seedEdit, Qt::Key_Backspace);
+    QVERIFY(!errorBar->isVisible());
+
+    // A valid key saves and closes the modal
+    seedEdit->clear();
+    QTest::keyClicks(seedEdit, "JBSWY3DPEHPK3PXP");
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultTotpSetupSave"), Qt::LeftButton);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal"));
+    QVERIFY(entry->hasTotp());
+    QCOMPARE(entry->totpSettings()->key, QString("JBSWY3DPEHPK3PXP"));
+
+    // Escape sets changes aside
+    m_mainWindow->findChild<QAction*>("actionEntrySetupTotp")->trigger();
+    modal = m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal");
+    QTRY_VERIFY(modal && modal->isOpen());
+    seedEdit = modal->findChild<QLineEdit*>("seedEdit");
+    QCOMPARE(seedEdit->text(), QString("JBSWY3DPEHPK3PXP"));
+    seedEdit->setText("GEZDGNBVGY3TQOJQ");
+    QTest::keyClick(modal, Qt::Key_Escape);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal"));
+    QCOMPARE(entry->totpSettings()->key, QString("JBSWY3DPEHPK3PXP"));
+
+    delete entry;
+    selectGroup(m_workGroup);
+}
+
 void TestGuiVault::testNewDatabaseModal()
 {
     const int tabsBefore = m_tabWidget->count();
@@ -1197,6 +1266,18 @@ void TestGuiVault::testScreenshots()
         QApplication::processEvents();
         QTest::qWait(200);
         QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-%1.png").arg(theme))));
+        m_mainWindow->findChild<QAction*>("actionEntrySetupTotp")->trigger();
+        QApplication::processEvents();
+        QTest::qWait(100);
+        QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-totp-%1.png").arg(theme))));
+        auto* totpModal = m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal");
+        totpModal->findChild<QRadioButton*>("radioCustom")->setChecked(true);
+        QApplication::processEvents();
+        QTest::qWait(100);
+        QVERIFY(
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-totp-custom-%1.png").arg(theme))));
+        QTest::keyClick(totpModal, Qt::Key_Escape);
+        QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal"));
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();
         QTest::qWait(100);
