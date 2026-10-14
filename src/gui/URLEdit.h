@@ -20,12 +20,12 @@
 #define KEEPASSX_URLEDIT_H
 
 #include <QAction>
-#include <QLineEdit>
 #include <QPointer>
 
 #include "core/Entry.h"
+#include "gui/vault/VaultControls.h"
 
-class URLEdit : public QLineEdit
+class URLEdit : public VaultLineEdit
 {
     Q_OBJECT
 
@@ -34,11 +34,15 @@ public:
     void enableVerifyMode();
     void setEntry(Entry* entry);
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private slots:
     void updateStylesheet(const QString& url = {});
 
 private:
     QPointer<QAction> m_errorAction;
+    bool m_invalid = false;
     QPointer<Entry> m_entry;
 };
 

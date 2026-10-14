@@ -20,10 +20,12 @@
 
 #include "gui/Icons.h"
 #include "gui/UrlTools.h"
-#include "gui/styles/StateColorPalette.h"
+#include "gui/styles/FluentTheme.h"
+
+#include <QPainter>
 
 URLEdit::URLEdit(QWidget* parent)
-    : QLineEdit(parent)
+    : VaultLineEdit(parent)
 {
     const QIcon errorIcon = icons()->icon("dialog-error");
     m_errorAction = addAction(errorIcon, QLineEdit::TrailingPosition);
@@ -45,18 +47,27 @@ void URLEdit::setEntry(Entry* entry)
     m_entry = entry;
 }
 
+// The Fluent field paints its own frame from its style sheet, so an invalid URL is outlined in the critical color
+// rather than given the stock field's tinted background
 void URLEdit::updateStylesheet(const QString& url)
 {
-    const QString stylesheetTemplate("QLineEdit { background: %1; }");
     const auto resolvedUrl = m_entry ? m_entry->resolveMultiplePlaceholders(url) : url;
+    m_invalid = !UrlTools::isUrlValid(resolvedUrl);
+    m_errorAction->setVisible(m_invalid);
+    update();
+}
 
-    if (!UrlTools::isUrlValid(resolvedUrl)) {
-        const StateColorPalette statePalette;
-        const auto color = statePalette.color(StateColorPalette::ColorRole::Error);
-        setStyleSheet(stylesheetTemplate.arg(color.name()));
-        m_errorAction->setVisible(true);
-    } else {
-        m_errorAction->setVisible(false);
-        setStyleSheet("");
+void URLEdit::paintEvent(QPaintEvent* event)
+{
+    VaultLineEdit::paintEvent(event);
+    if (!m_invalid || !isEnabled()) {
+        return;
     }
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(FluentTheme::palette().critical, 1.0));
+    painter.setBrush(Qt::NoBrush);
+    const qreal radius = themeRadius().control;
+    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
 }
