@@ -18,12 +18,14 @@
 #ifndef KEEPASSXC_VAULTCONTROLS_H
 #define KEEPASSXC_VAULTCONTROLS_H
 
+#include <QPlainTextEdit>
 #include <QPointer>
 
 #include <components/basicinput/Button.h>
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ComboBox.h>
 #include <components/basicinput/RadioButton.h>
+#include <components/foundation/FluentElement.h>
 #include <components/menus_toolbars/Menu.h>
 #include <components/textfields/LineEdit.h>
 
@@ -127,6 +129,32 @@ public:
 
 protected:
     void showEvent(QShowEvent* event) override;
+};
+
+// Multi-line text field framed like the Fluent line edit. It stays a QPlainTextEdit, rather than Fluent-Qt's
+// TextEdit, so forms keep its API, the font they set and the height their layout gives it.
+class VaultPlainTextEdit : public QPlainTextEdit, public fluent::FluentElement
+{
+    Q_OBJECT
+
+public:
+    explicit VaultPlainTextEdit(QWidget* parent = nullptr);
+
+    QMargins contentMargins() const;
+    void setContentMargins(const QMargins& margins);
+
+    void onThemeUpdated() override;
+
+protected:
+    bool event(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+
+private:
+    void applyThemeStyle();
+    void paintFrame();
+
+    QMargins m_contentMargins;
 };
 
 // Fluent menu for context menus, button menus and menu bar menus

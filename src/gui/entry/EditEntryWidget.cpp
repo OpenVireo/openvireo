@@ -259,12 +259,11 @@ void EditEntryWidget::setupMain()
     m_usernameCompleter->setModel(m_usernameCompleterModel);
     m_mainUi->usernameComboBox->setCompleter(m_usernameCompleter);
 
-    // The title, username, password and URL are the entry's main fields, so give them the
+    // The title, username, password, URL and notes are the entry's main fields, so give them the
     // roomier padding of the unlock card's password
     m_mainUi->titleEdit->setContentMargins(VaultLineEdit::LargePadding);
-    // The URL field is a stock line edit, so pad its text and match the title's height instead
-    m_mainUi->urlEdit->setTextMargins(VaultLineEdit::LargePadding.left(), 0, VaultLineEdit::LargePadding.right(), 0);
-    m_mainUi->urlEdit->setMinimumHeight(m_mainUi->titleEdit->sizeHint().height());
+    m_mainUi->urlEdit->setContentMargins(VaultLineEdit::LargePadding);
+    m_mainUi->notesEdit->setContentMargins(VaultLineEdit::LargePadding);
     m_mainUi->usernameComboBox->setContentPaddingH(VaultLineEdit::LargePadding.left());
     m_mainUi->usernameComboBox->setContentPaddingV(VaultLineEdit::LargePadding.top());
     if (auto* passwordEdit = m_mainUi->passwordEdit->findChild<VaultLineEdit*>("passwordEdit")) {
