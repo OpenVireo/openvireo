@@ -179,6 +179,10 @@ public:
         SSHAgent_AuthSockOverride,
         SSHAgent_SecurityKeyProviderOverride,
 
+        Autofill_Enabled,
+        Autofill_KeepIdentitiesWhenLocked,
+        Autofill_ExcludedDatabases,
+
         FdoSecrets_Enabled,
         FdoSecrets_ShowNotification,
         FdoSecrets_ConfirmDeleteItem,

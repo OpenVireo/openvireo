@@ -333,11 +333,77 @@ AttestationKeyPair BrowserPasskeys::buildCredentialPrivateKey(int alg, const Tes
     return attestationKeyPair;
 }
 
+PasskeyAssertion BrowserPasskeys::buildAssertionWithClientDataHash(const QString& rpId,
+                                                                   const QByteArray& clientDataHash,
+                                                                   const QString& privateKeyPem,
+                                                                   const bool beFlag,
+                                                                   const bool bsFlag)
+{
+    if (rpId.isEmpty() || clientDataHash.size() != HASH_BYTES) {
+        return {};
+    }
+
+    PasskeyAssertion assertion;
+    assertion.authenticatorData = buildAuthenticatorData(rpId, {}, beFlag, bsFlag);
+    assertion.signature = buildSignatureWithClientDataHash(assertion.authenticatorData, clientDataHash, privateKeyPem);
+    if (assertion.signature.isEmpty()) {
+        return {};
+    }
+    return assertion;
+}
+
+PasskeyRegistration BrowserPasskeys::buildRegistrationWithClientDataHash(const QString& rpId,
+                                                                         const QList<int>& algorithms,
+                                                                         const TestingVariables& testingVariables)
+{
+    if (rpId.isEmpty()) {
+        return {};
+    }
+
+    // Use the first algorithm the relying party asks for that we support, or ES256 when it names none
+    int alg = algorithms.isEmpty() ? WebAuthnAlgorithms::ES256 : 0;
+    for (const auto requested : algorithms) {
+        if (requested == WebAuthnAlgorithms::ES256 || requested == WebAuthnAlgorithms::EDDSA
+            || requested == WebAuthnAlgorithms::RS256) {
+            alg = requested;
+            break;
+        }
+    }
+
+    const auto privateKey = buildCredentialPrivateKey(alg, testingVariables);
+    if (privateKey.cborEncodedPublicKey.isEmpty() || privateKey.privateKeyPem.isEmpty()) {
+        return {};
+    }
+
+    const auto credentialId = testingVariables.credentialId.isEmpty()
+                                  ? browserMessageBuilder()->getRandomBytesAsBase64(ID_BYTES)
+                                  : testingVariables.credentialId;
+    const QJsonObject options({{"rp", QJsonObject({{"id", rpId}})}});
+    const auto attestationObject =
+        buildAttestationObject(options, {}, credentialId, privateKey.cborEncodedPublicKey, testingVariables);
+    if (attestationObject.isEmpty()) {
+        return {};
+    }
+
+    PasskeyRegistration registration;
+    registration.credentialId = credentialId;
+    registration.attestationObject = attestationObject;
+    registration.privateKeyPem = privateKey.privateKeyPem;
+    return registration;
+}
+
 QByteArray BrowserPasskeys::buildSignature(const QByteArray& authenticatorData,
                                            const QByteArray& clientData,
                                            const QString& privateKeyPem)
 {
     const auto clientDataHash = browserMessageBuilder()->getSha256Hash(clientData);
+    return buildSignatureWithClientDataHash(authenticatorData, clientDataHash, privateKeyPem);
+}
+
+QByteArray BrowserPasskeys::buildSignatureWithClientDataHash(const QByteArray& authenticatorData,
+                                                             const QByteArray& clientDataHash,
+                                                             const QString& privateKeyPem)
+{
     const auto attToBeSigned = authenticatorData + clientDataHash;
 
     try {

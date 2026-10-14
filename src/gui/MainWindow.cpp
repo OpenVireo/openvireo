@@ -76,6 +76,10 @@
 #include "fdosecrets/FdoSecretsPlugin.h"
 #endif
 
+#ifdef KPXC_FEATURE_AUTOFILL
+#include "autofill/AutofillService.h"
+#endif
+
 #ifdef KPXC_FEATURE_BROWSER
 #include "browser/BrowserService.h"
 #endif
@@ -242,6 +246,12 @@ MainWindow::MainWindow()
 #ifdef KPXC_FEATURE_BROWSER
     connect(
         browserService(), &BrowserService::requestUnlock, m_ui->tabWidget, &DatabaseTabWidget::performBrowserUnlock);
+#endif
+
+#ifdef KPXC_FEATURE_AUTOFILL
+    // The AutoFill extension asks for an unlock the same way the browser extension does
+    connect(
+        autofillService(), &AutofillService::requestUnlock, m_ui->tabWidget, &DatabaseTabWidget::performBrowserUnlock);
 #endif
 
 #ifdef KPXC_FEATURE_SSHAGENT

@@ -356,6 +356,11 @@ if(KPXC_FEATURE_FDOSECRETS)
     set(fdosecrets_LIB fdosecrets)
 endif()
 
+add_subdirectory(autofill)
+if(KPXC_FEATURE_AUTOFILL)
+    set(autofill_LIB autofill)
+endif()
+
 configure_file(config-keepassx.h.in ${CMAKE_CURRENT_BINARY_DIR}/config-keepassx.h)
 configure_file(git-info.h.in ${CMAKE_CURRENT_BINARY_DIR}/git-info.h)
 
@@ -386,6 +391,7 @@ target_link_libraries(keepassxc_gui
         Qt6::Widgets
         FluentQt::FluentQt
         ${autotype_LIB}
+        ${autofill_LIB}
         ${browser_LIB}
         ${fdosecrets_LIB}
         ${keeshare_LIB}
@@ -445,11 +451,31 @@ if(WIN32)
     target_sources(${PROGNAME} PUBLIC ${WIN32_ResourceFiles})
 
 elseif(APPLE AND WITH_APP_BUNDLE)
-    set(MACOSX_BUNDLE_IDENTIFIER com.bonganimbigi.keepassxc)
+    set(MACOSX_BUNDLE_IDENTIFIER ${MACOS_BUNDLE_IDENTIFIER})
     set(MACOSX_BUNDLE_ICON_NAME keepassxc)
     set(MACOSX_BUNDLE_APPLE_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/share/macosx/keepassxc.entitlements")
+    set(MACOSX_BUNDLE_PROVISIONING_PROFILE "${CMAKE_SOURCE_DIR}/share/macosx/embedded.provisionprofile")
+    if(KPXC_FEATURE_AUTOFILL)
+        # The app writes to the credential identity store and listens in the App Group container
+        set(MACOSX_BUNDLE_APPLE_ENTITLEMENTS "${AUTOFILL_APP_ENTITLEMENTS}")
+        if(EXISTS "${AUTOFILL_APP_PROFILE}")
+            set(MACOSX_BUNDLE_PROVISIONING_PROFILE "${AUTOFILL_APP_PROFILE}")
+        endif()
+        set(MACOSX_BUNDLE_AUTOFILL_EXTENSION "${AUTOFILL_EXTENSION_NAME}.appex")
+        set(MACOSX_BUNDLE_AUTOFILL_ENTITLEMENTS "${AUTOFILL_EXTENSION_ENTITLEMENTS}")
+
+        # Embed the extension in the build tree's bundle too, so a build can be signed and tried as is
+        add_dependencies(${PROGNAME} ${AUTOFILL_EXTENSION_NAME})
+        add_custom_command(TARGET ${PROGNAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/PlugIns
+                COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_BUNDLE_DIR:${AUTOFILL_EXTENSION_NAME}>
+                        $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/PlugIns/${AUTOFILL_EXTENSION_NAME}.appex)
+        install(TARGETS ${AUTOFILL_EXTENSION_NAME} BUNDLE DESTINATION ${PLUGIN_INSTALL_DIR} COMPONENT Runtime)
+    endif()
     configure_file("${CMAKE_SOURCE_DIR}/share/macosx/Info.plist.in" ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
-    install(FILES "${CMAKE_SOURCE_DIR}/share/macosx/embedded.provisionprofile" DESTINATION ${BUNDLE_INSTALL_DIR})
+    install(FILES "${MACOSX_BUNDLE_PROVISIONING_PROFILE}"
+            DESTINATION ${BUNDLE_INSTALL_DIR}
+            RENAME embedded.provisionprofile)
     set(MACOSX_BUNDLE_RESOURCE_FILES
             "${CMAKE_SOURCE_DIR}/share/macosx/Assets.car"
             "${CMAKE_SOURCE_DIR}/share/macosx/keepassxc.icns"

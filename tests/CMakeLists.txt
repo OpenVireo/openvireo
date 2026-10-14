@@ -189,6 +189,11 @@ if(KPXC_FEATURE_BROWSER)
         LIBS browser ${TEST_LIBRARIES})
 endif()
 
+if(KPXC_FEATURE_AUTOFILL)
+    add_unit_test(NAME testautofill SOURCES TestAutofill.cpp
+        LIBS autofill browser ${TEST_LIBRARIES})
+endif()
+
 if(KPXC_FEATURE_NETWORK OR KPXC_FEATURE_BROWSER)
     add_unit_test(NAME testurltools SOURCES TestUrlTools.cpp LIBS ${TEST_LIBRARIES})
 endif()
