@@ -183,15 +183,15 @@ When a Custom Browser has been successfully set, KeePassXC will automatically wr
 If you wish to support multiple custom browsers, you can copy the native messaging script files manually to the _native-messaging-hosts_ folder from other browsers.
 
 ==== Managed Microsoft Edge on Windows
-1. Deploy *org.keepassxc.keepassxc_browser_edge.json* to, for example, `C:\ProgramData\KeePassXC\` on all managed platforms.
+1. Deploy *com.bonganimbigi.keepassxc_browser_edge.json* to, for example, `C:\ProgramData\KeePassXC\` on all managed platforms.
 +
 ----
 {
     "allowed_origins": [
-        "chrome-extension://pdffhmdngciaglkoonimfcmckehcpafo/"
+        "chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/"
     ],
     "description": "KeePassXC integration with native messaging support",
-    "name": "org.keepassxc.keepassxc_browser",
+    "name": "com.bonganimbigi.keepassxc_browser",
     "path": "C:\\Program Files\\KeePassXC\\keepassxc-proxy.exe",
     "type": "stdio"
 }
@@ -201,21 +201,21 @@ If you wish to support multiple custom browsers, you can copy the native messagi
 +
 ----
 Windows Registry Editor Version 5.00
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Edge\NativeMessagingHosts\org.keepassxc.keepassxc_browser]
-@="C:\ProgramData\KeepassXC\org.keepassxc.keepassxc_browser_edge.json"
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Edge\NativeMessagingHosts\com.bonganimbigi.keepassxc_browser]
+@="C:\ProgramData\KeepassXC\com.bonganimbigi.keepassxc_browser_edge.json"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
 "NativeMessagingUserLevelHosts"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallAllowlist]
-"1"="pdffhmdngciaglkoonimfcmckehcpafo"
+"1"="bafnojkbdaiajjkkaeljcngflakgdmmk"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\NativeMessagingAllowlist]
-"1"="org.keepassxc.keepassxc_browser"
+"1"="com.bonganimbigi.keepassxc_browser"
 ----
 
 ==== Managed Microsoft Edge on macOS
-1. Deploy *org.keepassxc.keepassxc_browser_edge.json* to `/Library/Microsoft/Edge/NativeMessagingHosts`.
+1. Deploy *com.bonganimbigi.keepassxc_browser_edge.json* to `/Library/Microsoft/Edge/NativeMessagingHosts`.
 
 2. You may need to configure Edge to allowlist the extension and native messaging host. See https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies#native-messaging[Microsoft Edge Native Messaging Policies] for more information.
 // end::advanced[]

@@ -36,11 +36,9 @@ using namespace BrowserShared;
 
 namespace
 {
-    const QString HOST_NAME = QStringLiteral("org.keepassxc.keepassxc_browser");
-    const QStringList ALLOWED_EXTENSIONS = QStringList() << QStringLiteral("keepassxc-browser@keepassxc.org");
-    const QStringList ALLOWED_ORIGINS = QStringList()
-                                        << QStringLiteral("chrome-extension://pdffhmdngciaglkoonimfcmckehcpafo/")
-                                        << QStringLiteral("chrome-extension://oboonakemofpalcgghocfoadofidjkkk/");
+    const QString HOST_NAME = QStringLiteral("com.bonganimbigi.keepassxc_browser");
+    const QStringList ALLOWED_EXTENSIONS = QStringList() << QStringLiteral("keepassxc-browser@bonganimbigi.com");
+    const QStringList ALLOWED_ORIGINS = QStringList() << QStringLiteral("chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/");
 #if defined(Q_OS_MACOS)
     const QString TARGET_DIR_CHROME = QStringLiteral("/Library/Application Support/Google/Chrome/NativeMessagingHosts");
     const QString TARGET_DIR_CHROMIUM = QStringLiteral("/Library/Application Support/Chromium/NativeMessagingHosts");
@@ -53,16 +51,16 @@ namespace
     const QString TARGET_DIR_EDGE = QStringLiteral("/Library/Application Support/Microsoft Edge/NativeMessagingHosts");
 #elif defined(Q_OS_WIN)
     const QString TARGET_DIR_CHROME = QStringLiteral(
-        "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\NativeMessagingHosts\\org.keepassxc.keepassxc_browser");
+        "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
     const QString TARGET_DIR_CHROMIUM =
-        QStringLiteral("HKEY_CURRENT_USER\\Software\\Chromium\\NativeMessagingHosts\\org.keepassxc.keepassxc_browser");
+        QStringLiteral("HKEY_CURRENT_USER\\Software\\Chromium\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
     const QString TARGET_DIR_FIREFOX =
-        QStringLiteral("HKEY_CURRENT_USER\\Software\\Mozilla\\NativeMessagingHosts\\org.keepassxc.keepassxc_browser");
+        QStringLiteral("HKEY_CURRENT_USER\\Software\\Mozilla\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
     const QString TARGET_DIR_VIVALDI = TARGET_DIR_CHROME;
     const QString TARGET_DIR_TOR_BROWSER = TARGET_DIR_FIREFOX;
     const QString TARGET_DIR_BRAVE = TARGET_DIR_CHROME;
     const QString TARGET_DIR_EDGE = QStringLiteral(
-        "HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\NativeMessagingHosts\\org.keepassxc.keepassxc_browser");
+        "HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
 #else
     const QString TARGET_DIR_CHROME = QStringLiteral("/google-chrome/NativeMessagingHosts");
     const QString TARGET_DIR_CHROMIUM = QStringLiteral("/chromium/NativeMessagingHosts");
@@ -256,7 +254,7 @@ QString NativeMessageInstaller::getNativeMessagePath(SupportedBrowsers browser) 
 #ifdef KEEPASSXC_DIST_FLATPAK
 /** Constructs a host accessible proxy path for use with flatpak
  *
- * @return path Path to host accessible wrapper script (org.keepassxc.KeePassXC)
+ * @return path Path to host accessible wrapper script (com.bonganimbigi.KeePassXC)
  */
 QString constructFlatpakPath()
 {
@@ -270,10 +268,10 @@ QString constructFlatpakPath()
     QRegularExpressionMatch match = re.match(appPath);
     if (match.hasMatch()) {
         // Construct a proxy path that should work with all flatpak installations
-        path = match.captured(1) + "/exports/bin/" + "org.keepassxc.KeePassXC";
+        path = match.captured(1) + "/exports/bin/" + "com.bonganimbigi.KeePassXC";
     } else {
         // Fallback to the most common and default flatpak installation path
-        path = "/var/lib/flatpak/exports/bin/org.keepassxc.KeePassXC";
+        path = "/var/lib/flatpak/exports/bin/com.bonganimbigi.KeePassXC";
     }
     settings.endGroup();
 

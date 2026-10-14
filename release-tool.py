@@ -526,7 +526,7 @@ class Check(Command):
 
     @staticmethod
     def check_app_stream_info(version, cwd=None):
-        appstream = Path('share/linux/org.keepassxc.KeePassXC.appdata.xml')
+        appstream = Path('share/linux/com.bonganimbigi.KeePassXC.appdata.xml')
         if cwd:
             appstream = Path(cwd) / appstream
         if not appstream.is_file():
@@ -928,7 +928,7 @@ class Build(Command):
 
         env_path = ':'.join([bin_dir.as_posix(), _get_bin_path()])
         install_prefix = app_dir / install_prefix.lstrip('/')
-        desktop_file = install_prefix / 'share/applications/org.keepassxc.KeePassXC.desktop'
+        desktop_file = install_prefix / 'share/applications/com.bonganimbigi.KeePassXC.desktop'
         icon_file = install_prefix / 'share/icons/hicolor/256x256/apps/keepassxc.png'
         executables = (install_prefix / 'bin').glob('keepassxc*')
         app_run = src_dir / 'share/linux/appimage-apprun.sh'

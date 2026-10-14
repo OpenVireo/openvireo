@@ -260,7 +260,7 @@ if(UNIX AND NOT APPLE)
             gui/osutils/nixutils/X11Funcs.cpp)
     endif()
     qt6_add_dbus_adaptor(gui_SOURCES
-            gui/org.keepassxc.KeePassXC.MainWindow.xml
+            gui/com.bonganimbigi.KeePassXC.MainWindow.xml
             gui/MainWindow.h
             MainWindow)
 
@@ -445,7 +445,7 @@ if(WIN32)
     target_sources(${PROGNAME} PUBLIC ${WIN32_ResourceFiles})
 
 elseif(APPLE AND WITH_APP_BUNDLE)
-    set(MACOSX_BUNDLE_IDENTIFIER org.keepassxc.keepassxc)
+    set(MACOSX_BUNDLE_IDENTIFIER com.bonganimbigi.keepassxc)
     set(MACOSX_BUNDLE_ICON_NAME keepassxc)
     set(MACOSX_BUNDLE_APPLE_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/share/macosx/keepassxc.entitlements")
     configure_file("${CMAKE_SOURCE_DIR}/share/macosx/Info.plist.in" ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)

@@ -8,10 +8,10 @@ compression: lzo
 apps:
   keepassxc:
     command: usr/bin/keepassxc
-    common-id: org.keepassxc.KeePassXC.desktop
+    common-id: com.bonganimbigi.KeePassXC.desktop
     extensions: [kde-neon]
     plugs: [home, unity7, network, network-bind, removable-media, raw-usb, password-manager-service, browser-native-messaging]
-    autostart: org.keepassxc.KeePassXC.desktop
+    autostart: com.bonganimbigi.KeePassXC.desktop
   cli:
     command: usr/bin/keepassxc-cli
     extensions: [kde-neon]
@@ -24,25 +24,25 @@ plugs:
   browser-native-messaging:
     interface: personal-files
     write:
-      - $HOME/.mozilla/native-messaging-hosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.config/chromium/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.config/google-chrome/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.config/microsoft-edge/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.config/vivaldi/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json
-      - $HOME/.local/share/torbrowser/tbb/x86_64/tor-browser_en-US/Browser/TorBrowser/Data/Browser/.mozilla/native-messaging-hosts/org.keepassxc.keepassxc_browser.json
+      - $HOME/.mozilla/native-messaging-hosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.config/chromium/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.config/google-chrome/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.config/microsoft-edge/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.config/vivaldi/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.local/share/torbrowser/tbb/x86_64/tor-browser_en-US/Browser/TorBrowser/Data/Browser/.mozilla/native-messaging-hosts/com.bonganimbigi.keepassxc_browser.json
 
 slots:
   session-dbus-interface:
     interface: dbus
-    name: org.keepassxc.KeePassXC.MainWindow
+    name: com.bonganimbigi.KeePassXC.MainWindow
     bus: session
 
 parts:
   keepassxc:
     source: .
     plugin: cmake
-    parse-info: [usr/share/metainfo/org.keepassxc.KeePassXC.appdata.xml]
+    parse-info: [usr/share/metainfo/com.bonganimbigi.KeePassXC.appdata.xml]
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr

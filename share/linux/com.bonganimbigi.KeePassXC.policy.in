@@ -7,7 +7,7 @@
   <vendor_url></vendor_url>
   <icon_name>@APP_ICON_NAME@</icon_name>
   
-  <action id="org.keepassxc.KeePassXC.unlockDatabase">
+  <action id="com.bonganimbigi.KeePassXC.unlockDatabase">
     <description>Quick Unlock for a KeePassXC Database</description>
     <message>Authentication is required to unlock a KeePassXC Database</message>
     <defaults>
