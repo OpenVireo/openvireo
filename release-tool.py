@@ -741,17 +741,20 @@ class Build(Command):
 
     @staticmethod
     def _get_vcpkg_toolchain_file(path=None):
-        vcpkg = shutil.which('vcpkg', path=path)
-        if not vcpkg:
-            # Check the VCPKG_ROOT environment variable
-            if 'VCPKG_ROOT' in os.environ:
-                vcpkg = Path(os.environ['VCPKG_ROOT']) / 'vcpkg'
-            else:
+        # VCPKG_ROOT comes first, as with vcpkg itself: package managers such as Homebrew install only the
+        # vcpkg binary, and the toolchain file is in the vcpkg checkout that VCPKG_ROOT points to
+        if os.environ.get('VCPKG_ROOT'):
+            vcpkg_root = Path(os.environ['VCPKG_ROOT'])
+        else:
+            vcpkg = shutil.which('vcpkg', path=path)
+            if not vcpkg:
                 raise Error('vcpkg not found in PATH (use --use-system-deps to build with '
                             'system dependencies instead).')
-        toolchain = Path(vcpkg).parent / 'scripts' / 'buildsystems' / 'vcpkg.cmake'
+            vcpkg_root = Path(vcpkg).resolve().parent
+        toolchain = vcpkg_root / 'scripts' / 'buildsystems' / 'vcpkg.cmake'
         if not toolchain.is_file():
-            raise Error('Toolchain file not found in vcpkg installation directory.')
+            raise Error('Toolchain file not found in %s. Set VCPKG_ROOT to a vcpkg checkout '
+                        '(git clone https://github.com/microsoft/vcpkg), or use --use-system-deps.', vcpkg_root)
         return toolchain.resolve()
 
     @staticmethod
