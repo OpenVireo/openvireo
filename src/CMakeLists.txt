@@ -469,7 +469,9 @@ elseif(APPLE AND WITH_APP_BUNDLE)
         add_custom_command(TARGET ${PROGNAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/PlugIns
                 COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_BUNDLE_DIR:${AUTOFILL_EXTENSION_NAME}>
-                        $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/PlugIns/${AUTOFILL_EXTENSION_NAME}.appex)
+                        $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/PlugIns/${AUTOFILL_EXTENSION_NAME}.appex
+                COMMAND ${CMAKE_COMMAND} -E copy ${MACOSX_BUNDLE_PROVISIONING_PROFILE}
+                        $<TARGET_BUNDLE_CONTENT_DIR:${PROGNAME}>/embedded.provisionprofile)
         install(TARGETS ${AUTOFILL_EXTENSION_NAME} BUNDLE DESTINATION ${PLUGIN_INSTALL_DIR} COMPONENT Runtime)
     endif()
     configure_file("${CMAKE_SOURCE_DIR}/share/macosx/Info.plist.in" ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
