@@ -495,6 +495,16 @@ QJsonObject AutofillService::passkeyRegister(const QJsonObject& request)
     if (databases.isEmpty()) {
         return failure(hasLockedDatabases() ? Error::Locked : Error::NotFound);
     }
+
+    // The site lists the passkeys it already has for this account, so that the user doesn't get a second one
+    QList<QByteArray> excludedCredentialIds;
+    for (const auto& id : request.value("excludedCredentials").toArray()) {
+        excludedCredentialIds << fromBase64(id);
+    }
+    if (AutofillCredentials::findExcludedPasskey(databases, rpId, excludedCredentialIds)) {
+        return failure(Error::Excluded);
+    }
+
     auto db = databases.first();
     const auto active = browserService()->getDatabase();
     if (active && databases.contains(active)) {

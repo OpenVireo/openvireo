@@ -152,7 +152,11 @@ other `KPXC_FEATURE_*` options)
 - [x] `BrowserPasskeys::buildAssertionWithClientDataHash` and `buildRegistrationWithClientDataHash` sign over a given
       hash. The browser path now goes through the same signing function, and `testpasskeys` still passes.
 - [x] Confirmation UX: in the extension sheet, not a Qt dialog in the main app.
-- [ ] Not handled yet: `excludedCredentials` (macOS 15) and passkey extensions such as PRF and large blobs.
+- [x] `excludedCredentials` (macOS 15): the extension passes the site's existing credential ids, and when one of
+      them is already in an AutoFill database the app refuses with `excluded`. The extension then cancels with
+      `ASExtensionErrorCodeMatchedExcludedCredential`, so the system tells the user the account already has a passkey.
+      The check runs after the user confirms saving, not before.
+- [ ] Not handled yet: passkey extensions such as PRF and large blobs.
 
 ### Phase 3: One-time codes (macOS 15+)
 
@@ -180,8 +184,8 @@ other `KPXC_FEATURE_*` options)
 Implemented in `src/autofill/AutofillProtocol.h` and, for the extension, `src/autofill/extension/KPXAutofillClient.m`.
 Each frame is a 4-byte big-endian length followed by a UTF-8 JSON object, at most 1 MiB. The extension opens one
 connection per request; every connection passes the code signature check first. Requests name their kind in `type`.
-Responses carry `ok`, and `error` when it's false: `locked`, `notFound`, `denied`, `canceled`, `disabled`, `badRequest`
-or `failed`. Binary fields are standard base64.
+Responses carry `ok`, and `error` when it's false: `locked`, `notFound`, `denied`, `canceled`, `disabled`, `badRequest`,
+`failed` or `excluded`. Binary fields are standard base64.
 
 | Request | Fields | Response |
 |---|---|---|
@@ -190,7 +194,7 @@ or `failed`. Binary fields are standard base64.
 | `getCredential` | `recordId` | `{ username, password }` |
 | `getOneTimeCode` | `recordId` | `{ code }` |
 | `passkeyAssert` | `rpId, clientDataHash` and `recordId` or `credentialId` | `{ credentialId, userHandle, authenticatorData, signature }` |
-| `passkeyRegister` | `rpId, userName, userHandle, clientDataHash, algorithms` | `{ credentialId, attestationObject }` |
+| `passkeyRegister` | `rpId, userName, userHandle, clientDataHash, algorithms, excludedCredentials` | `{ credentialId, attestationObject }`, or `excluded` when the account already has one of the excluded passkeys |
 | `requestUnlock` | — | Raises KeePassXC's unlock dialog and answers `{ ok }` once a database unlocks, or `canceled` |
 
 The planned `databaseUnlocked` / `databaseLocked` push events turned out unnecessary: `requestUnlock` simply answers late.

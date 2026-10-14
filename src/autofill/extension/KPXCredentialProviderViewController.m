@@ -248,6 +248,15 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
                                      title:@"KeePassXC"];
                      } else if ([failure isEqualToString:@"canceled"]) {
                          [self showLocked];
+                     } else if ([failure isEqualToString:@"excluded"]) {
+                         // The system tells the user that this account already has a passkey
+                         if (@available(macOS 15.0, *)) {
+                             [self failWithCode:ASExtensionErrorCodeMatchedExcludedCredential];
+                         } else {
+                             [self showMessage:NSLocalizedString(@"KeePassXC already has a passkey for this account.",
+                                                                 nil)
+                                         title:@"KeePassXC"];
+                         }
                      } else {
                          [self showMessage:NSLocalizedString(@"KeePassXC could not complete the request.", nil)
                                      title:@"KeePassXC"];
@@ -768,6 +777,14 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
     self.retry = ^{
         [weakSelf registerPasskey];
     };
+    // The system names the site's existing credentials from macOS 15 on
+    NSMutableArray<NSString*>* excludedCredentials = [NSMutableArray array];
+    if (@available(macOS 15.0, *)) {
+        for (ASAuthorizationPlatformPublicKeyCredentialDescriptor* descriptor in request.excludedCredentials) {
+            [excludedCredentials addObject:[descriptor.credentialID base64EncodedStringWithOptions:0]];
+        }
+    }
+
     [self showWaiting:NSLocalizedString(@"Saving the passkey…", nil)];
     [self send:@{
         @"type" : @"passkeyRegister",
@@ -776,6 +793,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
         @"userHandle" : [identity.userHandle base64EncodedStringWithOptions:0] ?: @"",
         @"clientDataHash" : [clientDataHash base64EncodedStringWithOptions:0] ?: @"",
         @"algorithms" : request.supportedAlgorithms ?: @[],
+        @"excludedCredentials" : excludedCredentials,
     }
         timeout:KPXRequestTimeout
            then:^(NSDictionary* response) {
