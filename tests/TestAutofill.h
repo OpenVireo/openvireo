@@ -39,6 +39,7 @@ private slots:
     void testIdentitiesSkipExcludedEntries();
     void testMatchingEntries();
     void testFindEntry();
+    void testFindExcludedPasskey();
 
     void testHostRefusesUntrustedPeer();
     void testHostRoundTrip();

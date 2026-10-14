@@ -283,6 +283,21 @@ namespace AutofillCredentials
         return entries;
     }
 
+    Entry* findExcludedPasskey(const QList<QSharedPointer<Database>>& databases,
+                               const QString& rpId,
+                               const QList<QByteArray>& excludedCredentialIds)
+    {
+        if (excludedCredentialIds.isEmpty()) {
+            return nullptr;
+        }
+        for (auto* entry : passkeyEntries(databases, rpId)) {
+            if (excludedCredentialIds.contains(passkeyCredentialId(entry))) {
+                return entry;
+            }
+        }
+        return nullptr;
+    }
+
     QByteArray passkeyCredentialId(const Entry* entry)
     {
         return QByteArray::fromBase64(passkeyUtils()->getCredentialIdFromEntry(entry).toUtf8(),

@@ -55,6 +55,8 @@ namespace AutofillProtocol
         constexpr auto Disabled = "disabled";
         constexpr auto BadRequest = "badRequest";
         constexpr auto Failed = "failed";
+        // A passkey registration names a credential the user already has
+        constexpr auto Excluded = "excluded";
     } // namespace Error
 
     QByteArray encodeFrame(const QJsonObject& message);
