@@ -660,6 +660,8 @@ class Build(Command):
             parser.add_argument('--notarize', help='Notarize signed file(s).', action='store_true')
             parser.add_argument('--keychain-profile', default='notarization-creds',
                                 help='Read Apple credentials for notarization from a keychain (default: %(default)s).')
+            parser.add_argument('--autofill', help='Include the AutoFill credential provider extension.',
+                                action='store_true')
             parser.set_defaults(cmake_generator='Ninja')
         elif sys.platform == 'linux':
             parser.add_argument('-d', '--docker-image', help='Run build in Docker image (overrides --use-system-deps).')
@@ -819,7 +821,12 @@ class Build(Command):
 
     # noinspection PyMethodMayBeStatic
     def build_macos(self, version, src_dir, output_dir, *, use_system_deps, parallelism, cmake_opts,
-                    macos_target, platform_target, with_tests, sign, sign_identity, notarize, keychain_profile, **_):
+                    macos_target, platform_target, with_tests, sign, sign_identity, notarize, keychain_profile,
+                    autofill, **_):
+        if autofill:
+            cmake_opts.append('-DKPXC_FEATURE_AUTOFILL=ON')
+            if not sign:
+                logger.warning('The AutoFill extension only registers with macOS in a signed build.')
         if not use_system_deps:
             cmake_opts.append(f'-DVCPKG_TARGET_TRIPLET={platform_target.replace("86_", "")}-osx-dynamic-release')
         cmake_opts.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macos_target}')
