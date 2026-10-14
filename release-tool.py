@@ -379,8 +379,9 @@ def _macos_validate_keychain_profile(keychain_profile):
     Validate that a given keychain profile with stored notarization credentials exists and is valid.
     If no such profile is found, an error is raised with instructions on how to set one up.
     """
-    if _run(['security', 'find-generic-password', '-a',
-             f'com.apple.gke.notary.tool.saved-creds.{keychain_profile}'], cwd=None, check=False).returncode != 0:
+    # Ask notarytool itself, since how it names its keychain items differs between Xcode versions
+    if _run(['xcrun', 'notarytool', 'history', f'--keychain-profile={keychain_profile}'],
+            cwd=None, check=False).returncode != 0:
         raise Error(f'Keychain profile "%s" not found! Run\n'
                     f'    {fmt.bold("xcrun notarytool store-credentials %s [...]" % keychain_profile)}\n'
                     f'to store your Apple notary service credentials in a keychain as "%s".',
