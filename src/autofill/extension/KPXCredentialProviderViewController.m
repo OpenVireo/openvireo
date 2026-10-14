@@ -747,7 +747,47 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
         return;
     }
     self.registrationRequest = registrationRequest;
-    [self confirmRegistration];
+
+    // Tell the user the account already has a passkey before asking to save another one
+    NSArray<NSString*>* excluded = [self excludedCredentials];
+    if (excluded.count == 0) {
+        [self confirmRegistration];
+        return;
+    }
+    ASPasskeyCredentialIdentity* identity =
+        (ASPasskeyCredentialIdentity*)((ASPasskeyCredentialRequest*)registrationRequest).credentialIdentity;
+    [self showWaiting:NSLocalizedString(@"Checking your passkeys…", nil)];
+    __weak typeof(self) weakSelf = self;
+    [KPXAutofillClient send:@{
+        @"type" : @"passkeyCheckExcluded",
+        @"rpId" : identity.relyingPartyIdentifier ?: @"",
+        @"excludedCredentials" : excluded,
+    }
+                    timeout:KPXQuickTimeout
+                 completion:^(NSDictionary* response, NSError* error) {
+                     if (!error && [[KPXAutofillClient errorOfResponse:response] isEqualToString:@"excluded"]) {
+                         // Only macOS 15 names excluded credentials, so this always holds here
+                         if (@available(macOS 15.0, *)) {
+                             [weakSelf failWithCode:ASExtensionErrorCodeMatchedExcludedCredential];
+                             return;
+                         }
+                     }
+                     // Locked or not running: KeePassXC checks again when saving, once it can see the databases
+                     [weakSelf confirmRegistration];
+                 }];
+}
+
+// Credential ids the site already holds for the account, which the system names from macOS 15 on
+- (NSArray<NSString*>*)excludedCredentials API_AVAILABLE(macos(14.0))
+{
+    NSMutableArray<NSString*>* excluded = [NSMutableArray array];
+    if (@available(macOS 15.0, *)) {
+        ASPasskeyCredentialRequest* request = self.registrationRequest;
+        for (ASAuthorizationPlatformPublicKeyCredentialDescriptor* descriptor in request.excludedCredentials) {
+            [excluded addObject:[descriptor.credentialID base64EncodedStringWithOptions:0]];
+        }
+    }
+    return excluded;
 }
 
 - (void)confirmRegistration API_AVAILABLE(macos(14.0))
@@ -777,14 +817,6 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
     self.retry = ^{
         [weakSelf registerPasskey];
     };
-    // The system names the site's existing credentials from macOS 15 on
-    NSMutableArray<NSString*>* excludedCredentials = [NSMutableArray array];
-    if (@available(macOS 15.0, *)) {
-        for (ASAuthorizationPlatformPublicKeyCredentialDescriptor* descriptor in request.excludedCredentials) {
-            [excludedCredentials addObject:[descriptor.credentialID base64EncodedStringWithOptions:0]];
-        }
-    }
-
     [self showWaiting:NSLocalizedString(@"Saving the passkey…", nil)];
     [self send:@{
         @"type" : @"passkeyRegister",
@@ -793,7 +825,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
         @"userHandle" : [identity.userHandle base64EncodedStringWithOptions:0] ?: @"",
         @"clientDataHash" : [clientDataHash base64EncodedStringWithOptions:0] ?: @"",
         @"algorithms" : request.supportedAlgorithms ?: @[],
-        @"excludedCredentials" : excludedCredentials,
+        @"excludedCredentials" : [self excludedCredentials],
     }
         timeout:KPXRequestTimeout
            then:^(NSDictionary* response) {

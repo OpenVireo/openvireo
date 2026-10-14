@@ -46,6 +46,15 @@ namespace
         return QByteArray::fromBase64(value.toString().toLatin1());
     }
 
+    QList<QByteArray> excludedCredentialIds(const QJsonObject& request)
+    {
+        QList<QByteArray> ids;
+        for (const auto& id : request.value("excludedCredentials").toArray()) {
+            ids << fromBase64(id);
+        }
+        return ids;
+    }
+
     QString toBase64(const QByteArray& bytes)
     {
         return QString::fromLatin1(bytes.toBase64());
@@ -347,6 +356,9 @@ QJsonObject AutofillService::handleRequest(QLocalSocket* socket, const QJsonObje
     if (type == Request::PasskeyRegister) {
         return passkeyRegister(request);
     }
+    if (type == Request::PasskeyCheckExcluded) {
+        return passkeyCheckExcluded(request);
+    }
     return failure(Error::BadRequest);
 }
 
@@ -479,6 +491,24 @@ QJsonObject AutofillService::passkeyAssert(const QJsonObject& request)
                     {"signature", toBase64(assertion.signature)}});
 }
 
+QJsonObject AutofillService::passkeyCheckExcluded(const QJsonObject& request)
+{
+    using namespace AutofillProtocol;
+
+    const auto rpId = request.value("rpId").toString();
+    if (rpId.isEmpty()) {
+        return failure(Error::BadRequest);
+    }
+    const auto databases = exposedDatabases();
+    if (databases.isEmpty()) {
+        return failure(hasLockedDatabases() ? Error::Locked : Error::NotFound);
+    }
+    if (AutofillCredentials::findExcludedPasskey(databases, rpId, excludedCredentialIds(request))) {
+        return failure(Error::Excluded);
+    }
+    return success();
+}
+
 QJsonObject AutofillService::passkeyRegister(const QJsonObject& request)
 {
     using namespace AutofillProtocol;
@@ -496,12 +526,9 @@ QJsonObject AutofillService::passkeyRegister(const QJsonObject& request)
         return failure(hasLockedDatabases() ? Error::Locked : Error::NotFound);
     }
 
-    // The site lists the passkeys it already has for this account, so that the user doesn't get a second one
-    QList<QByteArray> excludedCredentialIds;
-    for (const auto& id : request.value("excludedCredentials").toArray()) {
-        excludedCredentialIds << fromBase64(id);
-    }
-    if (AutofillCredentials::findExcludedPasskey(databases, rpId, excludedCredentialIds)) {
+    // The site lists the passkeys it already has for this account, so that the user doesn't get a second one.
+    // The extension asks before the user confirms too; this catches a database unlocked only after that.
+    if (AutofillCredentials::findExcludedPasskey(databases, rpId, excludedCredentialIds(request))) {
         return failure(Error::Excluded);
     }
 
