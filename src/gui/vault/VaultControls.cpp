@@ -358,6 +358,146 @@ void VaultLineEdit::showEvent(QShowEvent* event)
     fluent::textfields::LineEdit::showEvent(event);
 }
 
+VaultPlainTextEdit::VaultPlainTextEdit(QWidget* parent)
+    : QPlainTextEdit(parent)
+    , m_contentMargins(::Spacing::Padding::TextFieldHorizontal,
+                       ::Spacing::Padding::TextFieldVertical,
+                       ::Spacing::Padding::TextFieldHorizontal,
+                       ::Spacing::Padding::TextFieldVertical)
+{
+    setAttribute(Qt::WA_Hover);
+    setFrameShape(QFrame::NoFrame);
+    viewport()->setAutoFillBackground(false);
+    applyThemeStyle();
+}
+
+QMargins VaultPlainTextEdit::contentMargins() const
+{
+    return m_contentMargins;
+}
+
+void VaultPlainTextEdit::setContentMargins(const QMargins& margins)
+{
+    if (m_contentMargins == margins) {
+        return;
+    }
+    m_contentMargins = margins;
+    applyThemeStyle();
+}
+
+void VaultPlainTextEdit::onThemeUpdated()
+{
+    applyThemeStyle();
+    update();
+}
+
+void VaultPlainTextEdit::applyThemeStyle()
+{
+    // The transparent border keeps the text and scroll bar inside the painted frame. This sheet also wins over
+    // the forms' own QPlainTextEdit rules, which would draw a stock frame over the Fluent one.
+    setStyleSheet(QStringLiteral("QPlainTextEdit { background: transparent; border: 1px solid transparent;"
+                                 " padding: %1px %2px %3px %4px; }")
+                      .arg(qMax(0, m_contentMargins.top() - 1))
+                      .arg(qMax(0, m_contentMargins.right() - 1))
+                      .arg(qMax(0, m_contentMargins.bottom() - 1))
+                      .arg(qMax(0, m_contentMargins.left() - 1)));
+
+    // Applying the sheet repolishes the field, so set the colors after it
+    const auto& c = themeColorsRef();
+    QPalette pal = palette();
+    pal.setColor(QPalette::Base, Qt::transparent);
+    pal.setColor(QPalette::Window, Qt::transparent);
+    pal.setColor(QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::PlaceholderText, c.textTertiary);
+    pal.setColor(QPalette::Highlight, c.accentDefault);
+    pal.setColor(QPalette::HighlightedText, c.textOnAccent);
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, c.accentDefault);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textOnAccent);
+    pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
+    if (pal != palette()) {
+        setPalette(pal);
+    }
+}
+
+bool VaultPlainTextEdit::event(QEvent* event)
+{
+    switch (event->type()) {
+    case QEvent::Paint:
+        // The text is painted on the viewport, so the frame goes on the field behind it
+        paintFrame();
+        break;
+    case QEvent::Enter:
+    case QEvent::Leave:
+    case QEvent::EnabledChange:
+    case QEvent::ReadOnlyChange:
+        update();
+        break;
+    default:
+        break;
+    }
+    return QPlainTextEdit::event(event);
+}
+
+void VaultPlainTextEdit::focusInEvent(QFocusEvent* event)
+{
+    QPlainTextEdit::focusInEvent(event);
+    update();
+}
+
+void VaultPlainTextEdit::focusOutEvent(QFocusEvent* event)
+{
+    QPlainTextEdit::focusOutEvent(event);
+    update();
+}
+
+// Same fill, border and focus underline as fluent::textfields::LineEdit
+void VaultPlainTextEdit::paintFrame()
+{
+    const auto& colors = themeColorsRef();
+    QColor fill;
+    QColor border;
+    QColor underline;
+    int underlineWidth = ::Spacing::Border::Normal;
+    if (!isEnabled()) {
+        fill = colors.controlDisabled;
+        border = colors.strokeDivider;
+        underline = border;
+    } else if (isReadOnly()) {
+        fill = colors.controlAltSecondary;
+        border = colors.strokeDefault;
+        underline = colors.strokeDivider;
+    } else if (hasFocus()) {
+        fill = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
+        border = colors.strokeSecondary;
+        underline = colors.accentDefault;
+        underlineWidth = ::Spacing::Border::Focused;
+    } else if (underMouse()) {
+        fill = colors.controlSecondary;
+        border = colors.strokeSecondary;
+        underline = colors.strokeSecondary;
+    } else {
+        fill = colors.controlDefault;
+        border = colors.strokeDefault;
+        underline = colors.strokeDivider;
+    }
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal radius = themeRadius().control;
+    const QRectF frame = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    painter.setPen(QPen(border, 1.0));
+    painter.setBrush(fill);
+    painter.drawRoundedRect(frame, radius, radius);
+
+    if (isEnabled() && !isReadOnly()) {
+        QPen pen(underline, underlineWidth);
+        pen.setCapStyle(Qt::RoundCap);
+        painter.setPen(pen);
+        const qreal y = rect().bottom() + 1 - underlineWidth / 2.0;
+        painter.drawLine(QPointF(frame.left() + radius, y), QPointF(frame.right() - radius, y));
+    }
+}
+
 VaultMenu::VaultMenu(QWidget* parent)
     : VaultMenu({}, parent)
 {
