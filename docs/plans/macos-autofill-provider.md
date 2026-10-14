@@ -101,7 +101,7 @@ Progress as of 2026-10-14: the main app now signs, notarizes and launches under 
       sub-project needed (Q5).
 - [x] `cmake/MacOSCodesign.cmake.in` signs inside-out: the whole bundle, then the extension with its entitlements, then
       the app. An ad-hoc signed copy passes `codesign --verify --deep --strict`.
-- [ ] `release-tool.py` has no AutoFill switch yet; pass `-DKPXC_FEATURE_AUTOFILL=ON` through its CMake options.
+- [x] `release-tool.py build --autofill` turns on `KPXC_FEATURE_AUTOFILL` for macOS builds and warns without `--sign`.
 
 ### Phase 1: Passwords
 
@@ -162,7 +162,16 @@ other `KPXC_FEATURE_*` options)
 ### Remaining
 
 - [ ] Developer account and profiles (phase 0 above).
-- [ ] Run the QA checklist in §7 on a signed, notarized build.
+- [ ] Run the QA checklist in §7 on a signed, notarized build. Results so far, on a Developer ID signed debug build
+      (no hardened runtime, Homebrew Qt) on 2026-10-14:
+  - [x] The extension registers with `pluginkit` and shows in System Settings.
+  - [x] Safari fills a password with the database unlocked.
+  - [ ] Locked database: unlock in KeePassXC, then fill.
+  - [ ] KeePassXC not running: "Open KeePassXC".
+  - [ ] Native app login.
+  - [ ] Passkey registration and sign-in on webauthn.io.
+  - [ ] One-time code (macOS 15+).
+  - [ ] Settings → AutoFill page and the extension's configuration screen.
 - [ ] User docs in `docs/topics/`.
 - [ ] Turn `KPXC_FEATURE_AUTOFILL` on by default once signed builds ship with the new profiles.
 
