@@ -43,6 +43,8 @@ namespace AutofillProtocol
         constexpr auto GetOneTimeCode = "getOneTimeCode";
         constexpr auto PasskeyAssert = "passkeyAssert";
         constexpr auto PasskeyRegister = "passkeyRegister";
+        // Whether a registration would be refused as excluded, asked before the user confirms it
+        constexpr auto PasskeyCheckExcluded = "passkeyCheckExcluded";
         constexpr auto RequestUnlock = "requestUnlock";
     } // namespace Request
 
