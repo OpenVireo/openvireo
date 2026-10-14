@@ -8,7 +8,7 @@ if [ "$1" == "cli" ] || [ "$(basename "$ARGV0")" == "keepassxc-cli" ] || [ "$(ba
 elif [ "$1" == "proxy" ] || [ "$(basename "$ARGV0")" == "keepassxc-proxy" ] || [ "$(basename "$ARGV0")" == "keepassxc-proxy.AppImage" ]; then
     [ "$1" == "proxy" ] && shift
     exec keepassxc-proxy "$@"
-elif [ -v CHROME_WRAPPER ] || [ -v MOZ_LAUNCHED_CHILD ] || [ "$2" == "keepassxc-browser@keepassxc.org" ]; then
+elif [ -v CHROME_WRAPPER ] || [ -v MOZ_LAUNCHED_CHILD ] || [ "$2" == "keepassxc-browser@bonganimbigi.com" ]; then
     exec keepassxc-proxy "$@"
 else
     # --- Icon file setup ---
@@ -23,8 +23,8 @@ else
     fi
 
     # --- Desktop file setup ---
-    desktop_source="$APPDIR/usr/share/applications/org.keepassxc.KeePassXC.desktop"
-    desktop_target="${XDG_DATA_HOME:-$HOME/.local/share}/applications/org.keepassxc.KeePassXC.desktop"
+    desktop_source="$APPDIR/usr/share/applications/com.bonganimbigi.KeePassXC.desktop"
+    desktop_target="${XDG_DATA_HOME:-$HOME/.local/share}/applications/com.bonganimbigi.KeePassXC.desktop"
     mkdir -p "$(dirname "$desktop_target")"
 
     # Substitute Exec and TryExec in memory
@@ -43,7 +43,7 @@ else
 
     EXEC="exec"
     if command -v systemd-run &>/dev/null; then
-        EXEC="exec systemd-run --user --scope --slice=app.slice --unit=app-org.keepassxc.KeePassXC-$(cat /proc/sys/kernel/random/uuid | tr -d -).scope"
+        EXEC="exec systemd-run --user --scope --slice=app.slice --unit=app-com.bonganimbigi.KeePassXC-$(cat /proc/sys/kernel/random/uuid | tr -d -).scope"
     fi
 
     $EXEC keepassxc "$@"

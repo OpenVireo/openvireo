@@ -36,7 +36,7 @@ if(UNIX AND NOT APPLE AND NOT HAIKU)
         foreach(icon_match ${ICON_FILES})
             get_filename_component(icon_name ${icon_match} NAME)
             get_filename_component(icon_dir ${icon_match} DIRECTORY)
-            # Prefix all icons with application id: "org.keepassxc.KeePassXC"
+            # Prefix all icons with application id: "com.bonganimbigi.KeePassXC"
             string(REGEX REPLACE "^keepassxc(.*)?(\\.png|\\.svg)$" "${APP_ID}\\1\\2" icon_name ${icon_name})
             string(REGEX REPLACE "^(application-x-keepassxc\\.svg)$" "${APP_ID}-\\1" icon_name ${icon_name})
             # Find icon sub dir ex. "scalable/mimetypes/"

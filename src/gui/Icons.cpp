@@ -54,7 +54,7 @@ Icons::Icons() = default;
 QString Icons::applicationIconName()
 {
 #ifdef KEEPASSXC_DIST_FLATPAK
-    return "org.keepassxc.KeePassXC";
+    return "com.bonganimbigi.KeePassXC";
 #else
     return "keepassxc";
 #endif

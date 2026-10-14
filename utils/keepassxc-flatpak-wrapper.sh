@@ -24,9 +24,9 @@
 # https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
 
 # Chromium, Google Chrome, Vivaldi & Brave
-readonly arg1='chrome-extension://oboonakemofpalcgghocfoadofidjkkk'
+readonly arg1='chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk'
 # Firefox & Tor Browser
-readonly arg2='keepassxc-browser@keepassxc.org'
+readonly arg2='keepassxc-browser@bonganimbigi.com'
 
 # Check arguments to see if this was a proxy launch from the browser
 # Use =~ to account for minor variations in the chrome extension
