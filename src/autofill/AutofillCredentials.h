@@ -77,6 +77,10 @@ namespace AutofillCredentials
     // Matching entries for the requested hosts across the databases, or all exposed entries when no host is given
     QList<Entry*> matchingEntries(const QList<QSharedPointer<Database>>& databases, const QStringList& requestHosts);
     QList<Entry*> passkeyEntries(const QList<QSharedPointer<Database>>& databases, const QString& rpId);
+    // The relying party's passkey whose credential id is among those a registration excludes, if any
+    Entry* findExcludedPasskey(const QList<QSharedPointer<Database>>& databases,
+                               const QString& rpId,
+                               const QList<QByteArray>& excludedCredentialIds);
 
     // Passkey attributes are stored base64url encoded; these return raw bytes
     QByteArray passkeyCredentialId(const Entry* entry);

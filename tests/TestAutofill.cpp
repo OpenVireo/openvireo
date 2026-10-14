@@ -358,6 +358,23 @@ void TestAutofill::testFindEntry()
     QVERIFY(!AutofillCredentials::findEntry(databases, AutofillCredentials::recordId(db.data(), entry)));
 }
 
+void TestAutofill::testFindExcludedPasskey()
+{
+    auto db = QSharedPointer<Database>::create();
+    auto* passkey = addEntry(db->rootGroup(), "Passkey", "", "");
+    passkey->attributes()->set(EntryAttributes::KPEX_PASSKEY_RELYING_PARTY, "webauthn.io");
+    passkey->attributes()->set(EntryAttributes::KPEX_PASSKEY_CREDENTIAL_ID, "AQIDBA");
+    passkey->attributes()->set(EntryAttributes::KPEX_PASSKEY_PRIVATE_KEY_PEM, "-----BEGIN PRIVATE KEY-----", true);
+    const QList<QSharedPointer<Database>> databases({db});
+    const QByteArray credentialId("\x01\x02\x03\x04");
+
+    QCOMPARE(AutofillCredentials::findExcludedPasskey(databases, "webauthn.io", {"other", credentialId}), passkey);
+    QVERIFY(!AutofillCredentials::findExcludedPasskey(databases, "webauthn.io", {}));
+    QVERIFY(!AutofillCredentials::findExcludedPasskey(databases, "webauthn.io", {"other"}));
+    // The same credential id under another relying party is a different passkey
+    QVERIFY(!AutofillCredentials::findExcludedPasskey(databases, "example.com", {credentialId}));
+}
+
 void TestAutofill::testHostRefusesUntrustedPeer()
 {
     QTemporaryDir dir;
