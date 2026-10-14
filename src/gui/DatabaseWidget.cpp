@@ -643,7 +643,37 @@ void DatabaseWidget::setupTotp()
         connect(setupTotpDialog, SIGNAL(totpUpdated()), m_editEntryWidget, SLOT(updateTotp()));
     }
     connect(this, &DatabaseWidget::databaseLockRequested, setupTotpDialog, &TotpSetupDialog::close);
-    setupTotpDialog->open();
+
+    if (!m_vaultLayout) {
+        setupTotpDialog->open();
+        return;
+    }
+
+    // Vault Index layout: the dialog opens as a modal card over the window, like the other editors
+    setupTotpDialog->setWindowFlags(Qt::Widget);
+    auto* modal =
+        new VaultModal(window(), setupTotpDialog, setupTotpDialog->windowTitle(), QStringLiteral("vaultTotpSetup"));
+    modal->setMaximumCardWidth(560);
+    modal->setFitToContent(true);
+    modal->setInitialFocus(setupTotpDialog->findChild<QLineEdit*>("seedEdit"));
+
+    // The footer, Escape and Enter go through the dialog's own buttons, so its checks still apply
+    auto* buttons = setupTotpDialog->findChild<QDialogButtonBox*>("buttonBox");
+    auto save = [buttons] { buttons->button(QDialogButtonBox::Ok)->click(); };
+    auto cancel = [buttons] { buttons->button(QDialogButtonBox::Cancel)->click(); };
+    auto* cancelButton = modal->addFooterButton(tr("Cancel"), false, QStringLiteral("Cancel"));
+    connect(cancelButton, &QPushButton::clicked, setupTotpDialog, cancel);
+    auto* saveButton = modal->addFooterButton(tr("Save"), true, QStringLiteral("Save"));
+    connect(saveButton, &QPushButton::clicked, setupTotpDialog, save);
+    connect(modal, &VaultModal::accepted, setupTotpDialog, save);
+    connect(modal, &VaultModal::rejected, setupTotpDialog, cancel);
+
+    // Saving, cancelling and locking all close the dialog, which takes the modal with it
+    connect(setupTotpDialog, &QDialog::finished, modal, [modal] {
+        modal->close();
+        modal->deleteLater();
+    });
+    modal->open();
 }
 
 void DatabaseWidget::expireSelectedEntries()

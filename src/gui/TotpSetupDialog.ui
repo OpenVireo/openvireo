@@ -46,7 +46,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="seedEdit">
+      <widget class="VaultLineEdit" name="seedEdit">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -85,7 +85,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QRadioButton" name="radioDefault">
+       <widget class="VaultRadioButton" name="radioDefault">
         <property name="text">
          <string>Default settings (RFC 6238)</string>
         </property>
@@ -98,7 +98,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioSteam">
+       <widget class="VaultRadioButton" name="radioSteam">
         <property name="text">
          <string>Steam® settings</string>
         </property>
@@ -108,7 +108,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioCustom">
+       <widget class="VaultRadioButton" name="radioCustom">
         <property name="text">
          <string>Custom settings:</string>
         </property>
@@ -229,6 +229,16 @@
   <zorder>invalidKeyLabel</zorder>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultRadioButton</class>
+   <extends>QRadioButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>
