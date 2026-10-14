@@ -259,11 +259,15 @@ void EditEntryWidget::setupMain()
     m_usernameCompleter->setModel(m_usernameCompleterModel);
     m_mainUi->usernameComboBox->setCompleter(m_usernameCompleter);
 
-    // The title, username, password, URL and notes are the entry's main fields, so give them the
+    // The title, username, password, URL, notes, tags and expiry are the entry's main fields, so give them the
     // roomier padding of the unlock card's password
     m_mainUi->titleEdit->setContentMargins(VaultLineEdit::LargePadding);
     m_mainUi->urlEdit->setContentMargins(VaultLineEdit::LargePadding);
     m_mainUi->notesEdit->setContentMargins(VaultLineEdit::LargePadding);
+    m_mainUi->expireDatePicker->setContentMargins(VaultLineEdit::LargePadding);
+    // The tags field has no Fluent counterpart, so frame it like one and pad its tags inside the frame
+    VaultFieldFrame::install(m_mainUi->tagsList);
+    m_mainUi->tagsList->setPadding(VaultLineEdit::LargePadding);
     m_mainUi->usernameComboBox->setContentPaddingH(VaultLineEdit::LargePadding.left());
     m_mainUi->usernameComboBox->setContentPaddingV(VaultLineEdit::LargePadding.top());
     if (auto* passwordEdit = m_mainUi->passwordEdit->findChild<VaultLineEdit*>("passwordEdit")) {

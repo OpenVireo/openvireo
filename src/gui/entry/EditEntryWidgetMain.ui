@@ -174,7 +174,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QDateTimeEdit" name="expireDatePicker">
+       <widget class="VaultDateTimeEdit" name="expireDatePicker">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -375,6 +375,11 @@
   <customwidget>
    <class>VaultPlainTextEdit</class>
    <extends>QPlainTextEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDateTimeEdit</class>
+   <extends>QDateTimeEdit</extends>
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
   <customwidget>

@@ -616,6 +616,19 @@ void TagsEdit::setReadOnly(bool readOnly)
         setAttribute(Qt::WA_InputMethodEnabled, true);
         impl->cross_deleter = true;
     }
+    update();
+}
+
+bool TagsEdit::isReadOnly() const
+{
+    return m_readOnly;
+}
+
+void TagsEdit::setPadding(const QMargins& padding)
+{
+    // Viewport margins, since changing the frame resets the contents margins
+    setViewportMargins(padding - viewport()->contentsMargins());
+    updateGeometry();
 }
 
 void TagsEdit::resizeEvent(QResizeEvent*)
