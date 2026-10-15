@@ -118,7 +118,7 @@ New code goes in `src/gui/remote/` next to `RemoteHandler`.
 | Component | Responsibility |
 |---|---|
 | `SyncServerClient` | The sync server's HTTP calls, moved out of `RemoteHandler.cpp` and made **asynchronous** (`QNetworkReply` + signals, no `runAndWaitForFuture`). Methods: `check(etag)` (HEAD + `If-None-Match`), `download()`, `upload(data, etag)`, later `history()` / `downloadRevision()` / `events()`. Returns status, ETag, `X-Database-Revision`. `RemoteHandler` keeps the command-based remotes and calls this client for the manual sync, so there's one HTTP code path. |
-| `SyncEngine` | One per `DatabaseWidget` that has a sync server remote with auto-sync turned on. Holds the state machine, the triggers, retries and backoff. Opening the downloaded KDBX, the merge and the save run on the GUI thread, like unlocking does. `Database` isn't thread-safe (its constructor registers in a static map, and `open()` starts a file watcher), so moving the KDF step off the GUI thread is a separate change. |
+| `SyncEngine` | One per `DatabaseWidget` that has a sync server remote with auto-sync turned on. Holds the state machine, the triggers, retries and backoff. The merge and the save run on the GUI thread. Opening the downloaded KDBX first ran there too, like unlocking does; it moved to a worker thread later (see "Follow-ups"). |
 | `SyncStateStore` | Local, per-device sync state keyed by database UUID, in `AppDataLocation/sync/<uuid>.json`: last-synced ETag, highest server revision, highest sync counter (generation), last sync time, and later the base snapshot. **Never stored in the KDBX** (see 3.1). |
 
 #### State machine
@@ -372,7 +372,21 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   Close and Open, with Open following `canOpenChanged`. Locking the database now closes the dialog in both layouts.
   `testOpensAnOlderVersionFromTheVaultCard` covers it; it needs `KPXC_TEST_VAULT_LAYOUT=1`, because the layout is read
   once per run.
-- **Opening the downloaded database off the GUI thread** — not started.
+- **Opening the downloaded database off the GUI thread** ✅ The readers already derived the key on a worker, but
+  waited for it in a nested event loop, so the user could open an editor, lock the database or start another sync in
+  the middle of `mergeDownload`, which then merged anyway. Now the engine reads the downloaded copy and the base with
+  `KeePass2Reader` on a `QThread` of its own (not the pool, which the reader waits on for the key) and gets them back
+  through a signal. The merge gate is checked again once they are open, a sync that ended meanwhile drops them
+  (`m_openRun`), and an open copy waits in `WaitingToMerge` without being read again.
+  - `Database` could be made off the GUI thread with three changes: the static UUID map has a mutex, and the
+    member timers of `Database` and `FileWatcher` (and its `QFileSystemWatcher`) are children of their owners, so
+    `moveToThread` takes them along. History items aren't QObject children of anything, so they move one by one.
+    The copy doesn't watch its file, since it isn't opened with `Database::open()`.
+  - The merge and the saves still run on the GUI thread, like the user's own edits.
+  - Tests: `testWaitsWhenEditingStartsWhileOpening` (fails on the old code), `testCancelWhileOpening`,
+    `testServerCopyBelongsToTheGuiThread` (thread of every object, including history, and no timer warnings).
+    The whole suite passes except `testcli`'s clipboard test and `testguibrowser`, which fail the same way without
+    these changes (as do `testgui` and `testguivault`, see above).
 
 ### 5.7 Testing
 
