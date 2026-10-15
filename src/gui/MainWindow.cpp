@@ -1124,7 +1124,27 @@ void MainWindow::showAboutDialog()
                 aboutDialog,
                 &AboutDialog::close);
     }
-    aboutDialog->open();
+
+    if (!m_vaultLayout) {
+        aboutDialog->open();
+        return;
+    }
+
+    // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
+    auto* modal = new VaultModal(this, aboutDialog, aboutDialog->windowTitle(), QStringLiteral("vaultAbout"));
+    modal->setMaximumCardWidth(640);
+    auto* closeButton = modal->addFooterButton(tr("Close"), true, QStringLiteral("Close"));
+    connect(closeButton, &QPushButton::clicked, aboutDialog, &AboutDialog::close);
+    connect(modal, &VaultModal::accepted, aboutDialog, &AboutDialog::close);
+    connect(modal, &VaultModal::rejected, aboutDialog, &AboutDialog::close);
+
+    // Closing, and locking the database, close the dialog, which takes the modal with it
+    connect(aboutDialog, &QDialog::finished, modal, [modal] {
+        modal->close();
+        modal->deleteLater();
+    });
+    modal->setInitialFocus(closeButton);
+    modal->open();
 }
 
 void MainWindow::performUpdateCheck()

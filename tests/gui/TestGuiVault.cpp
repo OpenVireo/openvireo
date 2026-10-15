@@ -18,12 +18,14 @@
 #include "TestGuiVault.h"
 
 #include "config-keepassx-tests.h"
+#include "config-keepassx.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
+#include "gui/AboutDialog.h"
 #include "gui/Application.h"
 #include "gui/ApplicationSettingsWidget.h"
 #include "gui/DatabaseTabWidget.h"
@@ -54,6 +56,7 @@
 #include <components/textfields/AutoSuggestBox.h>
 #include <components/windowing/TitleBar.h>
 
+#include <QClipboard>
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -1017,6 +1020,49 @@ void TestGuiVault::testTotpSetupModal()
     selectGroup(m_workGroup);
 }
 
+void TestGuiVault::testAboutModal()
+{
+    // About opens a modal over the window, with the app in a hero above a pivot of its pages
+    m_mainWindow->findChild<QAction*>("actionAbout")->trigger();
+    auto* modal = m_mainWindow->findChild<VaultModal*>("vaultAboutModal");
+    QVERIFY(modal);
+    QTRY_VERIFY(modal->isOpen());
+    auto* dialog = modal->findChild<AboutDialog*>();
+    QVERIFY(dialog);
+    QVERIFY(!dialog->isWindow());
+    QVERIFY(dialog->findChild<QDialogButtonBox*>("buttonBox")->isHidden());
+    QVERIFY(dialog->findChild<QWidget*>("aboutHero")->isVisible());
+    QVERIFY(dialog->findChild<QLabel*>("aboutVersion")->text().contains(KEEPASSXC_VERSION));
+
+    // The pivot switches the pages
+    auto* pivot = dialog->findChild<QTabBar*>("aboutPivot");
+    auto* tabs = dialog->findChild<QTabWidget*>("tabWidget");
+    QVERIFY(pivot->isVisible());
+    QVERIFY(!tabs->tabBar()->isVisible());
+    QCOMPARE(pivot->count(), 3);
+    pivot->setCurrentIndex(2);
+    QCOMPARE(tabs->currentIndex(), 2);
+
+    // Copying the debug info confirms it on the button
+    auto* copy = dialog->findChild<QPushButton*>("vaultCopyDebugInfo");
+    QTRY_VERIFY(copy->isVisible());
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(QApplication::clipboard()->text(), dialog->findChild<QPlainTextEdit*>("debugInfo")->toPlainText());
+    QCOMPARE(copy->text(), QString("Copied"));
+    pivot->setCurrentIndex(0);
+
+    // Close in the footer closes the modal
+    QTest::mouseClick(modal->findChild<QPushButton*>("vaultAboutClose"), Qt::LeftButton);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultAboutModal"));
+
+    // So does Escape
+    m_mainWindow->findChild<QAction*>("actionAbout")->trigger();
+    modal = m_mainWindow->findChild<VaultModal*>("vaultAboutModal");
+    QTRY_VERIFY(modal && modal->isOpen());
+    QTest::keyClick(modal, Qt::Key_Escape);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultAboutModal"));
+}
+
 void TestGuiVault::testFluentMessageBox()
 {
     using fluent::dialogs_flyouts::ContentDialog;
@@ -1547,6 +1593,23 @@ void TestGuiVault::testScreenshots()
             m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-totp-custom-%1.png").arg(theme))));
         QTest::keyClick(totpModal, Qt::Key_Escape);
         QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal"));
+        m_mainWindow->findChild<QAction*>("actionAbout")->trigger();
+        auto* aboutModal = m_mainWindow->findChild<VaultModal*>("vaultAboutModal");
+        auto* aboutPivot = aboutModal->findChild<QTabBar*>("aboutPivot");
+        for (int i = 0; i < aboutPivot->count(); ++i) {
+            aboutPivot->setCurrentIndex(i);
+            QApplication::processEvents();
+            QTest::qWait(100);
+            QVERIFY(m_mainWindow->grab().save(
+                QDir(dir).absoluteFilePath(QString("vault-about-%1-%2.png").arg(i).arg(theme))));
+        }
+        aboutPivot->setCurrentIndex(0);
+        auto* aboutScroll = aboutModal->findChild<QWidget*>("aboutTab")->findChild<QScrollArea*>();
+        aboutScroll->verticalScrollBar()->setValue(aboutScroll->verticalScrollBar()->maximum());
+        QApplication::processEvents();
+        QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-about-end-%1.png").arg(theme))));
+        QTest::keyClick(aboutModal, Qt::Key_Escape);
+        QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultAboutModal"));
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();
         QTest::qWait(100);

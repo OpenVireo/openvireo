@@ -21,6 +21,8 @@
 
 #include <QDialog>
 
+class VaultButton;
+
 namespace Ui
 {
     class AboutDialog;
@@ -38,7 +40,16 @@ protected slots:
     void copyToClipboard();
 
 private:
+    void setupVaultLayout();
+    void setupVaultHero();
+    void setupVaultPivot();
+    void setupVaultAboutPage();
+    void setupVaultContributorsPage();
+    void setupVaultDebugPage();
+
     QScopedPointer<Ui::AboutDialog> m_ui;
+    // In the Vault Index layout, copies the debug info and confirms it for a moment
+    VaultButton* m_vaultCopyButton = nullptr;
 };
 
 #endif // KEEPASSX_ABOUTDIALOG_H
