@@ -33,6 +33,7 @@
 #include <QSplitter>
 #include <QTextDocumentFragment>
 #include <QTextEdit>
+#include <QTreeWidget>
 
 #include "autotype/AutoType.h"
 #include "core/AsyncTask.h"
@@ -2012,7 +2013,36 @@ void DatabaseWidget::showServerHistory(const RemoteParams* params)
     connect(dialog, &SyncHistoryDialog::openRequested, this, [this](const QString& filePath) {
         emit requestOpenDatabase(filePath, false, {}, {});
     });
-    dialog->open();
+    connect(this, &DatabaseWidget::databaseLockRequested, dialog, &QDialog::reject);
+
+    if (!m_vaultLayout) {
+        dialog->open();
+        return;
+    }
+
+    // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
+    dialog->setWindowFlags(Qt::Widget);
+    dialog->buttonBox()->hide();
+    auto* modal = new VaultModal(window(), dialog, dialog->windowTitle(), QStringLiteral("vaultSyncHistory"));
+    modal->setMaximumCardWidth(640);
+    modal->setFitToContent(true);
+    modal->setInitialFocus(dialog->versionList());
+
+    auto* closeButton = modal->addFooterButton(tr("Close"), false, QStringLiteral("Close"));
+    connect(closeButton, &QPushButton::clicked, dialog, &QDialog::reject);
+    auto* openButton = modal->addFooterButton(tr("Open"), true, QStringLiteral("Open"));
+    openButton->setEnabled(false);
+    connect(dialog, &SyncHistoryDialog::canOpenChanged, openButton, &QPushButton::setEnabled);
+    connect(openButton, &QPushButton::clicked, dialog, &SyncHistoryDialog::openSelected);
+    connect(modal, &VaultModal::accepted, dialog, &SyncHistoryDialog::openSelected);
+    connect(modal, &VaultModal::rejected, dialog, &QDialog::reject);
+
+    // Opening a version, closing and locking all finish the dialog, which takes the modal with it
+    connect(dialog, &QDialog::finished, modal, [modal] {
+        modal->close();
+        modal->deleteLater();
+    });
+    modal->open();
 }
 
 void DatabaseWidget::stopServerSync()

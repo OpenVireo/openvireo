@@ -31,6 +31,7 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncHistoryDialog.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "gui/styles/FluentTheme.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
 
@@ -188,6 +189,10 @@ void TestGuiAutoSync::initTestCase()
     KeeShare::init(this);
     config()->set(Config::AutoSaveAfterEveryChange, false);
     config()->set(Config::AutoSaveOnExit, false);
+    // The layout is read once per run, so the Vault Index layout's tests need a run of their own
+    if (qEnvironmentVariable("KPXC_TEST_VAULT_LAYOUT") == "1") {
+        config()->set(Config::GUI_VaultLayout, true);
+    }
 }
 
 void TestGuiAutoSync::testSyncsInTheBackgroundAfterSaves()
@@ -386,6 +391,51 @@ void TestGuiAutoSync::testOpensAnOlderVersion()
     QVERIFY(version.open(filePath, makeKey()));
     QCOMPARE(titles(&version), QStringList({"In the first version"}));
     QFile::remove(filePath);
+}
+
+void TestGuiAutoSync::testOpensAnOlderVersionFromTheVaultCard()
+{
+    SKIP_WITHOUT_SERVER();
+    if (!FluentTheme::vaultLayoutEnabled()) {
+        QSKIP("Set KPXC_TEST_VAULT_LAYOUT=1 to test the Vault Index layout");
+    }
+
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    QWidget window;
+    window.resize(1000, 700);
+    auto* widget = new DatabaseWidget(db, &window);
+    window.show();
+    addEntry(db.data(), "In the first version");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    QVERIFY(uploadFromOtherDevice(params, "Added later"));
+
+    QSignalSpy opened(widget, &DatabaseWidget::requestOpenDatabase);
+    widget->showServerHistory(&params);
+    // A card over the window instead of a dialog of its own, with the buttons in its footer
+    auto* card = window.findChild<QWidget*>("vaultSyncHistoryCard");
+    QVERIFY(card && card->isVisible());
+    auto* dialog = window.findChild<SyncHistoryDialog*>();
+    QVERIFY(dialog && !dialog->isWindow());
+    QVERIFY(!dialog->buttonBox()->isVisible());
+    auto* open = window.findChild<QPushButton*>("vaultSyncHistoryOpen");
+    QVERIFY(open && !open->isEnabled());
+
+    auto* versions = dialog->versionList();
+    QTRY_COMPARE_WITH_TIMEOUT(versions->topLevelItemCount(), 2, 5000);
+    versions->setCurrentItem(versions->topLevelItem(1));
+    QVERIFY(open->isEnabled());
+    open->click();
+    QTRY_COMPARE_WITH_TIMEOUT(opened.count(), 1, 5000);
+    QVERIFY(opened.first().first().toString().contains("version 1"));
+    QFile::remove(opened.first().first().toString());
+
+    // Opening the version closes the card
+    QTRY_VERIFY(!window.findChild<QWidget*>("vaultSyncHistoryCard"));
 }
 
 void TestGuiAutoSync::testCombinesChangesToDifferentFields()

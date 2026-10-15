@@ -46,6 +46,7 @@ SyncHistoryDialog::SyncHistoryDialog(const RemoteParams& params, QWidget* parent
     , m_versions(new QTreeWidget(this))
     , m_status(new QLabel(this))
     , m_openButton(new QPushButton(tr("Open"), this))
+    , m_buttons(new QDialogButtonBox(QDialogButtonBox::Close, this))
 {
     setObjectName("syncHistoryDialog");
     setWindowTitle(tr("Versions on %1").arg(params.name));
@@ -64,25 +65,42 @@ SyncHistoryDialog::SyncHistoryDialog(const RemoteParams& params, QWidget* parent
     m_versions->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_versions->header()->setSectionResizeMode(1, QHeaderView::Stretch);
     connect(m_versions, &QTreeWidget::itemSelectionChanged, this, [this] {
-        m_openButton->setEnabled(!m_versions->selectedItems().isEmpty());
+        setCanOpen(!m_versions->selectedItems().isEmpty());
     });
     connect(m_versions, &QTreeWidget::itemDoubleClicked, this, &SyncHistoryDialog::openSelected);
 
     m_status->setWordWrap(true);
 
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
+    m_buttons->setObjectName("syncHistoryButtons");
+    m_openButton->setObjectName("syncHistoryOpen");
     m_openButton->setEnabled(false);
-    buttons->addButton(m_openButton, QDialogButtonBox::AcceptRole);
+    m_buttons->addButton(m_openButton, QDialogButtonBox::AcceptRole);
     connect(m_openButton, &QPushButton::clicked, this, &SyncHistoryDialog::openSelected);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(m_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     auto* layout = new QVBoxLayout(this);
     layout->addWidget(intro);
     layout->addWidget(m_versions, 1);
     layout->addWidget(m_status);
-    layout->addWidget(buttons);
+    layout->addWidget(m_buttons);
 
     loadVersions();
+}
+
+QDialogButtonBox* SyncHistoryDialog::buttonBox() const
+{
+    return m_buttons;
+}
+
+QTreeWidget* SyncHistoryDialog::versionList() const
+{
+    return m_versions;
+}
+
+void SyncHistoryDialog::setCanOpen(bool canOpen)
+{
+    m_openButton->setEnabled(canOpen);
+    emit canOpenChanged(canOpen);
 }
 
 void SyncHistoryDialog::showStatus(const QString& text)
@@ -124,11 +142,11 @@ void SyncHistoryDialog::openSelected()
         return;
     }
     const auto revision = selected.first()->data(0, RevisionRole).toLongLong();
-    m_openButton->setEnabled(false);
+    setCanOpen(false);
     showStatus(tr("Downloading version %1…").arg(revision));
 
     m_client->downloadRevision(revision, [this, revision](const SyncServerClient::Response& response) {
-        m_openButton->setEnabled(true);
+        setCanOpen(true);
         if (response.status != 200) {
             showStatus(SyncServerClient::errorMessage(response));
             return;

@@ -367,7 +367,11 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   - Tested: server tests (claim, one use, expiry, the cap, case and dashes, the limiter), live client tests against a
     local server, and the CLI code and the `429` by hand. Not tested: the new button in the GUI, since `testgui` can't
     run on this branch.
-- **A Fluent version of the history dialog** — not started.
+- **A Fluent version of the history dialog** ✅ In the Vault Index layout `SyncHistoryDialog` opens as a `VaultModal`
+  card (prefix `vaultSyncHistory`), the way the TOTP setup dialog does: its own buttons hide and the card's footer has
+  Close and Open, with Open following `canOpenChanged`. Locking the database now closes the dialog in both layouts.
+  `testOpensAnOlderVersionFromTheVaultCard` covers it; it needs `KPXC_TEST_VAULT_LAYOUT=1`, because the layout is read
+  once per run.
 - **Opening the downloaded database off the GUI thread** — not started.
 
 ### 5.7 Testing
