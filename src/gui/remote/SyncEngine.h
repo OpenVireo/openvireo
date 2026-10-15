@@ -21,6 +21,8 @@
 #include "SyncServerClient.h"
 #include "SyncStateStore.h"
 
+#include "core/Merger.h"
+
 #include <QObject>
 #include <QScopedPointer>
 #include <QSharedPointer>
@@ -30,6 +32,24 @@
 
 class Database;
 class QTemporaryDir;
+
+/**
+ * An entry that changed on both sides since the last sync, found before merging.
+ */
+struct SyncConflict
+{
+    enum class Kind
+    {
+        EditedOnBoth,
+        // Deleted on this device, edited on another
+        DeletedHereEditedThere,
+        // Edited on this device, deleted on another
+        EditedHereDeletedThere
+    };
+    QUuid uuid;
+    QString title;
+    Kind kind = Kind::EditedOnBoth;
+};
 
 /**
  * Syncs one local database with one database on a sync server without blocking the event loop:
@@ -42,6 +62,11 @@ class QTemporaryDir;
  *        │         ▼                        ▼                            │
  *        │   mergeDeferred()         unlockRequired()                    │
  *        └──────────── retry, up to MaxAttempts ─────┘
+ *
+ * The server is trusted to store files, not to be honest about them. A sync stops in NeedsAttention,
+ * without merging, when the server returns an older revision than this device has seen, a copy whose
+ * sync generation (kept inside the encrypted database) is older than one already seen, or nothing at
+ * all for a database this device has synced before. syncAcceptingServerState() continues anyway.
  *
  * The merge and the save are delegated to the owner (DatabaseWidget), which knows how to
  * save with the user's settings. Opening the downloaded database runs on the GUI thread,
@@ -63,9 +88,21 @@ public:
         WaitingForUnlock,
         Uploading,
         // A network error happened and a retry is scheduled
-        Backoff
+        Backoff,
+        // The server's copy looks older than expected; see attention()
+        NeedsAttention
     };
     Q_ENUM(State)
+
+    enum class Attention
+    {
+        None,
+        // The server returned an older version than this device has already seen
+        ServerRolledBack,
+        // The server no longer has a database this device synced with before
+        ServerLostDatabase
+    };
+    Q_ENUM(Attention)
 
     // Merge the opened server copy and the local database into each other and save both
     using MergeHandler = std::function<bool(const QSharedPointer<Database>& remoteDb, QString* error)>;
@@ -92,17 +129,32 @@ public:
     void setRetryOnNetworkError(bool retry);
 
     State state() const;
-    // True while a sync is running; a scheduled retry doesn't count
+    // True while a sync is running; a scheduled retry or a stop for attention doesn't count
     bool isBusy() const;
     QSharedPointer<Database> database() const;
     const RemoteParams& params() const;
     int backoffMsec() const;
     // The downloaded server copy waiting for the user to unlock it, while WaitingForUnlock
     QString pendingUnlockPath() const;
+    Attention attention() const;
+
+    // The sync generation stored in a database, 0 when it has none
+    static qint64 generationOf(const Database* db);
+    // Merge the two databases into each other. When that changes anything, both get the next sync
+    // generation, so the result is newer than every copy it came from. The caller saves both.
+    static Merger::ChangeList mergeDatabases(Database* local, Database* remote);
+    // Entry modification times, to be compared with the next sync's copies
+    static QHash<QUuid, QDateTime> snapshotOf(const Database* db);
+    // Entries both sides changed since `snapshot`, which is the state after the last sync
+    static QList<SyncConflict>
+    findConflicts(const Database* local, const Database* remote, const QHash<QUuid, QDateTime>& snapshot);
 
 public slots:
     // Start a sync, or run a scheduled retry now. Does nothing while a sync is running.
     void sync();
+    // Sync even though the server's copy looks older than expected, and take what the server
+    // has as the new starting point. Only after the user agreed to it.
+    void syncAcceptingServerState();
     // Stop the running sync or scheduled retry. A running sync finishes with an error.
     void cancel();
     // Continue after unlockRequired(): `merged` is true when the owner unlocked the server
@@ -118,11 +170,16 @@ signals:
     void unlockRequired(const QString& filePath);
     // The merge waits until the gate opens and resumeMerge() is called
     void mergeDeferred();
+    // Entries changed on both sides were merged; the older version of each is in its history
+    void conflictsDetected(const QList<SyncConflict>& conflicts);
     void finished(bool success, const QString& error);
 
 private:
     void setState(State state);
+    void start();
     bool hasLocalChanges() const;
+    bool acceptRevision(qint64 revision);
+    void needAttention(Attention attention, const QString& message);
     void startCheck();
     void startDownload();
     void mergeDownload();
@@ -140,6 +197,8 @@ private:
     MergeGate m_mergeGate;
 
     State m_state = State::Idle;
+    Attention m_attention = Attention::None;
+    bool m_acceptServerState = false;
     SyncState m_syncState;
     int m_attempt = 0;
     // The last merge went through the unlock dialog, so a conflict isn't retried without the user
@@ -149,6 +208,7 @@ private:
     QString m_remotePath;
     QString m_remoteEtag;
     qint64 m_remoteRevision = -1;
+    qint64 m_remoteGeneration = 0;
     QSharedPointer<Database> m_remoteDb;
 
     bool m_retryOnNetworkError = false;

@@ -48,6 +48,7 @@ class TagView;
 class ElidedLabel;
 class RemoteSettings;
 class SyncEngine;
+struct SyncConflict;
 class SyncScheduler;
 class EntryDetailCard;
 class VaultCommandBar;
@@ -150,7 +151,9 @@ public:
             // A network error; the sync is retried automatically
             Offline,
             // The server copy uses a different password or key file
-            NeedsUnlock
+            NeedsUnlock,
+            // The server's copy looks older than expected; the user decides whether to sync anyway
+            NeedsAttention
         };
         State state = State::Idle;
         QDateTime lastSync;
@@ -337,6 +340,7 @@ private slots:
     void updateAutoSync();
     void backgroundSync();
     void resumeBackgroundSync();
+    void showSyncConflicts(const QList<SyncConflict>& conflicts);
     void emitCurrentModeChanged();
     // Database autoreload slots
     void reloadDatabaseFile(bool triggeredBySave);

@@ -73,6 +73,8 @@ public:
     static const QString FdoSecretsExposedGroup;
     static const QString RandomSlug;
     static const QString RemoteProgramSettings;
+    // Raised by sync whenever it changes the database, so a server can't serve an older copy unnoticed
+    static const QString SyncGeneration;
 
     // Pre-KDBX 4.1
     static const QString ExcludeFromReportsLegacy;

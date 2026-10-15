@@ -95,6 +95,12 @@ SyncState SyncStateStore::load(const QString& databasePath, const RemoteParams& 
     state.etag = object.value("etag").toString();
     state.revision = static_cast<qint64>(object.value("revision").toDouble());
     state.lastSync = QDateTime::fromString(object.value("lastSync").toString(), Qt::ISODateWithMs);
+    state.generation = static_cast<qint64>(object.value("generation").toDouble());
+    const auto entries = object.value("entries").toObject();
+    for (auto it = entries.begin(); it != entries.end(); ++it) {
+        state.entries.insert(QUuid::fromString(it.key()),
+                             QDateTime::fromString(it.value().toString(), Qt::ISODateWithMs));
+    }
     return state;
 }
 
@@ -104,6 +110,12 @@ bool SyncStateStore::save(const QString& databasePath, const RemoteParams& param
     object["etag"] = state.etag;
     object["revision"] = static_cast<double>(state.revision);
     object["lastSync"] = state.lastSync.toUTC().toString(Qt::ISODateWithMs);
+    object["generation"] = static_cast<double>(state.generation);
+    QJsonObject entries;
+    for (auto it = state.entries.begin(); it != state.entries.end(); ++it) {
+        entries[it.key().toString(QUuid::WithoutBraces)] = it.value().toUTC().toString(Qt::ISODateWithMs);
+    }
+    object["entries"] = entries;
 
     auto states = readStates(m_filePath);
     states[keyFor(databasePath, params)] = object;
