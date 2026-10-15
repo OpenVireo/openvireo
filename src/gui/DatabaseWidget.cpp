@@ -69,6 +69,7 @@
 #include "keeshare/KeeShare.h"
 #include "remote/RemoteHandler.h"
 #include "remote/RemoteSettings.h"
+#include "remote/SyncEngine.h"
 
 #ifdef KPXC_FEATURE_NETWORK
 #include "gui/IconDownloaderDialog.h"
@@ -564,6 +565,8 @@ void DatabaseWidget::replaceDatabase(QSharedPointer<Database> db)
     m_groupView->changeDatabase(m_db);
     m_tagView->setDatabase(m_db);
     m_remoteSettings->setDatabase(m_db);
+    // A sync in progress belongs to the database being replaced (lock, reload)
+    stopServerSync();
 
     // Restore the new parent group pointer, if not found default to the root group
     // this prevents data loss when merging a database while creating a new entry
@@ -1563,6 +1566,11 @@ int DatabaseWidget::addChildWidget(QWidget* w)
 
 void DatabaseWidget::syncWithRemote(const RemoteParams* params)
 {
+    if (params->type == RemoteParams::Type::SyncServer) {
+        syncWithServer(*params);
+        return;
+    }
+
     setDisabled(true);
     emit databaseSyncInProgress();
 
@@ -1576,21 +1584,13 @@ void DatabaseWidget::syncWithRemote(const RemoteParams* params)
         emit updateSyncProgress(25, tr("Downloading..."));
         // Start a download first then merge and upload in the callback
         result = remoteHandler->download(params);
-        if (result.success && result.remoteMissing) {
-            // First sync with a sync server: there is nothing to merge, publish the local database
-            if (m_db->isModified() && !save()) {
-                result.success = false;
-                result.errorMessage = tr("The database must be saved before it can be uploaded.");
-            } else {
-                result.filePath = m_db->filePath();
-            }
-        } else if (result.success) {
+        if (result.success) {
             QString error;
             QSharedPointer<Database> remoteDb = QSharedPointer<Database>::create();
             if (!remoteDb->open(result.filePath, m_db->key(), &error)) {
                 // Failed to open downloaded remote database with same key
                 // Unlock downloaded remote database via dialog
-                syncDatabaseWithLockedDatabase(result.filePath, params, result.etag);
+                syncDatabaseWithLockedDatabase(result.filePath, params);
                 return;
             }
             remoteDb->markAsTemporaryDatabase();
@@ -1605,21 +1605,17 @@ void DatabaseWidget::syncWithRemote(const RemoteParams* params)
     uploadAndFinishSync(params, result);
 }
 
-void DatabaseWidget::syncDatabaseWithLockedDatabase(const QString& filePath,
-                                                    const RemoteParams* params,
-                                                    const QString& etag)
+void DatabaseWidget::syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params)
 {
     // disconnect any previously added slots to these signal
     disconnect(this, &DatabaseWidget::databaseSyncUnlocked, nullptr, nullptr);
     disconnect(this, &DatabaseWidget::databaseSyncUnlockFailed, nullptr, nullptr);
 
-    connect(this, &DatabaseWidget::databaseSyncUnlocked, [this, params, etag](RemoteHandler::RemoteResult result) {
-        // Carry the downloaded version through the unlock dialog so the upload can detect conflicts
-        result.etag = etag;
+    connect(this, &DatabaseWidget::databaseSyncUnlocked, [this, params](const RemoteHandler::RemoteResult& result) {
         uploadAndFinishSync(params, result);
     });
     connect(this, &DatabaseWidget::databaseSyncUnlockFailed, [this, params](const RemoteHandler::RemoteResult& result) {
-        finishSync(params, result);
+        finishSync(params->name, result);
     });
 
     emit unlockDatabaseInDialogForSync(filePath);
@@ -1630,22 +1626,93 @@ void DatabaseWidget::uploadAndFinishSync(const RemoteParams* params, RemoteHandl
     QScopedPointer<RemoteHandler> remoteHandler(new RemoteHandler(this));
     if (result.success && params->hasUpload()) {
         emit updateSyncProgress(75, tr("Uploading..."));
-        result = remoteHandler->upload(result.filePath, params, result.etag);
+        result = remoteHandler->upload(result.filePath, params);
     }
 
-    finishSync(params, result);
+    finishSync(params->name, result);
 }
 
-void DatabaseWidget::finishSync(const RemoteParams* params, RemoteHandler::RemoteResult result)
+void DatabaseWidget::finishSync(const QString& syncName, const RemoteHandler::RemoteResult& result)
 {
     setDisabled(false);
     emit updateSyncProgress(-1, "");
     if (result.success) {
-        emit databaseSyncCompleted(params->name);
-        showMessage(tr("Remote sync '%1' completed successfully!").arg(params->name), MessageWidget::Positive, false);
+        emit databaseSyncCompleted(syncName);
+        showMessage(tr("Remote sync '%1' completed successfully!").arg(syncName), MessageWidget::Positive, false);
     } else {
-        emit databaseSyncFailed(params->name, result.errorMessage);
-        showErrorMessage(tr("Remote sync '%1' failed: %2").arg(params->name, result.errorMessage));
+        emit databaseSyncFailed(syncName, result.errorMessage);
+        showErrorMessage(tr("Remote sync '%1' failed: %2").arg(syncName, result.errorMessage));
+    }
+}
+
+void DatabaseWidget::syncWithServer(const RemoteParams& params)
+{
+    if (m_syncEngine && m_syncEngine->isBusy()) {
+        return;
+    }
+
+    // Keep one engine per database and server, so a scheduled retry survives between syncs
+    const auto sameServer = [](const RemoteParams& a, const RemoteParams& b) {
+        return a.name == b.name && a.serverUrl == b.serverUrl && a.serverDatabaseId == b.serverDatabaseId
+               && a.serverToken == b.serverToken && a.downloadTimeoutMsec == b.downloadTimeoutMsec
+               && a.uploadTimeoutMsec == b.uploadTimeoutMsec;
+    };
+    if (m_syncEngine && (m_syncEngine->database() != m_db || !sameServer(m_syncEngine->params(), params))) {
+        stopServerSync();
+    }
+
+    if (!m_syncEngine) {
+        auto* engine = new SyncEngine(m_db, new SyncServerClient(params), SyncStateStore(), this);
+        engine->setMergeHandler([this](const QSharedPointer<Database>& remoteDb, QString* error) {
+            return syncWithDatabase(remoteDb, *error);
+        });
+        engine->setSaveHandler([this](QString* error) {
+            if (save()) {
+                return true;
+            }
+            *error = tr("The database must be saved before it can be uploaded.");
+            return false;
+        });
+        connect(engine, &SyncEngine::progress, this, &DatabaseWidget::updateSyncProgress);
+        connect(engine, &SyncEngine::unlockRequired, this, &DatabaseWidget::unlockServerCopyForSync);
+        connect(engine, &SyncEngine::finished, this, [this, name = params.name](bool success, const QString& error) {
+            RemoteHandler::RemoteResult result;
+            result.success = success;
+            result.errorMessage = error;
+            finishSync(name, result);
+        });
+        m_syncEngine = engine;
+    }
+
+    setDisabled(true);
+    emit databaseSyncInProgress();
+    m_syncEngine->sync();
+}
+
+void DatabaseWidget::unlockServerCopyForSync(const QString& filePath)
+{
+    disconnect(this, &DatabaseWidget::databaseSyncUnlocked, nullptr, nullptr);
+    disconnect(this, &DatabaseWidget::databaseSyncUnlockFailed, nullptr, nullptr);
+
+    // syncUnlockedDatabase() has merged the unlocked copy by the time these fire
+    auto* engine = m_syncEngine.data();
+    connect(this, &DatabaseWidget::databaseSyncUnlocked, engine, [engine](const RemoteHandler::RemoteResult& r) {
+        engine->resumeAfterUnlock(r.success, r.errorMessage);
+    });
+    connect(this, &DatabaseWidget::databaseSyncUnlockFailed, engine, [engine](const RemoteHandler::RemoteResult& r) {
+        engine->resumeAfterUnlock(false, r.errorMessage);
+    });
+
+    emit unlockDatabaseInDialogForSync(filePath);
+}
+
+void DatabaseWidget::stopServerSync()
+{
+    if (m_syncEngine) {
+        // Reports the cancelled sync, which re-enables this widget and the main window
+        m_syncEngine->cancel();
+        m_syncEngine->deleteLater();
+        m_syncEngine = nullptr;
     }
 }
 

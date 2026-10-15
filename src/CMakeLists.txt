@@ -200,6 +200,9 @@ set(gui_SOURCES
         gui/remote/RemoteHandler.cpp
         gui/remote/RemoteProcess.cpp
         gui/remote/RemoteSettings.cpp
+        gui/remote/SyncEngine.cpp
+        gui/remote/SyncServerClient.cpp
+        gui/remote/SyncStateStore.cpp
         gui/reports/ReportsWidget.cpp
         gui/reports/ReportsDialog.cpp
         gui/reports/ReportsWidgetHealthcheck.cpp

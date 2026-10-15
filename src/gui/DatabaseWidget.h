@@ -46,6 +46,7 @@ class EntryPreviewWidget;
 class TagView;
 class ElidedLabel;
 class RemoteSettings;
+class SyncEngine;
 class EntryDetailCard;
 class VaultCommandBar;
 class VaultModal;
@@ -137,9 +138,7 @@ public:
     void setSearchStringForAutoType(const QString& search);
 
     void syncWithRemote(const RemoteParams* params);
-    void syncDatabaseWithLockedDatabase(const QString& filePath,
-                                        const RemoteParams* params,
-                                        const QString& etag = {});
+    void syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params);
     QList<RemoteParams*> getRemoteParams() const;
 
 signals:
@@ -300,7 +299,10 @@ private slots:
     void syncUnlockedDatabase(bool accepted);
     bool syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error);
     void uploadAndFinishSync(const RemoteParams* params, RemoteHandler::RemoteResult result);
-    void finishSync(const RemoteParams* params, RemoteHandler::RemoteResult result);
+    void finishSync(const QString& syncName, const RemoteHandler::RemoteResult& result);
+    void syncWithServer(const RemoteParams& params);
+    void unlockServerCopyForSync(const QString& filePath);
+    void stopServerSync();
     void emitCurrentModeChanged();
     // Database autoreload slots
     void reloadDatabaseFile(bool triggeredBySave);
@@ -379,6 +381,7 @@ private:
     bool m_attemptingLock = false;
 
     QScopedPointer<RemoteSettings> m_remoteSettings;
+    QPointer<SyncEngine> m_syncEngine;
 
     // Search state
     QScopedPointer<EntrySearcher> m_entrySearcher;
