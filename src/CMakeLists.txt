@@ -204,6 +204,7 @@ set(gui_SOURCES
         gui/remote/SyncScheduler.cpp
         gui/remote/SyncServerClient.cpp
         gui/remote/SyncStateStore.cpp
+        gui/remote/SyncTokenStore.cpp
         gui/reports/ReportsWidget.cpp
         gui/reports/ReportsDialog.cpp
         gui/reports/ReportsWidgetHealthcheck.cpp

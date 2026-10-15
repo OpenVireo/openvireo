@@ -223,7 +223,7 @@
               <enum>QLineEdit::Password</enum>
              </property>
              <property name="placeholderText">
-              <string>Stored encrypted inside this database</string>
+              <string>Stored on this device only</string>
              </property>
             </widget>
            </item>

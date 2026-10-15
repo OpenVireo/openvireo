@@ -268,9 +268,20 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
         });
     });
     connect(this, &DatabaseWidget::currentModeChanged, this, [this](Mode mode) {
-        if (mode == Mode::ViewMode) {
-            resumeBackgroundSync();
+        if (mode != Mode::ViewMode) {
+            return;
         }
+        // Back from the settings, perhaps with the missing token entered
+        if (m_syncStatus.state == SyncStatus::State::NeedsToken) {
+            const auto params = getRemoteParams();
+            const bool allHaveTokens = std::all_of(params.begin(), params.end(), [](const RemoteParams* p) {
+                return p->type != RemoteParams::Type::SyncServer || !p->serverToken.trimmed().isEmpty();
+            });
+            if (allHaveTokens) {
+                setSyncStatus(SyncStatus::State::Idle);
+            }
+        }
+        resumeBackgroundSync();
     });
 
     m_searchLimitGroup = config()->get(Config::SearchLimitGroup).toBool();
@@ -1776,6 +1787,14 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
 
 void DatabaseWidget::syncWithServer(const RemoteParams& params)
 {
+    if (params.serverToken.trimmed().isEmpty()) {
+        // Each device needs its own token, and a database set up on another device comes without one
+        setSyncStatus(
+            SyncStatus::State::NeedsToken,
+            tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.").arg(params.name));
+        switchToRemoteSettings();
+        return;
+    }
     ensureSyncEngine(params);
     const auto state = m_syncEngine->state();
     if (m_syncEngine->isBusy() && state != SyncEngine::State::WaitingForUnlock
@@ -1847,6 +1866,14 @@ void DatabaseWidget::backgroundSync()
 {
     const auto* params = autoSyncParams();
     if (!params || isLocked()) {
+        return;
+    }
+    if (params->serverToken.trimmed().isEmpty()) {
+        if (m_syncStatus.state != SyncStatus::State::NeedsToken) {
+            setSyncStatus(SyncStatus::State::NeedsToken,
+                          tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.")
+                              .arg(params->name));
+        }
         return;
     }
     if (!canSyncInBackground()) {

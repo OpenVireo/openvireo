@@ -23,14 +23,17 @@
 #include "core/Entry.h"
 #include "core/Group.h"
 #include "core/Merger.h"
+#include "core/Metadata.h"
 #include "crypto/Crypto.h"
 #include "crypto/kdf/AesKdf.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncEngine.h"
+#include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 
 #include <QFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -75,6 +78,8 @@ namespace
 void TestRemoteSyncServer::initTestCase()
 {
     QVERIFY(Crypto::init());
+    // Never touch the real Keychain or token file
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
 }
 
 void TestRemoteSyncServer::testSettingsRoundTrip()
@@ -118,6 +123,111 @@ void TestRemoteSyncServer::testSettingsRoundTrip()
     QVERIFY(!loadedCommand->autoSync);
     QVERIFY(loadedCommand->hasDownload());
     QVERIFY(!loadedCommand->hasUpload());
+}
+
+namespace
+{
+    RemoteParams* tokenParams(const QString& token)
+    {
+        auto* params = new RemoteParams();
+        params->name = "server";
+        params->type = RemoteParams::Type::SyncServer;
+        params->serverUrl = "https://sync.example.com";
+        params->serverDatabaseId = "personal";
+        params->serverToken = token;
+        return params;
+    }
+
+    QString storedSettings(const QSharedPointer<Database>& db)
+    {
+        return db->metadata()->customData()->value(CustomData::RemoteProgramSettings);
+    }
+} // namespace
+
+void TestRemoteSyncServer::testTokenStaysOnThisDevice()
+{
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    auto db = QSharedPointer<Database>::create();
+    RemoteSettings settings(db);
+    settings.addRemoteParams(tokenParams("device-token"));
+    settings.saveSettings();
+
+    // The database, which every device shares, doesn't carry the token
+    QVERIFY(storedSettings(db).contains("sync.example.com"));
+    QVERIFY(!storedSettings(db).contains("device-token"));
+    QCOMPARE(RemoteSettings(db).getRemoteParams("server")->serverToken, QString("device-token"));
+
+    // Another device opening the same database has no token until it gets its own
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    QVERIFY(RemoteSettings(db).getRemoteParams("server")->serverToken.isEmpty());
+
+    // Tokens belong to one database: another one syncing the same server database needs its own entry
+    auto other = QSharedPointer<Database>::create();
+    QVERIFY(SyncTokenStore::keyFor(db->rootGroup()->uuid(), *tokenParams({}))
+            != SyncTokenStore::keyFor(other->rootGroup()->uuid(), *tokenParams({})));
+}
+
+void TestRemoteSyncServer::testMovesTokenOutOfOlderDatabases()
+{
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    auto db = QSharedPointer<Database>::create();
+    // Settings as an older version saved them, with the token inside
+    db->metadata()->customData()->set(CustomData::RemoteProgramSettings,
+                                      R"([{"name":"server","type":"syncServer","serverUrl":"https://sync.example.com",)"
+                                      R"("serverDatabaseId":"personal","serverToken":"shared-token"}])");
+
+    RemoteSettings settings(db);
+    QCOMPARE(settings.getRemoteParams("server")->serverToken, QString("shared-token"));
+    const auto key = SyncTokenStore::keyFor(db->rootGroup()->uuid(), *settings.getRemoteParams("server"));
+    QCOMPARE(SyncTokenStore::load(key), QString("shared-token"));
+
+    // Saving the settings takes it out of the database; this device keeps it
+    settings.saveSettings();
+    QVERIFY(!storedSettings(db).contains("shared-token"));
+    QCOMPARE(RemoteSettings(db).getRemoteParams("server")->serverToken, QString("shared-token"));
+
+    // A token this device already has wins over one still inside the database
+    SyncTokenStore::save(key, "own-token");
+    db->metadata()->customData()->set(CustomData::RemoteProgramSettings,
+                                      R"([{"name":"server","type":"syncServer","serverUrl":"https://sync.example.com",)"
+                                      R"("serverDatabaseId":"personal","serverToken":"shared-token"}])");
+    QCOMPARE(RemoteSettings(db).getRemoteParams("server")->serverToken, QString("own-token"));
+}
+
+void TestRemoteSyncServer::testForgetsTokensOfRemovedRemotes()
+{
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    auto db = QSharedPointer<Database>::create();
+    RemoteSettings settings(db);
+    settings.addRemoteParams(tokenParams("device-token"));
+    settings.saveSettings();
+    const auto key = SyncTokenStore::keyFor(db->rootGroup()->uuid(), *tokenParams({}));
+    QCOMPARE(SyncTokenStore::load(key), QString("device-token"));
+
+    RemoteSettings editor(db);
+    editor.removeRemoteParams("server");
+    editor.saveSettings();
+    QVERIFY(SyncTokenStore::load(key).isEmpty());
+}
+
+void TestRemoteSyncServer::testPlatformTokenStore()
+{
+    // Writes to the real Keychain (macOS) or token file, so only on request
+    if (qEnvironmentVariable("KPXC_TEST_KEYCHAIN") != "1") {
+        QSKIP("Set KPXC_TEST_KEYCHAIN=1 to test the platform token store");
+    }
+    SyncTokenStore::setBackend(nullptr);
+    auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
+
+    const auto key = "keepassxc-test-" + QUuid::createUuid().toString(QUuid::Id128);
+    QVERIFY(SyncTokenStore::load(key).isEmpty());
+    QVERIFY(SyncTokenStore::save(key, "first-token"));
+    QCOMPARE(SyncTokenStore::load(key), QString("first-token"));
+    QVERIFY(SyncTokenStore::save(key, "second-tökén"));
+    QCOMPARE(SyncTokenStore::load(key), QString("second-tökén"));
+    QVERIFY(SyncTokenStore::remove(key));
+    QVERIFY(SyncTokenStore::load(key).isEmpty());
+    QVERIFY(SyncTokenStore::remove(key));
 }
 
 void TestRemoteSyncServer::testSyncServerCycle()
