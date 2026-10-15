@@ -30,6 +30,7 @@ private slots:
     void testRequestNowIsImmediate();
     void testPollsWhileEnabled();
     void testEventsAreRateLimited();
+    void testParsesServerEvents();
 };
 
 #endif // KEEPASSXC_TESTSYNCSCHEDULER_H

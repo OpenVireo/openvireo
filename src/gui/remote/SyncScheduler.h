@@ -36,6 +36,8 @@ class SyncScheduler : public QObject
 public:
     static constexpr int DefaultSaveDelayMsec = 3 * 1000;
     static constexpr int DefaultPollIntervalMsec = 60 * 1000;
+    // While the server's change notifications arrive, polling only covers for missed ones
+    static constexpr int FallbackPollIntervalMsec = 5 * 60 * 1000;
     // Coming online or to the front again soon after a sync doesn't sync again
     static constexpr int DefaultMinEventGapMsec = 10 * 1000;
 

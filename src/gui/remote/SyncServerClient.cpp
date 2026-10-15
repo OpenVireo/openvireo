@@ -41,22 +41,20 @@ const RemoteParams& SyncServerClient::params() const
     return m_params;
 }
 
-QUrl SyncServerClient::databaseUrl() const
+QUrl SyncServerClient::endpoint(const RemoteParams& params, const QString& path)
 {
-    auto base = m_params.serverUrl.trimmed();
+    auto base = params.serverUrl.trimmed();
     while (base.endsWith('/')) {
         base.chop(1);
     }
-    return QUrl(base + "/api/v1/databases/" + QUrl::toPercentEncoding(m_params.serverDatabaseId.trimmed()));
+    return QUrl(base + "/api/v1/" + path);
 }
 
-QUrl SyncServerClient::listingUrl() const
+QUrl SyncServerClient::databaseUrl(const QString& suffix) const
 {
-    auto base = m_params.serverUrl.trimmed();
-    while (base.endsWith('/')) {
-        base.chop(1);
-    }
-    return QUrl(base + "/api/v1/databases");
+    return endpoint(m_params,
+                    "databases/" + QString::fromLatin1(QUrl::toPercentEncoding(m_params.serverDatabaseId.trimmed()))
+                        + suffix);
 }
 
 void SyncServerClient::check(const QString& etag, Callback callback)
@@ -87,7 +85,22 @@ void SyncServerClient::upload(const QByteArray& data, const QString& etag, Callb
 
 void SyncServerClient::listDatabases(Callback callback)
 {
-    send("GET", listingUrl(), {}, {}, m_params.downloadTimeoutMsec, std::move(callback));
+    send("GET", endpoint(m_params, "databases"), {}, {}, m_params.downloadTimeoutMsec, std::move(callback));
+}
+
+void SyncServerClient::history(Callback callback)
+{
+    send("GET", databaseUrl("/history"), {}, {}, m_params.downloadTimeoutMsec, std::move(callback));
+}
+
+void SyncServerClient::downloadRevision(qint64 revision, Callback callback)
+{
+    send("GET",
+         databaseUrl("/history/" + QString::number(revision)),
+         {},
+         {},
+         m_params.downloadTimeoutMsec,
+         std::move(callback));
 }
 
 void SyncServerClient::abort()

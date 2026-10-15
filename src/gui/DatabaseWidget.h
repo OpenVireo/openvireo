@@ -50,6 +50,7 @@ class RemoteSettings;
 class SyncEngine;
 struct SyncConflict;
 class SyncScheduler;
+class SyncEventStream;
 class EntryDetailCard;
 class VaultCommandBar;
 class VaultModal;
@@ -168,6 +169,8 @@ public:
     const RemoteParams* autoSyncParams() const;
 
     void syncWithRemote(const RemoteParams* params);
+    // The versions of the database the sync server keeps, to open one of them
+    void showServerHistory(const RemoteParams* params);
     void syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params);
     QList<RemoteParams*> getRemoteParams() const;
 
@@ -342,6 +345,7 @@ private slots:
     void updateAutoSync();
     void backgroundSync();
     void resumeBackgroundSync();
+    void updateSyncEvents(const RemoteParams* params);
     void showSyncConflicts(const QList<SyncConflict>& conflicts);
     void emitCurrentModeChanged();
     // Database autoreload slots
@@ -423,6 +427,8 @@ private:
     QScopedPointer<RemoteSettings> m_remoteSettings;
     SyncScheduler* m_syncScheduler;
     QPointer<SyncEngine> m_syncEngine;
+    // The server's change notifications, while automatic sync is on
+    QPointer<SyncEventStream> m_syncEvents;
     SyncStatus m_syncStatus;
     // The running sync was started by the user, so it may show dialogs and messages
     bool m_syncInteractive = false;

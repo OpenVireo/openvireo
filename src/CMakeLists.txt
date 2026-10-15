@@ -201,6 +201,8 @@ set(gui_SOURCES
         gui/remote/RemoteProcess.cpp
         gui/remote/RemoteSettings.cpp
         gui/remote/SyncEngine.cpp
+        gui/remote/SyncEventStream.cpp
+        gui/remote/SyncHistoryDialog.cpp
         gui/remote/SyncScheduler.cpp
         gui/remote/SyncServerClient.cpp
         gui/remote/SyncStateStore.cpp
