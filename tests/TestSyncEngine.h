@@ -37,6 +37,9 @@ private slots:
     void testBacksOffAfterNetworkError();
     void testCancelStopsTheSync();
     void testMergeWaitsForTheGate();
+    void testWaitsWhenEditingStartsWhileOpening();
+    void testCancelWhileOpening();
+    void testServerCopyBelongsToTheGuiThread();
     void testGenerationRisesOnlyWithChanges();
     void testTwoDevicesSettle();
     void testDetectsServerRevisionGoingBack();

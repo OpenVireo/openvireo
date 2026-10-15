@@ -26,6 +26,13 @@
 FileWatcher::FileWatcher(QObject* parent)
     : QObject(parent)
 {
+    // Children, so they move along when the watcher moves to another thread with its database
+    for (QObject* member : {static_cast<QObject*>(&m_fileWatcher),
+                            static_cast<QObject*>(&m_fileChangeDelayTimer),
+                            static_cast<QObject*>(&m_fileIgnoreDelayTimer),
+                            static_cast<QObject*>(&m_fileChecksumTimer)}) {
+        member->setParent(this);
+    }
     connect(&m_fileWatcher, SIGNAL(fileChanged(QString)), SLOT(checkFileChanged()));
     connect(&m_fileChecksumTimer, SIGNAL(timeout()), SLOT(checkFileChanged()));
     connect(&m_fileChangeDelayTimer, &QTimer::timeout, this, [this] { emit fileChanged(m_filePath); });

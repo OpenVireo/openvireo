@@ -196,12 +196,14 @@ private:
     void needAttention(Attention attention, const QString& message);
     void startCheck();
     void startDownload();
+    // Merges the downloaded copy once it is open, the base is open if needed and the gate is open
     void mergeDownload();
+    void openDownload();
+    void openBase();
     void uploadFile(const QString& filePath);
     void startUpload(const QByteArray& data);
     // `serverData` is what the server now has, kept as the base for the next merge; empty keeps the old base
     void succeed(const QString& etag, qint64 revision, const QByteArray& serverData = {});
-    QSharedPointer<Database> openBase();
     void fail(const QString& error, bool networkError = false);
     void cleanup();
 
@@ -228,6 +230,11 @@ private:
     // What the running sync is uploading
     QByteArray m_uploadData;
     QSharedPointer<Database> m_remoteDb;
+    // The copy both sides last synced from, when merging needs it
+    QSharedPointer<Database> m_baseDb;
+    bool m_baseOpened = false;
+    // Bumped when a sync ends, so databases that finish opening afterwards are dropped
+    quint64 m_openRun = 0;
 
     bool m_retryOnNetworkError = false;
     int m_backoffMsec = 0;

@@ -29,11 +29,14 @@
 #include "mock/MockClock.h"
 
 #include <QFile>
+#include <QRegularExpression>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QThread>
 #include <QTimeZone>
+#include <QTimer>
 #include <functional>
 
 QTEST_GUILESS_MAIN(TestSyncEngine)
@@ -575,6 +578,108 @@ void TestSyncEngine::testMergeWaitsForTheGate()
     QVERIFY(finished.count() == 1 || finished.wait(5000));
     QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
     QCOMPARE(titles(f.local.data()), QStringList({"Remote entry"}));
+}
+
+void TestSyncEngine::testWaitsWhenEditingStartsWhileOpening()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+
+    // The user opens an editor just after the downloaded copy started opening
+    bool editing = false;
+    f.engine->setMergeGate([&editing] { return !editing; });
+    connect(f.engine.data(), &SyncEngine::stateChanged, this, [&editing](SyncEngine::State state) {
+        if (state == SyncEngine::State::Merging) {
+            editing = true;
+        }
+    });
+    QSignalSpy deferred(f.engine.data(), &SyncEngine::mergeDeferred);
+    QSignalSpy finished(f.engine.data(), &SyncEngine::finished);
+
+    f.engine->sync();
+    QVERIFY(deferred.wait(5000));
+    QCOMPARE(f.engine->state(), SyncEngine::State::WaitingToMerge);
+    QVERIFY(titles(f.local.data()).isEmpty());
+
+    // The copy is already open: closing the editor merges it at once
+    editing = false;
+    f.engine->resumeMerge();
+    QVERIFY(finished.count() == 1 || finished.wait(5000));
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QCOMPARE(titles(f.local.data()), QStringList({"Remote entry"}));
+}
+
+void TestSyncEngine::testCancelWhileOpening()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+
+    int merges = 0;
+    f.engine->setMergeHandler([&](const QSharedPointer<Database>& remote, const Database* base, QString* error) {
+        ++merges;
+        return mergeBothWays(f.local.data(), remote, base, error);
+    });
+    connect(f.engine.data(), &SyncEngine::stateChanged, this, [&f](SyncEngine::State state) {
+        if (state == SyncEngine::State::Merging) {
+            QTimer::singleShot(0, f.engine.data(), &SyncEngine::cancel);
+        }
+    });
+    QSignalSpy finished(f.engine.data(), &SyncEngine::finished);
+    f.engine->sync();
+    QVERIFY(finished.count() == 1 || finished.wait(5000));
+    QVERIFY(!finished.first().first().toBool());
+
+    // The copy finishes opening after the cancel and is dropped
+    QTest::qWait(500);
+    QCOMPARE(merges, 0);
+    QCOMPARE(finished.count(), 1);
+    QCOMPARE(f.engine->state(), SyncEngine::State::Idle);
+    QVERIFY(titles(f.local.data()).isEmpty());
+}
+
+void TestSyncEngine::testServerCopyBelongsToTheGuiThread()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    QVERIFY(f.sync().value(0).toBool());
+
+    // Another device edits the entry, which keeps the old version in its history
+    auto other = openServerCopy(f.server, f.dir.filePath("other.kdbx"));
+    QVERIFY(other);
+    auto* shared = findEntry(other.data(), "Shared");
+    shared->beginUpdate();
+    shared->setNotes("edited elsewhere");
+    shared->endUpdate();
+    QVERIFY(!shared->historyItems().isEmpty());
+    QVERIFY(other->save(Database::Atomic));
+    f.server->store(readFile(f.dir.filePath("other.kdbx")));
+
+    // Objects read on another thread and left there would miss events and their timers wouldn't start
+    QTest::failOnWarning(QRegularExpression("thread|Timers", QRegularExpression::CaseInsensitiveOption));
+    bool checked = false;
+    f.engine->setMergeHandler([&](const QSharedPointer<Database>& remote, const Database* base, QString* error) {
+        auto* gui = QThread::currentThread();
+        checked =
+            remote->thread() == gui && remote->rootGroup()->thread() == gui && remote->metadata()->thread() == gui;
+        for (auto* entry : remote->rootGroup()->entriesRecursive()) {
+            checked = checked && entry->thread() == gui;
+            for (const auto* item : entry->historyItems()) {
+                checked = checked && item->thread() == gui;
+            }
+        }
+        // Registered for lookups like any other database
+        checked = checked && Database::databaseByUuid(remote->uuid()) == remote.data();
+        return mergeBothWays(f.local.data(), remote, base, error);
+    });
+    auto result = f.sync();
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QVERIFY(checked);
+    QCOMPARE(findEntry(f.local.data(), "Shared")->notes(), QString("edited elsewhere"));
 }
 
 void TestSyncEngine::testGenerationRisesOnlyWithChanges()
