@@ -55,6 +55,8 @@ private slots:
     void chooseKeyFile();
     void updateDatabaseChoices() const;
     void loadSyncServerDatabases();
+    // Trades a pairing code typed in the token field for this device's token; false if that failed
+    bool claimPairingCode();
 
 private:
     void setupVaultLayout();

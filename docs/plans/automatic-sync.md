@@ -349,7 +349,24 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   - Tested: the Secret Service path against GNOME Keyring in a Debian container (save, overwrite, remove, moving a token
     out of the file, no keyring, KeePassXC as the provider). Not tested: the unlock prompt (needs a desktop session), and
     the Windows store, which so far is only known to compile against MinGW's `wincred.h`.
-- **Pairing a device with a short code** — not started.
+- **Pairing a device with a short code** ✅ `POST /api/v1/devices/pairing` (with a token) returns an eight-character
+  code (32-letter alphabet without 0/O/1/I, so 40 bits) valid for 10 minutes; `POST /api/v1/devices/pairing/claim`
+  (without a token) trades it and a device name for a new device and its token. Codes are stored hashed under their
+  user in `users.json` (`pairings`), not in memory, so `devices pair <user>` on the command line works for a user's
+  first device too, and codes survive restarts. At most 5 wait per user. Wrong claims are limited per client address
+  and in total (`FailureLimiter`, 10 and 100 per 10 minutes).
+  - Client: a pairing code works wherever a token goes, in Remote Sync settings (Save, Test Connection) and the import
+    wizard (Load, Next): `SyncServerClient::isPairingCode` tells it from a token (43 characters), and it is swapped for
+    the token before anything else uses the field. The device names itself after the host name (without `.local`).
+    **Pair Device…** next to Test Connection creates a code and shows it with its expiry.
+  - The CLI and the running server each rewrite the whole `users.json`, so a code created with `devices pair` in the
+    same moment the server writes the file (a claim, or a device's hourly last-seen time) can be lost. This was already
+    so for `devices add`; run it again if the code isn't accepted.
+  - A code claimed from the settings page whose settings are then cancelled leaves a device on the server without a
+    token anywhere; `devices revoke` cleans it up.
+  - Tested: server tests (claim, one use, expiry, the cap, case and dashes, the limiter), live client tests against a
+    local server, and the CLI code and the `429` by hand. Not tested: the new button in the GUI, since `testgui` can't
+    run on this branch.
 - **A Fluent version of the history dialog** — not started.
 - **Opening the downloaded database off the GUI thread** — not started.
 

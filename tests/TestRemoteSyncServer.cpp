@@ -30,6 +30,7 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncEngine.h"
 #include "gui/remote/SyncEventStream.h"
+#include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 
@@ -538,4 +539,50 @@ void TestRemoteSyncServer::testHistoryAndEvents()
 
     events.stop();
     QVERIFY(!events.isConnected());
+}
+
+void TestRemoteSyncServer::testRecognisesPairingCodes()
+{
+    QVERIFY(SyncServerClient::isPairingCode("ABCD-EFGH"));
+    QVERIFY(SyncServerClient::isPairingCode(" abcd efgh "));
+    QVERIFY(SyncServerClient::isPairingCode("ABCD2345"));
+    QVERIFY(!SyncServerClient::isPairingCode("ABCD-EFG"));
+    QVERIFY(!SyncServerClient::isPairingCode("ABCD-EFGH1"));
+    // A real token: 32 random bytes in base64url
+    QVERIFY(!SyncServerClient::isPairingCode("q3Jx0b2V8kQm1pZt7cWfYhNnL4sAeRuDiG9oPvXyTzA"));
+    QVERIFY(!SyncServerClient::isPairingCode({}));
+}
+
+void TestRemoteSyncServer::testPairsAnotherDevice()
+{
+    SKIP_WITHOUT_SERVER();
+
+    auto params = serverParams();
+    RemoteHandler handler;
+    auto created = handler.createSyncServerPairingCode(&params);
+    QVERIFY2(created.success, qPrintable(created.errorMessage));
+    QVERIFY(SyncServerClient::isPairingCode(created.code));
+    QVERIFY(created.expiresAt > QDateTime::currentDateTimeUtc());
+
+    // The new device knows the server, not a token
+    auto newDevice = params;
+    newDevice.serverToken.clear();
+    auto claimed = handler.claimSyncServerPairingCode(&newDevice, created.code.toLower());
+    QVERIFY2(claimed.success, qPrintable(claimed.errorMessage));
+    QVERIFY(!claimed.token.isEmpty());
+    QVERIFY(claimed.token != params.serverToken);
+
+    newDevice.serverToken = claimed.token;
+    auto listing = handler.listSyncServerDatabases(&newDevice);
+    QVERIFY2(listing.success, qPrintable(listing.errorMessage));
+
+    // A code adds one device only
+    auto again = handler.claimSyncServerPairingCode(&newDevice, created.code);
+    QVERIFY(!again.success);
+    QVERIFY(again.errorMessage.contains("Unknown or expired pairing code"));
+
+    // Only a device with a token can create codes
+    auto stranger = params;
+    stranger.serverToken = "not-a-token";
+    QVERIFY(!handler.createSyncServerPairingCode(&stranger).success);
 }

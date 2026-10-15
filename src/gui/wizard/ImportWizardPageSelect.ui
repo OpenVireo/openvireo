@@ -147,6 +147,9 @@
            <property name="echoMode">
             <enum>QLineEdit::Password</enum>
            </property>
+           <property name="placeholderText">
+            <string>Access token, or a pairing code from another device</string>
+           </property>
           </widget>
          </item>
          <item row="2" column="0">

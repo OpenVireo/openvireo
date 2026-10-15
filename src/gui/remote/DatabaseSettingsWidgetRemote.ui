@@ -275,6 +275,16 @@
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="VaultButton" name="pairDeviceButton">
+               <property name="toolTip">
+                <string>Show a one-time code that adds another of your devices to this server</string>
+               </property>
+               <property name="text">
+                <string>Pair Device…</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </item>
            <item row="4" column="0" colspan="2">

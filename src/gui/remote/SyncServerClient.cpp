@@ -20,6 +20,7 @@
 #include <QCryptographicHash>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #ifdef KPXC_FEATURE_NETWORK
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -103,6 +104,27 @@ void SyncServerClient::downloadRevision(qint64 revision, Callback callback)
          std::move(callback));
 }
 
+void SyncServerClient::createPairingCode(Callback callback)
+{
+    send("POST",
+         endpoint(m_params, "devices/pairing"),
+         {{"Content-Type", "application/json"}},
+         "{}",
+         m_params.downloadTimeoutMsec,
+         std::move(callback));
+}
+
+void SyncServerClient::claimPairingCode(const QString& code, const QString& deviceName, Callback callback)
+{
+    QJsonObject body{{"code", code.trimmed()}, {"deviceName", deviceName}};
+    send("POST",
+         endpoint(m_params, "devices/pairing/claim"),
+         {{"Content-Type", "application/json"}},
+         QJsonDocument(body).toJson(QJsonDocument::Compact),
+         m_params.downloadTimeoutMsec,
+         std::move(callback));
+}
+
 void SyncServerClient::abort()
 {
     ++m_generation;
@@ -146,7 +168,9 @@ void SyncServerClient::send(const QByteArray& verb,
     }
 
     QNetworkRequest request(url);
-    request.setRawHeader("Authorization", "Bearer " + m_params.serverToken.trimmed().toUtf8());
+    if (!m_params.serverToken.trimmed().isEmpty()) {
+        request.setRawHeader("Authorization", "Bearer " + m_params.serverToken.trimmed().toUtf8());
+    }
     request.setRawHeader("User-Agent", "KeePassXC");
     // Never follow redirects, they could forward the access token to another host
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
@@ -205,6 +229,12 @@ QString SyncServerClient::errorMessage(const Response& response)
         message = tr("Unexpected response.");
     }
     return tr("The sync server responded with HTTP %1: %2").arg(response.status).arg(message);
+}
+
+bool SyncServerClient::isPairingCode(const QString& text)
+{
+    static const QRegularExpression code("^[A-Z2-9]{4}[- ]?[A-Z2-9]{4}$", QRegularExpression::CaseInsensitiveOption);
+    return code.match(text.trimmed()).hasMatch();
 }
 
 QString SyncServerClient::etagFor(const QByteArray& data)
