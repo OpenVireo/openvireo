@@ -88,7 +88,6 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
-    QTEST_DISABLE_KEYPAD_NAVIGATION
     TestGui tc;
     QTEST_SET_MAIN_SOURCE_PATH
     return QTest::qExec(&tc, argc, argv);
@@ -976,7 +975,7 @@ void TestGui::testPasswordEntryEntropy()
     QVERIFY(passwordEdit);
     QTest::mouseClick(passwordEdit, Qt::LeftButton);
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     QTest::keyClick(passwordEdit, Qt::Key_G, Qt::MetaModifier);
 #else
     QTest::keyClick(passwordEdit, Qt::Key_G, Qt::ControlModifier);
@@ -1037,7 +1036,7 @@ void TestGui::testDicewareEntryEntropy()
     QVERIFY(passwordEdit);
     QTest::mouseClick(passwordEdit, Qt::LeftButton);
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     QTest::keyClick(passwordEdit, Qt::Key_G, Qt::MetaModifier);
 #else
     QTest::keyClick(passwordEdit, Qt::Key_G, Qt::ControlModifier);
