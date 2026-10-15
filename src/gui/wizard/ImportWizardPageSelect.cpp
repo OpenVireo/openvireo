@@ -138,11 +138,11 @@ namespace
         bool eventFilter(QObject* watched, QEvent* event) override
         {
             if (watched == m_view->viewport() && event->type() == QEvent::Resize) {
-                // Columns count as if the scroll bar showed, so it showing or not doesn't change them and the
-                // height of the tiles with them, which would show or hide it again
+                // Size the tiles as if the scroll bar showed, so they fit either way. Sized to the viewport, the
+                // scroll bar showing would wrap them onto more rows than fit, and hiding again would unwrap them.
                 const int scrollBar = m_view->style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, m_view);
-                const int columns = qMax(1, (m_view->contentsRect().width() - scrollBar) / TileMinimumWidth);
-                const int width = m_view->viewport()->width();
+                const int width = m_view->contentsRect().width() - scrollBar;
+                const int columns = qMax(1, width / TileMinimumWidth);
                 const QSize grid(qMax(1, (width - 1) / columns), TileHeight);
                 if (m_view->gridSize() != grid) {
                     m_view->setGridSize(grid);
@@ -309,6 +309,10 @@ void ImportWizardPageSelect::setupVaultLayout()
     list->setSpacing(0);
     list->setFrameShape(QFrame::NoFrame);
     list->setMinimumSize(0, 0);
+    // The columns follow the width the list gets, so it mustn't ask for the width of its columns: the form asks
+    // for that, and the list growing or shrinking with them would change their number again
+    list->setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
+    list->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     list->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
