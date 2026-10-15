@@ -23,6 +23,7 @@
 
 #include "RemoteHandler.h"
 #include "RemoteSettings.h"
+#include "SyncTokenStore.h"
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
@@ -79,6 +80,10 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     connect(m_ui->autoSyncCheckBox, &QCheckBox::toggled, setModified);
 
     updateTypeVisibility();
+    // Each device has its own token, so it isn't stored in the database that all devices share
+    m_ui->serverTokenEdit->setPlaceholderText(tr("Stored on this device only, in %1. Each device needs its own token: "
+                                                 "keepassxc-sync-server devices add <user> <device-name>")
+                                                  .arg(SyncTokenStore::description()));
 
     if (FluentTheme::vaultLayoutEnabled()) {
         buildVaultPage();

@@ -17,7 +17,10 @@
 
 #include "RemoteSettings.h"
 
+#include "SyncTokenStore.h"
+
 #include "core/Database.h"
+#include "core/Group.h"
 #include "core/Metadata.h"
 
 #include <QDebug>
@@ -76,9 +79,31 @@ void RemoteSettings::loadSettings()
 
 void RemoteSettings::saveSettings() const
 {
-    if (m_db) {
-        m_db->metadata()->customData()->set(CustomData::RemoteProgramSettings, toConfig());
+    if (!m_db) {
+        return;
     }
+    m_db->metadata()->customData()->set(CustomData::RemoteProgramSettings, toConfig());
+
+    // Tokens stay on this device; forget the ones of remotes that were removed or moved
+    QSet<QString> keys;
+    for (const auto* params : m_remoteParams) {
+        if (params->type == RemoteParams::Type::SyncServer) {
+            const auto key = tokenKey(*params);
+            keys.insert(key);
+            if (!SyncTokenStore::save(key, params->serverToken.trimmed())) {
+                qWarning("Could not store the sync server access token for %s", qPrintable(params->name));
+            }
+        }
+    }
+    for (const auto& key : m_tokenKeys - keys) {
+        SyncTokenStore::remove(key);
+    }
+    m_tokenKeys = keys;
+}
+
+QString RemoteSettings::tokenKey(const RemoteParams& params) const
+{
+    return SyncTokenStore::keyFor(m_db->rootGroup()->uuid(), params);
 }
 
 QString RemoteSettings::toConfig() const
@@ -91,7 +116,6 @@ QString RemoteSettings::toConfig() const
             object["type"] = "syncServer";
             object["serverUrl"] = params->serverUrl;
             object["serverDatabaseId"] = params->serverDatabaseId;
-            object["serverToken"] = params->serverToken;
             object["autoSync"] = params->autoSync;
         }
         object["downloadCommand"] = params->downloadCommand;
@@ -109,6 +133,7 @@ QString RemoteSettings::toConfig() const
 void RemoteSettings::fromConfig(const QString& data)
 {
     m_remoteParams.clear();
+    m_tokenKeys.clear();
 
     QJsonDocument json = QJsonDocument::fromJson(data.toUtf8());
     for (const auto& item : json.array().toVariantList()) {
@@ -119,7 +144,16 @@ void RemoteSettings::fromConfig(const QString& data)
             params->type = RemoteParams::Type::SyncServer;
             params->serverUrl = itemMap["serverUrl"].toString();
             params->serverDatabaseId = itemMap["serverDatabaseId"].toString();
-            params->serverToken = itemMap["serverToken"].toString();
+            // Each device keeps its own token; databases from before that carry one inside,
+            // which this device keeps using until it gets its own
+            const auto key = tokenKey(*params);
+            params->serverToken = SyncTokenStore::load(key);
+            const auto embeddedToken = itemMap["serverToken"].toString();
+            if (params->serverToken.isEmpty() && !embeddedToken.isEmpty()) {
+                params->serverToken = embeddedToken;
+                SyncTokenStore::save(key, embeddedToken);
+            }
+            m_tokenKeys.insert(key);
             params->autoSync = itemMap["autoSync"].toBool();
         }
         params->downloadCommand = itemMap["downloadCommand"].toString();

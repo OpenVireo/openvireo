@@ -27,6 +27,10 @@ class TestRemoteSyncServer : public QObject
 private slots:
     void initTestCase();
     void testSettingsRoundTrip();
+    void testTokenStaysOnThisDevice();
+    void testMovesTokenOutOfOlderDatabases();
+    void testForgetsTokensOfRemovedRemotes();
+    void testPlatformTokenStore();
     void testSyncServerCycle();
     void testSyncServerRejectsBadToken();
     void testSyncEngineTwoDevices();

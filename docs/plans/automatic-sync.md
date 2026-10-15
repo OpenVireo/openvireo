@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phases 1–3 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–4 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -216,7 +216,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 | 1 ✅ | `SyncServerClient` (async), `SyncStateStore`, `SyncEngine` state machine with retry on `412` and backoff; the manual sync goes through it | none | `RemoteHandler.*`, new `SyncServerClient.*`, `SyncEngine.*`, `SyncStateStore.*`, `DatabaseWidget.cpp` |
 | 2 ✅ | Triggers, the `autoSync` setting, chip states, no menu disabling for background syncs | none | `RemoteSettings.*`, `DatabaseSettingsWidgetRemote.*`, `VaultPanes.*`, `MainWindow.cpp` |
 | 3 ✅ | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
-| 4 | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
+| 4 ✅ | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
 | 5 | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
 | 6 | Three-way merge from the base snapshot | none | `Merger.*`, `SyncEngine.*` |
 
@@ -276,6 +276,23 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   bar that stays until closed. The first sync of a database has no snapshot, so it reports nothing.
 - Not covered: when the server copy needs the unlock dialog (different key), its generation isn't checked, because the
   engine never opens it.
+
+#### Phase 4 notes
+
+- Server: `users.json` keeps devices per user, each with its own token hash, creation time and last-seen time (written
+  at most once an hour per device). A user's `tokenHash` from before devices is read as a device called `legacy`, so
+  existing tokens keep working until revoked. CLI: `users add <name> [device]`, `devices add|list|revoke`. Adding an
+  existing user is an error now instead of rotating its token. Pairing by code is left for later.
+- Client: `SyncTokenStore` keeps tokens in the login Keychain on macOS (generic passwords, service "KeePassXC Sync",
+  never synced through iCloud) and, elsewhere for now, in `sync-tokens.json` (mode 0600) next to the local config.
+  That fallback is plain text on disk, where the token used to be inside the encrypted database; Windows Credential
+  Manager and libsecret are the follow-ups. Tests use an in-memory store; `KPXC_TEST_KEYCHAIN=1` runs one test against
+  the real store.
+- Tokens are keyed by the database's root group UUID, server URL and database ID. `RemoteSettings` no longer writes
+  `serverToken` into the database. A token found there is copied to the store on load and dropped from the database
+  the next time the remote settings are saved; a token the device already has wins.
+- A sync server remote without a token on this device shows "token needed"; background syncs skip it without sending
+  anything, and a manual sync opens the Remote Sync settings.
 
 ### 5.7 Testing
 

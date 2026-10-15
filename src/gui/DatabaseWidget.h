@@ -153,7 +153,9 @@ public:
             // The server copy uses a different password or key file
             NeedsUnlock,
             // The server's copy looks older than expected; the user decides whether to sync anyway
-            NeedsAttention
+            NeedsAttention,
+            // This device has no access token for the server yet
+            NeedsToken
         };
         State state = State::Idle;
         QDateTime lastSync;
