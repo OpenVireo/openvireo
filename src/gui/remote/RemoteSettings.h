@@ -20,6 +20,7 @@
 
 #include <QHash>
 #include <QObject>
+#include <QSet>
 #include <QSharedPointer>
 
 class Database;
@@ -45,6 +46,7 @@ struct RemoteParams
     // Sync server settings
     QString serverUrl;
     QString serverDatabaseId;
+    // Kept on this device only (SyncTokenStore), never written into the database
     QString serverToken;
     // Sync server only: sync in the background after saves, on unlock and periodically
     bool autoSync = false;
@@ -80,9 +82,12 @@ public:
 private:
     void fromConfig(const QString& data);
     QString toConfig() const;
+    QString tokenKey(const RemoteParams& params) const;
 
     QHash<QString, RemoteParams*> m_remoteParams;
     QSharedPointer<Database> m_db;
+    // Tokens stored for the remotes as last loaded or saved
+    mutable QSet<QString> m_tokenKeys;
 };
 
 #endif // KEEPASSXC_REMOTESETTINGS_H

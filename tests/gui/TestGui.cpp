@@ -63,6 +63,7 @@
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
 #include "gui/remote/RemoteHandler.h"
+#include "gui/remote/SyncTokenStore.h"
 #include "gui/tag/TagsEdit.h"
 #include "gui/wizard/NewDatabaseWizard.h"
 #include "keys/FileKey.h"
@@ -94,6 +95,8 @@ int main(int argc, char* argv[])
 
 void TestGui::initTestCase()
 {
+    // Never touch the real Keychain or token file
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
     QVERIFY(Crypto::init());
 
     // Create temporary config file

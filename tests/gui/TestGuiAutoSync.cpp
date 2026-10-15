@@ -29,6 +29,7 @@
 #include "gui/MessageBox.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
+#include "gui/remote/SyncTokenStore.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
 
@@ -175,6 +176,8 @@ void TestGuiAutoSync::initTestCase()
     QVERIFY(Crypto::init());
     Config::createConfigFromFile(TemporaryFile::createTempConfigFile(), TemporaryFile::createTempConfigFile());
     Application::bootstrap();
+    // Never touch the real Keychain or token file
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
     // Normally done by MainWindow, which these tests don't need
     KeeShare::init(this);
     config()->set(Config::AutoSaveAfterEveryChange, false);
@@ -297,4 +300,22 @@ void TestGuiAutoSync::testAsksBeforeRecreatingALostDatabase()
     widget.syncWithRemote(widget.getRemoteParams().first());
     QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
     QCOMPARE(serverTitles(params), QStringList({"Kept", "Later"}));
+}
+
+void TestGuiAutoSync::testWaitsForThisDevicesToken()
+{
+    // No server needed: without a token nothing is sent
+    using State = DatabaseWidget::SyncStatus::State;
+    auto params = serverParams();
+    params.serverUrl = "https://sync.invalid";
+    params.serverToken.clear();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    DatabaseWidget widget(db);
+
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsToken, 5000);
+    QVERIFY(widget.syncStatus().error.contains("no access token"));
+    QVERIFY(widget.isEnabled());
 }

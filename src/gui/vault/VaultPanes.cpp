@@ -491,6 +491,10 @@ void VaultSyncChip::refresh()
         setText(tr("%1 · unlock needed").arg(name));
         setToolTip(tr("The database on the server uses a different password or key file. Click to unlock it."));
         break;
+    case State::NeedsToken:
+        setText(tr("%1 · token needed").arg(name));
+        setToolTip(tr("%1\nClick to open the Remote Sync settings.").arg(status.error));
+        break;
     case State::NeedsAttention:
         setText(tr("%1 · check server").arg(name));
         setToolTip(tr("%1\nSyncing is paused. Click to review.").arg(status.error));
@@ -567,6 +571,7 @@ void VaultSyncChip::paintEvent(QPaintEvent* event)
         break;
     case State::Offline:
     case State::NeedsUnlock:
+    case State::NeedsToken:
         dot = p.caution;
         break;
     case State::Syncing:

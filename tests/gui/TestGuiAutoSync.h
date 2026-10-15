@@ -30,6 +30,7 @@ private slots:
     void testWaitsWhileTheDatabaseHasUnsavedChanges();
     void testManualSyncReportsToTheUser();
     void testAsksBeforeRecreatingALostDatabase();
+    void testWaitsForThisDevicesToken();
 };
 
 #endif // KEEPASSXC_TESTGUIAUTOSYNC_H
