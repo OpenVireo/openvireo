@@ -1281,6 +1281,17 @@ void TestGuiVault::testImportModal()
     }
     screenshot("vault-import-source.png");
 
+    // The tiles settle on a number of columns at any width instead of flipping between them
+    for (int width = 900; width <= 1300; width += 10) {
+        m_mainWindow->resize(width, 720);
+        QTest::qWait(30);
+        const auto settled = sources->gridSize();
+        QTest::qWait(60);
+        QVERIFY2(sources->gridSize() == settled, qPrintable(QString("Columns flip at a width of %1").arg(width)));
+    }
+    m_mainWindow->resize(1180, 720);
+    QTRY_COMPARE(sources->visualItemRect(sources->item(1)).top(), sources->visualItemRect(sources->item(0)).top());
+
     // Double-clicking a tile moves on to its details, which ask for a file before continuing
     const auto tile = sources->visualItemRect(sources->currentItem()).center();
     QTest::mouseClick(sources->viewport(), Qt::LeftButton, Qt::NoModifier, tile);
