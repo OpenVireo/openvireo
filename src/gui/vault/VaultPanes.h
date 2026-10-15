@@ -142,7 +142,8 @@ private:
 
 /**
  * Remote Sync status for the current database, shown next to the search field.
- * Hidden when the database has no Remote Sync configured; clicking it syncs.
+ * Hidden when the database has no Remote Sync configured; clicking it syncs, or
+ * unlocks the server copy when a background sync is waiting for that.
  */
 class VaultSyncChip : public QAbstractButton, public fluent::FluentElement
 {
@@ -165,24 +166,9 @@ private slots:
     void sync();
 
 private:
-    enum class State
-    {
-        Idle,
-        Syncing,
-        Synced,
-        Failed
-    };
-    struct Status
-    {
-        State state = State::Idle;
-        QDateTime lastSync;
-        QString error;
-    };
-
     QString remoteName() const;
 
     QPointer<DatabaseWidget> m_dbWidget;
-    QHash<DatabaseWidget*, Status> m_status;
     QTimer* m_relativeTimeTimer;
     bool m_hovered = false;
 };

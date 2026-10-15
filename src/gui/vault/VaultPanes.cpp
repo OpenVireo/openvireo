@@ -423,29 +423,10 @@ void VaultSyncChip::setDatabaseWidget(DatabaseWidget* dbWidget)
     m_dbWidget = dbWidget;
 
     if (m_dbWidget) {
-        connect(m_dbWidget, &DatabaseWidget::databaseSyncInProgress, this, [this] {
-            m_status[m_dbWidget].state = State::Syncing;
-            refresh();
-        });
-        connect(m_dbWidget, &DatabaseWidget::databaseSyncCompleted, this, [this] {
-            auto& status = m_status[m_dbWidget];
-            status.state = State::Synced;
-            status.lastSync = QDateTime::currentDateTime();
-            status.error.clear();
-            refresh();
-        });
-        connect(m_dbWidget, &DatabaseWidget::databaseSyncFailed, this, [this](const QString&, const QString& error) {
-            auto& status = m_status[m_dbWidget];
-            status.state = State::Failed;
-            status.error = error;
-            refresh();
-        });
+        connect(m_dbWidget, &DatabaseWidget::syncStatusChanged, this, &VaultSyncChip::refresh);
         connect(m_dbWidget, &DatabaseWidget::databaseModified, this, &VaultSyncChip::refresh);
         connect(m_dbWidget, &DatabaseWidget::databaseUnlocked, this, &VaultSyncChip::refresh);
         connect(m_dbWidget, &DatabaseWidget::databaseLocked, this, &VaultSyncChip::refresh);
-        connect(m_dbWidget, &QObject::destroyed, this, [this](QObject* object) {
-            m_status.remove(static_cast<DatabaseWidget*>(object));
-        });
     }
     refresh();
 }
@@ -454,6 +435,9 @@ QString VaultSyncChip::remoteName() const
 {
     if (!m_dbWidget) {
         return {};
+    }
+    if (const auto* params = m_dbWidget->autoSyncParams()) {
+        return params->name;
     }
     const auto params = m_dbWidget->getRemoteParams();
     // Prefer a sync server over command-based remotes
@@ -474,11 +458,13 @@ void VaultSyncChip::refresh()
         return;
     }
 
-    const auto status = m_status.value(m_dbWidget);
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto status = m_dbWidget->syncStatus();
+    const auto automatic = status.automatic ? tr("Syncs automatically. ") : QString();
     switch (status.state) {
     case State::Idle:
         setText(name);
-        setToolTip(tr("Sync with %1").arg(name));
+        setToolTip(automatic + tr("Sync with %1").arg(name));
         break;
     case State::Syncing:
         setText(tr("Syncing…"));
@@ -488,13 +474,22 @@ void VaultSyncChip::refresh()
         const auto minutes = status.lastSync.secsTo(QDateTime::currentDateTime()) / 60;
         setText(minutes < 1 ? tr("%1 · synced just now").arg(name)
                             : tr("%1 · synced %n min ago", "", int(minutes)).arg(name));
-        setToolTip(tr("Last synced at %1. Click to sync again.")
-                       .arg(QLocale().toString(status.lastSync.time(), QLocale::ShortFormat)));
+        setToolTip(automatic
+                   + tr("Last synced at %1. Click to sync again.")
+                         .arg(QLocale().toString(status.lastSync.time(), QLocale::ShortFormat)));
         break;
     }
     case State::Failed:
         setText(tr("%1 · sync failed").arg(name));
         setToolTip(status.error.isEmpty() ? tr("Click to try again.") : status.error);
+        break;
+    case State::Offline:
+        setText(tr("%1 · offline").arg(name));
+        setToolTip(tr("%1\nRetrying automatically. Click to try now.").arg(status.error));
+        break;
+    case State::NeedsUnlock:
+        setText(tr("%1 · unlock needed").arg(name));
+        setToolTip(tr("The database on the server uses a different password or key file. Click to unlock it."));
         break;
     }
     setAccessibleName(text());
@@ -504,7 +499,7 @@ void VaultSyncChip::refresh()
 
 void VaultSyncChip::sync()
 {
-    if (!m_dbWidget || m_status.value(m_dbWidget).state == State::Syncing) {
+    if (!m_dbWidget || m_dbWidget->syncStatus().state == DatabaseWidget::SyncStatus::State::Syncing) {
         return;
     }
     const auto name = remoteName();
@@ -555,14 +550,19 @@ void VaultSyncChip::paintEvent(QPaintEvent* event)
     painter.setPen(QPen(hasFocus() ? p.text : p.stroke, hasFocus() ? 2 : 1));
     painter.drawPath(path);
 
-    // Status dot: green when synced, red when the last sync failed
+    // Status dot: green when synced, red when the last sync failed, amber when it needs attention
+    using State = DatabaseWidget::SyncStatus::State;
     QColor dot = p.textTertiary;
-    switch (m_status.value(m_dbWidget).state) {
+    switch (m_dbWidget ? m_dbWidget->syncStatus().state : State::Idle) {
     case State::Synced:
         dot = p.success;
         break;
     case State::Failed:
         dot = p.critical;
+        break;
+    case State::Offline:
+    case State::NeedsUnlock:
+        dot = p.caution;
         break;
     case State::Syncing:
         dot = p.accent;

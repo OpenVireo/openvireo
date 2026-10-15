@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phase 1 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–2 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -214,7 +214,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 | # | Scope | Server changes | Main files |
 |---|---|---|---|
 | 1 ✅ | `SyncServerClient` (async), `SyncStateStore`, `SyncEngine` state machine with retry on `412` and backoff; the manual sync goes through it | none | `RemoteHandler.*`, new `SyncServerClient.*`, `SyncEngine.*`, `SyncStateStore.*`, `DatabaseWidget.cpp` |
-| 2 | Triggers, the `autoSync` setting, chip states, no menu disabling for background syncs | none | `RemoteSettings.*`, `DatabaseSettingsWidgetRemote.*`, `VaultPanes.*`, `MainWindow.cpp` |
+| 2 ✅ | Triggers, the `autoSync` setting, chip states, no menu disabling for background syncs | none | `RemoteSettings.*`, `DatabaseSettingsWidgetRemote.*`, `VaultPanes.*`, `MainWindow.cpp` |
 | 3 | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
 | 4 | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
 | 5 | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
@@ -233,6 +233,27 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   syncs.
 - Tests: `tests/TestSyncEngine.cpp` (fake server), and `testSyncEngineTwoDevices` in `tests/TestRemoteSyncServer.cpp`
   (live server).
+
+#### Phase 2 notes
+
+- `SyncScheduler` (`src/gui/remote/`) emits `syncRequested()` 3 s after the last save, every 60 s, when the network comes
+  back (`QNetworkInformation`) and when the app comes to the front (at most once per 10 s for those two). Enabling it,
+  which happens on unlock or when auto-sync is turned on, syncs at once.
+- `DatabaseWidget` only starts a background sync when it is showing the database (no editor or settings open), has no
+  unsaved changes, and isn't saving or reloading; otherwise it remembers the sync and runs it once the user is done.
+  If the user opens an editor while a sync downloads, the engine's merge gate holds the downloaded copy (`WaitingToMerge`)
+  until the editor closes.
+- `Database` emits `databaseSaved` while it still holds its save lock (`isSaving()` is true), so the post-save check runs
+  from the event loop.
+- Background syncs never show dialogs, messages, progress or disable the window. A server copy with a different key
+  leaves the engine in `WaitingForUnlock` and the chip at "unlock needed"; clicking it opens the unlock dialog. Network
+  errors show "offline" and retry with backoff.
+- The chip reads `DatabaseWidget::syncStatus()` instead of keeping its own state. Polls that find nothing new (HEAD → 304)
+  don't show "Syncing…".
+- `autoSync` is part of the remote settings, which live in the KDBX and sync to every device. Turning it on therefore
+  turns it on everywhere; a per-device override could come with the per-device tokens of phase 4.
+- `testgui` and `testguivault` crash during setup on this branch, before any sync work, so phase 2 has its own GUI test,
+  `tests/gui/TestGuiAutoSync.cpp` (needs `WITH_GUI_TESTS=ON` and a live server, like `testremotesyncserver`).
 
 ### 5.7 Testing
 

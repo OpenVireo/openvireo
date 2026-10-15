@@ -92,6 +92,7 @@ QString RemoteSettings::toConfig() const
             object["serverUrl"] = params->serverUrl;
             object["serverDatabaseId"] = params->serverDatabaseId;
             object["serverToken"] = params->serverToken;
+            object["autoSync"] = params->autoSync;
         }
         object["downloadCommand"] = params->downloadCommand;
         object["downloadCommandInput"] = params->downloadInput;
@@ -119,6 +120,7 @@ void RemoteSettings::fromConfig(const QString& data)
             params->serverUrl = itemMap["serverUrl"].toString();
             params->serverDatabaseId = itemMap["serverDatabaseId"].toString();
             params->serverToken = itemMap["serverToken"].toString();
+            params->autoSync = itemMap["autoSync"].toBool();
         }
         params->downloadCommand = itemMap["downloadCommand"].toString();
         params->downloadInput = itemMap["downloadCommandInput"].toString();
