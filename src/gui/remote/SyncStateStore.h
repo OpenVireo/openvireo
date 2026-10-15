@@ -63,6 +63,8 @@ public:
     SyncState load(const QString& databasePath, const RemoteParams& params) const;
     bool save(const QString& databasePath, const RemoteParams& params, const SyncState& state) const;
     bool remove(const QString& databasePath, const RemoteParams& params) const;
+    // Where the copy of the database as last synced is kept, the common base for the next merge
+    QString basePath(const QString& databasePath, const RemoteParams& params) const;
 
     QString filePath() const;
     static QString defaultFilePath();

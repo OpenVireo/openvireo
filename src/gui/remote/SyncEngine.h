@@ -31,6 +31,7 @@
 #include <functional>
 
 class Database;
+class Entry;
 class QTemporaryDir;
 
 /**
@@ -49,6 +50,8 @@ struct SyncConflict
     QUuid uuid;
     QString title;
     Kind kind = Kind::EditedOnBoth;
+    // EditedOnBoth: the fields both sides changed differently, where the newer change was kept
+    QStringList fields;
 };
 
 /**
@@ -104,8 +107,10 @@ public:
     };
     Q_ENUM(Attention)
 
-    // Merge the opened server copy and the local database into each other and save both
-    using MergeHandler = std::function<bool(const QSharedPointer<Database>& remoteDb, QString* error)>;
+    // Merge the opened server copy and the local database into each other (with mergeDatabases(), using
+    // `base` when there is one) and save both
+    using MergeHandler =
+        std::function<bool(const QSharedPointer<Database>& remoteDb, const Database* base, QString* error)>;
     // Save the local database
     using SaveHandler = std::function<bool(QString* error)>;
     // Whether the local database may be merged into right now
@@ -144,7 +149,14 @@ public:
     static qint64 generationOf(const Database* db);
     // Merge the two databases into each other. When that changes anything, both get the next sync
     // generation, so the result is newer than every copy it came from. The caller saves both.
-    static Merger::ChangeList mergeDatabases(Database* local, Database* remote);
+    //
+    // With `base`, the copy both sides last synced from, entries changed on both sides are combined
+    // field by field first: a field changed on one side only takes that change, and only a field both
+    // changed differently falls back to the newer one. An entry changed on one side only keeps that
+    // change even when the device's clock made it look older.
+    static Merger::ChangeList mergeDatabases(Database* local, Database* remote, const Database* base = nullptr);
+    // The fields `local` and `remote` both changed differently since `base`, by name
+    static QStringList conflictingFields(const Entry* local, const Entry* remote, const Entry* base);
     // Entry modification times, to be compared with the next sync's copies
     static QHash<QUuid, QDateTime> snapshotOf(const Database* db);
     // Entries both sides changed since `snapshot`, which is the state after the last sync
@@ -187,7 +199,9 @@ private:
     void mergeDownload();
     void uploadFile(const QString& filePath);
     void startUpload(const QByteArray& data);
-    void succeed(const QString& etag, qint64 revision);
+    // `serverData` is what the server now has, kept as the base for the next merge; empty keeps the old base
+    void succeed(const QString& etag, qint64 revision, const QByteArray& serverData = {});
+    QSharedPointer<Database> openBase();
     void fail(const QString& error, bool networkError = false);
     void cleanup();
 
@@ -211,6 +225,8 @@ private:
     QString m_remoteEtag;
     qint64 m_remoteRevision = -1;
     qint64 m_remoteGeneration = 0;
+    // What the running sync is uploading
+    QByteArray m_uploadData;
     QSharedPointer<Database> m_remoteDb;
 
     bool m_retryOnNetworkError = false;

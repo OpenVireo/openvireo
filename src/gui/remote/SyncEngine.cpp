@@ -17,13 +17,18 @@
 
 #include "SyncEngine.h"
 
+#include "core/Clock.h"
 #include "core/Database.h"
 #include "core/Entry.h"
+#include "core/EntryAttachments.h"
+#include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QTemporaryDir>
 #include <QTimeZone>
 
@@ -38,6 +43,222 @@ namespace
         }
         *data = file.readAll();
         return true;
+    }
+
+    qint64 seconds(const Entry* entry)
+    {
+        return entry->timeInfo().lastModificationTime().toSecsSinceEpoch();
+    }
+
+    // The parts of an entry that are merged one by one, by name; a missing value means "absent"
+    using Fields = QMap<QString, QVariant>;
+
+    Fields fieldsOf(const Entry* entry)
+    {
+        Fields fields;
+        const auto* attributes = entry->attributes();
+        for (const auto& key : attributes->keys()) {
+            // The file marks the standard fields protected by the database's settings, whatever the entry says,
+            // so a copy read back from it can differ from the one in memory in that flag alone
+            const bool protect = !EntryAttributes::isDefaultAttribute(key) && attributes->isProtected(key);
+            fields["attribute/" + key] = QStringList{attributes->value(key), protect ? "protected" : QString()};
+        }
+        const auto* attachments = entry->attachments();
+        for (const auto& key : attachments->keys()) {
+            fields["attachment/" + key] = attachments->value(key);
+        }
+        fields["tags"] = entry->tags();
+        const auto& timeInfo = entry->timeInfo();
+        fields["expiry"] = timeInfo.expires() ? QVariant(timeInfo.expiryTime().toSecsSinceEpoch()) : QVariant("never");
+        fields["icon"] = entry->iconUuid().isNull() ? QVariant(entry->iconNumber()) : QVariant(entry->iconUuid());
+        fields["colors"] = QStringList{entry->foregroundColor(), entry->backgroundColor()};
+        return fields;
+    }
+
+    QString fieldName(const QString& field)
+    {
+        if (field == "attribute/" + EntryAttributes::TitleKey) {
+            return SyncEngine::tr("Title");
+        } else if (field == "attribute/" + EntryAttributes::UserNameKey) {
+            return SyncEngine::tr("Username");
+        } else if (field == "attribute/" + EntryAttributes::PasswordKey) {
+            return SyncEngine::tr("Password");
+        } else if (field == "attribute/" + EntryAttributes::URLKey) {
+            return SyncEngine::tr("URL");
+        } else if (field == "attribute/" + EntryAttributes::NotesKey) {
+            return SyncEngine::tr("Notes");
+        } else if (field.startsWith("attribute/")) {
+            return field.mid(QString("attribute/").size());
+        } else if (field.startsWith("attachment/")) {
+            return SyncEngine::tr("attachment %1").arg(field.mid(QString("attachment/").size()));
+        } else if (field == "tags") {
+            return SyncEngine::tr("Tags");
+        } else if (field == "expiry") {
+            return SyncEngine::tr("Expiry");
+        } else if (field == "icon") {
+            return SyncEngine::tr("Icon");
+        }
+        return SyncEngine::tr("Colors");
+    }
+
+    void applyField(Entry* entry, const QString& field, const QVariant& value)
+    {
+        if (field.startsWith("attribute/")) {
+            const auto key = field.mid(QString("attribute/").size());
+            if (!value.isValid()) {
+                // The standard fields always exist
+                EntryAttributes::isDefaultAttribute(key) ? entry->attributes()->set(key, {})
+                                                         : entry->attributes()->remove(key);
+            } else {
+                const auto parts = value.toStringList();
+                const bool protect = EntryAttributes::isDefaultAttribute(key) ? entry->attributes()->isProtected(key)
+                                                                              : !parts.value(1).isEmpty();
+                entry->attributes()->set(key, parts.value(0), protect);
+            }
+        } else if (field.startsWith("attachment/")) {
+            const auto key = field.mid(QString("attachment/").size());
+            value.isValid() ? entry->attachments()->set(key, value.toByteArray()) : entry->attachments()->remove(key);
+        } else if (field == "tags") {
+            entry->setTags(value.toString());
+        } else if (field == "expiry") {
+            auto timeInfo = entry->timeInfo();
+            const bool expires = value.toString() != "never";
+            timeInfo.setExpires(expires);
+            if (expires) {
+                timeInfo.setExpiryTime(QDateTime::fromSecsSinceEpoch(value.toLongLong(), QTimeZone::utc()));
+            }
+            entry->setTimeInfo(timeInfo);
+        } else if (field == "icon") {
+            value.typeId() == QMetaType::QUuid ? entry->setIcon(value.toUuid()) : entry->setIcon(value.toInt());
+        } else if (field == "colors") {
+            const auto colors = value.toStringList();
+            entry->setForegroundColor(colors.value(0));
+            entry->setBackgroundColor(colors.value(1));
+        }
+    }
+
+    struct Resolution
+    {
+        Fields merged;
+        QStringList conflicts;
+    };
+
+    // Three-way merge of the fields: a field one side changed takes that change; one both changed
+    // differently takes the newer side's value and counts as a conflict
+    Resolution resolveFields(const Entry* local, const Entry* remote, const Entry* base, bool localIsNewer)
+    {
+        const auto localFields = fieldsOf(local);
+        const auto remoteFields = fieldsOf(remote);
+        const auto baseFields = fieldsOf(base);
+        QStringList keys = localFields.keys() + remoteFields.keys() + baseFields.keys();
+        keys.removeDuplicates();
+
+        Resolution resolution;
+        for (const auto& key : keys) {
+            const auto localValue = localFields.value(key);
+            const auto remoteValue = remoteFields.value(key);
+            const auto baseValue = baseFields.value(key);
+            QVariant value;
+            if (localValue == remoteValue || remoteValue == baseValue) {
+                value = localValue;
+            } else if (localValue == baseValue) {
+                value = remoteValue;
+            } else {
+                value = localIsNewer ? localValue : remoteValue;
+                resolution.conflicts << fieldName(key);
+            }
+            if (value.isValid()) {
+                resolution.merged.insert(key, value);
+            }
+        }
+        return resolution;
+    }
+
+    // Gives both entries the combined fields and the same modification time, so Merger sees one version.
+    // Each keeps its previous state in its history.
+    void combineEntries(Entry* local, Entry* remote, const Entry* base)
+    {
+        const bool localIsNewer = seconds(local) >= seconds(remote);
+        const auto resolution = resolveFields(local, remote, base, localIsNewer);
+        auto* newer = localIsNewer ? local : remote;
+        auto* older = localIsNewer ? remote : local;
+        const auto when = QDateTime::fromSecsSinceEpoch(
+            qMax(Clock::currentDateTimeUtc().toSecsSinceEpoch(), qMax(seconds(local), seconds(remote))),
+            QTimeZone::utc());
+
+        for (auto* entry : {older, newer}) {
+            entry->beginUpdate();
+            if (entry == older) {
+                // Everything not merged field by field comes from the newer entry
+                entry->copyDataFrom(newer);
+            }
+            entry->setUpdateTimeinfo(false);
+            const auto current = fieldsOf(entry);
+            QStringList keys = current.keys() + resolution.merged.keys();
+            keys.removeDuplicates();
+            for (const auto& key : keys) {
+                if (current.value(key) != resolution.merged.value(key)) {
+                    applyField(entry, key, resolution.merged.value(key));
+                }
+            }
+            auto timeInfo = entry->timeInfo();
+            timeInfo.setLastModificationTime(when);
+            entry->setTimeInfo(timeInfo);
+            entry->endUpdate();
+            entry->setUpdateTimeinfo(true);
+        }
+    }
+
+    bool sameFields(const Entry* a, const Entry* b)
+    {
+        return fieldsOf(a) == fieldsOf(b);
+    }
+
+    /*
+     * Which side changed an entry since the last sync, from the snapshot taken then. Times alone can't
+     * always tell: a file keeps whole seconds, so an edit in the same second as a sync looks unchanged.
+     * This device's copy is in memory and keeps milliseconds; the server's is read from its file.
+     */
+    struct Changes
+    {
+        bool local = false;
+        bool remote = false;
+    };
+
+    Changes changesSince(const Entry* local, const Entry* remote, const QDateTime& snapshot)
+    {
+        Changes changes;
+        const auto localTime = local->timeInfo().lastModificationTime();
+        // Read back from the file since the snapshot, the milliseconds are gone but it is the same version
+        const bool reloaded =
+            localTime.time().msec() == 0 && localTime.toSecsSinceEpoch() == snapshot.toSecsSinceEpoch();
+        changes.local = localTime != snapshot && !reloaded;
+        // If this side didn't change and the contents differ, the other side did, whatever the times say
+        changes.remote =
+            seconds(remote) != snapshot.toSecsSinceEpoch() || (!changes.local && !sameFields(local, remote));
+        return changes;
+    }
+
+    /*
+     * Whether merging needs the common base: an entry both sides changed, or one side changed but
+     * doesn't look newer (a device whose clock is behind, or an edit in the same second as the last
+     * sync). Merger alone keeps the newer-looking copy in those cases.
+     */
+    bool needsCommonBase(const Database* local, const Database* remote, const QHash<QUuid, QDateTime>& snapshot)
+    {
+        for (auto it = snapshot.begin(); it != snapshot.end(); ++it) {
+            const auto* localEntry = local->rootGroup()->findEntryByUuid(it.key());
+            const auto* remoteEntry = remote->rootGroup()->findEntryByUuid(it.key());
+            if (!localEntry || !remoteEntry || sameFields(localEntry, remoteEntry)) {
+                continue;
+            }
+            const auto changes = changesSince(localEntry, remoteEntry, it.value());
+            if ((changes.local && changes.remote) || (changes.local && seconds(localEntry) <= seconds(remoteEntry))
+                || (changes.remote && seconds(remoteEntry) <= seconds(localEntry))) {
+                return true;
+            }
+        }
+        return false;
     }
 } // namespace
 
@@ -285,10 +506,37 @@ void SyncEngine::mergeDownload()
         return;
     }
 
-    const auto conflicts = findConflicts(m_db.data(), m_remoteDb.data(), m_syncState.entries);
+    auto conflicts = findConflicts(m_db.data(), m_remoteDb.data(), m_syncState.entries);
+
+    // The copy both sides last synced from tells which fields each side changed. Opening it costs another
+    // key derivation, so only when an entry changed on both sides needs it.
+    QSharedPointer<Database> base;
+    const bool editedOnBoth = std::any_of(conflicts.begin(), conflicts.end(), [](const SyncConflict& conflict) {
+        return conflict.kind == SyncConflict::Kind::EditedOnBoth;
+    });
+    if (editedOnBoth || needsCommonBase(m_db.data(), m_remoteDb.data(), m_syncState.entries)) {
+        base = openBase();
+    }
+    if (base) {
+        QList<SyncConflict> remaining;
+        for (auto conflict : conflicts) {
+            const auto* baseEntry = base->rootGroup()->findEntryByUuid(conflict.uuid);
+            if (conflict.kind == SyncConflict::Kind::EditedOnBoth && baseEntry) {
+                conflict.fields = conflictingFields(m_db->rootGroup()->findEntryByUuid(conflict.uuid),
+                                                    m_remoteDb->rootGroup()->findEntryByUuid(conflict.uuid),
+                                                    baseEntry);
+                if (conflict.fields.isEmpty()) {
+                    // Different fields changed: both changes are kept, nothing to report
+                    continue;
+                }
+            }
+            remaining << conflict;
+        }
+        conflicts = remaining;
+    }
 
     QString error;
-    if (!m_mergeHandler || !m_mergeHandler(m_remoteDb, &error)) {
+    if (!m_mergeHandler || !m_mergeHandler(m_remoteDb, base.data(), &error)) {
         fail(error.isEmpty() ? tr("The databases could not be merged.") : error);
         return;
     }
@@ -334,15 +582,16 @@ void SyncEngine::startUpload(const QByteArray& data)
 {
     // The merge didn't change the server copy, so there is nothing to upload
     if (!m_remoteEtag.isEmpty() && SyncServerClient::etagFor(data) == m_remoteEtag) {
-        succeed(m_remoteEtag, m_remoteRevision);
+        succeed(m_remoteEtag, m_remoteRevision, data);
         return;
     }
 
     setState(State::Uploading);
     emit progress(75, tr("Uploading..."));
+    m_uploadData = data;
     m_client->upload(data, m_remoteEtag, [this](const SyncServerClient::Response& response) {
         if (response.status == 200 || response.status == 201) {
-            succeed(response.etag, response.revision);
+            succeed(response.etag, response.revision, m_uploadData);
             return;
         }
         if (response.status == 412) {
@@ -360,8 +609,20 @@ void SyncEngine::startUpload(const QByteArray& data)
     });
 }
 
-void SyncEngine::succeed(const QString& etag, qint64 revision)
+void SyncEngine::succeed(const QString& etag, qint64 revision, const QByteArray& serverData)
 {
+    if (!serverData.isEmpty()) {
+        // Kept like the database itself: encrypted, and readable only by the user
+        const auto basePath = m_stateStore.basePath(m_db->filePath(), params());
+        QDir().mkpath(QFileInfo(basePath).absolutePath());
+        QSaveFile file(basePath);
+        if (file.open(QIODevice::WriteOnly)) {
+            file.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
+            file.write(serverData);
+            file.commit();
+        }
+    }
+
     SyncState state;
     state.etag = etag;
     // Accepting the server's state starts the comparison over from what it has now
@@ -378,6 +639,21 @@ void SyncEngine::succeed(const QString& etag, qint64 revision)
     m_acceptServerState = false;
     setState(State::Idle);
     emit finished(true, {});
+}
+
+QSharedPointer<Database> SyncEngine::openBase()
+{
+    const auto basePath = m_stateStore.basePath(m_db->filePath(), params());
+    if (!QFile::exists(basePath)) {
+        return {};
+    }
+    auto base = QSharedPointer<Database>::create();
+    // A base under another password (e.g. from before a password change) is no use, merging goes on without it
+    if (!base->open(basePath, m_db->key())) {
+        return {};
+    }
+    base->markAsTemporaryDatabase();
+    return base;
 }
 
 bool SyncEngine::acceptRevision(qint64 revision)
@@ -409,11 +685,46 @@ qint64 SyncEngine::generationOf(const Database* db)
     return db->metadata()->customData()->value(CustomData::SyncGeneration).toLongLong();
 }
 
-Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote)
+QStringList SyncEngine::conflictingFields(const Entry* local, const Entry* remote, const Entry* base)
 {
+    if (!local || !remote || !base) {
+        return {};
+    }
+    return resolveFields(local, remote, base, true).conflicts;
+}
+
+Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote, const Database* base)
+{
+    Merger::ChangeList changes;
+    if (base) {
+        for (auto* localEntry : local->rootGroup()->entriesRecursive()) {
+            auto* remoteEntry = remote->rootGroup()->findEntryByUuid(localEntry->uuid());
+            const auto* baseEntry = base->rootGroup()->findEntryByUuid(localEntry->uuid());
+            if (!remoteEntry || !baseEntry) {
+                continue;
+            }
+            if (sameFields(localEntry, remoteEntry)) {
+                continue;
+            }
+            // Compared by content with the base, so neither clocks nor same-second edits can mislead
+            const bool localChanged = !sameFields(localEntry, baseEntry);
+            const bool remoteChanged = !sameFields(remoteEntry, baseEntry);
+            const auto localTime = seconds(localEntry);
+            const auto remoteTime = seconds(remoteEntry);
+            // Merger keeps the newer entry: right when only one side changed and it is strictly newer
+            const bool needed = (localChanged && remoteChanged) || (localChanged && localTime <= remoteTime)
+                                || (remoteChanged && remoteTime <= localTime);
+            if (needed) {
+                combineEntries(localEntry, remoteEntry, baseEntry);
+                changes << Merger::Change(
+                    Merger::Change::Type::Modified, *localEntry, tr("Combined the changes made on both devices"));
+            }
+        }
+    }
+
     Merger firstMerge(local, remote);
     Merger secondMerge(remote, local);
-    auto changes = firstMerge.merge() + secondMerge.merge();
+    changes += firstMerge.merge() + secondMerge.merge();
     if (!changes.isEmpty()) {
         const auto generation = QString::number(qMax(generationOf(local), generationOf(remote)) + 1);
         local->metadata()->customData()->set(CustomData::SyncGeneration, generation);
@@ -426,9 +737,8 @@ QHash<QUuid, QDateTime> SyncEngine::snapshotOf(const Database* db)
 {
     QHash<QUuid, QDateTime> snapshot;
     for (const auto* entry : db->rootGroup()->entriesRecursive()) {
-        // Saved files keep whole seconds, so compare at that precision
-        const auto seconds = entry->timeInfo().lastModificationTime().toSecsSinceEpoch();
-        snapshot.insert(entry->uuid(), QDateTime::fromSecsSinceEpoch(seconds, QTimeZone::utc()));
+        // With milliseconds where this device has them, to see edits made in the same second as a sync
+        snapshot.insert(entry->uuid(), entry->timeInfo().lastModificationTime().toUTC());
     }
     return snapshot;
 }
@@ -446,8 +756,8 @@ SyncEngine::findConflicts(const Database* local, const Database* remote, const Q
         SyncConflict conflict;
         conflict.uuid = it.key();
         if (localEntry && remoteEntry) {
-            if (!changedSince(localEntry, it.value()) || !changedSince(remoteEntry, it.value())
-                || !changedSince(localEntry, remoteEntry->timeInfo().lastModificationTime())) {
+            const auto changes = changesSince(localEntry, remoteEntry, it.value());
+            if (!changes.local || !changes.remote || sameFields(localEntry, remoteEntry)) {
                 continue;
             }
             conflict.kind = SyncConflict::Kind::EditedOnBoth;
@@ -488,4 +798,5 @@ void SyncEngine::cleanup()
     m_remoteEtag.clear();
     m_remoteRevision = -1;
     m_remoteGeneration = 0;
+    m_uploadData.clear();
 }
