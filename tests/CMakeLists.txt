@@ -119,7 +119,7 @@ add_unit_test(NAME testremotesyncserver SOURCES TestRemoteSyncServer.cpp
         LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
-        LIBS ${TEST_LIBRARIES})
+        LIBS testsupport ${TEST_LIBRARIES})
 
 add_unit_test(NAME testsyncscheduler SOURCES TestSyncScheduler.cpp
         LIBS ${TEST_LIBRARIES})

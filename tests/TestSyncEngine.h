@@ -37,6 +37,14 @@ private slots:
     void testBacksOffAfterNetworkError();
     void testCancelStopsTheSync();
     void testMergeWaitsForTheGate();
+    void testGenerationRisesOnlyWithChanges();
+    void testTwoDevicesSettle();
+    void testDetectsServerRevisionGoingBack();
+    void testDetectsOlderCopyBehindANewRevision();
+    void testDetectsLostDatabase();
+    void testReportsEntriesChangedOnBothSides();
+    void testFindsDeletedAndEditedEntries();
+    void testMergerIgnoresTheGeneration();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H

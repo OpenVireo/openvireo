@@ -26,12 +26,16 @@
 #include "crypto/kdf/AesKdf.h"
 #include "gui/Application.h"
 #include "gui/DatabaseWidget.h"
+#include "gui/MessageBox.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
 
+#include <QEventLoop>
 #include <QFile>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -146,6 +150,18 @@ namespace
         QFile::remove(result.filePath);
         return upload.success;
     }
+    // Delete the database on the server, as an administrator might
+    bool deleteOnServer(const RemoteParams& params)
+    {
+        QNetworkRequest request(QUrl(params.serverUrl + "/api/v1/databases/" + params.serverDatabaseId));
+        request.setRawHeader("Authorization", "Bearer " + params.serverToken.toUtf8());
+        QNetworkAccessManager nam;
+        QScopedPointer<QNetworkReply> reply(nam.deleteResource(request));
+        QEventLoop loop;
+        QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        return reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() / 100 == 2;
+    }
 } // namespace
 
 #define SKIP_WITHOUT_SERVER()                                                                                          \
@@ -245,4 +261,40 @@ void TestGuiAutoSync::testManualSyncReportsToTheUser()
     QVERIFY(widget.isEnabled());
     QCOMPARE(widget.syncStatus().state, DatabaseWidget::SyncStatus::State::Synced);
     QCOMPARE(serverTitles(params), QStringList());
+}
+
+void TestGuiAutoSync::testAsksBeforeRecreatingALostDatabase()
+{
+    SKIP_WITHOUT_SERVER();
+
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    DatabaseWidget widget(db);
+    addEntry(db.data(), "Kept");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    QVERIFY(deleteOnServer(params));
+
+    // The background sync stops instead of quietly uploading again
+    addEntry(db.data(), "Later");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsAttention, 10000);
+    QVERIFY(widget.syncStatus().error.contains("no longer has this database"));
+    QCOMPARE(serverTitles(params), QStringList({"<nothing on the server>"}));
+
+    // Declining leaves it that way
+    MessageBox::setNextAnswer(MessageBox::Cancel);
+    widget.syncWithRemote(widget.getRemoteParams().first());
+    QTest::qWait(200);
+    QCOMPARE(widget.syncStatus().state, State::NeedsAttention);
+    QCOMPARE(serverTitles(params), QStringList({"<nothing on the server>"}));
+
+    // Agreeing uploads this device's copy again
+    MessageBox::setNextAnswer(MessageBox::Yes);
+    widget.syncWithRemote(widget.getRemoteParams().first());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    QCOMPARE(serverTitles(params), QStringList({"Kept", "Later"}));
 }

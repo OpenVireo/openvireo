@@ -29,6 +29,7 @@ private slots:
     void testSyncsInTheBackgroundAfterSaves();
     void testWaitsWhileTheDatabaseHasUnsavedChanges();
     void testManualSyncReportsToTheUser();
+    void testAsksBeforeRecreatingALostDatabase();
 };
 
 #endif // KEEPASSXC_TESTGUIAUTOSYNC_H

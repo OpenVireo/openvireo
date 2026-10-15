@@ -19,7 +19,9 @@
 #define KEEPASSXC_SYNCSTATESTORE_H
 
 #include <QDateTime>
+#include <QHash>
 #include <QString>
+#include <QUuid>
 
 struct RemoteParams;
 
@@ -34,6 +36,11 @@ struct SyncState
     qint64 revision = 0;
     // When the last sync finished successfully
     QDateTime lastSync;
+    // Highest sync generation seen inside the database, 0 when unknown
+    qint64 generation = 0;
+    // Last modification time of every entry after the last sync, to tell which side changed an entry.
+    // Only UUIDs and times: no titles or other content.
+    QHash<QUuid, QDateTime> entries;
 
     bool isEmpty() const
     {

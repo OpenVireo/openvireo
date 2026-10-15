@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phases 1–2 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–3 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -215,7 +215,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 |---|---|---|---|
 | 1 ✅ | `SyncServerClient` (async), `SyncStateStore`, `SyncEngine` state machine with retry on `412` and backoff; the manual sync goes through it | none | `RemoteHandler.*`, new `SyncServerClient.*`, `SyncEngine.*`, `SyncStateStore.*`, `DatabaseWidget.cpp` |
 | 2 ✅ | Triggers, the `autoSync` setting, chip states, no menu disabling for background syncs | none | `RemoteSettings.*`, `DatabaseSettingsWidgetRemote.*`, `VaultPanes.*`, `MainWindow.cpp` |
-| 3 | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
+| 3 ✅ | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
 | 4 | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
 | 5 | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
 | 6 | Three-way merge from the base snapshot | none | `Merger.*`, `SyncEngine.*` |
@@ -254,6 +254,28 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   turns it on everywhere; a per-device override could come with the per-device tokens of phase 4.
 - `testgui` and `testguivault` crash during setup on this branch, before any sync work, so phase 2 has its own GUI test,
   `tests/gui/TestGuiAutoSync.cpp` (needs `WITH_GUI_TESTS=ON` and a live server, like `testremotesyncserver`).
+
+#### Phase 3 notes
+
+- The engine stops in `NeedsAttention`, before merging or uploading, when:
+  - the server's `X-Database-Revision` is lower than the highest this device has seen;
+  - the downloaded copy's sync generation (`KPXC_SYNC_GENERATION` in the database's custom data) is lower than the
+    highest seen, even if the revision went up;
+  - the server returns 404 for a database this device has synced before (deleted, or a server reset). Not in the
+    original plan, but quietly re-uploading would hide a server that drops data.
+- Background syncs skip a database in `NeedsAttention`; the chip shows "check server". Clicking it asks the user, and
+  agreeing runs `syncAcceptingServerState()`, which merges as usual and takes the server's state as the new baseline.
+- `SyncEngine::mergeDatabases()` is now the one two-way merge, used by the engine and by `DatabaseWidget` for command
+  remotes and the unlock-dialog path. When the merge changes anything, both copies get `max(generations) + 1`; when it
+  changes nothing, neither is touched, so devices don't keep uploading to each other.
+- The generation key is "auto-generated" for `Merger` (like `KPXC_RANDOM_SLUG`) and protected from removal. Otherwise
+  `Merger` copies it with the rest of the custom data, and two devices keep changing it for each other forever;
+  `testTwoDevicesSettle` and `testMergerIgnoresTheGeneration` fail without this.
+- Conflicts compare each entry's modification time, to the second (KDBX stores whole seconds), with the snapshot taken
+  after the previous sync. Edited on both sides, or deleted on one and edited on the other, is reported in a message
+  bar that stays until closed. The first sync of a database has no snapshot, so it reports nothing.
+- Not covered: when the server copy needs the unlock dialog (different key), its generation isn't checked, because the
+  engine never opens it.
 
 ### 5.7 Testing
 
