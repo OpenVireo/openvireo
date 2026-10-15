@@ -403,7 +403,7 @@ VaultSyncChip::VaultSyncChip(QWidget* parent)
     setAttribute(Qt::WA_Hover);
     setVisible(false);
 
-    // Keep "synced 2 min ago" current
+    // Keep the "synced 2 min ago" tooltip current
     m_relativeTimeTimer->setInterval(30 * 1000);
     connect(m_relativeTimeTimer, &QTimer::timeout, this, &VaultSyncChip::refresh);
     m_relativeTimeTimer->start();
@@ -458,12 +458,13 @@ void VaultSyncChip::refresh()
         return;
     }
 
+    // Keep the chip short: the status dot and a word or two, with the details in the tooltip
     using State = DatabaseWidget::SyncStatus::State;
     const auto status = m_dbWidget->syncStatus();
     const auto automatic = status.automatic ? tr("Syncs automatically. ") : QString();
     switch (status.state) {
     case State::Idle:
-        setText(name);
+        setText(tr("Sync"));
         setToolTip(automatic + tr("Sync with %1").arg(name));
         break;
     case State::Syncing:
@@ -472,31 +473,30 @@ void VaultSyncChip::refresh()
         break;
     case State::Synced: {
         const auto minutes = status.lastSync.secsTo(QDateTime::currentDateTime()) / 60;
-        setText(minutes < 1 ? tr("%1 · synced just now").arg(name)
-                            : tr("%1 · synced %n min ago", "", int(minutes)).arg(name));
-        setToolTip(automatic
-                   + tr("Last synced at %1. Click to sync again.")
-                         .arg(QLocale().toString(status.lastSync.time(), QLocale::ShortFormat)));
+        setText(tr("Synced"));
+        setToolTip((minutes < 1 ? tr("Synced with %1 just now.").arg(name)
+                                : tr("Synced with %1 %n min ago.", "", int(minutes)).arg(name))
+                   + "\n" + automatic + tr("Click to sync again."));
         break;
     }
     case State::Failed:
-        setText(tr("%1 · sync failed").arg(name));
-        setToolTip(status.error.isEmpty() ? tr("Click to try again.") : status.error);
+        setText(tr("Sync failed"));
+        setToolTip(tr("%1\nClick to try again.").arg(status.error.isEmpty() ? name : status.error));
         break;
     case State::Offline:
-        setText(tr("%1 · offline").arg(name));
+        setText(tr("Offline"));
         setToolTip(tr("%1\nRetrying automatically. Click to try now.").arg(status.error));
         break;
     case State::NeedsUnlock:
-        setText(tr("%1 · unlock needed").arg(name));
+        setText(tr("Unlock needed"));
         setToolTip(tr("The database on the server uses a different password or key file. Click to unlock it."));
         break;
     case State::NeedsToken:
-        setText(tr("%1 · token needed").arg(name));
+        setText(tr("Token needed"));
         setToolTip(tr("%1\nClick to open the Remote Sync settings.").arg(status.error));
         break;
     case State::NeedsAttention:
-        setText(tr("%1 · check server").arg(name));
+        setText(tr("Check server"));
         setToolTip(tr("%1\nSyncing is paused. Click to review.").arg(status.error));
         break;
     }
