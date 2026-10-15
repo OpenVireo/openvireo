@@ -29,6 +29,7 @@
 
 #include <QFileInfo>
 #include <QJsonObject>
+#include <QMutex>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QTemporaryFile>
@@ -42,6 +43,12 @@
 
 QHash<QUuid, QPointer<Database>> Database::s_uuidMap;
 
+namespace
+{
+    // Databases can be read on worker threads (see SyncEngine), so the map is shared between threads
+    QMutex s_uuidMapMutex;
+} // namespace
+
 Database::Database()
     : m_metadata(new Metadata(this))
     , m_data()
@@ -49,7 +56,8 @@ Database::Database()
     , m_fileWatcher(new FileWatcher(this))
     , m_uuid(QUuid::createUuid())
 {
-    // setup modified timer
+    // setup modified timer; a child, so it moves along when the database moves to another thread
+    m_modifiedTimer.setParent(this);
     m_modifiedTimer.setSingleShot(true);
     connect(this, &Database::emitModifiedChanged, this, [this](bool value) {
         if (!value) {
@@ -73,7 +81,10 @@ Database::Database()
     connect(m_fileWatcher, &FileWatcher::fileChanged, this, [this] { emit databaseFileChanged(false); });
 
     // static uuid map
-    s_uuidMap.insert(m_uuid, this);
+    {
+        QMutexLocker locker(&s_uuidMapMutex);
+        s_uuidMap.insert(m_uuid, this);
+    }
 
     // block modified signal and set root group
     setEmitModified(false);
@@ -564,7 +575,10 @@ void Database::releaseData()
     setEmitModified(false);
     m_modified = false;
 
-    s_uuidMap.remove(m_uuid);
+    {
+        QMutexLocker locker(&s_uuidMapMutex);
+        s_uuidMap.remove(m_uuid);
+    }
     m_uuid = QUuid();
 
     m_data.clear();
@@ -1110,6 +1124,7 @@ void Database::markNonDataChange()
  */
 Database* Database::databaseByUuid(const QUuid& uuid)
 {
+    QMutexLocker locker(&s_uuidMapMutex);
     return s_uuidMap.value(uuid, nullptr);
 }
 

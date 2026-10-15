@@ -24,16 +24,70 @@
 #include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
+#include "format/KeePass2Reader.h"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QPointer>
 #include <QSaveFile>
 #include <QTemporaryDir>
+#include <QThread>
 #include <QTimeZone>
 
 namespace
 {
+    /*
+     * Opens a database file on a thread of its own and hands it to `context`'s thread, or null when it can't
+     * be read with `key`. Reading derives the key, which takes a second or more by design, and a sync must not
+     * hold up the window or wait in a nested event loop that lets the user change things meanwhile. Unlike
+     * Database::open() the database doesn't watch its file.
+     *
+     * A thread of its own rather than the thread pool, because the reader waits for the pool to derive the key.
+     */
+    void openInBackground(const QString& filePath,
+                          const QSharedPointer<const CompositeKey>& key,
+                          QObject* context,
+                          std::function<void(QSharedPointer<Database>)> done)
+    {
+        auto* target = context->thread();
+        auto result = std::make_shared<Database*>(nullptr);
+        auto* thread = QThread::create([filePath, key, target, result] {
+            QFile file(filePath);
+            if (!file.open(QIODevice::ReadOnly)) {
+                return;
+            }
+            auto* db = new Database();
+            db->setEmitModified(false);
+            KeePass2Reader reader;
+            if (!reader.readDatabase(&file, key, db)) {
+                delete db;
+                return;
+            }
+            db->setFilePath(filePath);
+            db->markAsClean();
+            db->setEmitModified(true);
+            // Objects belong to the thread that made them. Groups and entries are the database's children and
+            // move with it; history items aren't anyone's children, so they move one by one.
+            for (auto* entry : db->rootGroup()->entriesRecursive()) {
+                for (auto* item : entry->historyItems()) {
+                    item->moveToThread(target);
+                }
+            }
+            db->moveToThread(target);
+            *result = db;
+        });
+        QPointer<QObject> guard(context);
+        QObject::connect(thread, &QThread::finished, thread, [thread, result, guard, done = std::move(done)] {
+            thread->deleteLater();
+            QSharedPointer<Database> db(*result);
+            if (guard) {
+                done(db);
+            }
+        });
+        thread->start();
+    }
+
     bool readFile(const QString& filePath, QByteArray* data, QString* error)
     {
         QFile file(filePath);
@@ -484,25 +538,8 @@ void SyncEngine::mergeDownload()
 
     setState(State::Merging);
     emit progress(50, tr("Syncing..."));
-
-    m_remoteDb = QSharedPointer<Database>::create();
-    if (!m_remoteDb->open(m_remotePath, m_db->key())) {
-        // Another device changed the password or key file: the owner asks the user to unlock it
-        m_remoteDb.reset();
-        setState(State::WaitingForUnlock);
-        emit unlockRequired(m_remotePath);
-        return;
-    }
-    m_remoteDb->markAsTemporaryDatabase();
-
-    // The revision comes from the server, the generation from inside the encrypted copy
-    m_remoteGeneration = generationOf(m_remoteDb.data());
-    if (!m_acceptServerState && m_remoteGeneration < m_syncState.generation) {
-        needAttention(Attention::ServerRolledBack,
-                      tr("The sync server returned a copy of the database that is older than one this device has "
-                         "already synced (sync generation %1, expected at least %2).")
-                          .arg(m_remoteGeneration)
-                          .arg(m_syncState.generation));
+    if (!m_remoteDb) {
+        openDownload();
         return;
     }
 
@@ -510,17 +547,17 @@ void SyncEngine::mergeDownload()
 
     // The copy both sides last synced from tells which fields each side changed. Opening it costs another
     // key derivation, so only when an entry changed on both sides needs it.
-    QSharedPointer<Database> base;
     const bool editedOnBoth = std::any_of(conflicts.begin(), conflicts.end(), [](const SyncConflict& conflict) {
         return conflict.kind == SyncConflict::Kind::EditedOnBoth;
     });
-    if (editedOnBoth || needsCommonBase(m_db.data(), m_remoteDb.data(), m_syncState.entries)) {
-        base = openBase();
+    if (!m_baseOpened && (editedOnBoth || needsCommonBase(m_db.data(), m_remoteDb.data(), m_syncState.entries))) {
+        openBase();
+        return;
     }
-    if (base) {
+    if (m_baseDb) {
         QList<SyncConflict> remaining;
         for (auto conflict : conflicts) {
-            const auto* baseEntry = base->rootGroup()->findEntryByUuid(conflict.uuid);
+            const auto* baseEntry = m_baseDb->rootGroup()->findEntryByUuid(conflict.uuid);
             if (conflict.kind == SyncConflict::Kind::EditedOnBoth && baseEntry) {
                 conflict.fields = conflictingFields(m_db->rootGroup()->findEntryByUuid(conflict.uuid),
                                                     m_remoteDb->rootGroup()->findEntryByUuid(conflict.uuid),
@@ -536,15 +573,48 @@ void SyncEngine::mergeDownload()
     }
 
     QString error;
-    if (!m_mergeHandler || !m_mergeHandler(m_remoteDb, base.data(), &error)) {
+    if (!m_mergeHandler || !m_mergeHandler(m_remoteDb, m_baseDb.data(), &error)) {
         fail(error.isEmpty() ? tr("The databases could not be merged.") : error);
         return;
     }
     m_remoteDb.reset();
+    m_baseDb.reset();
     if (!conflicts.isEmpty()) {
         emit conflictsDetected(conflicts);
     }
     uploadFile(m_remotePath);
+}
+
+void SyncEngine::openDownload()
+{
+    const auto run = m_openRun;
+    openInBackground(m_remotePath, m_db->key(), this, [this, run](const QSharedPointer<Database>& db) {
+        // Cancelled, or another sync started, while it was being read
+        if (run != m_openRun || m_state != State::Merging) {
+            return;
+        }
+        if (!db) {
+            // Another device changed the password or key file: the owner asks the user to unlock it
+            setState(State::WaitingForUnlock);
+            emit unlockRequired(m_remotePath);
+            return;
+        }
+        db->markAsTemporaryDatabase();
+        m_remoteDb = db;
+
+        // The revision comes from the server, the generation from inside the encrypted copy
+        m_remoteGeneration = generationOf(m_remoteDb.data());
+        if (!m_acceptServerState && m_remoteGeneration < m_syncState.generation) {
+            needAttention(Attention::ServerRolledBack,
+                          tr("The sync server returned a copy of the database that is older than one this device has "
+                             "already synced (sync generation %1, expected at least %2).")
+                              .arg(m_remoteGeneration)
+                              .arg(m_syncState.generation));
+            return;
+        }
+        // The user may have started editing while it was read
+        mergeDownload();
+    });
 }
 
 void SyncEngine::resumeMerge()
@@ -641,19 +711,26 @@ void SyncEngine::succeed(const QString& etag, qint64 revision, const QByteArray&
     emit finished(true, {});
 }
 
-QSharedPointer<Database> SyncEngine::openBase()
+void SyncEngine::openBase()
 {
+    m_baseOpened = true;
     const auto basePath = m_stateStore.basePath(m_db->filePath(), params());
     if (!QFile::exists(basePath)) {
-        return {};
+        mergeDownload();
+        return;
     }
-    auto base = QSharedPointer<Database>::create();
-    // A base under another password (e.g. from before a password change) is no use, merging goes on without it
-    if (!base->open(basePath, m_db->key())) {
-        return {};
-    }
-    base->markAsTemporaryDatabase();
-    return base;
+    const auto run = m_openRun;
+    openInBackground(basePath, m_db->key(), this, [this, run](const QSharedPointer<Database>& base) {
+        if (run != m_openRun || m_state != State::Merging) {
+            return;
+        }
+        // A base under another password (e.g. from before a password change) is no use, merging goes on without it
+        if (base) {
+            base->markAsTemporaryDatabase();
+        }
+        m_baseDb = base;
+        mergeDownload();
+    });
 }
 
 bool SyncEngine::acceptRevision(qint64 revision)
@@ -792,7 +869,11 @@ void SyncEngine::fail(const QString& error, bool networkError)
 
 void SyncEngine::cleanup()
 {
+    // Databases still being read belong to the sync that is ending
+    ++m_openRun;
     m_remoteDb.reset();
+    m_baseDb.reset();
+    m_baseOpened = false;
     m_workDir.reset();
     m_remotePath.clear();
     m_remoteEtag.clear();
