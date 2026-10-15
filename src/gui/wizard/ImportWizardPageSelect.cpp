@@ -27,6 +27,7 @@
 #include "gui/MessageBox.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
+#include "gui/remote/SyncServerClient.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsPage.h"
@@ -415,6 +416,9 @@ void ImportWizardPageSelect::initializePage()
 
 bool ImportWizardPageSelect::validatePage()
 {
+    if (field("ImportType").toInt() == ImportWizard::IMPORT_SYNC_SERVER && !claimPairingCode()) {
+        return false;
+    }
     if (m_ui->existingDatabaseRadio->isChecked()) {
         if (m_ui->existingDatabaseChoice->currentIndex() == -1) {
             return false;
@@ -667,6 +671,11 @@ void ImportWizardPageSelect::loadSyncServerDatabases()
         return;
     }
 
+    if (!claimPairingCode()) {
+        return;
+    }
+    params.serverToken = m_ui->serverTokenEdit->text().trimmed();
+
     RemoteHandler handler;
     auto listing = handler.listSyncServerDatabases(&params);
     if (!listing.success) {
@@ -684,6 +693,26 @@ void ImportWizardPageSelect::loadSyncServerDatabases()
     if (!current.isEmpty() && listing.databaseIds.contains(current)) {
         m_ui->serverDatabaseIdChoice->setCurrentText(current);
     }
+}
+
+bool ImportWizardPageSelect::claimPairingCode()
+{
+    const auto code = m_ui->serverTokenEdit->text().trimmed();
+    if (!SyncServerClient::isPairingCode(code)) {
+        return true;
+    }
+    RemoteParams params;
+    params.type = RemoteParams::Type::SyncServer;
+    params.serverUrl = m_ui->serverUrlEdit->text().trimmed();
+    RemoteHandler handler;
+    auto pairing = handler.claimSyncServerPairingCode(&params, code);
+    if (!pairing.success) {
+        MessageBox::warning(this, tr("Sync Server"), tr("Could not pair this device: %1").arg(pairing.errorMessage));
+        return false;
+    }
+    // From here on the field holds this device's own token, which the import stores on this device
+    m_ui->serverTokenEdit->setText(pairing.token);
+    return true;
 }
 
 QString ImportWizardPageSelect::importFileFilter()

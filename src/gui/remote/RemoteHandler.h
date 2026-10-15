@@ -18,6 +18,7 @@
 #ifndef KEEPASSXC_REMOTEHANDLER_H
 #define KEEPASSXC_REMOTEHANDLER_H
 
+#include <QDateTime>
 #include <QObject>
 
 class Database;
@@ -52,10 +53,27 @@ public:
         QStringList databaseIds;
     };
 
+    struct SyncServerPairing
+    {
+        bool success = false;
+        QString errorMessage;
+        // From createSyncServerPairingCode
+        QString code;
+        QDateTime expiresAt;
+        // From claimSyncServerPairingCode
+        QString token;
+    };
+
     RemoteResult download(const RemoteParams* params);
     RemoteResult upload(const QString& filePath, const RemoteParams* params, const QString& etag = {});
     // Names of the databases the access token can see on a sync server
     SyncServerListing listSyncServerDatabases(const RemoteParams* params);
+    // A code that adds another device of the same user, for params' token
+    SyncServerPairing createSyncServerPairingCode(const RemoteParams* params);
+    // Trades a code from another device for this device's own token
+    SyncServerPairing claimSyncServerPairingCode(const RemoteParams* params, const QString& code);
+    // How this device introduces itself to the server when pairing
+    static QString deviceName();
 
     // Used for testing only
     static void setRemoteProcessFunc(std::function<QScopedPointer<RemoteProcess>(QObject*)> func);
