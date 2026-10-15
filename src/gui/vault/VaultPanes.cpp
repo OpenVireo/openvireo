@@ -491,6 +491,10 @@ void VaultSyncChip::refresh()
         setText(tr("%1 · unlock needed").arg(name));
         setToolTip(tr("The database on the server uses a different password or key file. Click to unlock it."));
         break;
+    case State::NeedsAttention:
+        setText(tr("%1 · check server").arg(name));
+        setToolTip(tr("%1\nSyncing is paused. Click to review.").arg(status.error));
+        break;
     }
     setAccessibleName(text());
     updateGeometry();
@@ -558,6 +562,7 @@ void VaultSyncChip::paintEvent(QPaintEvent* event)
         dot = p.success;
         break;
     case State::Failed:
+    case State::NeedsAttention:
         dot = p.critical;
         break;
     case State::Offline:

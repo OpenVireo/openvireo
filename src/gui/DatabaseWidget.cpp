@@ -1752,9 +1752,14 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
                 setSyncStatus(SyncStatus::State::NeedsUnlock);
             }
         });
+        connect(engine, &SyncEngine::conflictsDetected, this, &DatabaseWidget::showSyncConflicts);
         connect(engine, &SyncEngine::finished, this, [this, engine, name = params.name](bool ok, const QString& error) {
-            const auto failureState =
-                engine->state() == SyncEngine::State::Backoff ? SyncStatus::State::Offline : SyncStatus::State::Failed;
+            auto failureState = SyncStatus::State::Failed;
+            if (engine->state() == SyncEngine::State::Backoff) {
+                failureState = SyncStatus::State::Offline;
+            } else if (engine->state() == SyncEngine::State::NeedsAttention) {
+                failureState = SyncStatus::State::NeedsAttention;
+            }
             if (m_syncInteractive) {
                 RemoteHandler::RemoteResult result;
                 result.success = ok;
@@ -1778,11 +1783,31 @@ void DatabaseWidget::syncWithServer(const RemoteParams& params)
         return;
     }
 
+    // The server's copy looked older than expected: only the user can decide to go ahead
+    bool acceptServerState = false;
+    if (state == SyncEngine::State::NeedsAttention) {
+        auto answer = MessageBox::question(
+            this,
+            tr("Check the sync server"),
+            tr("%1\n\nThis can happen when the server was restored from a backup, but it can also mean someone is "
+               "tampering with it. Syncing merges the server's copy into this database and uploads the result; "
+               "nothing on this device is lost.\n\nSync anyway?")
+                .arg(m_syncStatus.error),
+            MessageBox::Yes | MessageBox::Cancel,
+            MessageBox::Cancel);
+        if (answer != MessageBox::Yes) {
+            return;
+        }
+        acceptServerState = true;
+    }
+
     m_syncInteractive = true;
     setDisabled(true);
     emit databaseSyncInProgress();
     setSyncStatus(SyncStatus::State::Syncing);
-    if (state == SyncEngine::State::WaitingForUnlock) {
+    if (acceptServerState) {
+        m_syncEngine->syncAcceptingServerState();
+    } else if (state == SyncEngine::State::WaitingForUnlock) {
         // A background sync is waiting for the server copy to be unlocked
         unlockServerCopyForSync(m_syncEngine->pendingUnlockPath());
     } else if (state == SyncEngine::State::WaitingToMerge) {
@@ -1832,11 +1857,44 @@ void DatabaseWidget::backgroundSync()
     m_autoSyncPending = false;
 
     ensureSyncEngine(*params);
-    if (m_syncEngine->isBusy()) {
+    // A server that looks rolled back waits for the user (syncWithServer)
+    if (m_syncEngine->isBusy() || m_syncEngine->state() == SyncEngine::State::NeedsAttention) {
         return;
     }
     m_syncInteractive = false;
     m_syncEngine->sync();
+}
+
+void DatabaseWidget::showSyncConflicts(const QList<SyncConflict>& conflicts)
+{
+    QStringList edited;
+    QStringList deleted;
+    for (const auto& conflict : conflicts) {
+        auto& list = conflict.kind == SyncConflict::Kind::EditedOnBoth ? edited : deleted;
+        list << (conflict.title.isEmpty() ? tr("(untitled)") : conflict.title);
+    }
+    const auto join = [](QStringList titles) {
+        constexpr int Shown = 5;
+        if (titles.size() > Shown) {
+            const auto more = titles.size() - Shown;
+            titles = titles.mid(0, Shown);
+            titles << tr("and %n more", "", more);
+        }
+        return titles.join(QStringLiteral(", "));
+    };
+
+    QStringList message;
+    if (!edited.isEmpty()) {
+        message << tr("These entries were changed both here and on another device: %1. The newer change was kept; "
+                      "the other is in each entry's history.")
+                       .arg(join(edited));
+    }
+    if (!deleted.isEmpty()) {
+        message << tr("These entries were deleted on one device and changed on another: %1. Check that they are as "
+                      "you expect.")
+                       .arg(join(deleted));
+    }
+    showMessage(message.join(' '), MessageWidget::Warning, true, MessageWidget::DisableAutoHide);
 }
 
 void DatabaseWidget::resumeBackgroundSync()
@@ -2134,9 +2192,7 @@ void DatabaseWidget::syncUnlockedDatabase(bool accepted)
 bool DatabaseWidget::syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error)
 {
     emit updateSyncProgress(50, tr("Syncing..."));
-    Merger firstMerge(m_db.data(), otherDb.data());
-    Merger secondMerge(otherDb.data(), m_db.data());
-    auto changeList = firstMerge.merge() + secondMerge.merge();
+    auto changeList = SyncEngine::mergeDatabases(m_db.data(), otherDb.data());
 
     if (!changeList.isEmpty()) {
         // Save synced databases

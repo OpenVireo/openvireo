@@ -21,15 +21,19 @@
 #include "core/Entry.h"
 #include "core/Group.h"
 #include "core/Merger.h"
+#include "core/Metadata.h"
 #include "crypto/Crypto.h"
 #include "crypto/kdf/AesKdf.h"
 #include "gui/remote/SyncEngine.h"
 #include "keys/PasswordKey.h"
+#include "mock/MockClock.h"
 
 #include <QFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimeZone>
 
 QTEST_GUILESS_MAIN(TestSyncEngine)
 
@@ -39,24 +43,38 @@ namespace
      * An in-memory sync server with the same concurrency rules as sync_server/.
      * beforePut runs before each upload is judged, to let "another device" upload first.
      */
-    class FakeSyncServer : public SyncServerClient
+    struct ServerData
     {
-    public:
-        explicit FakeSyncServer(const RemoteParams& params)
-            : SyncServerClient(params)
-        {
-        }
-
-        void store(const QByteArray& data)
-        {
-            stored = data;
-            etag = etagFor(data);
-            ++revision;
-        }
-
         QByteArray stored;
         QString etag;
         qint64 revision = 0;
+    };
+
+    class FakeSyncServer : public SyncServerClient
+    {
+    public:
+        // Clients created with the same data talk to the same server
+        explicit FakeSyncServer(const RemoteParams& params,
+                                QSharedPointer<ServerData> serverData = QSharedPointer<ServerData>::create())
+            : SyncServerClient(params)
+            , data(std::move(serverData))
+            , stored(data->stored)
+            , etag(data->etag)
+            , revision(data->revision)
+        {
+        }
+
+        void store(const QByteArray& content)
+        {
+            stored = content;
+            etag = etagFor(content);
+            ++revision;
+        }
+
+        QSharedPointer<ServerData> data;
+        QByteArray& stored;
+        QString& etag;
+        qint64& revision;
         QStringList requests;
         int networkErrors = 0;
         std::function<void()> beforePut;
@@ -205,24 +223,49 @@ namespace
         return true;
     }
 
-    // Same two-way merge as DatabaseWidget::syncWithDatabase
+    // Same merge and saves as DatabaseWidget::syncWithDatabase
     bool mergeBothWays(Database* local, const QSharedPointer<Database>& remote, QString* error)
     {
-        Merger firstMerge(local, remote.data());
-        Merger secondMerge(remote.data(), local);
-        auto changes = firstMerge.merge() + secondMerge.merge();
-        if (changes.isEmpty()) {
+        if (SyncEngine::mergeDatabases(local, remote.data()).isEmpty()) {
             return true;
         }
         return local->save(Database::Atomic, {}, error) && remote->save(Database::Atomic, {}, error);
     }
 
+    Entry* findEntry(Database* db, const QString& title)
+    {
+        for (auto* entry : db->rootGroup()->entriesRecursive()) {
+            if (entry->title() == title) {
+                return entry;
+            }
+        }
+        return nullptr;
+    }
+
+    // Edit an entry as of a given time, so tests don't depend on the clock
+    void editEntry(Entry* entry, const QString& notes, const QDateTime& when)
+    {
+        entry->setNotes(notes);
+        auto timeInfo = entry->timeInfo();
+        timeInfo.setLastModificationTime(when);
+        entry->setTimeInfo(timeInfo);
+    }
+
     struct Fixture
     {
-        Fixture()
+        // A second fixture can share the first one's server and act as another device
+        explicit Fixture(const QString& name = "local", Fixture* sameServerAs = nullptr)
         {
-            local = createDatabase(dir.filePath("local.kdbx"));
-            server = new FakeSyncServer(serverParams());
+            local = createDatabase(dir.filePath(name + ".kdbx"));
+            if (sameServerAs) {
+                // Start from the same database, as a device set up from the server would
+                local.reset();
+                QFile::copy(sameServerAs->local->filePath(), dir.filePath(name + ".kdbx"));
+                local = QSharedPointer<Database>::create();
+                local->open(dir.filePath(name + ".kdbx"), makeKey("a"));
+            }
+            server = sameServerAs ? new FakeSyncServer(serverParams(), sameServerAs->server->data)
+                                  : new FakeSyncServer(serverParams());
             engine.reset(new SyncEngine(local, server, SyncStateStore(dir.filePath("state.json"))));
             engine->setMergeHandler([this](const QSharedPointer<Database>& remote, QString* error) {
                 return mergeBothWays(local.data(), remote, error);
@@ -266,12 +309,17 @@ void TestSyncEngine::testStateStoreRoundTrip()
     state.etag = "\"abc\"";
     state.revision = 7;
     state.lastSync = QDateTime::currentDateTimeUtc();
+    state.generation = 4;
+    const auto entryUuid = QUuid::createUuid();
+    state.entries.insert(entryUuid, QDateTime::fromSecsSinceEpoch(1700000000, QTimeZone::utc()));
     QVERIFY(store.save(dbPath, params, state));
 
     auto loaded = store.load(dbPath, params);
     QCOMPARE(loaded.etag, state.etag);
     QCOMPARE(loaded.revision, qint64(7));
     QCOMPARE(loaded.lastSync, state.lastSync);
+    QCOMPARE(loaded.generation, qint64(4));
+    QCOMPARE(loaded.entries, state.entries);
 
     // Another server database for the same file is tracked separately
     auto other = params;
@@ -491,4 +539,258 @@ void TestSyncEngine::testMergeWaitsForTheGate()
     QVERIFY(finished.count() == 1 || finished.wait(5000));
     QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
     QCOMPARE(titles(f.local.data()), QStringList({"Remote entry"}));
+}
+
+void TestSyncEngine::testGenerationRisesOnlyWithChanges()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(SyncEngine::generationOf(f.local.data()), qint64(0));
+
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+    addEntry(f.local.data(), "Local entry");
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(SyncEngine::generationOf(f.local.data()), qint64(1));
+    auto serverCopy = openServerCopy(f.server, f.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    QCOMPARE(SyncEngine::generationOf(serverCopy.data()), qint64(1));
+
+    // Nothing changed: no new generation and nothing uploaded
+    const auto revision = f.server->revision;
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(SyncEngine::generationOf(f.local.data()), qint64(1));
+    QCOMPARE(f.server->revision, revision);
+}
+
+void TestSyncEngine::testTwoDevicesSettle()
+{
+    // Each step a minute apart, as on real devices, so newer custom data really is newer
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+
+    Fixture first("first");
+    QVERIFY(first.local);
+    QVERIFY(first.sync().value(0).toBool());
+    Fixture second("second", &first);
+    QVERIFY(second.local);
+
+    clock->advanceMinute(1);
+    addEntry(first.local.data(), "From first");
+    QVERIFY(first.sync().value(0).toBool());
+    clock->advanceMinute(1);
+    addEntry(second.local.data(), "From second");
+    QVERIFY(second.sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    QCOMPARE(titles(first.local.data()), QStringList({"From first", "From second"}));
+    QCOMPARE(titles(second.local.data()), QStringList({"From first", "From second"}));
+
+    // Once both have everything, syncing back and forth changes nothing on the server
+    const auto revision = first.server->revision;
+    for (int i = 0; i < 3; ++i) {
+        clock->advanceMinute(1);
+        QVERIFY(first.sync().value(0).toBool());
+        clock->advanceMinute(1);
+        QVERIFY(second.sync().value(0).toBool());
+    }
+    QCOMPARE(first.server->revision, revision);
+}
+
+void TestSyncEngine::testDetectsServerRevisionGoingBack()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    const auto oldCopy = f.server->stored;
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+    QVERIFY(f.sync().value(0).toBool());
+
+    // The server is restored from a backup: the old file and an old revision number
+    f.server->stored = oldCopy;
+    f.server->etag = SyncServerClient::etagFor(oldCopy);
+    f.server->revision = 1;
+    f.server->requests.clear();
+
+    auto result = f.sync();
+    QVERIFY(!result.value(0).toBool());
+    QVERIFY2(result.value(1).toString().contains("older version"), qPrintable(result.value(1).toString()));
+    QCOMPARE(f.engine->state(), SyncEngine::State::NeedsAttention);
+    QCOMPARE(f.engine->attention(), SyncEngine::Attention::ServerRolledBack);
+    QVERIFY(!f.engine->isBusy());
+    QVERIFY(!f.server->requests.contains("PUT"));
+    QCOMPARE(f.server->stored, oldCopy);
+
+    // Asking again without accepting stops again
+    QVERIFY(!f.sync().value(0).toBool());
+    QCOMPARE(f.engine->state(), SyncEngine::State::NeedsAttention);
+
+    // The user accepts: the server gets everything back, and later syncs compare against the new state
+    QSignalSpy finished(f.engine.data(), &SyncEngine::finished);
+    f.engine->syncAcceptingServerState();
+    QVERIFY(finished.wait(5000));
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QCOMPARE(f.engine->attention(), SyncEngine::Attention::None);
+    auto serverCopy = openServerCopy(f.server, f.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    QCOMPARE(titles(serverCopy.data()), QStringList({"Remote entry"}));
+    QVERIFY(f.sync().value(0).toBool());
+}
+
+void TestSyncEngine::testDetectsOlderCopyBehindANewRevision()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    const auto oldCopy = f.server->stored;
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+    addEntry(f.local.data(), "Local entry");
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(SyncEngine::generationOf(f.local.data()), qint64(1));
+
+    // A server that lies: a higher revision number, but the content of an older version
+    f.server->store(oldCopy);
+    auto result = f.sync();
+    QVERIFY(!result.value(0).toBool());
+    QVERIFY2(result.value(1).toString().contains("sync generation"), qPrintable(result.value(1).toString()));
+    QCOMPARE(f.engine->attention(), SyncEngine::Attention::ServerRolledBack);
+    // Nothing was merged into the local database
+    QCOMPARE(titles(f.local.data()), QStringList({"Local entry", "Remote entry"}));
+    QVERIFY(!f.local->isModified());
+}
+
+void TestSyncEngine::testDetectsLostDatabase()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    f.server->stored.clear();
+    f.server->etag.clear();
+
+    auto result = f.sync();
+    QVERIFY(!result.value(0).toBool());
+    QCOMPARE(f.engine->attention(), SyncEngine::Attention::ServerLostDatabase);
+    QVERIFY(f.server->stored.isEmpty());
+
+    QSignalSpy finished(f.engine.data(), &SyncEngine::finished);
+    f.engine->syncAcceptingServerState();
+    QVERIFY(finished.wait(5000));
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QCOMPARE(f.server->stored, readFile(f.local->filePath()));
+}
+
+void TestSyncEngine::testReportsEntriesChangedOnBothSides()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    addEntry(f.local.data(), "Only here");
+    QVERIFY(f.sync().value(0).toBool());
+
+    const auto base = QDateTime::currentDateTimeUtc();
+    // Another device edits "Shared" and uploads
+    {
+        auto other = openServerCopy(f.server, f.dir.filePath("other.kdbx"));
+        QVERIFY(other);
+        editEntry(findEntry(other.data(), "Shared"), "edited elsewhere", base.addSecs(20));
+        QVERIFY(other->save(Database::Atomic));
+        f.server->store(readFile(other->filePath()));
+    }
+    // This device edits "Shared" too, and "Only here" which nobody else touched
+    editEntry(findEntry(f.local.data(), "Shared"), "edited here", base.addSecs(10));
+    editEntry(findEntry(f.local.data(), "Only here"), "edited here", base.addSecs(10));
+    const auto sharedUuid = findEntry(f.local.data(), "Shared")->uuid();
+
+    QSignalSpy conflicts(f.engine.data(), &SyncEngine::conflictsDetected);
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(conflicts.count(), 1);
+    const auto list = conflicts.first().first().value<QList<SyncConflict>>();
+    QCOMPARE(list.size(), 1);
+    QCOMPARE(list.first().uuid, sharedUuid);
+    QCOMPARE(list.first().title, QString("Shared"));
+    QCOMPARE(list.first().kind, SyncConflict::Kind::EditedOnBoth);
+    // The newer edit won, and the older one is in the entry's history
+    auto* shared = findEntry(f.local.data(), "Shared");
+    QCOMPARE(shared->notes(), QString("edited elsewhere"));
+    bool inHistory = false;
+    for (const auto* item : shared->historyItems()) {
+        inHistory |= item->notes() == "edited here";
+    }
+    QVERIFY(inHistory);
+
+    // The next sync starts from the merged state, so there is nothing to report
+    conflicts.clear();
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(conflicts.count(), 0);
+}
+
+void TestSyncEngine::testFindsDeletedAndEditedEntries()
+{
+    QTemporaryDir dir;
+    auto local = createDatabase(dir.filePath("local.kdbx"));
+    QVERIFY(local);
+    addEntry(local.data(), "Deleted here");
+    addEntry(local.data(), "Deleted there");
+    addEntry(local.data(), "Untouched");
+    const auto base = QDateTime::currentDateTimeUtc().addSecs(-100);
+    for (auto* entry : local->rootGroup()->entriesRecursive()) {
+        editEntry(entry, {}, base);
+    }
+    QVERIFY(local->save(Database::Atomic));
+    const auto snapshot = SyncEngine::snapshotOf(local.data());
+    QVERIFY(QFile::copy(local->filePath(), dir.filePath("remote.kdbx")));
+    auto remote = QSharedPointer<Database>::create();
+    QVERIFY(remote->open(dir.filePath("remote.kdbx"), makeKey("a")));
+
+    const auto deletedHere = findEntry(local.data(), "Deleted here")->uuid();
+    const auto deletedThere = findEntry(local.data(), "Deleted there")->uuid();
+    delete findEntry(local.data(), "Deleted here");
+    editEntry(findEntry(remote.data(), "Deleted here"), "edited there", base.addSecs(10));
+    delete findEntry(remote.data(), "Deleted there");
+    editEntry(findEntry(local.data(), "Deleted there"), "edited here", base.addSecs(10));
+
+    auto conflicts = SyncEngine::findConflicts(local.data(), remote.data(), snapshot);
+    QCOMPARE(conflicts.size(), 2);
+    for (const auto& conflict : conflicts) {
+        if (conflict.uuid == deletedHere) {
+            QCOMPARE(conflict.kind, SyncConflict::Kind::DeletedHereEditedThere);
+        } else {
+            QCOMPARE(conflict.uuid, deletedThere);
+            QCOMPARE(conflict.kind, SyncConflict::Kind::EditedHereDeletedThere);
+        }
+    }
+
+    // Without a snapshot there is no common starting point, so nothing is reported
+    QVERIFY(SyncEngine::findConflicts(local.data(), remote.data(), {}).isEmpty());
+}
+
+void TestSyncEngine::testMergerIgnoresTheGeneration()
+{
+    // If Merger copied the generation like other custom data, two devices would keep "changing" it for each
+    // other and sync forever
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+
+    QTemporaryDir dir;
+    auto first = createDatabase(dir.filePath("first.kdbx"));
+    QVERIFY(first);
+    QVERIFY(QFile::copy(first->filePath(), dir.filePath("second.kdbx")));
+    auto second = QSharedPointer<Database>::create();
+    QVERIFY(second->open(dir.filePath("second.kdbx"), makeKey("a")));
+
+    // Different times, so Merger takes the newer side's custom data
+    first->metadata()->customData()->set(CustomData::SyncGeneration, "5");
+    clock->advanceMinute(1);
+    second->metadata()->customData()->set(CustomData::SyncGeneration, "2");
+
+    QVERIFY(SyncEngine::mergeDatabases(first.data(), second.data()).isEmpty());
+    QCOMPARE(SyncEngine::generationOf(first.data()), qint64(5));
+    QCOMPARE(SyncEngine::generationOf(second.data()), qint64(2));
+
+    // Without the key on one side, the other side keeps it
+    second->metadata()->customData()->remove(CustomData::SyncGeneration);
+    Merger(second.data(), first.data()).merge();
+    QCOMPARE(SyncEngine::generationOf(first.data()), qint64(5));
 }
