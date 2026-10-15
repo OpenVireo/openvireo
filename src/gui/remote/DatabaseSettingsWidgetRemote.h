@@ -51,11 +51,14 @@ private slots:
     void removeCurrentSettings();
     void editCurrentSettings();
     void testDownload();
+    void pairDevice();
     void updateTypeVisibility();
 
 private:
     void buildVaultPage();
     RemoteParams* paramsFromFields() const;
+    // Trades a pairing code typed in the token field for this device's token; false if that failed
+    bool claimPairingCode();
     void updateSettingsList();
     QListWidgetItem* findItemByName(const QString& name);
     void clearFields();

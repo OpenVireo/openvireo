@@ -38,6 +38,8 @@ private slots:
     void testSyncServerRejectsBadToken();
     void testSyncEngineTwoDevices();
     void testHistoryAndEvents();
+    void testRecognisesPairingCodes();
+    void testPairsAnotherDevice();
 };
 
 #endif // KEEPASSXC_TESTREMOTESYNCSERVER_H

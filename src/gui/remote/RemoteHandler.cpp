@@ -32,6 +32,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSysInfo>
 #include <QUuid>
 
 namespace
@@ -271,4 +272,62 @@ RemoteHandler::SyncServerListing RemoteHandler::listSyncServerDatabases(const Re
         listing.success = true;
         return listing;
     });
+}
+
+RemoteHandler::SyncServerPairing RemoteHandler::createSyncServerPairingCode(const RemoteParams* params)
+{
+    return AsyncTask::runAndWaitForFuture([params] {
+        SyncServerPairing pairing;
+        auto response = waitForSyncServer(params, [](SyncServerClient& client, SyncServerClient::Callback done) {
+            client.createPairingCode(std::move(done));
+        });
+        const auto body = QJsonDocument::fromJson(response.body).object();
+        pairing.code = body.value("code").toString();
+        if (response.status != 201 || pairing.code.isEmpty()) {
+            pairing.errorMessage = SyncServerClient::errorMessage(response);
+            return pairing;
+        }
+        pairing.expiresAt = QDateTime::fromString(body.value("expiresAt").toString(), Qt::ISODateWithMs);
+        pairing.success = true;
+        return pairing;
+    });
+}
+
+RemoteHandler::SyncServerPairing RemoteHandler::claimSyncServerPairingCode(const RemoteParams* params,
+                                                                           const QString& code)
+{
+    // The code stands in for a token; never send one along with it
+    RemoteParams anonymous = *params;
+    anonymous.serverToken.clear();
+    const auto name = deviceName();
+    return AsyncTask::runAndWaitForFuture([anonymous, code, name] {
+        SyncServerPairing pairing;
+        auto response = waitForSyncServer(&anonymous, [&](SyncServerClient& client, SyncServerClient::Callback done) {
+            client.claimPairingCode(code, name, std::move(done));
+        });
+        pairing.token = QJsonDocument::fromJson(response.body).object().value("token").toString();
+        if (response.status != 201 || pairing.token.isEmpty()) {
+            pairing.errorMessage = SyncServerClient::errorMessage(response);
+            return pairing;
+        }
+        pairing.success = true;
+        return pairing;
+    });
+}
+
+QString RemoteHandler::deviceName()
+{
+    auto name = QSysInfo::machineHostName().trimmed();
+    // macOS reports its Bonjour name, e.g. "Alices-MacBook.local"
+    if (name.endsWith(".local", Qt::CaseInsensitive)) {
+        name.chop(6);
+    }
+    if (name.isEmpty() || name == "localhost") {
+        name = QSysInfo::prettyProductName();
+    }
+    // The server takes up to 64 bytes
+    while (name.toUtf8().size() > 64) {
+        name.chop(1);
+    }
+    return name.isEmpty() ? QStringLiteral("KeePassXC") : name;
 }

@@ -68,6 +68,10 @@ public:
     // The current and kept previous versions: {"versions": [{revision, etag, size, updatedAt}, ...]}, newest first
     void history(Callback callback);
     void downloadRevision(qint64 revision, Callback callback);
+    // A one-time code another device of the same user trades for a token of its own: {"code", "expiresAt"}
+    void createPairingCode(Callback callback);
+    // Sent without a token, the code stands in for it: {"user", "deviceId", "token"}
+    void claimPairingCode(const QString& code, const QString& deviceName, Callback callback);
 
     // Drop all requests in flight; their callbacks are never called
     void abort();
@@ -79,6 +83,8 @@ public:
     static QString errorMessage(const Response& response);
     // The server's ETag for this content: the quoted SHA-256 of the file
     static QString etagFor(const QByteArray& data);
+    // Pairing codes are eight letters and digits, typed where the token goes; tokens are much longer
+    static bool isPairingCode(const QString& text);
 
 protected:
     // Overridden by tests to answer without a network

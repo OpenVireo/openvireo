@@ -23,6 +23,7 @@
 
 #include "RemoteHandler.h"
 #include "RemoteSettings.h"
+#include "SyncServerClient.h"
 #include "SyncTokenStore.h"
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
@@ -30,6 +31,7 @@
 
 #include <QFile>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QTabBar>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -59,6 +61,7 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
             &DatabaseSettingsWidgetRemote::editCurrentSettings);
     connect(m_ui->testDownloadCommandButton, &QPushButton::clicked, this, &DatabaseSettingsWidgetRemote::testDownload);
     connect(m_ui->testServerButton, &QPushButton::clicked, this, &DatabaseSettingsWidgetRemote::testDownload);
+    connect(m_ui->pairDeviceButton, &QPushButton::clicked, this, &DatabaseSettingsWidgetRemote::pairDevice);
     connect(m_ui->typeComboBox,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
             this,
@@ -81,9 +84,10 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
 
     updateTypeVisibility();
     // Each device has its own token, so it isn't stored in the database that all devices share
-    m_ui->serverTokenEdit->setPlaceholderText(tr("Stored on this device only, in %1. Each device needs its own token: "
-                                                 "keepassxc-sync-server devices add <user> <device-name>")
-                                                  .arg(SyncTokenStore::description()));
+    m_ui->serverTokenEdit->setPlaceholderText(
+        tr("Stored on this device only, in %1. Each device needs its own token: enter a pairing code from "
+           "Pair Device… on another device, or from keepassxc-sync-server devices pair <user>")
+            .arg(SyncTokenStore::description()));
 
     if (FluentTheme::vaultLayoutEnabled()) {
         buildVaultPage();
@@ -129,7 +133,8 @@ void DatabaseSettingsWidgetRemote::buildVaultPage()
           configuration->addSetting(
               ui->serverDatabaseIdLabel, ui->serverDatabaseIdEdit, ui->serverDatabaseIdEdit->placeholderText()),
           configuration->addSetting(ui->serverTokenLabel, ui->serverTokenEdit, ui->serverTokenEdit->placeholderText()),
-          configuration->addSetting(ui->serverTimeoutLabel, {ui->serverTimeoutSec, ui->testServerButton}),
+          configuration->addSetting(ui->serverTimeoutLabel,
+                                    {ui->serverTimeoutSec, ui->testServerButton, ui->pairDeviceButton}),
           configuration->addToggle(ui->autoSyncCheckBox, ui->autoSyncCheckBox->toolTip())}) {
         card->follow(ui->serverSettingsWidget);
     }
@@ -255,6 +260,10 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
                                              MessageWidget::Warning);
             return;
         }
+        if (!claimPairingCode()) {
+            return;
+        }
+        params->serverToken = m_ui->serverTokenEdit->text().trimmed();
         if (params->serverDatabaseId.trimmed().isEmpty() || params->serverToken.trimmed().isEmpty()) {
             m_ui->messageWidget->showMessage(tr("Database ID and access token cannot be empty."),
                                              MessageWidget::Warning);
@@ -390,8 +399,62 @@ void DatabaseSettingsWidgetRemote::updateTypeVisibility()
     m_ui->serverSettingsWidget->setVisible(isServer);
 }
 
+bool DatabaseSettingsWidgetRemote::claimPairingCode()
+{
+    const auto code = m_ui->serverTokenEdit->text().trimmed();
+    if (m_ui->typeComboBox->currentIndex() != 1 || !SyncServerClient::isPairingCode(code)) {
+        return true;
+    }
+    QScopedPointer<RemoteParams> params(paramsFromFields());
+    RemoteHandler handler;
+    auto pairing = handler.claimSyncServerPairingCode(params.data(), code);
+    if (!pairing.success) {
+        m_ui->messageWidget->showMessage(tr("Could not pair this device: %1").arg(pairing.errorMessage),
+                                         MessageWidget::Error);
+        return false;
+    }
+    m_ui->serverTokenEdit->setText(pairing.token);
+    m_ui->messageWidget->showMessage(tr("Paired this device as \"%1\". Its access token is stored on this device only.")
+                                         .arg(RemoteHandler::deviceName()),
+                                     MessageWidget::Positive);
+    return true;
+}
+
+void DatabaseSettingsWidgetRemote::pairDevice()
+{
+    if (!claimPairingCode()) {
+        return;
+    }
+    QScopedPointer<RemoteParams> params(paramsFromFields());
+    if (params->serverUrl.isEmpty() || params->serverToken.isEmpty()) {
+        m_ui->messageWidget->showMessage(tr("Enter the server URL and this device's access token first."),
+                                         MessageWidget::Warning);
+        return;
+    }
+
+    RemoteHandler handler;
+    auto pairing = handler.createSyncServerPairingCode(params.data());
+    if (!pairing.success) {
+        m_ui->messageWidget->showMessage(tr("Could not create a pairing code: %1").arg(pairing.errorMessage),
+                                         MessageWidget::Error);
+        return;
+    }
+    const auto until = QLocale().toString(pairing.expiresAt.toLocalTime().time(), QLocale::ShortFormat);
+    MessageBox::information(this,
+                            tr("Pair Device"),
+                            tr("<p>On the other device, enter this code where it asks for the sync server's "
+                               "access token, in this database's Remote Sync settings or when importing from "
+                               "the sync server:</p>"
+                               "<p style=\"font-size: x-large; font-family: monospace;\"><b>%1</b></p>"
+                               "<p>It adds one device and works until %2.</p>")
+                                .arg(pairing.code, until));
+}
+
 void DatabaseSettingsWidgetRemote::testDownload()
 {
+    if (!claimPairingCode()) {
+        return;
+    }
     QScopedPointer<RemoteParams> params(paramsFromFields());
     bool isServer = params->type == RemoteParams::Type::SyncServer;
 
