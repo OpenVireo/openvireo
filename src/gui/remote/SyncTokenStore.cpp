@@ -22,6 +22,7 @@
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -32,6 +33,14 @@
 #ifdef Q_OS_MACOS
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
+#elif defined(Q_OS_WIN)
+// clang-format off
+#include <windows.h>
+#include <wincred.h>
+// clang-format on
+#elif defined(Q_OS_UNIX) && !defined(QT_NO_DBUS)
+#include "SyncTokenSecretService.h"
+#define KPXC_SYNC_TOKEN_SECRET_SERVICE
 #endif
 
 namespace
@@ -64,11 +73,16 @@ namespace
 
     /*
      * A JSON file next to the local config that only the user can read. Used where no system
-     * credential store is wired up yet.
+     * credential store can be reached.
      */
     class FileBackend : public SyncTokenStore::Backend
     {
     public:
+        explicit FileBackend(QString filePath = {})
+            : m_filePath(std::move(filePath))
+        {
+        }
+
         QString load(const QString& key) override
         {
             return read().value(key).toString();
@@ -94,11 +108,14 @@ namespace
         }
 
     private:
-        static QString filePath()
+        QString filePath() const
         {
+            if (!m_filePath.isEmpty()) {
+                return m_filePath;
+            }
             return QFileInfo(SyncStateStore::defaultFilePath()).absolutePath() + "/sync-tokens.json";
         }
-        static QJsonObject read()
+        QJsonObject read() const
         {
             QFile file(filePath());
             if (!file.open(QIODevice::ReadOnly)) {
@@ -106,8 +123,14 @@ namespace
             }
             return QJsonDocument::fromJson(file.readAll()).object();
         }
-        static bool write(const QJsonObject& tokens)
+        bool write(const QJsonObject& tokens) const
         {
+            if (tokens.isEmpty()) {
+                // Leave no file behind once every token has moved to the system store
+                return !QFile::exists(filePath()) || QFile::remove(filePath());
+            }
+            // The settings folder may not exist yet on a fresh install
+            QDir().mkpath(QFileInfo(filePath()).absolutePath());
             QSaveFile file(filePath());
             if (!file.open(QIODevice::WriteOnly)) {
                 return false;
@@ -116,6 +139,65 @@ namespace
             file.write(QJsonDocument(tokens).toJson());
             return file.commit();
         }
+
+        QString m_filePath;
+    };
+
+    /*
+     * The system store when it can be reached, the file otherwise. A token is only ever in one
+     * of them: saving to the system store removes the file's copy.
+     */
+    class FallbackBackend : public SyncTokenStore::Backend
+    {
+    public:
+        FallbackBackend(std::unique_ptr<SyncTokenStore::Backend> system, std::unique_ptr<SyncTokenStore::Backend> file)
+            : m_system(std::move(system))
+            , m_file(std::move(file))
+        {
+        }
+
+        QString load(const QString& key) override
+        {
+            if (!m_system->isAvailable()) {
+                return m_file->load(key);
+            }
+            auto token = m_system->load(key);
+            if (token.isEmpty()) {
+                // Kept in the file while no system store could be reached
+                token = m_file->load(key);
+                if (!token.isEmpty() && m_system->save(key, token)) {
+                    m_file->remove(key);
+                }
+            }
+            return token;
+        }
+
+        bool save(const QString& key, const QString& token) override
+        {
+            if (m_system->isAvailable() && m_system->save(key, token)) {
+                m_file->remove(key);
+                return true;
+            }
+            return m_file->save(key, token);
+        }
+
+        bool remove(const QString& key) override
+        {
+            const auto removedFromFile = m_file->remove(key);
+            if (!m_system->isAvailable()) {
+                return removedFromFile;
+            }
+            return m_system->remove(key) && removedFromFile;
+        }
+
+        QString description() const override
+        {
+            return m_system->isAvailable() ? m_system->description() : m_file->description();
+        }
+
+    private:
+        std::unique_ptr<SyncTokenStore::Backend> m_system;
+        std::unique_ptr<SyncTokenStore::Backend> m_file;
     };
 
 #ifdef Q_OS_MACOS
@@ -193,6 +275,57 @@ namespace
             return query;
         }
     };
+#elif defined(Q_OS_WIN)
+    /*
+     * Generic credentials in the Windows Credential Manager, kept on this computer only (not
+     * roamed with the user's profile): each token belongs to one device.
+     */
+    class CredentialManagerBackend : public SyncTokenStore::Backend
+    {
+    public:
+        QString load(const QString& key) override
+        {
+            PCREDENTIALW credential = nullptr;
+            if (!CredReadW(target(key).c_str(), CRED_TYPE_GENERIC, 0, &credential)) {
+                return {};
+            }
+            const auto token = QString::fromUtf8(reinterpret_cast<const char*>(credential->CredentialBlob),
+                                                 static_cast<int>(credential->CredentialBlobSize));
+            CredFree(credential);
+            return token;
+        }
+
+        bool save(const QString& key, const QString& token) override
+        {
+            auto bytes = token.toUtf8();
+            const auto name = target(key);
+            CREDENTIALW credential = {};
+            credential.Type = CRED_TYPE_GENERIC;
+            credential.TargetName = const_cast<LPWSTR>(name.c_str());
+            credential.Comment = const_cast<LPWSTR>(L"KeePassXC sync server access token");
+            credential.CredentialBlobSize = static_cast<DWORD>(bytes.size());
+            credential.CredentialBlob = reinterpret_cast<LPBYTE>(bytes.data());
+            credential.Persist = CRED_PERSIST_LOCAL_MACHINE;
+            credential.UserName = const_cast<LPWSTR>(L"KeePassXC");
+            return CredWriteW(&credential, 0);
+        }
+
+        bool remove(const QString& key) override
+        {
+            return CredDeleteW(target(key).c_str(), CRED_TYPE_GENERIC, 0) || GetLastError() == ERROR_NOT_FOUND;
+        }
+
+        QString description() const override
+        {
+            return QCoreApplication::translate("SyncTokenStore", "the Windows Credential Manager");
+        }
+
+    private:
+        static std::wstring target(const QString& key)
+        {
+            return QStringLiteral("KeePassXC Sync/%1").arg(key).toStdWString();
+        }
+    };
 #endif
 
     std::unique_ptr<SyncTokenStore::Backend>& currentBackend()
@@ -201,10 +334,23 @@ namespace
         return backend;
     }
 
+    // Tokens already read, so that reloading the remote settings after every change doesn't
+    // ask the system store again
+    QHash<QString, QString>& cache()
+    {
+        static QHash<QString, QString> tokens;
+        return tokens;
+    }
+
     std::unique_ptr<SyncTokenStore::Backend> createPlatformBackend()
     {
 #ifdef Q_OS_MACOS
         return std::make_unique<KeychainBackend>();
+#elif defined(Q_OS_WIN)
+        return SyncTokenStore::createFallbackBackend(std::make_unique<CredentialManagerBackend>(),
+                                                     std::make_unique<FileBackend>());
+#elif defined(KPXC_SYNC_TOKEN_SECRET_SERVICE)
+        return SyncTokenStore::createFallbackBackend(createSecretServiceBackend(), std::make_unique<FileBackend>());
 #else
         return std::make_unique<FileBackend>();
 #endif
@@ -231,19 +377,37 @@ SyncTokenStore::Backend& SyncTokenStore::backend()
 
 QString SyncTokenStore::load(const QString& key)
 {
-    return backend().load(key);
+    auto it = cache().constFind(key);
+    if (it != cache().constEnd()) {
+        return it.value();
+    }
+    // A missing token isn't kept: it may be added from another window or after the keyring unlocks
+    const auto token = backend().load(key);
+    if (!token.isEmpty()) {
+        cache().insert(key, token);
+    }
+    return token;
 }
 
 bool SyncTokenStore::save(const QString& key, const QString& token)
 {
     if (token.isEmpty()) {
-        return backend().remove(key);
+        return remove(key);
     }
-    return backend().save(key, token);
+    if (cache().value(key) == token) {
+        return true;
+    }
+    cache().remove(key);
+    if (!backend().save(key, token)) {
+        return false;
+    }
+    cache().insert(key, token);
+    return true;
 }
 
 bool SyncTokenStore::remove(const QString& key)
 {
+    cache().remove(key);
     return backend().remove(key);
 }
 
@@ -254,10 +418,22 @@ QString SyncTokenStore::description()
 
 void SyncTokenStore::setBackend(std::unique_ptr<Backend> backend)
 {
+    cache().clear();
     currentBackend() = std::move(backend);
 }
 
 std::unique_ptr<SyncTokenStore::Backend> SyncTokenStore::createMemoryBackend()
 {
     return std::make_unique<MemoryBackend>();
+}
+
+std::unique_ptr<SyncTokenStore::Backend> SyncTokenStore::createFileBackend(const QString& filePath)
+{
+    return std::make_unique<FileBackend>(filePath);
+}
+
+std::unique_ptr<SyncTokenStore::Backend> SyncTokenStore::createFallbackBackend(std::unique_ptr<Backend> system,
+                                                                               std::unique_ptr<Backend> file)
+{
+    return std::make_unique<FallbackBackend>(std::move(system), std::move(file));
 }

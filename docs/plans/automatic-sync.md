@@ -284,10 +284,8 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   existing tokens keep working until revoked. CLI: `users add <name> [device]`, `devices add|list|revoke`. Adding an
   existing user is an error now instead of rotating its token. Pairing by code is left for later.
 - Client: `SyncTokenStore` keeps tokens in the login Keychain on macOS (generic passwords, service "KeePassXC Sync",
-  never synced through iCloud) and, elsewhere for now, in `sync-tokens.json` (mode 0600) next to the local config.
-  That fallback is plain text on disk, where the token used to be inside the encrypted database; Windows Credential
-  Manager and libsecret are the follow-ups. Tests use an in-memory store; `KPXC_TEST_KEYCHAIN=1` runs one test against
-  the real store.
+  never synced through iCloud). See "Follow-ups" for Windows and Linux. Tests use an in-memory store;
+  `KPXC_TEST_KEYCHAIN=1` runs one test against the real store.
 - Tokens are keyed by the database's root group UUID, server URL and database ID. `RemoteSettings` no longer writes
   `serverToken` into the database. A token found there is copied to the store on load and dropped from the database
   the next time the remote settings are saved; a token the device already has wins.
@@ -332,6 +330,28 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   conflicting changes" warning in the tests was about (same values, different flag), not lost data.
 - `testguiautosync` now runs with `QStandardPaths` test mode; before, it wrote sync state and base copies into the real
   KeePassXC data folder.
+
+### Follow-ups
+
+- **Token stores on Windows and Linux** ✅ Windows uses the Credential Manager (generic credentials, target
+  `KeePassXC Sync/<key>`, persisted on this computer only, not roamed). Linux and the BSDs use the Secret Service on the
+  session bus through QtDBus, so no libsecret dependency: items in the default collection with the attributes
+  `xdg:schema=org.keepassxc.SyncToken`, `service=KeePassXC Sync`, `account=<key>`, over a "plain" session. A locked item
+  or collection shows the keyring's own unlock prompt, waited for in a local event loop without user input (2 min
+  timeout, one prompt at a time).
+  - The Secret Service counts as unavailable when nothing provides it and the bus can't start it, and when KeePassXC
+    itself provides it (its own FdoSecrets): the token would then sit in one of the user's databases, which can be
+    locked, or be the very database that needs the token to sync. Both platforms then fall back to `sync-tokens.json`
+    (now created along with its folder on a fresh install), and a token found there moves to the system store when
+    next read. The file is deleted once it holds no tokens.
+  - `SyncTokenStore` keeps tokens it has read in memory, since the remote settings are reloaded after every change to
+    the database. Missing tokens aren't cached.
+  - Tested: the Secret Service path against GNOME Keyring in a Debian container (save, overwrite, remove, moving a token
+    out of the file, no keyring, KeePassXC as the provider). Not tested: the unlock prompt (needs a desktop session), and
+    the Windows store, which so far is only known to compile against MinGW's `wincred.h`.
+- **Pairing a device with a short code** — not started.
+- **A Fluent version of the history dialog** — not started.
+- **Opening the downloaded database off the GUI thread** — not started.
 
 ### 5.7 Testing
 

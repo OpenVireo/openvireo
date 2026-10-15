@@ -30,6 +30,9 @@ private slots:
     void testTokenStaysOnThisDevice();
     void testMovesTokenOutOfOlderDatabases();
     void testForgetsTokensOfRemovedRemotes();
+    void testTokenFileWithoutSystemStore();
+    void testTokenMovesFromFileToSystemStore();
+    void testTokensAreReadOnce();
     void testPlatformTokenStore();
     void testSyncServerCycle();
     void testSyncServerRejectsBadToken();
