@@ -277,6 +277,16 @@
              </item>
             </layout>
            </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QCheckBox" name="autoSyncCheckBox">
+             <property name="toolTip">
+              <string>Sync after each save, when the database is unlocked, and every minute while it is open</string>
+             </property>
+             <property name="text">
+              <string>Sync automatically</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>

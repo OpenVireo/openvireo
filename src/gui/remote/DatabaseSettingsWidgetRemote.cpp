@@ -76,6 +76,7 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     connect(m_ui->serverDatabaseIdEdit, &QLineEdit::textChanged, setModified);
     connect(m_ui->serverTokenEdit, &QLineEdit::textChanged, setModified);
     connect(m_ui->serverTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+    connect(m_ui->autoSyncCheckBox, &QCheckBox::toggled, setModified);
 
     updateTypeVisibility();
 
@@ -123,7 +124,8 @@ void DatabaseSettingsWidgetRemote::buildVaultPage()
           configuration->addSetting(
               ui->serverDatabaseIdLabel, ui->serverDatabaseIdEdit, ui->serverDatabaseIdEdit->placeholderText()),
           configuration->addSetting(ui->serverTokenLabel, ui->serverTokenEdit, ui->serverTokenEdit->placeholderText()),
-          configuration->addSetting(ui->serverTimeoutLabel, {ui->serverTimeoutSec, ui->testServerButton})}) {
+          configuration->addSetting(ui->serverTimeoutLabel, {ui->serverTimeoutSec, ui->testServerButton}),
+          configuration->addToggle(ui->autoSyncCheckBox, ui->autoSyncCheckBox->toolTip())}) {
         card->follow(ui->serverSettingsWidget);
     }
     // Their hints show as the cards' descriptions, so the fields don't repeat them
@@ -261,6 +263,15 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
         }
     }
 
+    // Only one remote syncs automatically
+    if (params->autoSync) {
+        for (auto* other : m_remoteSettings->getAllRemoteParams()) {
+            if (other->name != params->name) {
+                other->autoSync = false;
+            }
+        }
+    }
+
     m_remoteSettings->addRemoteParams(params.take());
     updateSettingsList();
 
@@ -305,6 +316,7 @@ void DatabaseSettingsWidgetRemote::editCurrentSettings()
     m_ui->serverUrlEdit->setText(params->serverUrl);
     m_ui->serverDatabaseIdEdit->setText(params->serverDatabaseId);
     m_ui->serverTokenEdit->setText(params->serverToken);
+    m_ui->autoSyncCheckBox->setChecked(params->autoSync);
     m_ui->serverTimeoutSec->setValue(params->downloadTimeoutMsec / 1000);
     m_ui->downloadCommand->setText(params->downloadCommand);
     m_ui->inputForDownload->setPlainText(params->downloadInput);
@@ -332,6 +344,7 @@ void DatabaseSettingsWidgetRemote::clearFields()
     m_ui->serverUrlEdit->setText("");
     m_ui->serverDatabaseIdEdit->setText("");
     m_ui->serverTokenEdit->setText("");
+    m_ui->autoSyncCheckBox->setChecked(false);
     m_ui->serverTimeoutSec->setValue(30);
     m_ui->downloadCommand->setText("");
     m_ui->inputForDownload->setPlainText("");
@@ -351,6 +364,7 @@ RemoteParams* DatabaseSettingsWidgetRemote::paramsFromFields() const
         params->serverUrl = m_ui->serverUrlEdit->text().trimmed();
         params->serverDatabaseId = m_ui->serverDatabaseIdEdit->text().trimmed();
         params->serverToken = m_ui->serverTokenEdit->text().trimmed();
+        params->autoSync = m_ui->autoSyncCheckBox->isChecked();
         params->downloadTimeoutMsec = m_ui->serverTimeoutSec->value() * 1000;
         params->uploadTimeoutMsec = params->downloadTimeoutMsec;
     } else {

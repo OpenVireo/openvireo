@@ -121,6 +121,9 @@ add_unit_test(NAME testremotesyncserver SOURCES TestRemoteSyncServer.cpp
 add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
         LIBS ${TEST_LIBRARIES})
 
+add_unit_test(NAME testsyncscheduler SOURCES TestSyncScheduler.cpp
+        LIBS ${TEST_LIBRARIES})
+
 add_unit_test(NAME testpasswordgenerator SOURCES TestPasswordGenerator.cpp
         LIBS ${TEST_LIBRARIES})
 

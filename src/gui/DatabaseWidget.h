@@ -19,6 +19,7 @@
 #ifndef KEEPASSX_DATABASEWIDGET_H
 #define KEEPASSX_DATABASEWIDGET_H
 
+#include <QDateTime>
 #include <QStackedWidget>
 
 #include "core/Database.h"
@@ -47,6 +48,7 @@ class TagView;
 class ElidedLabel;
 class RemoteSettings;
 class SyncEngine;
+class SyncScheduler;
 class EntryDetailCard;
 class VaultCommandBar;
 class VaultModal;
@@ -137,6 +139,29 @@ public:
     void setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>& sizes);
     void setSearchStringForAutoType(const QString& search);
 
+    struct SyncStatus
+    {
+        enum class State
+        {
+            Idle,
+            Syncing,
+            Synced,
+            Failed,
+            // A network error; the sync is retried automatically
+            Offline,
+            // The server copy uses a different password or key file
+            NeedsUnlock
+        };
+        State state = State::Idle;
+        QDateTime lastSync;
+        QString error;
+        // A remote syncs in the background
+        bool automatic = false;
+    };
+    SyncStatus syncStatus() const;
+    // The sync server remote that syncs automatically, if any
+    const RemoteParams* autoSyncParams() const;
+
     void syncWithRemote(const RemoteParams* params);
     void syncDatabaseWithLockedDatabase(const QString& filePath, const RemoteParams* params);
     QList<RemoteParams*> getRemoteParams() const;
@@ -169,6 +194,7 @@ signals:
     void databaseSyncUnlocked(const RemoteHandler::RemoteResult& result);
     void unlockDatabaseInDialogForSync(const QString& filePath);
     void updateSyncProgress(int percentage, QString message);
+    void syncStatusChanged();
     void groupContextMenuRequested(const QPoint& globalPos);
     void entryContextMenuRequested(const QPoint& globalPos);
     void listModeAboutToActivate();
@@ -299,10 +325,18 @@ private slots:
     void syncUnlockedDatabase(bool accepted);
     bool syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error);
     void uploadAndFinishSync(const RemoteParams* params, RemoteHandler::RemoteResult result);
-    void finishSync(const QString& syncName, const RemoteHandler::RemoteResult& result);
+    void finishSync(const QString& syncName,
+                    const RemoteHandler::RemoteResult& result,
+                    SyncStatus::State failureState = SyncStatus::State::Failed);
     void syncWithServer(const RemoteParams& params);
+    void ensureSyncEngine(const RemoteParams& params);
     void unlockServerCopyForSync(const QString& filePath);
     void stopServerSync();
+    void setSyncStatus(SyncStatus::State state, const QString& error = {});
+    bool canSyncInBackground() const;
+    void updateAutoSync();
+    void backgroundSync();
+    void resumeBackgroundSync();
     void emitCurrentModeChanged();
     // Database autoreload slots
     void reloadDatabaseFile(bool triggeredBySave);
@@ -381,7 +415,13 @@ private:
     bool m_attemptingLock = false;
 
     QScopedPointer<RemoteSettings> m_remoteSettings;
+    SyncScheduler* m_syncScheduler;
     QPointer<SyncEngine> m_syncEngine;
+    SyncStatus m_syncStatus;
+    // The running sync was started by the user, so it may show dialogs and messages
+    bool m_syncInteractive = false;
+    // A background sync was due while the user was busy
+    bool m_autoSyncPending = false;
 
     // Search state
     QScopedPointer<EntrySearcher> m_entrySearcher;

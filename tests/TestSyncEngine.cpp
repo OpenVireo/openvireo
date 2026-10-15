@@ -463,3 +463,32 @@ void TestSyncEngine::testCancelStopsTheSync()
     QCOMPARE(finished.count(), 1);
     QVERIFY(f.server->stored.isEmpty());
 }
+
+void TestSyncEngine::testMergeWaitsForTheGate()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    QVERIFY(uploadFromOtherDevice(f.server, f.dir.filePath("other.kdbx"), "Remote entry"));
+
+    bool editing = true;
+    f.engine->setMergeGate([&editing] { return !editing; });
+    QSignalSpy deferred(f.engine.data(), &SyncEngine::mergeDeferred);
+    QSignalSpy finished(f.engine.data(), &SyncEngine::finished);
+
+    f.engine->sync();
+    QVERIFY(deferred.wait(5000));
+    QCOMPARE(f.engine->state(), SyncEngine::State::WaitingToMerge);
+    QVERIFY(f.engine->isBusy());
+    QVERIFY(titles(f.local.data()).isEmpty());
+
+    // Still editing: nothing happens
+    f.engine->resumeMerge();
+    QCOMPARE(f.engine->state(), SyncEngine::State::WaitingToMerge);
+
+    editing = false;
+    f.engine->resumeMerge();
+    QVERIFY(finished.count() == 1 || finished.wait(5000));
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QCOMPARE(titles(f.local.data()), QStringList({"Remote entry"}));
+}
