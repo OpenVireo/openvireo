@@ -17,6 +17,7 @@
 
 #include "TestSyncScheduler.h"
 
+#include "gui/remote/SyncEventStream.h"
 #include "gui/remote/SyncScheduler.h"
 
 #include <QSignalSpy>
@@ -126,4 +127,31 @@ void TestSyncScheduler::testEventsAreRateLimited()
     QTest::qWait(120);
     scheduler.notifyEvent();
     QCOMPARE(requested.count(), 3);
+}
+
+void TestSyncScheduler::testParsesServerEvents()
+{
+    QByteArray buffer("retry: 5000\n: connected\n\n"
+                      "event: database\ndata: {\"id\":\"personal\",\"etag\":\"\\\"abc\\\"\",\"revision\":7}\n\n"
+                      ": ping\n\n"
+                      "event: database\r\ndata: {\"id\":\"work\",\"deleted\":true}\r\n\r\n"
+                      "event: other\ndata: {\"id\":\"ignored\"}\n\n"
+                      "event: database\ndata: {\"id\":\"par");
+
+    auto events = SyncEventStream::takeEvents(buffer);
+    QCOMPARE(events.size(), 2);
+    QCOMPARE(events[0].databaseId, QString("personal"));
+    QCOMPARE(events[0].etag, QString("\"abc\""));
+    QCOMPARE(events[0].revision, qint64(7));
+    QVERIFY(!events[0].deleted);
+    QCOMPARE(events[1].databaseId, QString("work"));
+    QVERIFY(events[1].deleted);
+
+    // The partial event waits for the rest
+    QCOMPARE(buffer, QByteArray("event: database\ndata: {\"id\":\"par"));
+    buffer += "tial\"}\n\n";
+    events = SyncEventStream::takeEvents(buffer);
+    QCOMPARE(events.size(), 1);
+    QCOMPARE(events[0].databaseId, QString("partial"));
+    QVERIFY(buffer.isEmpty());
 }

@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phases 1–4 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–5 implemented on `feature/auto-sync` (see 5.6); phase 6 (three-way merge) remains; builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -217,7 +217,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 | 2 ✅ | Triggers, the `autoSync` setting, chip states, no menu disabling for background syncs | none | `RemoteSettings.*`, `DatabaseSettingsWidgetRemote.*`, `VaultPanes.*`, `MainWindow.cpp` |
 | 3 ✅ | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
 | 4 ✅ | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
-| 5 | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
+| 5 ✅ | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
 | 6 | Three-way merge from the base snapshot | none | `Merger.*`, `SyncEngine.*` |
 
 #### Phase 1 notes
@@ -293,6 +293,23 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   the next time the remote settings are saved; a token the device already has wins.
 - A sync server remote without a token on this device shows "token needed"; background syncs skip it without sending
   anything, and a manual sync opens the Remote Sync settings.
+
+#### Phase 5 notes
+
+- History: `GET …/{id}/history` and `GET …/{id}/history/{revision}`, routed inside the existing `databases/(.+)`
+  handler rather than as separate routes, so route order doesn't matter. Each kept version now has a `<revision>.json`
+  with its metadata; versions kept before that get theirs from the file.
+- Events: server-sent events, as planned, through Drogon's `newAsyncStreamResponse`. An `EventHub` keeps each user's
+  open streams, publishes after every upload and delete, and pings every 25 s, dropping streams that fail to send.
+- Client: `SyncEventStream` runs while automatic sync is on. It reconnects with a growing delay (5 s up to 5 min), and
+  after 60 s without even a ping. An event for our database whose ETag isn't the one we last synced requests a sync at
+  once; our own uploads come back as events too and are skipped that way. While connected the poll slows to 5 minutes.
+- History UI: **Database → Remote Sync → Versions on <name>…** opens `SyncHistoryDialog`, a plain `QDialog` for now
+  rather than a Fluent modal. Opening a version downloads it to its own folder under the system temp directory (left
+  for the OS to clean up, because the tab keeps using the file) and opens it in a new tab, locked, through
+  `requestOpenDatabase`.
+- `SyncEventStream`'s destructor blocks its signals: it is usually deleted as `DatabaseWidget`'s child, and a final
+  `connectedChanged(false)` called back into the half-destroyed widget (found by `testguiautosync`).
 
 ### 5.7 Testing
 

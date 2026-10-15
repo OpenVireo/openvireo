@@ -124,6 +124,11 @@ SyncEngine::Attention SyncEngine::attention() const
     return m_attention;
 }
 
+QString SyncEngine::lastSyncedEtag() const
+{
+    return m_stateStore.load(m_db->filePath(), params()).etag;
+}
+
 void SyncEngine::sync()
 {
     if (isBusy()) {

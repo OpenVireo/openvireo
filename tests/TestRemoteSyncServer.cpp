@@ -29,10 +29,14 @@
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncEngine.h"
+#include "gui/remote/SyncEventStream.h"
 #include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -375,4 +379,52 @@ void TestRemoteSyncServer::testSyncEngineTwoDevices()
     const auto etag = stateStore.load(first->filePath(), params).etag;
     QCOMPARE(runSync(firstEngine.data()), QString());
     QCOMPARE(stateStore.load(first->filePath(), params).etag, etag);
+}
+
+void TestRemoteSyncServer::testHistoryAndEvents()
+{
+    SKIP_WITHOUT_SERVER();
+
+    auto params = serverParams();
+    const QString firstDb = QString(KEEPASSX_TEST_DATA_DIR).append("/NewDatabase.kdbx");
+    const QString secondDb = QString(KEEPASSX_TEST_DATA_DIR).append("/NewDatabase2.kdbx");
+
+    SyncEventStream events(params);
+    QSignalSpy connected(&events, &SyncEventStream::connectedChanged);
+    QSignalSpy changed(&events, &SyncEventStream::databaseChanged);
+    events.start();
+    QVERIFY(connected.wait(5000));
+    QVERIFY(events.isConnected());
+
+    RemoteHandler handler;
+    auto result = handler.upload(firstDb, &params, {});
+    QVERIFY2(result.success, qPrintable(result.errorMessage));
+    result = handler.upload(secondDb, &params, result.etag);
+    QVERIFY2(result.success, qPrintable(result.errorMessage));
+
+    // Both uploads are announced, the last with the version it created
+    QTRY_COMPARE_WITH_TIMEOUT(changed.count(), 2, 5000);
+    auto last = changed.last().first().value<SyncEventStream::Event>();
+    QCOMPARE(last.databaseId, params.serverDatabaseId);
+    QCOMPARE(last.etag, result.etag);
+    QCOMPARE(last.revision, qint64(2));
+
+    // The server keeps the previous version
+    SyncServerClient client(params);
+    SyncServerClient::Response history;
+    client.history([&](const SyncServerClient::Response& response) { history = response; });
+    QTRY_VERIFY_WITH_TIMEOUT(history.status != 0, 5000);
+    QCOMPARE(history.status, 200);
+    const auto versions = QJsonDocument::fromJson(history.body).object().value("versions").toArray();
+    QCOMPARE(versions.size(), 2);
+    QCOMPARE(versions[1].toObject().value("revision").toInt(), 1);
+
+    SyncServerClient::Response first;
+    client.downloadRevision(1, [&](const SyncServerClient::Response& response) { first = response; });
+    QTRY_VERIFY_WITH_TIMEOUT(first.status != 0, 5000);
+    QCOMPARE(first.status, 200);
+    QCOMPARE(first.body, readFile(firstDb));
+
+    events.stop();
+    QVERIFY(!events.isConnected());
 }

@@ -65,11 +65,16 @@ public:
     // Conditional PUT: replaces exactly `etag`, or only creates the database when `etag` is empty
     void upload(const QByteArray& data, const QString& etag, Callback callback);
     void listDatabases(Callback callback);
+    // The current and kept previous versions: {"versions": [{revision, etag, size, updatedAt}, ...]}, newest first
+    void history(Callback callback);
+    void downloadRevision(qint64 revision, Callback callback);
 
     // Drop all requests in flight; their callbacks are never called
     void abort();
 
     const RemoteParams& params() const;
+    // An API URL on the server, e.g. endpoint(params, "events") for <server>/api/v1/events
+    static QUrl endpoint(const RemoteParams& params, const QString& path);
 
     static QString errorMessage(const Response& response);
     // The server's ETag for this content: the quoted SHA-256 of the file
@@ -88,8 +93,7 @@ protected:
     void deliverLater(const Response& response, Callback callback);
 
 private:
-    QUrl databaseUrl() const;
-    QUrl listingUrl() const;
+    QUrl databaseUrl(const QString& suffix = {}) const;
 
     RemoteParams m_params;
     // Bumped by abort() so late replies are ignored

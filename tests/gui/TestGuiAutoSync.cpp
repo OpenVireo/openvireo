@@ -29,6 +29,7 @@
 #include "gui/MessageBox.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
+#include "gui/remote/SyncHistoryDialog.h"
 #include "gui/remote/SyncTokenStore.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
@@ -37,7 +38,9 @@
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QPushButton>
 #include <QSignalSpy>
+#include <QTreeWidget>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QUuid>
@@ -318,4 +321,66 @@ void TestGuiAutoSync::testWaitsForThisDevicesToken()
     QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsToken, 5000);
     QVERIFY(widget.syncStatus().error.contains("no access token"));
     QVERIFY(widget.isEnabled());
+}
+
+void TestGuiAutoSync::testSyncsWhenTheServerAnnouncesAChange()
+{
+    SKIP_WITHOUT_SERVER();
+
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    DatabaseWidget widget(db);
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    // Let the event stream connect and the sync that follows its connecting settle
+    QTest::qWait(1500);
+
+    // Nothing is saved here and the next poll is a minute away: only the server's notice can bring this in
+    QVERIFY(uploadFromOtherDevice(params, "Announced"));
+    QTRY_COMPARE_WITH_TIMEOUT(titles(db.data()), QStringList({"Announced"}), 5000);
+}
+
+void TestGuiAutoSync::testOpensAnOlderVersion()
+{
+    SKIP_WITHOUT_SERVER();
+
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    DatabaseWidget widget(db);
+    addEntry(db.data(), "In the first version");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    QVERIFY(uploadFromOtherDevice(params, "Added later"));
+
+    SyncHistoryDialog dialog(params);
+    QSignalSpy opened(&dialog, &SyncHistoryDialog::openRequested);
+    auto* versions = dialog.findChild<QTreeWidget*>("syncHistoryVersions");
+    QVERIFY(versions);
+    QTRY_COMPARE_WITH_TIMEOUT(versions->topLevelItemCount(), 2, 5000);
+    QVERIFY(versions->topLevelItem(0)->text(0).contains("current"));
+
+    // Open the first version
+    versions->setCurrentItem(versions->topLevelItem(1));
+    auto* open = dialog.findChild<QPushButton*>();
+    for (auto* button : dialog.findChildren<QPushButton*>()) {
+        if (button->text() == "Open") {
+            open = button;
+        }
+    }
+    QVERIFY(open && open->isEnabled());
+    open->click();
+    QTRY_COMPARE_WITH_TIMEOUT(opened.count(), 1, 5000);
+
+    const auto filePath = opened.first().first().toString();
+    QVERIFY(filePath.contains("version 1"));
+    Database version;
+    QVERIFY(version.open(filePath, makeKey()));
+    QCOMPARE(titles(&version), QStringList({"In the first version"}));
+    QFile::remove(filePath);
 }
