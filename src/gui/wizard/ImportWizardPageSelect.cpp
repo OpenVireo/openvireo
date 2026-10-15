@@ -27,8 +27,162 @@
 #include "gui/MessageBox.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultModal.h"
+#include "gui/vault/VaultSettingsPage.h"
 
 #include <QDesktopServices>
+#include <QKeyEvent>
+#include <QPainter>
+#include <QScrollArea>
+#include <QStyledItemDelegate>
+
+namespace
+{
+    constexpr int SourceDescriptionRole = Qt::UserRole + 1;
+    constexpr int TileHeight = 72;
+    constexpr int TileGap = 4;
+    constexpr int TileIconSize = 32;
+    constexpr int TileMinimumWidth = 240;
+
+    /**
+     * Paints a source as a tile with its icon, name and file type. The chosen tile is outlined in the accent
+     * color with a filled radio mark, like the steps of the modal.
+     */
+    class SourceTileDelegate : public QStyledItemDelegate
+    {
+    public:
+        using QStyledItemDelegate::QStyledItemDelegate;
+
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            Q_UNUSED(index)
+            auto view = qobject_cast<const QListView*>(option.widget);
+            return view && view->gridSize().isValid() ? view->gridSize() : QSize(TileMinimumWidth, TileHeight);
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            const auto colors = VaultModal::colors();
+            const bool selected = option.state & QStyle::State_Selected;
+            const bool hovered = option.state & QStyle::State_MouseOver;
+            const QRectF tile = QRectF(option.rect).adjusted(TileGap, TileGap, -TileGap, -TileGap);
+
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+
+            QColor fill = hovered ? colors.hover : Qt::transparent;
+            if (selected) {
+                fill = colors.selected;
+                fill.setAlpha(FluentTheme::isDark() ? 40 : 18);
+            }
+            painter->setPen(selected ? QPen(colors.selected, 2) : QPen(colors.border, 1));
+            painter->setBrush(fill);
+            const qreal inset = selected ? 1 : 0.5;
+            painter->drawRoundedRect(tile.adjusted(inset, inset, -inset, -inset), 8, 8);
+
+            const QRect icon(
+                qRound(tile.left()) + 16, qRound(tile.center().y()) - TileIconSize / 2, TileIconSize, TileIconSize);
+            index.data(Qt::DecorationRole).value<QIcon>().paint(painter, icon);
+
+            // Radio mark on the right
+            const QRectF mark(tile.right() - 16 - 18, tile.center().y() - 9, 18, 18);
+            if (selected) {
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(colors.selected);
+                painter->drawEllipse(mark);
+                painter->setBrush(colors.onSelected);
+                painter->drawEllipse(mark.center(), 3.5, 3.5);
+            } else {
+                painter->setPen(QPen(colors.textSecondary, 1));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawEllipse(mark.adjusted(0.5, 0.5, -0.5, -0.5));
+            }
+
+            const int textLeft = icon.right() + 1 + 14;
+            const int textWidth = qRound(mark.left()) - 12 - textLeft;
+            const auto nameFont = VaultModal::pixelFont(option.font, 14, QFont::DemiBold);
+            const auto descriptionFont = VaultModal::pixelFont(option.font, 12);
+            const int nameHeight = QFontMetrics(nameFont).height();
+            const int descriptionHeight = QFontMetrics(descriptionFont).height();
+            const int top = qRound(tile.center().y()) - (nameHeight + 2 + descriptionHeight) / 2;
+
+            painter->setFont(nameFont);
+            painter->setPen(colors.text);
+            painter->drawText(
+                QRect(textLeft, top, textWidth, nameHeight),
+                Qt::AlignLeft | Qt::AlignVCenter,
+                painter->fontMetrics().elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, textWidth));
+            painter->setFont(descriptionFont);
+            painter->setPen(colors.textSecondary);
+            painter->drawText(QRect(textLeft, top + nameHeight + 2, textWidth, descriptionHeight),
+                              Qt::AlignLeft | Qt::AlignVCenter,
+                              painter->fontMetrics().elidedText(
+                                  index.data(SourceDescriptionRole).toString(), Qt::ElideRight, textWidth));
+            painter->restore();
+        }
+    };
+
+    // Lays the tiles out in as many columns as fit, each filling its share of the width
+    class TileGridFitter : public QObject
+    {
+    public:
+        explicit TileGridFitter(QListView* view)
+            : QObject(view)
+            , m_view(view)
+        {
+            view->viewport()->installEventFilter(this);
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (watched == m_view->viewport() && event->type() == QEvent::Resize) {
+                // Columns count as if the scroll bar showed, so it showing or not doesn't change them and the
+                // height of the tiles with them, which would show or hide it again
+                const int scrollBar = m_view->style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, m_view);
+                const int columns = qMax(1, (m_view->contentsRect().width() - scrollBar) / TileMinimumWidth);
+                const int width = m_view->viewport()->width();
+                const QSize grid(qMax(1, (width - 1) / columns), TileHeight);
+                if (m_view->gridSize() != grid) {
+                    m_view->setGridSize(grid);
+                }
+            }
+            return QObject::eventFilter(watched, event);
+        }
+
+    private:
+        QListView* m_view;
+    };
+
+    // Enter on a tile chooses it, as double-clicking does; item views otherwise handle it differently per platform
+    class TileActivator : public QObject
+    {
+    public:
+        TileActivator(QListView* view, std::function<void()> activate)
+            : QObject(view)
+            , m_activate(std::move(activate))
+        {
+            view->installEventFilter(this);
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::KeyPress) {
+                const auto key = static_cast<QKeyEvent*>(event)->key();
+                if (key == Qt::Key_Return || key == Qt::Key_Enter) {
+                    m_activate();
+                    return true;
+                }
+            }
+            return QObject::eventFilter(watched, event);
+        }
+
+    private:
+        std::function<void()> m_activate;
+    };
+} // namespace
 
 ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     : QWizardPage(parent)
@@ -36,23 +190,66 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
 {
     m_ui->setupUi(this);
 
-    new QListWidgetItem(icons()->icon("csv"), tr("Comma Separated Values (.csv)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("onepassword"), tr("1Password Export (.1pux)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("onepassword"), tr("1Password Vault (.opvault)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("bitwarden"), tr("Bitwarden (.json)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("proton"), tr("Proton Pass (.json)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("web"), tr("Remote Database (.kdbx)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("remote-sync"), tr("KeePassXC Sync Server (.kdbx)"), m_ui->importTypeList);
-    new QListWidgetItem(icons()->icon("object-locked"), tr("KeePass 1 Database (.kdb)"), m_ui->importTypeList);
+    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
 
-    m_ui->importTypeList->item(0)->setData(Qt::UserRole, ImportWizard::IMPORT_CSV);
-    m_ui->importTypeList->item(1)->setData(Qt::UserRole, ImportWizard::IMPORT_OPUX);
-    m_ui->importTypeList->item(2)->setData(Qt::UserRole, ImportWizard::IMPORT_OPVAULT);
-    m_ui->importTypeList->item(3)->setData(Qt::UserRole, ImportWizard::IMPORT_BITWARDEN);
-    m_ui->importTypeList->item(4)->setData(Qt::UserRole, ImportWizard::IMPORT_PROTONPASS);
-    m_ui->importTypeList->item(5)->setData(Qt::UserRole, ImportWizard::IMPORT_REMOTE);
-    m_ui->importTypeList->item(6)->setData(Qt::UserRole, ImportWizard::IMPORT_SYNC_SERVER);
-    m_ui->importTypeList->item(7)->setData(Qt::UserRole, ImportWizard::IMPORT_KEEPASS1);
+    struct Source
+    {
+        QString icon;
+        QString label;
+        // Name and file type on the tiles of the Vault Index layout
+        QString name;
+        QString description;
+        ImportWizard::ImportType type;
+    };
+    const QList<Source> sources = {
+        {"csv",
+         tr("Comma Separated Values (.csv)"),
+         tr("CSV File"),
+         tr("Comma separated values (.csv)"),
+         ImportWizard::IMPORT_CSV},
+        {"onepassword",
+         tr("1Password Export (.1pux)"),
+         tr("1Password"),
+         tr("Export file (.1pux)"),
+         ImportWizard::IMPORT_OPUX},
+        {"onepassword",
+         tr("1Password Vault (.opvault)"),
+         tr("1Password Vault"),
+         tr("Vault folder (.opvault)"),
+         ImportWizard::IMPORT_OPVAULT},
+        {"bitwarden",
+         tr("Bitwarden (.json)"),
+         tr("Bitwarden"),
+         tr("JSON export (.json)"),
+         ImportWizard::IMPORT_BITWARDEN},
+        {"proton",
+         tr("Proton Pass (.json)"),
+         tr("Proton Pass"),
+         tr("JSON export (.json)"),
+         ImportWizard::IMPORT_PROTONPASS},
+        {"web",
+         tr("Remote Database (.kdbx)"),
+         tr("Remote Database"),
+         tr("Command download (.kdbx)"),
+         ImportWizard::IMPORT_REMOTE},
+        {"remote-sync",
+         tr("KeePassXC Sync Server (.kdbx)"),
+         tr("Sync Server"),
+         tr("KeePassXC Sync Server (.kdbx)"),
+         ImportWizard::IMPORT_SYNC_SERVER},
+        {"object-locked",
+         tr("KeePass 1 Database (.kdb)"),
+         tr("KeePass 1"),
+         tr("KeePass 1 database (.kdb)"),
+         ImportWizard::IMPORT_KEEPASS1},
+    };
+    for (const auto& source : sources) {
+        auto item = new QListWidgetItem(
+            icons()->icon(source.icon), m_vaultLayout ? source.name : source.label, m_ui->importTypeList);
+        item->setData(Qt::UserRole, source.type);
+        item->setData(SourceDescriptionRole, source.description);
+        item->setData(Qt::AccessibleTextRole, source.label);
+    }
 
     connect(m_ui->importTypeList, &QListWidget::currentItemChanged, this, &ImportWizardPageSelect::itemSelected);
     m_ui->importTypeList->setCurrentRow(0);
@@ -89,6 +286,115 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     registerField("SyncServerUrl", m_ui->serverUrlEdit);
     registerField("SyncServerToken", m_ui->serverTokenEdit);
     registerField("SyncServerDatabaseId", m_ui->serverDatabaseIdChoice, "currentText", "currentTextChanged");
+
+    if (m_vaultLayout) {
+        setupVaultLayout();
+    }
+}
+
+// In the Vault Index layout, the page is the content of a modal, which names its steps. The sources show as tiles,
+// and the file, the credentials and where to import into read as Fluent settings cards, shown as a step of their own.
+void ImportWizardPageSelect::setupVaultLayout()
+{
+    auto ui = m_ui.data();
+    setTitle({});
+
+    auto list = ui->importTypeList;
+    list->setItemDelegate(new SourceTileDelegate(list));
+    list->setViewMode(QListView::IconMode);
+    list->setMovement(QListView::Static);
+    list->setFlow(QListView::LeftToRight);
+    list->setWrapping(true);
+    list->setResizeMode(QListView::Adjust);
+    list->setSpacing(0);
+    list->setFrameShape(QFrame::NoFrame);
+    list->setMinimumSize(0, 0);
+    list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    list->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    list->viewport()->setAttribute(Qt::WA_Hover);
+    list->viewport()->setAutoFillBackground(false);
+    list->setAccessibleName(tr("Import source"));
+    new TileGridFitter(list);
+    connect(list, &QListWidget::itemDoubleClicked, this, &ImportWizardPageSelect::sourceActivated);
+    new TileActivator(list, [this] { emit sourceActivated(); });
+    // The tiles show on their own, outside of the cards
+    ui->verticalLayout_2->removeWidget(list);
+    list->setParent(this);
+
+    VaultSettingsPage page(this, {});
+
+    auto location = page.addSection(tr("Location"));
+    location->addSetting(ui->importFileLabel, {ui->importFileEdit, ui->importFileButton});
+    location->addSetting(ui->downloadCommandLabel, {ui->downloadCommand, ui->downloadCommandHelpButton});
+    ui->downloadCommandInput->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    ui->downloadCommandInput->setMinimumWidth(320);
+    ui->downloadCommandInput->setFixedHeight(120);
+    location->addSetting(ui->downloadCommandInputLabel, ui->downloadCommandInput);
+    // The sync server's settings show while it is the source
+    for (auto card : {location->addSetting(ui->serverUrlLabel, ui->serverUrlEdit),
+                      location->addSetting(ui->serverTokenLabel, ui->serverTokenEdit),
+                      location->addSetting(ui->serverDatabaseIdLabel,
+                                           {ui->serverDatabaseIdChoice, ui->serverLoadDatabasesButton})}) {
+        card->follow(ui->syncServerFields);
+    }
+    ui->serverDatabaseIdChoice->setMinimumWidth(200);
+
+    // Only the sources that are locked ask for them
+    auto credentials = page.addSection(tr("Credentials"));
+    ui->passwordEdit->setMinimumWidth(240);
+    credentials->addSetting(ui->passwordLabel, ui->passwordEdit);
+    credentials->addSetting(ui->keyFileLabel, {ui->keyFileEdit, ui->keyFileButton});
+
+    // The choices share a parent, so the radio buttons stay exclusive
+    auto destination = page.addSection(tr("Import into"));
+    auto choices = new QWidget(this);
+    auto choicesLayout = new QVBoxLayout(choices);
+    choicesLayout->setContentsMargins(0, 0, 0, 0);
+    choicesLayout->setSpacing(8);
+    choicesLayout->addWidget(ui->newDatabaseRadio);
+    auto existing = new QHBoxLayout();
+    existing->setSpacing(12);
+    existing->addWidget(ui->existingDatabaseRadio);
+    existing->addWidget(ui->existingDatabaseChoice, 1);
+    choicesLayout->addLayout(existing);
+    choicesLayout->addWidget(ui->temporaryDatabaseRadio);
+    ui->existingDatabaseRadio->setText(tr("Existing database"));
+    ui->temporaryDatabaseRadio->setText(tr("Temporary database"));
+    destination->addWidget(choices);
+
+    page.finish();
+
+    auto cards = findChild<QWidget*>(objectName() + QStringLiteral("Cards"), Qt::FindDirectChildrenOnly);
+    Q_ASSERT(cards);
+    layout()->removeWidget(cards);
+    auto scroll = new QScrollArea(this);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->viewport()->setAutoFillBackground(false);
+    scroll->setWidget(cards);
+    cards->setAutoFillBackground(false);
+    m_details = scroll;
+
+    layout()->addWidget(list);
+    layout()->addWidget(m_details);
+    setSourceStep(true);
+}
+
+void ImportWizardPageSelect::setSourceStep(bool sourceStep)
+{
+    if (!m_details) {
+        return;
+    }
+    m_ui->importTypeList->setVisible(sourceStep);
+    m_details->setVisible(!sourceStep);
+}
+
+QString ImportWizardPageSelect::sourceName() const
+{
+    auto item = m_ui->importTypeList->currentItem();
+    return item ? item->text() : QString();
 }
 
 ImportWizardPageSelect::~ImportWizardPageSelect()
@@ -98,7 +404,9 @@ ImportWizardPageSelect::~ImportWizardPageSelect()
 void ImportWizardPageSelect::initializePage()
 {
     setField("ImportType", m_ui->importTypeList->currentItem()->data(Qt::UserRole).toInt());
-    adjustSize();
+    if (!m_vaultLayout) {
+        adjustSize();
+    }
 }
 
 bool ImportWizardPageSelect::validatePage()
@@ -275,8 +583,9 @@ void ImportWizardPageSelect::setCredentialState(bool passwordEnabled, bool keyFi
     m_ui->keyFileEdit->setVisible(keyFileEnable);
     m_ui->keyFileButton->setVisible(keyFileEnable);
 
-    // Workaround Qt bug where the wizard window is not updated when the internal layout changes
-    if (window()) {
+    // Workaround Qt bug where the wizard window is not updated when the internal layout changes. In the Vault
+    // Index layout, the window is the main window, which the modal's cards don't size.
+    if (window() && !m_vaultLayout) {
         int height = window()->height();
         if (passwordStateChanged) {
             auto diff = m_ui->passwordEdit->height() + m_ui->inputFields->layout()->spacing();
@@ -306,7 +615,7 @@ void ImportWizardPageSelect::setDownloadCommand(bool downloadCommandEnabled)
     m_ui->importFileButton->setVisible(!downloadCommandEnabled);
 
     // Workaround Qt bug where the wizard window is not updated when the internal layout changes
-    if (window()) {
+    if (window() && !m_vaultLayout) {
         int height = window()->height();
         if (downloadCommandStateChanged) {
             auto diff = m_ui->downloadCommand->height() + m_ui->downloadCommandInput->height()
@@ -328,11 +637,16 @@ void ImportWizardPageSelect::setSyncServer(bool syncServerEnabled)
         m_ui->temporaryDatabaseRadio->setVisible(true);
     }
     // The server copy keeps its own credentials, so a "new" database is really a local copy of it
-    m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local Copy (keeps the server database's credentials)")
-                                                      : tr("New Database"));
+    if (m_vaultLayout) {
+        m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local copy (keeps the server database's credentials)")
+                                                          : tr("New database"));
+    } else {
+        m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local Copy (keeps the server database's credentials)")
+                                                          : tr("New Database"));
+    }
 
     // Workaround Qt bug where the wizard window is not updated when the internal layout changes
-    if (window() && stateChanged) {
+    if (window() && stateChanged && !m_vaultLayout) {
         auto diff = m_ui->syncServerFields->sizeHint().height() + m_ui->inputFields->layout()->spacing();
         window()->resize(window()->width(), window()->height() + (syncServerEnabled ? diff : -diff));
     }

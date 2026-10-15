@@ -34,6 +34,7 @@
 #include "gui/MessageBox.h"
 #include "gui/export/ExportDialog.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
@@ -283,8 +284,19 @@ void DatabaseTabWidget::addDatabaseTab(DatabaseWidget* dbWidget, bool inBackgrou
 
 void DatabaseTabWidget::importFile()
 {
+    // The menus stay usable behind the modal, so don't stack a second one
+    if (FluentTheme::vaultLayoutEnabled() && window()->findChild<VaultImportModal*>()) {
+        return;
+    }
+
     // Show the import wizard
     m_importWizard = new ImportWizard(this);
+    // In the Vault Index layout, the wizard shows in a modal over the window. It closes when the wizard finishes,
+    // before the import below runs, so made first.
+    QPointer<VaultImportModal> modal;
+    if (FluentTheme::vaultLayoutEnabled()) {
+        modal = new VaultImportModal(window(), m_importWizard);
+    }
 
     connect(m_importWizard.data(), &QWizard::finished, [&](int result) {
         if (result != QDialog::Accepted) {
@@ -350,6 +362,10 @@ void DatabaseTabWidget::importFile()
         }
     });
 
+    if (modal) {
+        modal->open();
+        return;
+    }
     // use `open` instead of `exec`. `exec` should not be used, see https://doc.qt.io/qt-6/qdialog.html#exec
     m_importWizard->show();
 }
