@@ -329,10 +329,8 @@ void TestRemoteSyncServer::testSyncEngineTwoDevices()
 
     const auto makeEngine = [&](const QSharedPointer<Database>& db) {
         auto* engine = new SyncEngine(db, new SyncServerClient(params), stateStore);
-        engine->setMergeHandler([db](const QSharedPointer<Database>& remoteDb, QString* error) {
-            Merger firstMerge(db.data(), remoteDb.data());
-            Merger secondMerge(remoteDb.data(), db.data());
-            if ((firstMerge.merge() + secondMerge.merge()).isEmpty()) {
+        engine->setMergeHandler([db](const QSharedPointer<Database>& remoteDb, const Database* base, QString* error) {
+            if (SyncEngine::mergeDatabases(db.data(), remoteDb.data(), base).isEmpty()) {
                 return true;
             }
             return db->save(Database::Atomic, {}, error) && remoteDb->save(Database::Atomic, {}, error);

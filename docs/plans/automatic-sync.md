@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phases 1–5 implemented on `feature/auto-sync` (see 5.6); phase 6 (three-way merge) remains; builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–6 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -218,7 +218,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 | 3 ✅ | Rollback checks (revision + generation), conflict detection from the metadata snapshot | none | `SyncEngine.*`, `SyncStateStore.*` |
 | 4 ✅ | Per-device tokens, migration, token moved out of the KDBX | `UserStore`, CLI | `UserStore.*`, `main.cpp`, `RemoteSettings.*`, new token store |
 | 5 ✅ | History endpoints and UI, SSE events | `SyncApi`, `DatabaseStore` | `SyncApi.cpp`, `DatabaseStore.*`, `SyncServerClient.*`, `SyncEngine.*` |
-| 6 | Three-way merge from the base snapshot | none | `Merger.*`, `SyncEngine.*` |
+| 6 ✅ | Three-way merge from the base snapshot | none | `Merger.*`, `SyncEngine.*` |
 
 #### Phase 1 notes
 
@@ -310,6 +310,28 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
   `requestOpenDatabase`.
 - `SyncEventStream`'s destructor blocks its signals: it is usually deleted as `DatabaseWidget`'s child, and a final
   `connectedChanged(false)` called back into the half-destroyed widget (found by `testguiautosync`).
+
+#### Phase 6 notes
+
+- Base: after each successful sync the engine keeps what the server now has (the uploaded file, or the downloaded one
+  when nothing was uploaded) as `sync-base/<state key>.kdbx` next to the sync state, mode 0600. It is encrypted like the
+  database. It is opened with the database's key only when merging needs it, so most syncs don't pay for a second key
+  derivation; a base that won't open (e.g. after a password change) means merging as before, without it.
+- `SyncEngine::mergeDatabases(local, remote, base)` combines entries field by field before `Merger` runs: attributes
+  (standard and custom, with their protection), attachments, tags, expiry, icon and colours. A field changed on one side
+  takes that change; one both changed differently takes the newer side's value and is reported with its name. Everything
+  else comes from the newer entry. Both copies then get the same values and modification time, so `Merger` sees one
+  version, and each keeps its previous state in its history.
+- Which side changed is decided by content against the base, not by times, so a device whose clock is behind, or an
+  edit in the same second as the last sync, can't make `Merger` keep the stale copy. The snapshot now keeps
+  milliseconds: this device's copy is in memory and has them, while files keep whole seconds. Both cases lost the
+  edit (to the entry's history) before; `testKeepsAChangeFromASlowClock`, `testKeepsAnEditFromTheSameSecondAsTheSync`
+  and `testTakesAnotherDevicesEditFromTheSameSecond` fail without this.
+- The standard fields' protection flag is ignored when comparing: the file sets it from the database's settings, so a
+  copy read back can differ from the one in memory in that flag alone. That is also what `Merger`'s "Entry … contains
+  conflicting changes" warning in the tests was about (same values, different flag), not lost data.
+- `testguiautosync` now runs with `QStandardPaths` test mode; before, it wrote sync state and base copies into the real
+  KeePassXC data folder.
 
 ### 5.7 Testing
 

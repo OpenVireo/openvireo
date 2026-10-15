@@ -331,7 +331,7 @@ private slots:
     void unlockDatabase(bool accepted);
     void mergeDatabase(bool accepted);
     void syncUnlockedDatabase(bool accepted);
-    bool syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error);
+    bool syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error, const Database* base = nullptr);
     void uploadAndFinishSync(const RemoteParams* params, RemoteHandler::RemoteResult result);
     void finishSync(const QString& syncName,
                     const RemoteHandler::RemoteResult& result,

@@ -34,6 +34,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimeZone>
+#include <functional>
 
 QTEST_GUILESS_MAIN(TestSyncEngine)
 
@@ -224,9 +225,9 @@ namespace
     }
 
     // Same merge and saves as DatabaseWidget::syncWithDatabase
-    bool mergeBothWays(Database* local, const QSharedPointer<Database>& remote, QString* error)
+    bool mergeBothWays(Database* local, const QSharedPointer<Database>& remote, const Database* base, QString* error)
     {
-        if (SyncEngine::mergeDatabases(local, remote.data()).isEmpty()) {
+        if (SyncEngine::mergeDatabases(local, remote.data(), base).isEmpty()) {
             return true;
         }
         return local->save(Database::Atomic, {}, error) && remote->save(Database::Atomic, {}, error);
@@ -243,12 +244,46 @@ namespace
     }
 
     // Edit an entry as of a given time, so tests don't depend on the clock
-    void editEntry(Entry* entry, const QString& notes, const QDateTime& when)
+    void editEntry(Entry* entry, const std::function<void(Entry*)>& change, const QDateTime& when)
     {
-        entry->setNotes(notes);
+        change(entry);
         auto timeInfo = entry->timeInfo();
         timeInfo.setLastModificationTime(when);
         entry->setTimeInfo(timeInfo);
+    }
+
+    void editEntry(Entry* entry, const QString& notes, const QDateTime& when)
+    {
+        editEntry(entry, [&notes](Entry* e) { e->setNotes(notes); }, when);
+    }
+
+    // Another device changes an entry of the server copy and uploads it
+    bool editOnOtherDevice(FakeSyncServer* server,
+                           const QString& filePath,
+                           const QString& title,
+                           const std::function<void(Entry*)>& change,
+                           const QDateTime& when)
+    {
+        auto other = openServerCopy(server, filePath);
+        if (!other || !findEntry(other.data(), title)) {
+            return false;
+        }
+        editEntry(findEntry(other.data(), title), change, when);
+        if (!other->save(Database::Atomic)) {
+            return false;
+        }
+        server->store(readFile(filePath));
+        return true;
+    }
+
+    bool historyHas(const Entry* entry, const std::function<bool(const Entry*)>& match)
+    {
+        for (const auto* item : entry->historyItems()) {
+            if (match(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     struct Fixture
@@ -267,9 +302,10 @@ namespace
             server = sameServerAs ? new FakeSyncServer(serverParams(), sameServerAs->server->data)
                                   : new FakeSyncServer(serverParams());
             engine.reset(new SyncEngine(local, server, SyncStateStore(dir.filePath("state.json"))));
-            engine->setMergeHandler([this](const QSharedPointer<Database>& remote, QString* error) {
-                return mergeBothWays(local.data(), remote, error);
-            });
+            engine->setMergeHandler(
+                [this](const QSharedPointer<Database>& remote, const Database* base, QString* error) {
+                    return mergeBothWays(local.data(), remote, base, error);
+                });
             engine->setSaveHandler([this](QString* error) { return local->save(Database::Atomic, {}, error); });
         }
 
@@ -710,6 +746,8 @@ void TestSyncEngine::testReportsEntriesChangedOnBothSides()
     QCOMPARE(list.first().uuid, sharedUuid);
     QCOMPARE(list.first().title, QString("Shared"));
     QCOMPARE(list.first().kind, SyncConflict::Kind::EditedOnBoth);
+    // Both changed the notes, so that field is named
+    QCOMPARE(list.first().fields, QStringList({"Notes"}));
     // The newer edit won, and the older one is in the entry's history
     auto* shared = findEntry(f.local.data(), "Shared");
     QCOMPARE(shared->notes(), QString("edited elsewhere"));
@@ -735,7 +773,7 @@ void TestSyncEngine::testFindsDeletedAndEditedEntries()
     addEntry(local.data(), "Untouched");
     const auto base = QDateTime::currentDateTimeUtc().addSecs(-100);
     for (auto* entry : local->rootGroup()->entriesRecursive()) {
-        editEntry(entry, {}, base);
+        editEntry(entry, QString(), base);
     }
     QVERIFY(local->save(Database::Atomic));
     const auto snapshot = SyncEngine::snapshotOf(local.data());
@@ -793,4 +831,219 @@ void TestSyncEngine::testMergerIgnoresTheGeneration()
     second->metadata()->customData()->remove(CustomData::SyncGeneration);
     Merger(second.data(), first.data()).merge();
     QCOMPARE(SyncEngine::generationOf(first.data()), qint64(5));
+}
+
+void TestSyncEngine::testCombinesDifferentFieldsChangedOnBothSides()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    findEntry(f.local.data(), "Shared")->setPassword("old password");
+    QVERIFY(f.sync().value(0).toBool());
+
+    const auto base = QDateTime::currentDateTimeUtc();
+    // Another device changes the password, this one the notes, a bit earlier
+    QVERIFY(editOnOtherDevice(
+        f.server,
+        f.dir.filePath("other.kdbx"),
+        "Shared",
+        [](Entry* e) { e->setPassword("new password"); },
+        base.addSecs(20)));
+    editEntry(findEntry(f.local.data(), "Shared"), "notes from here", base.addSecs(10));
+
+    QSignalSpy conflicts(f.engine.data(), &SyncEngine::conflictsDetected);
+    QVERIFY(f.sync().value(0).toBool());
+    // Nothing to report: both changes are kept
+    QCOMPARE(conflicts.count(), 0);
+
+    auto* shared = findEntry(f.local.data(), "Shared");
+    QCOMPARE(shared->password(), QString("new password"));
+    QCOMPARE(shared->notes(), QString("notes from here"));
+    auto serverCopy = openServerCopy(f.server, f.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    auto* serverShared = findEntry(serverCopy.data(), "Shared");
+    QCOMPARE(serverShared->password(), QString("new password"));
+    QCOMPARE(serverShared->notes(), QString("notes from here"));
+
+    // Each side's version before combining is in the history
+    QVERIFY(historyHas(
+        shared, [](const Entry* e) { return e->notes() == "notes from here" && e->password() == "old password"; }));
+    QVERIFY(historyHas(shared, [](const Entry* e) { return e->notes().isEmpty() && e->password() == "new password"; }));
+
+    // Syncing again changes nothing
+    const auto revision = f.server->revision;
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(f.server->revision, revision);
+}
+
+void TestSyncEngine::testKeepsAChangeFromASlowClock()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    QVERIFY(f.sync().value(0).toBool());
+
+    // Another device, its clock an hour behind, changes the entry; this one doesn't touch it.
+    // Comparing times alone would keep the unchanged copy here, which looks newer.
+    QVERIFY(editOnOtherDevice(
+        f.server,
+        f.dir.filePath("other.kdbx"),
+        "Shared",
+        [](Entry* e) { e->setNotes("changed elsewhere"); },
+        QDateTime::currentDateTimeUtc().addSecs(-3600)));
+    // Something else changes here, so this device has to merge
+    addEntry(f.local.data(), "Unrelated");
+
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(findEntry(f.local.data(), "Shared")->notes(), QString("changed elsewhere"));
+    auto serverCopy = openServerCopy(f.server, f.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    QCOMPARE(findEntry(serverCopy.data(), "Shared")->notes(), QString("changed elsewhere"));
+}
+
+void TestSyncEngine::testMergesEveryKindOfField()
+{
+    QTemporaryDir dir;
+    auto base = createDatabase(dir.filePath("base.kdbx"));
+    QVERIFY(base);
+    addEntry(base.data(), "Shared");
+    const auto then = QDateTime::currentDateTimeUtc().addSecs(-100);
+    editEntry(
+        findEntry(base.data(), "Shared"),
+        [](Entry* e) {
+            e->attributes()->set("PIN", "1234", true);
+            e->attributes()->set("Old", "remove me");
+            e->attachments()->set("a.txt", "attachment");
+            e->setTags("work");
+        },
+        then);
+    QVERIFY(base->save(Database::Atomic));
+    QVERIFY(QFile::copy(base->filePath(), dir.filePath("local.kdbx")));
+    QVERIFY(QFile::copy(base->filePath(), dir.filePath("remote.kdbx")));
+    auto local = QSharedPointer<Database>::create();
+    QVERIFY(local->open(dir.filePath("local.kdbx"), makeKey("a")));
+    auto remote = QSharedPointer<Database>::create();
+    QVERIFY(remote->open(dir.filePath("remote.kdbx"), makeKey("a")));
+
+    editEntry(
+        findEntry(local.data(), "Shared"),
+        [](Entry* e) {
+            e->attributes()->set("PIN", "5678", true);
+            e->attachments()->remove("a.txt");
+            e->attributes()->remove("Old");
+        },
+        then.addSecs(10));
+    editEntry(
+        findEntry(remote.data(), "Shared"),
+        [](Entry* e) {
+            e->setTags("work;bank");
+            e->attributes()->set("Recovery", "words", true);
+            e->setUsername("me@example.com");
+        },
+        then.addSecs(20));
+
+    QVERIFY(!SyncEngine::mergeDatabases(local.data(), remote.data(), base.data()).isEmpty());
+    for (auto* db : {local.data(), remote.data()}) {
+        auto* shared = findEntry(db, "Shared");
+        QCOMPARE(shared->attributes()->value("PIN"), QString("5678"));
+        QVERIFY(shared->attributes()->isProtected("PIN"));
+        QVERIFY(!shared->attributes()->hasKey("Old"));
+        QVERIFY(!shared->attachments()->hasKey("a.txt"));
+        QCOMPARE(shared->tags(), QString("bank,work"));
+        QCOMPARE(shared->attributes()->value("Recovery"), QString("words"));
+        QVERIFY(shared->attributes()->isProtected("Recovery"));
+        QCOMPARE(shared->username(), QString("me@example.com"));
+    }
+    // Both copies ended up as the same version
+    QVERIFY(findEntry(local.data(), "Shared")
+                ->equals(findEntry(remote.data(), "Shared"),
+                         CompareItemIgnoreHistory | CompareItemIgnoreMilliseconds | CompareItemIgnoreLocation));
+}
+
+void TestSyncEngine::testMergesWithoutABase()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    QVERIFY(f.sync().value(0).toBool());
+    // E.g. the base was deleted, or comes from before a password change
+    QVERIFY(QFile::remove(SyncStateStore(f.dir.filePath("state.json")).basePath(f.local->filePath(), serverParams())));
+
+    const auto base = QDateTime::currentDateTimeUtc();
+    QVERIFY(editOnOtherDevice(
+        f.server,
+        f.dir.filePath("other.kdbx"),
+        "Shared",
+        [](Entry* e) { e->setPassword("new password"); },
+        base.addSecs(20)));
+    editEntry(findEntry(f.local.data(), "Shared"), "notes from here", base.addSecs(10));
+
+    QSignalSpy conflicts(f.engine.data(), &SyncEngine::conflictsDetected);
+    QVERIFY(f.sync().value(0).toBool());
+    // Without the base the newer entry wins as before, and the conflict is reported without fields
+    QCOMPARE(conflicts.count(), 1);
+    const auto list = conflicts.first().first().value<QList<SyncConflict>>();
+    QCOMPARE(list.size(), 1);
+    QVERIFY(list.first().fields.isEmpty());
+    auto* shared = findEntry(f.local.data(), "Shared");
+    QCOMPARE(shared->password(), QString("new password"));
+    QVERIFY(historyHas(shared, [](const Entry* e) { return e->notes() == "notes from here"; }));
+}
+
+namespace
+{
+    // Another time in the same second, which the file can't tell apart
+    QDateTime sameSecond(const QDateTime& time)
+    {
+        const auto msec = time.time().msec();
+        return QDateTime::fromMSecsSinceEpoch(time.toSecsSinceEpoch() * 1000 + (msec >= 500 ? msec - 400 : msec + 400),
+                                              QTimeZone::utc());
+    }
+} // namespace
+
+void TestSyncEngine::testKeepsAnEditFromTheSameSecondAsTheSync()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    QVERIFY(f.sync().value(0).toBool());
+    auto* shared = findEntry(f.local.data(), "Shared");
+    const auto synced = shared->timeInfo().lastModificationTime();
+
+    // Edited here right after the sync, within the same second: by whole seconds it looks unchanged
+    editEntry(shared, "changed here", sameSecond(synced));
+    QVERIFY(editOnOtherDevice(
+        f.server,
+        f.dir.filePath("other.kdbx"),
+        "Shared",
+        [](Entry* e) { e->setPassword("changed elsewhere"); },
+        synced.addSecs(5)));
+
+    QVERIFY(f.sync().value(0).toBool());
+    shared = findEntry(f.local.data(), "Shared");
+    QCOMPARE(shared->notes(), QString("changed here"));
+    QCOMPARE(shared->password(), QString("changed elsewhere"));
+}
+
+void TestSyncEngine::testTakesAnotherDevicesEditFromTheSameSecond()
+{
+    Fixture f;
+    QVERIFY(f.local);
+    addEntry(f.local.data(), "Shared");
+    QVERIFY(f.sync().value(0).toBool());
+    const auto synced = findEntry(f.local.data(), "Shared")->timeInfo().lastModificationTime();
+
+    // Another device edits within the same second as this device's sync; nothing changes here
+    QVERIFY(editOnOtherDevice(
+        f.server,
+        f.dir.filePath("other.kdbx"),
+        "Shared",
+        [](Entry* e) { e->setNotes("changed elsewhere"); },
+        sameSecond(synced)));
+
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(findEntry(f.local.data(), "Shared")->notes(), QString("changed elsewhere"));
+    auto serverCopy = openServerCopy(f.server, f.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    QCOMPARE(findEntry(serverCopy.data(), "Shared")->notes(), QString("changed elsewhere"));
 }

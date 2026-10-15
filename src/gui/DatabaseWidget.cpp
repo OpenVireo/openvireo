@@ -1734,8 +1734,8 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
 
     if (!m_syncEngine) {
         auto* engine = new SyncEngine(m_db, new SyncServerClient(params), SyncStateStore(), this);
-        engine->setMergeHandler([this](const QSharedPointer<Database>& remoteDb, QString* error) {
-            return syncWithDatabase(remoteDb, *error);
+        engine->setMergeHandler([this](const QSharedPointer<Database>& remoteDb, const Database* base, QString* error) {
+            return syncWithDatabase(remoteDb, *error, base);
         });
         engine->setSaveHandler([this](QString* error) {
             if (save()) {
@@ -1900,8 +1900,13 @@ void DatabaseWidget::showSyncConflicts(const QList<SyncConflict>& conflicts)
     QStringList edited;
     QStringList deleted;
     for (const auto& conflict : conflicts) {
-        auto& list = conflict.kind == SyncConflict::Kind::EditedOnBoth ? edited : deleted;
-        list << (conflict.title.isEmpty() ? tr("(untitled)") : conflict.title);
+        auto title = conflict.title.isEmpty() ? tr("(untitled)") : conflict.title;
+        if (conflict.kind == SyncConflict::Kind::EditedOnBoth) {
+            // With the fields when both devices changed the same ones; other changes were combined
+            edited << (conflict.fields.isEmpty() ? title : tr("%1 (%2)").arg(title, conflict.fields.join(", ")));
+        } else {
+            deleted << title;
+        }
     }
     const auto join = [](QStringList titles) {
         constexpr int Shown = 5;
@@ -2273,10 +2278,10 @@ void DatabaseWidget::syncUnlockedDatabase(bool accepted)
     switchToMainView();
 }
 
-bool DatabaseWidget::syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error)
+bool DatabaseWidget::syncWithDatabase(const QSharedPointer<Database>& otherDb, QString& error, const Database* base)
 {
     emit updateSyncProgress(50, tr("Syncing..."));
-    auto changeList = SyncEngine::mergeDatabases(m_db.data(), otherDb.data());
+    auto changeList = SyncEngine::mergeDatabases(m_db.data(), otherDb.data(), base);
 
     if (!changeList.isEmpty()) {
         // Save synced databases

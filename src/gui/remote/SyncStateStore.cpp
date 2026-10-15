@@ -124,7 +124,13 @@ bool SyncStateStore::save(const QString& databasePath, const RemoteParams& param
 
 bool SyncStateStore::remove(const QString& databasePath, const RemoteParams& params) const
 {
+    QFile::remove(basePath(databasePath, params));
     auto states = readStates(m_filePath);
     states.remove(keyFor(databasePath, params));
     return writeStates(m_filePath, states);
+}
+
+QString SyncStateStore::basePath(const QString& databasePath, const RemoteParams& params) const
+{
+    return QFileInfo(m_filePath).absolutePath() + "/sync-base/" + keyFor(databasePath, params) + ".kdbx";
 }

@@ -40,13 +40,16 @@
 #include <QNetworkReply>
 #include <QPushButton>
 #include <QSignalSpy>
-#include <QTreeWidget>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTreeWidget>
 #include <QUuid>
 
 int main(int argc, char* argv[])
 {
+    // Sync state and base copies go to a test location, not the real KeePassXC data folder
+    QStandardPaths::setTestModeEnabled(true);
     // DatabaseWidget relies on KeePassXC's application object for its theme
     Application app(argc, argv);
     app.setApplicationName("KeePassXC");
@@ -383,4 +386,46 @@ void TestGuiAutoSync::testOpensAnOlderVersion()
     QVERIFY(version.open(filePath, makeKey()));
     QCOMPARE(titles(&version), QStringList({"In the first version"}));
     QFile::remove(filePath);
+}
+
+void TestGuiAutoSync::testCombinesChangesToDifferentFields()
+{
+    SKIP_WITHOUT_SERVER();
+
+    using State = DatabaseWidget::SyncStatus::State;
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    auto db = createDatabase(dir.filePath("local.kdbx"), params);
+    QVERIFY(db);
+    DatabaseWidget widget(db);
+    addEntry(db.data(), "Bank");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+
+    // Another device changes the password...
+    {
+        RemoteHandler handler;
+        auto result = handler.download(&params);
+        QVERIFY(result.success);
+        Database other;
+        QVERIFY(other.open(result.filePath, makeKey()));
+        auto* entry = other.rootGroup()->entriesRecursive().first();
+        entry->setPassword("changed elsewhere");
+        auto timeInfo = entry->timeInfo();
+        timeInfo.setLastModificationTime(QDateTime::currentDateTimeUtc().addSecs(5));
+        entry->setTimeInfo(timeInfo);
+        QVERIFY(other.save(Database::Atomic));
+        QVERIFY(handler.upload(result.filePath, &params, result.etag).success);
+        QFile::remove(result.filePath);
+    }
+    // ...and this one the notes, before hearing about it
+    const auto uuid = db->rootGroup()->entriesRecursive().first()->uuid();
+    db->rootGroup()->findEntryByUuid(uuid)->setNotes("changed here");
+    QVERIFY(widget.save());
+
+    // Merging may replace the entry object, so look it up each time
+    const auto entry = [&] { return widget.database()->rootGroup()->findEntryByUuid(uuid); };
+    QTRY_COMPARE_WITH_TIMEOUT(entry()->password(), QString("changed elsewhere"), 10000);
+    QCOMPARE(entry()->notes(), QString("changed here"));
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
 }

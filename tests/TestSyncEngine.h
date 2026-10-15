@@ -45,6 +45,12 @@ private slots:
     void testReportsEntriesChangedOnBothSides();
     void testFindsDeletedAndEditedEntries();
     void testMergerIgnoresTheGeneration();
+    void testCombinesDifferentFieldsChangedOnBothSides();
+    void testKeepsAChangeFromASlowClock();
+    void testMergesEveryKindOfField();
+    void testMergesWithoutABase();
+    void testKeepsAnEditFromTheSameSecondAsTheSync();
+    void testTakesAnotherDevicesEditFromTheSameSecond();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H
