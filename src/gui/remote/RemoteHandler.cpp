@@ -21,11 +21,11 @@
 
 #include "RemoteProcess.h"
 #include "RemoteSettings.h"
+#include "SyncServerClient.h"
 
 #include "core/AsyncTask.h"
 #include "core/Database.h"
 
-#include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -33,10 +33,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUuid>
-#ifdef KPXC_FEATURE_NETWORK
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#endif
 
 namespace
 {
@@ -47,90 +43,24 @@ namespace
         return QDir::toNativeSeparators(QDir::temp().absoluteFilePath("RemoteDatabase-" + uuid + ".kdbx"));
     }
 
-#ifdef KPXC_FEATURE_NETWORK
-    struct HttpResponse
-    {
-        int status = 0;
-        QByteArray body;
-        QByteArray etag;
-        QString networkError;
-    };
-
-    // The database URL, or the database listing when forListing is set
-    QUrl syncServerUrl(const RemoteParams* params, bool forListing = false)
-    {
-        auto base = params->serverUrl.trimmed();
-        while (base.endsWith('/')) {
-            base.chop(1);
-        }
-        if (forListing) {
-            return QUrl(base + "/api/v1/databases");
-        }
-        return QUrl(base + "/api/v1/databases/" + QUrl::toPercentEncoding(params->serverDatabaseId.trimmed()));
-    }
-
     /*
-     * Perform one request against the sync server and block until it completes.
-     * Called from an AsyncTask worker thread, so the network manager and event loop live there.
+     * Run one sync server request and wait for it.
+     * Called from an AsyncTask worker thread, so the client and its event loop live there.
      */
-    HttpResponse syncServerRequest(const RemoteParams* params,
-                                   const QByteArray& verb,
-                                   const QList<QPair<QByteArray, QByteArray>>& headers,
-                                   const QByteArray& body,
-                                   int timeoutMsec,
-                                   bool forListing = false)
+    SyncServerClient::Response
+    waitForSyncServer(const RemoteParams* params,
+                      const std::function<void(SyncServerClient&, SyncServerClient::Callback)>& request)
     {
-        HttpResponse response;
-
-        auto url = syncServerUrl(params, forListing);
-        if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
-            response.networkError = RemoteHandler::tr("Invalid sync server URL: %1").arg(params->serverUrl);
-            return response;
-        }
-
-        QNetworkRequest request(url);
-        request.setRawHeader("Authorization", "Bearer " + params->serverToken.trimmed().toUtf8());
-        request.setRawHeader("User-Agent", "KeePassXC");
-        // Never follow redirects, they could forward the access token to another host
-        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
-        request.setTransferTimeout(timeoutMsec);
-        for (const auto& header : headers) {
-            request.setRawHeader(header.first, header.second);
-        }
-
-        QNetworkAccessManager nam;
+        SyncServerClient client(*params);
+        SyncServerClient::Response response;
         QEventLoop loop;
-        QScopedPointer<QNetworkReply> reply(nam.sendCustomRequest(request, verb, body));
-        QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        request(client, [&](const SyncServerClient::Response& reply) {
+            response = reply;
+            loop.quit();
+        });
         loop.exec();
-
-        response.status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        response.body = reply->readAll();
-        response.etag = reply->rawHeader("ETag");
-        if (response.status == 0) {
-            response.networkError = reply->errorString();
-        }
         return response;
     }
-
-    QString syncServerError(const HttpResponse& response)
-    {
-        if (response.status == 0) {
-            return RemoteHandler::tr("Could not reach the sync server: %1").arg(response.networkError);
-        }
-        if (response.status == 401 || response.status == 403) {
-            return RemoteHandler::tr("The sync server rejected the access token.");
-        }
-        if (response.status >= 300 && response.status < 400) {
-            return RemoteHandler::tr("The sync server responded with a redirect, check the server URL.");
-        }
-        auto message = QJsonDocument::fromJson(response.body).object().value("error").toString();
-        if (message.isEmpty()) {
-            message = RemoteHandler::tr("Unexpected response.");
-        }
-        return RemoteHandler::tr("The sync server responded with HTTP %1: %2").arg(response.status).arg(message);
-    }
-#endif
 } // namespace
 
 std::function<QScopedPointer<RemoteProcess>(QObject*)> RemoteHandler::m_createRemoteProcess([](QObject* parent) {
@@ -257,8 +187,8 @@ RemoteHandler::RemoteResult RemoteHandler::downloadFromSyncServer(const RemotePa
 {
     RemoteResult result;
     result.success = false;
-#ifdef KPXC_FEATURE_NETWORK
-    auto response = syncServerRequest(params, "GET", {}, {}, params->downloadTimeoutMsec);
+    auto response = waitForSyncServer(
+        params, [](SyncServerClient& client, SyncServerClient::Callback done) { client.download(std::move(done)); });
     if (response.status == 404) {
         // Nothing uploaded yet, the first sync publishes the local database
         result.success = true;
@@ -266,7 +196,7 @@ RemoteHandler::RemoteResult RemoteHandler::downloadFromSyncServer(const RemotePa
         return result;
     }
     if (response.status != 200) {
-        result.errorMessage = syncServerError(response);
+        result.errorMessage = SyncServerClient::errorMessage(response);
         return result;
     }
 
@@ -281,11 +211,7 @@ RemoteHandler::RemoteResult RemoteHandler::downloadFromSyncServer(const RemotePa
 
     result.success = true;
     result.filePath = filePath;
-    result.etag = QString::fromLatin1(response.etag);
-#else
-    Q_UNUSED(params)
-    result.errorMessage = tr("This build of KeePassXC was compiled without network support.");
-#endif
+    result.etag = response.etag;
     return result;
 }
 
@@ -294,7 +220,6 @@ RemoteHandler::uploadToSyncServer(const QString& filePath, const RemoteParams* p
 {
     RemoteResult result;
     result.success = false;
-#ifdef KPXC_FEATURE_NETWORK
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         result.errorMessage = tr("Failed to read database %1: %2").arg(filePath, file.errorString());
@@ -304,41 +229,28 @@ RemoteHandler::uploadToSyncServer(const QString& filePath, const RemoteParams* p
     file.close();
 
     // The server's ETag is the SHA-256 of its copy, so an unchanged merge needs no upload
-    auto localEtag = "\"" + QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex() + "\"";
-    if (!etag.isEmpty() && etag.toLatin1() == localEtag) {
+    if (!etag.isEmpty() && etag == SyncServerClient::etagFor(data)) {
         result.success = true;
         result.etag = etag;
         return result;
     }
 
-    QList<QPair<QByteArray, QByteArray>> headers{{"Content-Type", "application/octet-stream"}};
-    // Only overwrite the exact version we merged with, or only create if we saw none
-    if (etag.isEmpty()) {
-        headers.append(qMakePair(QByteArray("If-None-Match"), QByteArray("*")));
-    } else {
-        headers.append(qMakePair(QByteArray("If-Match"), etag.toLatin1()));
-    }
-
-    auto response = syncServerRequest(params, "PUT", headers, data, params->uploadTimeoutMsec);
+    auto response = waitForSyncServer(params, [&](SyncServerClient& client, SyncServerClient::Callback done) {
+        client.upload(data, etag, std::move(done));
+    });
     if (response.status == 412) {
         result.errorMessage = tr("The database on the sync server was changed by another device during the sync. "
                                  "Your local changes are saved, sync again to merge them.");
         return result;
     }
     if (response.status != 200 && response.status != 201) {
-        result.errorMessage = tr("Failed to upload merged database. %1").arg(syncServerError(response));
+        result.errorMessage = tr("Failed to upload merged database. %1").arg(SyncServerClient::errorMessage(response));
         return result;
     }
 
     result.success = true;
     result.filePath = filePath;
-    result.etag = QString::fromLatin1(response.etag);
-#else
-    Q_UNUSED(filePath)
-    Q_UNUSED(params)
-    Q_UNUSED(etag)
-    result.errorMessage = tr("This build of KeePassXC was compiled without network support.");
-#endif
+    result.etag = response.etag;
     return result;
 }
 
@@ -346,20 +258,17 @@ RemoteHandler::SyncServerListing RemoteHandler::listSyncServerDatabases(const Re
 {
     return AsyncTask::runAndWaitForFuture([params] {
         SyncServerListing listing;
-#ifdef KPXC_FEATURE_NETWORK
-        auto response = syncServerRequest(params, "GET", {}, {}, params->downloadTimeoutMsec, true);
+        auto response = waitForSyncServer(params, [](SyncServerClient& client, SyncServerClient::Callback done) {
+            client.listDatabases(std::move(done));
+        });
         if (response.status != 200) {
-            listing.errorMessage = syncServerError(response);
+            listing.errorMessage = SyncServerClient::errorMessage(response);
             return listing;
         }
         for (const auto& database : QJsonDocument::fromJson(response.body).object().value("databases").toArray()) {
             listing.databaseIds << database.toObject().value("id").toString();
         }
         listing.success = true;
-#else
-        Q_UNUSED(params)
-        listing.errorMessage = tr("This build of KeePassXC was compiled without network support.");
-#endif
         return listing;
     });
 }

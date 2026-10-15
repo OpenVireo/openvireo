@@ -20,11 +20,19 @@
 #include "config-keepassx-tests.h"
 
 #include "core/Database.h"
+#include "core/Entry.h"
+#include "core/Group.h"
+#include "core/Merger.h"
 #include "crypto/Crypto.h"
+#include "crypto/kdf/AesKdf.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
+#include "gui/remote/SyncEngine.h"
+#include "keys/PasswordKey.h"
 
 #include <QFile>
+#include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QUuid>
 
@@ -178,4 +186,80 @@ void TestRemoteSyncServer::testSyncServerRejectsBadToken()
     auto listing = handler.listSyncServerDatabases(&params);
     QVERIFY(!listing.success);
     QVERIFY2(listing.errorMessage.contains("access token"), qPrintable(listing.errorMessage));
+}
+
+void TestRemoteSyncServer::testSyncEngineTwoDevices()
+{
+    SKIP_WITHOUT_SERVER();
+
+    const auto params = serverParams();
+    QTemporaryDir dir;
+    const SyncStateStore stateStore(dir.filePath("state.json"));
+
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(QSharedPointer<PasswordKey>::create("a"));
+
+    // The first device creates the database, the second starts from a copy of it
+    auto first = QSharedPointer<Database>::create();
+    auto kdf = QSharedPointer<AesKdf>::create();
+    kdf->setRounds(1);
+    first->setKdf(kdf);
+    first->setKey(key);
+    QVERIFY(first->saveAs(dir.filePath("first.kdbx")));
+    QVERIFY(QFile::copy(dir.filePath("first.kdbx"), dir.filePath("second.kdbx")));
+    auto second = QSharedPointer<Database>::create();
+    QVERIFY(second->open(dir.filePath("second.kdbx"), key));
+
+    const auto makeEngine = [&](const QSharedPointer<Database>& db) {
+        auto* engine = new SyncEngine(db, new SyncServerClient(params), stateStore);
+        engine->setMergeHandler([db](const QSharedPointer<Database>& remoteDb, QString* error) {
+            Merger firstMerge(db.data(), remoteDb.data());
+            Merger secondMerge(remoteDb.data(), db.data());
+            if ((firstMerge.merge() + secondMerge.merge()).isEmpty()) {
+                return true;
+            }
+            return db->save(Database::Atomic, {}, error) && remoteDb->save(Database::Atomic, {}, error);
+        });
+        engine->setSaveHandler([db](QString* error) { return db->save(Database::Atomic, {}, error); });
+        return QSharedPointer<SyncEngine>(engine);
+    };
+    const auto runSync = [](SyncEngine* engine) {
+        QSignalSpy finished(engine, &SyncEngine::finished);
+        engine->sync();
+        if (!finished.wait(10000)) {
+            return QString("timed out");
+        }
+        return finished.first().at(0).toBool() ? QString() : finished.first().at(1).toString();
+    };
+    const auto addEntry = [](Database* db, const QString& title) {
+        auto* entry = new Entry();
+        entry->setUuid(QUuid::createUuid());
+        entry->setTitle(title);
+        entry->setGroup(db->rootGroup());
+    };
+    const auto titles = [](Database* db) {
+        QStringList result;
+        for (const auto* entry : db->rootGroup()->entriesRecursive()) {
+            result << entry->title();
+        }
+        result.sort();
+        return result;
+    };
+
+    auto firstEngine = makeEngine(first);
+    auto secondEngine = makeEngine(second);
+
+    addEntry(first.data(), "From first");
+    QCOMPARE(runSync(firstEngine.data()), QString());
+    addEntry(second.data(), "From second");
+    QCOMPARE(runSync(secondEngine.data()), QString());
+    QCOMPARE(runSync(firstEngine.data()), QString());
+
+    QCOMPARE(titles(first.data()), QStringList({"From first", "From second"}));
+    QCOMPARE(titles(second.data()), QStringList({"From first", "From second"}));
+
+    // Both devices now agree with the server, so another sync is only a check
+    const auto etag = stateStore.load(first->filePath(), params).etag;
+    QCOMPARE(runSync(firstEngine.data()), QString());
+    QCOMPARE(stateStore.load(first->filePath(), params).etag, etag);
 }

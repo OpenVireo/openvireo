@@ -29,6 +29,7 @@ private slots:
     void testSettingsRoundTrip();
     void testSyncServerCycle();
     void testSyncServerRejectsBadToken();
+    void testSyncEngineTwoDevices();
 };
 
 #endif // KEEPASSXC_TESTREMOTESYNCSERVER_H
