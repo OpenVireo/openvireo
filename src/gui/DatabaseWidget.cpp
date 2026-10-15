@@ -70,6 +70,8 @@
 #include "remote/RemoteHandler.h"
 #include "remote/RemoteSettings.h"
 #include "remote/SyncEngine.h"
+#include "remote/SyncEventStream.h"
+#include "remote/SyncHistoryDialog.h"
 #include "remote/SyncScheduler.h"
 
 #ifdef KPXC_FEATURE_NETWORK
@@ -1845,6 +1847,7 @@ bool DatabaseWidget::canSyncInBackground() const
 void DatabaseWidget::updateAutoSync()
 {
     const auto* params = isLocked() ? nullptr : autoSyncParams();
+    updateSyncEvents(params);
     if (!params) {
         if (m_syncScheduler->isEnabled()) {
             m_syncScheduler->setEnabled(false);
@@ -1954,9 +1957,63 @@ void DatabaseWidget::unlockServerCopyForSync(const QString& filePath)
     emit unlockDatabaseInDialogForSync(filePath);
 }
 
+void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
+{
+    const bool same = m_syncEvents && params && m_syncEvents->params().serverUrl == params->serverUrl
+                      && m_syncEvents->params().serverToken == params->serverToken;
+    if (same) {
+        return;
+    }
+    delete m_syncEvents.data();
+    if (!params || params->serverToken.trimmed().isEmpty()) {
+        m_syncScheduler->setPollInterval(SyncScheduler::DefaultPollIntervalMsec);
+        return;
+    }
+
+    m_syncEvents = new SyncEventStream(*params, this);
+    connect(m_syncEvents, &SyncEventStream::databaseChanged, this, [this](const SyncEventStream::Event& event) {
+        const auto* params = autoSyncParams();
+        if (!params || event.databaseId != params->serverDatabaseId.trimmed()) {
+            return;
+        }
+        // Our own uploads come back as events too; only sync for versions we haven't got
+        if (event.deleted || !m_syncEngine || event.etag != m_syncEngine->lastSyncedEtag()) {
+            m_syncScheduler->requestNow();
+        }
+    });
+    connect(m_syncEvents, &SyncEventStream::connectedChanged, this, [this](bool connected) {
+        // Polling is only the fallback while the server can tell us about changes
+        m_syncScheduler->setPollInterval(connected ? SyncScheduler::FallbackPollIntervalMsec
+                                                   : SyncScheduler::DefaultPollIntervalMsec);
+        if (connected) {
+            // Changes made while the stream was down
+            m_syncScheduler->notifyEvent();
+        }
+    });
+    m_syncEvents->start();
+}
+
+void DatabaseWidget::showServerHistory(const RemoteParams* params)
+{
+    if (!params || params->type != RemoteParams::Type::SyncServer) {
+        return;
+    }
+    if (params->serverToken.trimmed().isEmpty()) {
+        syncWithServer(*params);
+        return;
+    }
+    auto* dialog = new SyncHistoryDialog(*params, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &SyncHistoryDialog::openRequested, this, [this](const QString& filePath) {
+        emit requestOpenDatabase(filePath, false, {}, {});
+    });
+    dialog->open();
+}
+
 void DatabaseWidget::stopServerSync()
 {
     m_syncScheduler->setEnabled(false);
+    delete m_syncEvents.data();
     m_autoSyncPending = false;
     if (m_syncEngine) {
         // Reports the cancelled sync, which re-enables this widget and the main window

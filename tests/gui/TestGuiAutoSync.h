@@ -31,6 +31,8 @@ private slots:
     void testManualSyncReportsToTheUser();
     void testAsksBeforeRecreatingALostDatabase();
     void testWaitsForThisDevicesToken();
+    void testSyncsWhenTheServerAnnouncesAChange();
+    void testOpensAnOlderVersion();
 };
 
 #endif // KEEPASSXC_TESTGUIAUTOSYNC_H

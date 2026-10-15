@@ -137,6 +137,8 @@ public:
     // The downloaded server copy waiting for the user to unlock it, while WaitingForUnlock
     QString pendingUnlockPath() const;
     Attention attention() const;
+    // The server version this device last synced with, empty before the first sync
+    QString lastSyncedEtag() const;
 
     // The sync generation stored in a database, 0 when it has none
     static qint64 generationOf(const Database* db);
