@@ -67,9 +67,19 @@ void SyncEngine::setSaveHandler(SaveHandler handler)
     m_saveHandler = std::move(handler);
 }
 
+void SyncEngine::setMergeGate(MergeGate gate)
+{
+    m_mergeGate = std::move(gate);
+}
+
 void SyncEngine::setRetryOnNetworkError(bool retry)
 {
     m_retryOnNetworkError = retry;
+}
+
+QString SyncEngine::pendingUnlockPath() const
+{
+    return m_state == State::WaitingForUnlock ? m_remotePath : QString();
 }
 
 SyncEngine::State SyncEngine::state() const
@@ -204,6 +214,12 @@ void SyncEngine::startDownload()
 
 void SyncEngine::mergeDownload()
 {
+    if (m_mergeGate && !m_mergeGate()) {
+        setState(State::WaitingToMerge);
+        emit mergeDeferred();
+        return;
+    }
+
     setState(State::Merging);
     emit progress(50, tr("Syncing..."));
 
@@ -224,6 +240,13 @@ void SyncEngine::mergeDownload()
     }
     m_remoteDb.reset();
     uploadFile(m_remotePath);
+}
+
+void SyncEngine::resumeMerge()
+{
+    if (m_state == State::WaitingToMerge && (!m_mergeGate || m_mergeGate())) {
+        mergeDownload();
+    }
 }
 
 void SyncEngine::resumeAfterUnlock(bool merged, const QString& error)

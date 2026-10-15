@@ -88,6 +88,7 @@ void TestRemoteSyncServer::testSettingsRoundTrip()
     server->serverUrl = "https://sync.example.com";
     server->serverDatabaseId = "personal";
     server->serverToken = "secret-token";
+    server->autoSync = true;
     server->downloadTimeoutMsec = 30000;
     server->uploadTimeoutMsec = 30000;
     settings.addRemoteParams(server);
@@ -105,6 +106,7 @@ void TestRemoteSyncServer::testSettingsRoundTrip()
     QCOMPARE(loadedServer->serverUrl, QString("https://sync.example.com"));
     QCOMPARE(loadedServer->serverDatabaseId, QString("personal"));
     QCOMPARE(loadedServer->serverToken, QString("secret-token"));
+    QVERIFY(loadedServer->autoSync);
     QCOMPARE(loadedServer->downloadTimeoutMsec, 30000);
     QVERIFY(loadedServer->hasDownload());
     QVERIFY(loadedServer->hasUpload());
@@ -113,6 +115,7 @@ void TestRemoteSyncServer::testSettingsRoundTrip()
     QVERIFY(loadedCommand);
     QCOMPARE(loadedCommand->type, RemoteParams::Type::Command);
     QVERIFY(loadedCommand->serverToken.isEmpty());
+    QVERIFY(!loadedCommand->autoSync);
     QVERIFY(loadedCommand->hasDownload());
     QVERIFY(!loadedCommand->hasUpload());
 }

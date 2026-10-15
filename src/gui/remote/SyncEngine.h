@@ -37,10 +37,10 @@ class QTemporaryDir;
  *   check (HEAD) ─304─▶ done
  *        │ changed, or local changes
  *        ▼
- *   download ─▶ open with the local key ─▶ merge ─▶ upload ─▶ done
- *        ▲                    │ wrong key            │ 412
- *        │                    ▼                      │
- *        │             unlockRequired()              │
+ *   download ─▶ [merge gate] ─▶ open with the local key ─▶ merge ─▶ upload ─▶ done
+ *        ▲         │ closed                 │ wrong key                  │ 412
+ *        │         ▼                        ▼                            │
+ *        │   mergeDeferred()         unlockRequired()                    │
  *        └──────────── retry, up to MaxAttempts ─────┘
  *
  * The merge and the save are delegated to the owner (DatabaseWidget), which knows how to
@@ -58,6 +58,8 @@ public:
         Checking,
         Downloading,
         Merging,
+        // Downloaded, but the merge gate is closed (the user is editing); resumeMerge() continues
+        WaitingToMerge,
         WaitingForUnlock,
         Uploading,
         // A network error happened and a retry is scheduled
@@ -69,6 +71,8 @@ public:
     using MergeHandler = std::function<bool(const QSharedPointer<Database>& remoteDb, QString* error)>;
     // Save the local database
     using SaveHandler = std::function<bool(QString* error)>;
+    // Whether the local database may be merged into right now
+    using MergeGate = std::function<bool()>;
 
     static constexpr int MaxAttempts = 3;
     static constexpr int FirstBackoffMsec = 30 * 1000;
@@ -83,6 +87,7 @@ public:
 
     void setMergeHandler(MergeHandler handler);
     void setSaveHandler(SaveHandler handler);
+    void setMergeGate(MergeGate gate);
     // Retry with a growing delay after network errors, instead of only reporting them
     void setRetryOnNetworkError(bool retry);
 
@@ -92,6 +97,8 @@ public:
     QSharedPointer<Database> database() const;
     const RemoteParams& params() const;
     int backoffMsec() const;
+    // The downloaded server copy waiting for the user to unlock it, while WaitingForUnlock
+    QString pendingUnlockPath() const;
 
 public slots:
     // Start a sync, or run a scheduled retry now. Does nothing while a sync is running.
@@ -101,12 +108,16 @@ public slots:
     // Continue after unlockRequired(): `merged` is true when the owner unlocked the server
     // copy at the given path and merged it, false when the user cancelled or it failed
     void resumeAfterUnlock(bool merged, const QString& error = {});
+    // Continue a merge held back by the merge gate, if the gate is open now
+    void resumeMerge();
 
 signals:
     void stateChanged(SyncEngine::State state);
     void progress(int percent, const QString& message);
     // The server copy can't be opened with the local key; the owner asks the user to unlock it
     void unlockRequired(const QString& filePath);
+    // The merge waits until the gate opens and resumeMerge() is called
+    void mergeDeferred();
     void finished(bool success, const QString& error);
 
 private:
@@ -126,6 +137,7 @@ private:
     SyncStateStore m_stateStore;
     MergeHandler m_mergeHandler;
     SaveHandler m_saveHandler;
+    MergeGate m_mergeGate;
 
     State m_state = State::Idle;
     SyncState m_syncState;

@@ -36,6 +36,7 @@ private slots:
     void testAsksToUnlockWhenKeyDiffers();
     void testBacksOffAfterNetworkError();
     void testCancelStopsTheSync();
+    void testMergeWaitsForTheGate();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H

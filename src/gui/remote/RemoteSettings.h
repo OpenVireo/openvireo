@@ -46,6 +46,8 @@ struct RemoteParams
     QString serverUrl;
     QString serverDatabaseId;
     QString serverToken;
+    // Sync server only: sync in the background after saves, on unlock and periodically
+    bool autoSync = false;
 
     bool hasDownload() const
     {

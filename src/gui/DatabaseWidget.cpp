@@ -70,6 +70,7 @@
 #include "remote/RemoteHandler.h"
 #include "remote/RemoteSettings.h"
 #include "remote/SyncEngine.h"
+#include "remote/SyncScheduler.h"
 
 #ifdef KPXC_FEATURE_NETWORK
 #include "gui/IconDownloaderDialog.h"
@@ -104,6 +105,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     , m_tagView(new TagView(this))
     , m_saveAttempts(0)
     , m_remoteSettings(new RemoteSettings(m_db, this))
+    , m_syncScheduler(new SyncScheduler(this))
     , m_entrySearcher(new EntrySearcher(false))
 {
     Q_ASSERT(m_db);
@@ -246,6 +248,30 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_autosaveTimer = new QTimer(this);
     m_autosaveTimer->setSingleShot(true);
     connect(m_autosaveTimer, SIGNAL(timeout()), this, SLOT(onAutosaveDelayTimeout()));
+
+    // Automatic sync with a sync server remote
+    connect(m_syncScheduler, &SyncScheduler::syncRequested, this, &DatabaseWidget::backgroundSync);
+    connect(this, &DatabaseWidget::databaseSaved, this, [this] {
+        // Saves made by a sync's own merge don't start another sync
+        if (!m_syncEngine || !m_syncEngine->isBusy()) {
+            m_syncScheduler->notifySaved();
+        }
+        // Database emits this while it still holds its save lock, so check once the save is over
+        QTimer::singleShot(0, this, [this] {
+            if (canSyncInBackground()) {
+                // The save may have turned automatic sync on or off
+                updateAutoSync();
+                if (m_syncEngine && m_syncEngine->state() == SyncEngine::State::WaitingToMerge) {
+                    m_syncEngine->resumeMerge();
+                }
+            }
+        });
+    });
+    connect(this, &DatabaseWidget::currentModeChanged, this, [this](Mode mode) {
+        if (mode == Mode::ViewMode) {
+            resumeBackgroundSync();
+        }
+    });
 
     m_searchLimitGroup = config()->get(Config::SearchLimitGroup).toBool();
 
@@ -565,8 +591,10 @@ void DatabaseWidget::replaceDatabase(QSharedPointer<Database> db)
     m_groupView->changeDatabase(m_db);
     m_tagView->setDatabase(m_db);
     m_remoteSettings->setDatabase(m_db);
-    // A sync in progress belongs to the database being replaced (lock, reload)
+    // A sync in progress belongs to the database being replaced (lock, reload); once the
+    // new database is shown, automatic sync starts again for it
     stopServerSync();
+    QTimer::singleShot(0, this, &DatabaseWidget::resumeBackgroundSync);
 
     // Restore the new parent group pointer, if not found default to the root group
     // this prevents data loss when merging a database while creating a new entry
@@ -1573,6 +1601,7 @@ void DatabaseWidget::syncWithRemote(const RemoteParams* params)
 
     setDisabled(true);
     emit databaseSyncInProgress();
+    setSyncStatus(SyncStatus::State::Syncing);
 
     QScopedPointer<RemoteHandler> remoteHandler(new RemoteHandler(this));
     RemoteHandler::RemoteResult result;
@@ -1632,32 +1661,61 @@ void DatabaseWidget::uploadAndFinishSync(const RemoteParams* params, RemoteHandl
     finishSync(params->name, result);
 }
 
-void DatabaseWidget::finishSync(const QString& syncName, const RemoteHandler::RemoteResult& result)
+void DatabaseWidget::finishSync(const QString& syncName,
+                                const RemoteHandler::RemoteResult& result,
+                                SyncStatus::State failureState)
 {
+    m_syncInteractive = false;
     setDisabled(false);
     emit updateSyncProgress(-1, "");
     if (result.success) {
+        setSyncStatus(SyncStatus::State::Synced);
         emit databaseSyncCompleted(syncName);
         showMessage(tr("Remote sync '%1' completed successfully!").arg(syncName), MessageWidget::Positive, false);
     } else {
+        setSyncStatus(failureState, result.errorMessage);
         emit databaseSyncFailed(syncName, result.errorMessage);
         showErrorMessage(tr("Remote sync '%1' failed: %2").arg(syncName, result.errorMessage));
     }
 }
 
-void DatabaseWidget::syncWithServer(const RemoteParams& params)
+DatabaseWidget::SyncStatus DatabaseWidget::syncStatus() const
 {
-    if (m_syncEngine && m_syncEngine->isBusy()) {
-        return;
-    }
+    auto status = m_syncStatus;
+    status.automatic = m_syncScheduler->isEnabled();
+    return status;
+}
 
+void DatabaseWidget::setSyncStatus(SyncStatus::State state, const QString& error)
+{
+    m_syncStatus.state = state;
+    m_syncStatus.error = error;
+    if (state == SyncStatus::State::Synced) {
+        m_syncStatus.lastSync = QDateTime::currentDateTime();
+    }
+    emit syncStatusChanged();
+}
+
+const RemoteParams* DatabaseWidget::autoSyncParams() const
+{
+    for (const auto* params : m_remoteSettings->getAllRemoteParams()) {
+        if (params->type == RemoteParams::Type::SyncServer && params->autoSync) {
+            return params;
+        }
+    }
+    return nullptr;
+}
+
+void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
+{
     // Keep one engine per database and server, so a scheduled retry survives between syncs
     const auto sameServer = [](const RemoteParams& a, const RemoteParams& b) {
         return a.name == b.name && a.serverUrl == b.serverUrl && a.serverDatabaseId == b.serverDatabaseId
                && a.serverToken == b.serverToken && a.downloadTimeoutMsec == b.downloadTimeoutMsec
                && a.uploadTimeoutMsec == b.uploadTimeoutMsec;
     };
-    if (m_syncEngine && (m_syncEngine->database() != m_db || !sameServer(m_syncEngine->params(), params))) {
+    if (m_syncEngine && !m_syncEngine->isBusy()
+        && (m_syncEngine->database() != m_db || !sameServer(m_syncEngine->params(), params))) {
         stopServerSync();
     }
 
@@ -1673,20 +1731,125 @@ void DatabaseWidget::syncWithServer(const RemoteParams& params)
             *error = tr("The database must be saved before it can be uploaded.");
             return false;
         });
-        connect(engine, &SyncEngine::progress, this, &DatabaseWidget::updateSyncProgress);
-        connect(engine, &SyncEngine::unlockRequired, this, &DatabaseWidget::unlockServerCopyForSync);
-        connect(engine, &SyncEngine::finished, this, [this, name = params.name](bool success, const QString& error) {
-            RemoteHandler::RemoteResult result;
-            result.success = success;
-            result.errorMessage = error;
-            finishSync(name, result);
+        // A background sync waits while the user edits, the user's own sync doesn't
+        engine->setMergeGate([this] { return m_syncInteractive || canSyncInBackground(); });
+        connect(engine, &SyncEngine::progress, this, [this](int percent, const QString& message) {
+            if (m_syncInteractive) {
+                emit updateSyncProgress(percent, message);
+            }
+        });
+        connect(engine, &SyncEngine::stateChanged, this, [this](SyncEngine::State state) {
+            // A poll that only checks for changes doesn't show as syncing
+            if (state == SyncEngine::State::Downloading || state == SyncEngine::State::Uploading) {
+                setSyncStatus(SyncStatus::State::Syncing);
+            }
+        });
+        connect(engine, &SyncEngine::unlockRequired, this, [this](const QString& filePath) {
+            if (m_syncInteractive) {
+                unlockServerCopyForSync(filePath);
+            } else {
+                // Never open a dialog in the background: the engine keeps the copy until the user acts
+                setSyncStatus(SyncStatus::State::NeedsUnlock);
+            }
+        });
+        connect(engine, &SyncEngine::finished, this, [this, engine, name = params.name](bool ok, const QString& error) {
+            const auto failureState =
+                engine->state() == SyncEngine::State::Backoff ? SyncStatus::State::Offline : SyncStatus::State::Failed;
+            if (m_syncInteractive) {
+                RemoteHandler::RemoteResult result;
+                result.success = ok;
+                result.errorMessage = error;
+                finishSync(name, result, failureState);
+            } else {
+                setSyncStatus(ok ? SyncStatus::State::Synced : failureState, error);
+            }
         });
         m_syncEngine = engine;
     }
+    m_syncEngine->setRetryOnNetworkError(params.autoSync);
+}
 
+void DatabaseWidget::syncWithServer(const RemoteParams& params)
+{
+    ensureSyncEngine(params);
+    const auto state = m_syncEngine->state();
+    if (m_syncEngine->isBusy() && state != SyncEngine::State::WaitingForUnlock
+        && state != SyncEngine::State::WaitingToMerge) {
+        return;
+    }
+
+    m_syncInteractive = true;
     setDisabled(true);
     emit databaseSyncInProgress();
+    setSyncStatus(SyncStatus::State::Syncing);
+    if (state == SyncEngine::State::WaitingForUnlock) {
+        // A background sync is waiting for the server copy to be unlocked
+        unlockServerCopyForSync(m_syncEngine->pendingUnlockPath());
+    } else if (state == SyncEngine::State::WaitingToMerge) {
+        m_syncEngine->resumeMerge();
+    } else {
+        m_syncEngine->sync();
+    }
+}
+
+bool DatabaseWidget::canSyncInBackground() const
+{
+    // Merging changes entries, so wait until no editor is open and the user's changes are saved
+    return m_db && currentMode() == Mode::ViewMode && !m_db->isModified() && !m_db->isSaving() && !m_reloading;
+}
+
+void DatabaseWidget::updateAutoSync()
+{
+    const auto* params = isLocked() ? nullptr : autoSyncParams();
+    if (!params) {
+        if (m_syncScheduler->isEnabled()) {
+            m_syncScheduler->setEnabled(false);
+            emit syncStatusChanged();
+        }
+        return;
+    }
+
+    ensureSyncEngine(*params);
+    if (!m_syncScheduler->isEnabled()) {
+        m_syncScheduler->setEnabled(true);
+        emit syncStatusChanged();
+        // Pick up what other devices changed while this database was locked or closed
+        m_syncScheduler->requestNow();
+    }
+}
+
+void DatabaseWidget::backgroundSync()
+{
+    const auto* params = autoSyncParams();
+    if (!params || isLocked()) {
+        return;
+    }
+    if (!canSyncInBackground()) {
+        // Try again once the user is done (resumeBackgroundSync) or at the next save
+        m_autoSyncPending = true;
+        return;
+    }
+    m_autoSyncPending = false;
+
+    ensureSyncEngine(*params);
+    if (m_syncEngine->isBusy()) {
+        return;
+    }
+    m_syncInteractive = false;
     m_syncEngine->sync();
+}
+
+void DatabaseWidget::resumeBackgroundSync()
+{
+    if (!canSyncInBackground()) {
+        return;
+    }
+    updateAutoSync();
+    if (m_syncEngine && m_syncEngine->state() == SyncEngine::State::WaitingToMerge) {
+        m_syncEngine->resumeMerge();
+    } else if (m_autoSyncPending) {
+        backgroundSync();
+    }
 }
 
 void DatabaseWidget::unlockServerCopyForSync(const QString& filePath)
@@ -1708,12 +1871,17 @@ void DatabaseWidget::unlockServerCopyForSync(const QString& filePath)
 
 void DatabaseWidget::stopServerSync()
 {
+    m_syncScheduler->setEnabled(false);
+    m_autoSyncPending = false;
     if (m_syncEngine) {
         // Reports the cancelled sync, which re-enables this widget and the main window
         m_syncEngine->cancel();
         m_syncEngine->deleteLater();
         m_syncEngine = nullptr;
     }
+    m_syncInteractive = false;
+    m_syncStatus = {};
+    emit syncStatusChanged();
 }
 
 QList<RemoteParams*> DatabaseWidget::getRemoteParams() const
