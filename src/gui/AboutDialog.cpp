@@ -23,19 +23,67 @@
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
+
+#include <components/basicinput/HyperlinkButton.h>
 
 #include <QClipboard>
+#include <QFontDatabase>
+#include <QRegularExpression>
+#include <QScrollArea>
+#include <QTabBar>
+#include <QTimer>
 
-static const QString aboutMaintainers = R"(
-<p><ul>
-    <li>Jonathan White (<a href="https://github.com/droidmonkey">droidmonkey</a>)</li>
-    <li>Janek Bevendorff (<a href="https://github.com/phoerious">phoerious</a>)</li>
-    <li>Sami V&auml;nttinen (<a href="https://github.com/varjolintu">varjolintu</a>)</li>
-    <li>Toni Spets (<a href="https://github.com/hifi">hifi</a>)</li>
-    <li>Louis-Bertrand (<a href="https://github.com/louib">louib</a>)</li>
-    <li><a href="https://github.com/TheZ3ro">TheZ3ro</a> (retired)</li>
-</ul></p>
-)";
+namespace
+{
+    struct Maintainer
+    {
+        const char* name;
+        const char* github;
+        bool retired;
+    };
+
+    const Maintainer maintainers[] = {
+        {"Jonathan White", "droidmonkey", false},
+        {"Janek Bevendorff", "phoerious", false},
+        {"Sami V\u00e4nttinen", "varjolintu", false},
+        {"Toni Spets", "hifi", false},
+        {"Louis-Bertrand", "louib", false},
+        {"TheZ3ro", "TheZ3ro", true},
+    };
+
+    QUrl githubProfile(const Maintainer& maintainer)
+    {
+        return QUrl(QStringLiteral("https://github.com/") + QLatin1String(maintainer.github));
+    }
+
+    QString aboutMaintainers()
+    {
+        QString html = QStringLiteral("<p><ul>");
+        for (const auto& maintainer : maintainers) {
+            const auto name = QString::fromUtf8(maintainer.name);
+            const auto github = QLatin1String(maintainer.github);
+            const auto link = QStringLiteral("<a href=\"%1\">%2</a>").arg(githubProfile(maintainer).toString(), github);
+            html += QStringLiteral("<li>");
+            html += name == github ? link : QStringLiteral("%1 (%2)").arg(name.toHtmlEscaped(), link);
+            if (maintainer.retired) {
+                html += QStringLiteral(" (retired)");
+            }
+            html += QStringLiteral("</li>");
+        }
+        return html + QStringLiteral("</ul></p>");
+    }
+
+    // A heading of the contributors list and the names under it, which may carry markup such as <strong>
+    struct ContributorGroup
+    {
+        QString title;
+        QStringList names;
+    };
+} // namespace
 
 static const QString aboutContributors = R"(
 <style>ul { list-style: disk; margin-left: 12px; -qt-list-indent: 0; }</style>
@@ -312,6 +360,21 @@ AboutDialog::AboutDialog(QWidget* parent)
 {
     m_ui->setupUi(this);
 
+    QString debugInfo = Tools::debugInfo().append("\n").append(Crypto::debugInfo());
+    m_ui->debugInfo->setPlainText(debugInfo);
+
+    m_ui->maintainers->setText(aboutMaintainers());
+    m_ui->contributors->setText(aboutContributors);
+
+    setAttribute(Qt::WA_DeleteOnClose);
+    connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
+    connect(m_ui->copyToClipboard, SIGNAL(clicked()), SLOT(copyToClipboard()));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultLayout();
+        return;
+    }
+
     resize(minimumSize());
     setWindowFlags(Qt::Sheet);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -323,16 +386,6 @@ AboutDialog::AboutDialog(QWidget* parent)
 
     m_ui->iconLabel->setPixmap(icons()->applicationIcon().pixmap(48));
 
-    QString debugInfo = Tools::debugInfo().append("\n").append(Crypto::debugInfo());
-    m_ui->debugInfo->setPlainText(debugInfo);
-
-    m_ui->maintainers->setText(aboutMaintainers);
-    m_ui->contributors->setText(aboutContributors);
-
-    setAttribute(Qt::WA_DeleteOnClose);
-    connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
-    connect(m_ui->copyToClipboard, SIGNAL(clicked()), SLOT(copyToClipboard()));
-
     m_ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(true);
 }
 
@@ -342,4 +395,249 @@ void AboutDialog::copyToClipboard()
 {
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(m_ui->debugInfo->toPlainText());
+
+    if (m_vaultCopyButton) {
+        auto button = m_vaultCopyButton;
+        button->setText(tr("Copied"));
+        button->setIconGlyph(Typography::Icons::CheckMark);
+        QTimer::singleShot(2000, button, [button] {
+            button->setText(tr("Copy"));
+            button->setIconGlyph(Typography::Icons::Copy);
+        });
+    }
+}
+
+// In the Vault Index layout, the dialog is the content of a modal over the window, which provides the title and the
+// Close button. The app reads as a hero at the top, with its pages below it as a Fluent pivot of settings cards.
+void AboutDialog::setupVaultLayout()
+{
+    setWindowFlags(Qt::Widget);
+    m_ui->buttonBox->hide();
+    m_ui->verticalLayout_2->setContentsMargins(0, 0, 0, 0);
+    m_ui->verticalLayout_2->setSpacing(0);
+
+    setupVaultHero();
+    setupVaultPivot();
+    setupVaultAboutPage();
+    setupVaultContributorsPage();
+    setupVaultDebugPage();
+}
+
+// The icon, name and version side by side on an inset panel, like the app header of Windows Settings' About page
+void AboutDialog::setupVaultHero()
+{
+    auto ui = m_ui.data();
+
+    auto hero = new QFrame(this);
+    hero->setObjectName("aboutHero");
+
+    ui->iconLabel->setFixedSize(64, 64);
+    ui->iconLabel->setPixmap(icons()->applicationIcon().pixmap(64));
+
+    ui->nameLabel->setText(QStringLiteral("KeePassXC"));
+    ui->nameLabel->setIndent(0);
+    auto version = new QLabel(tr("Version %1").arg(KEEPASSXC_VERSION), hero);
+    version->setObjectName("aboutVersion");
+    version->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    auto tagline = new QLabel(tr("Cross-Platform Password Manager"), hero);
+    tagline->setObjectName("aboutTagline");
+
+    auto texts = new QVBoxLayout();
+    texts->setContentsMargins(0, 0, 0, 0);
+    texts->setSpacing(2);
+    texts->addStretch();
+    texts->addWidget(ui->nameLabel);
+    texts->addWidget(version);
+    texts->addWidget(tagline);
+    texts->addStretch();
+
+    auto layout = new QHBoxLayout(hero);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(16);
+    layout->addWidget(ui->iconLabel, 0, Qt::AlignVCenter);
+    layout->addLayout(texts, 1);
+
+    Vault::followTheme(hero, [hero, name = ui->nameLabel, version, tagline] {
+        const auto p = FluentTheme::palette();
+        const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
+        hero->setStyleSheet(QStringLiteral("#aboutHero { background-color: %1; border: 1px solid %2;"
+                                           " border-radius: 8px; }")
+                                .arg(argb(p.inset), argb(p.stroke)));
+        Vault::styleLabel(name, Typography::FontRole::Title, p.text);
+        Vault::styleLabel(version, Typography::FontRole::BodyStrong, p.text);
+        Vault::styleLabel(tagline, Typography::FontRole::Caption, p.textSecondary);
+    });
+
+    auto oldLayout = ui->horizontalLayout;
+    ui->verticalLayout_2->insertWidget(ui->verticalLayout_2->indexOf(oldLayout), hero);
+    ui->verticalLayout_2->removeItem(oldLayout);
+    delete oldLayout;
+}
+
+// The tabs read as a Fluent pivot: plain labels with an accent line under the current one. A separate tab bar
+// switches the tab widget, as the style draws a tab widget's own bar on a filled base.
+void AboutDialog::setupVaultPivot()
+{
+    auto tabs = m_ui->tabWidget;
+    auto pivot = new QTabBar(this);
+    pivot->setObjectName("aboutPivot");
+    pivot->setAccessibleName(tr("About pages"));
+    pivot->setDrawBase(false);
+    pivot->setExpanding(false);
+    for (int i = 0; i < tabs->count(); ++i) {
+        pivot->addTab(tabs->tabText(i));
+    }
+    pivot->setCurrentIndex(tabs->currentIndex());
+    connect(pivot, &QTabBar::currentChanged, tabs, &QTabWidget::setCurrentIndex);
+    connect(tabs, &QTabWidget::currentChanged, pivot, &QTabBar::setCurrentIndex);
+    tabs->tabBar()->hide();
+    tabs->setDocumentMode(true);
+    tabs->setStyleSheet(QStringLiteral("QTabWidget::pane { border: none; }"));
+    Vault::followTheme(pivot, [pivot] { pivot->setStyleSheet(Vault::pivotStyleSheet()); });
+
+    auto layout = m_ui->verticalLayout_2;
+    layout->insertSpacing(layout->indexOf(tabs), 12);
+    layout->insertWidget(layout->indexOf(tabs), pivot, 0, Qt::AlignLeft);
+    layout->insertSpacing(layout->indexOf(tabs), 4);
+}
+
+namespace
+{
+    fluent::basicinput::HyperlinkButton* hyperlink(const QString& text, const QString& url, QWidget* parent)
+    {
+        auto link = new fluent::basicinput::HyperlinkButton(text, QUrl(url), parent);
+        link->setToolTip(url);
+        return link;
+    }
+
+    // Lets the cards of a page scroll once the modal is shorter than they are
+    void scrollCards(QWidget* page)
+    {
+        auto cards = page->findChild<QWidget*>(page->objectName() + QStringLiteral("Cards"), Qt::FindDirectChildrenOnly);
+        Q_ASSERT(cards);
+        auto scrollArea = new QScrollArea(page);
+        scrollArea->setFrameShape(QFrame::NoFrame);
+        scrollArea->setWidgetResizable(true);
+        scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        page->layout()->replaceWidget(cards, scrollArea);
+        scrollArea->setWidget(cards);
+        scrollArea->viewport()->setAutoFillBackground(false);
+        cards->setAutoFillBackground(false);
+    }
+
+    QList<ContributorGroup> contributorGroups(const QString& html)
+    {
+        static const QRegularExpression groupPattern(QStringLiteral("<h3>(.*?):?</h3>\\s*<ul>(.*?)</ul>"),
+                                                     QRegularExpression::DotMatchesEverythingOption);
+        static const QRegularExpression namePattern(QStringLiteral("<li>(.*?)</li>"),
+                                                    QRegularExpression::DotMatchesEverythingOption);
+        QList<ContributorGroup> groups;
+        auto match = groupPattern.globalMatch(html);
+        while (match.hasNext()) {
+            const auto group = match.next();
+            ContributorGroup contributors{group.captured(1).trimmed(), {}};
+            auto names = namePattern.globalMatch(group.captured(2));
+            while (names.hasNext()) {
+                contributors.names << names.next().captured(1).simplified();
+            }
+            groups << contributors;
+        }
+        return groups;
+    }
+} // namespace
+
+// Links, the license and the people behind the project as settings cards
+void AboutDialog::setupVaultAboutPage()
+{
+    auto ui = m_ui.data();
+    VaultSettingsPage page(ui->aboutTab, {});
+
+    auto links = page.addSection(tr("Links"));
+    links->addSetting(tr("Website"),
+                      hyperlink(QStringLiteral("keepassxc.org"), QStringLiteral("https://keepassxc.org/"), this),
+                      tr("News, documentation and downloads"));
+    links->addSetting(tr("Report a bug"),
+                      hyperlink(tr("GitHub issues"),
+                                QStringLiteral("https://github.com/keepassxreboot/keepassxc/issues"),
+                                this),
+                      tr("Include the debug info when you report a bug"));
+
+    auto license = page.addSection(tr("License"));
+    license->addSetting(tr("GNU General Public License"),
+                        hyperlink(tr("Read the license"), QStringLiteral("https://www.gnu.org/licenses/"), this),
+                        ui->label_3->text());
+
+    auto team = page.addSection(tr("Project maintainers"));
+    auto maintainersCard = team->addSetting(tr("The KeePassXC team"), QWidgetList{}, ui->label_7->text());
+    maintainersCard->setCollapsible(false);
+    for (const auto& maintainer : maintainers) {
+        auto name = QString::fromUtf8(maintainer.name);
+        if (maintainer.retired) {
+            name = tr("%1 (retired)").arg(name);
+        }
+        maintainersCard->addSetting(
+            name, hyperlink(QStringLiteral("@") + QLatin1String(maintainer.github), githubProfile(maintainer).toString(), this));
+    }
+
+    page.finish();
+    scrollCards(ui->aboutTab);
+}
+
+// Each group of contributors as a section of its own, the names flowing across a card
+void AboutDialog::setupVaultContributorsPage()
+{
+    auto ui = m_ui.data();
+    VaultSettingsPage page(ui->contribTab, {});
+
+    auto code = page.addSection();
+    code->addSetting(tr("Everyone who contributed code"),
+                     hyperlink(tr("See contributions on GitHub"),
+                               QStringLiteral("https://github.com/keepassxreboot/keepassxc/graphs/contributors"),
+                               this),
+                     tr("KeePassXC is built by its community"));
+
+    for (const auto& group : contributorGroups(aboutContributors)) {
+        auto section = page.addSection(group.title);
+        // Translators are listed by language, one language to a line; everyone else flows along the line
+        const bool byLanguage = group.names.value(0).startsWith(QStringLiteral("<strong>"));
+        auto names = new QLabel(byLanguage ? group.names.join(QStringLiteral("<br>"))
+                                           : group.names.join(QStringLiteral(" \u00b7 ")),
+                                this);
+        names->setTextFormat(Qt::RichText);
+        names->setWordWrap(true);
+        names->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        names->setContentsMargins(0, 4, 0, 4);
+        Vault::followTheme(names, [names] {
+            Vault::styleLabel(names, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+        });
+        section->addWidget(names);
+    }
+
+    page.finish();
+    scrollCards(ui->contribTab);
+}
+
+// The debug info in a monospaced field, with a button to copy it for a bug report
+void AboutDialog::setupVaultDebugPage()
+{
+    auto ui = m_ui.data();
+    VaultSettingsPage page(ui->debugTab, {});
+
+    auto button = new VaultButton(tr("Copy"), this);
+    button->setObjectName("vaultCopyDebugInfo");
+    button->setIconGlyph(Typography::Icons::Copy);
+    connect(button, &QPushButton::clicked, this, &AboutDialog::copyToClipboard);
+    m_vaultCopyButton = button;
+    ui->copyToClipboard->hide();
+
+    auto section = page.addSection();
+    section->addSetting(tr("System information"), button, ui->label->text());
+
+    ui->debugInfo->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    ui->debugInfo->setLineWrapMode(QPlainTextEdit::NoWrap);
+    ui->debugInfo->setMinimumHeight(180);
+    section->addWidget(ui->debugInfo);
+
+    page.finish();
+    scrollCards(ui->debugTab);
 }
