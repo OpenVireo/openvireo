@@ -23,6 +23,8 @@
 #include <QPointer>
 #include <QWidget>
 
+#include <functional>
+
 class QHBoxLayout;
 class QLabel;
 class QPushButton;
@@ -110,6 +112,35 @@ private:
     QHBoxLayout* m_footer;
     bool m_fitToContent = false;
     int m_maximumCardWidth = 1000;
+};
+
+/**
+ * Numbered steps down the side of a modal that stands in for a wizard: finished
+ * ones carry a check, the current one is outlined in the accent color. A finished
+ * step can be clicked to go back to it.
+ */
+class VaultStepList : public QWidget
+{
+public:
+    VaultStepList(QStringList titles, QWidget* parent);
+
+    void setCurrent(int current);
+
+    std::function<void(int)> onStepClicked;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+
+private:
+    QRect rowRect(int index) const;
+    int stepAt(const QPoint& pos) const;
+
+    QStringList m_titles;
+    int m_current = 0;
+    int m_hovered = -1;
 };
 
 #endif // KEEPASSXC_VAULTMODAL_H

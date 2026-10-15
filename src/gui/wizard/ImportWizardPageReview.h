@@ -30,6 +30,10 @@
 class CompositeKey;
 class CsvImportWidget;
 class Database;
+namespace fluent::status_info
+{
+    class InfoBar;
+}
 namespace Ui
 {
     class ImportWizardPageReview;
@@ -46,6 +50,7 @@ public:
 
     void initializePage() override;
     bool validatePage() override;
+    bool isComplete() const override;
 
     QSharedPointer<Database> database();
 
@@ -69,12 +74,16 @@ private:
     QSharedPointer<CompositeKey> buildKey(const QString& password, const QString& keyfile);
 
     void setupDatabasePreview();
+    void setupVaultLayout();
+    void showError(const QString& message);
 
     QScopedPointer<Ui::ImportWizardPageReview> m_ui;
 
     QSharedPointer<Database> m_db;
     QPointer<CsvImportWidget> m_csvWidget;
     QPointer<RemoteHandler> m_remoteHandler;
+    // In the Vault Index layout, import errors show here instead of in the message widget
+    QPointer<fluent::status_info::InfoBar> m_errorBar;
 };
 
 #endif

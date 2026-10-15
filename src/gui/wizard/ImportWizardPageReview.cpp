@@ -26,6 +26,8 @@
 #include "format/OpVaultReader.h"
 #include "format/ProtonPassReader.h"
 #include "gui/csvImport/CsvImportWidget.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/wizard/ImportWizard.h"
 
 #include "cli/Utils.h"
@@ -38,6 +40,8 @@
 #include <QTableWidget>
 
 #include "gui/remote/RemoteSettings.h"
+
+#include <components/status_info/InfoBar.h>
 
 struct RemoteParams;
 
@@ -68,6 +72,9 @@ void ImportWizardPageReview::initializePage()
     m_ui->messageWidget->hideMessage();
     m_ui->messageWidget->setAnimate(false);
     m_ui->messageWidget->setCloseButtonVisible(false);
+    if (FluentTheme::vaultLayoutEnabled()) {
+        setupVaultLayout();
+    }
 
     auto importType = field("ImportType").toInt();
     switch (importType) {
@@ -118,9 +125,57 @@ bool ImportWizardPageReview::validatePage()
     return !m_db.isNull();
 }
 
+bool ImportWizardPageReview::isComplete() const
+{
+    // Nothing to import when reading the source failed; a CSV file is only read on finishing
+    return isCsvImport() || m_db;
+}
+
 QSharedPointer<Database> ImportWizardPageReview::database()
 {
     return m_db;
+}
+
+// In the Vault Index layout, the page is the content of a modal, which names the step. The source heads a flat
+// preview, and errors show in a Fluent info bar.
+void ImportWizardPageReview::setupVaultLayout()
+{
+    m_ui->messageWidget->hide();
+    m_errorBar = new fluent::status_info::InfoBar(this);
+    m_errorBar->setObjectName("importErrorBar");
+    m_errorBar->setSeverity(fluent::status_info::InfoBar::Error);
+    m_errorBar->setIsClosable(false);
+    m_errorBar->setIsOpen(true);
+    m_errorBar->setSizePolicy(QSizePolicy::Expanding, m_errorBar->sizePolicy().verticalPolicy());
+    m_errorBar->hide();
+    m_ui->verticalLayout->insertWidget(0, m_errorBar);
+    m_ui->verticalLayout->setContentsMargins(0, 0, 0, 0);
+
+    m_ui->scrollArea->setFrameShape(QFrame::NoFrame);
+    m_ui->scrollArea->setMinimumSize(0, 0);
+    m_ui->scrollArea->viewport()->setAutoFillBackground(false);
+    m_ui->scrollAreaContents->setAutoFillBackground(false);
+    m_ui->scrollAreaContents->layout()->setSpacing(4);
+
+    m_ui->filenameLabel->setFont(Vault::font(Typography::FontRole::BodyStrong));
+    m_ui->filenameLabel->setWordWrap(true);
+    m_ui->previewLabel->setFont(Vault::font(Typography::FontRole::Body));
+    // Style sheets rather than palettes, since the modal resets the palettes of its content
+    Vault::followTheme(m_ui->previewLabel, [label = m_ui->previewLabel] {
+        label->setStyleSheet(
+            QStringLiteral("color: %1;").arg(FluentTheme::palette().textSecondary.name(QColor::HexArgb)));
+    });
+}
+
+void ImportWizardPageReview::showError(const QString& message)
+{
+    if (m_errorBar) {
+        m_errorBar->setTitle(tr("Import failed"));
+        m_errorBar->setMessage(message);
+        m_errorBar->show();
+        return;
+    }
+    m_ui->messageWidget->showMessage(message, MessageWidget::Error, -1);
 }
 
 void ImportWizardPageReview::setupCsvImport(const QString& filename)
@@ -130,10 +185,12 @@ void ImportWizardPageReview::setupCsvImport(const QString& filename)
 
     m_csvWidget = new CsvImportWidget();
     connect(m_csvWidget, &CsvImportWidget::message, m_ui->messageWidget, [this](QString message) {
-        if (message.isEmpty()) {
-            m_ui->messageWidget->hideMessage();
+        if (!message.isEmpty()) {
+            showError(message);
+        } else if (m_errorBar) {
+            m_errorBar->hide();
         } else {
-            m_ui->messageWidget->showMessage(message, MessageWidget::Error, -1);
+            m_ui->messageWidget->hideMessage();
         }
     });
 
@@ -156,7 +213,11 @@ void ImportWizardPageReview::setupDatabasePreview()
     }
 
     auto entryList = m_db->rootGroup()->entriesRecursive();
-    m_ui->previewLabel->setText(tr("Entry count: %1").arg(entryList.count()));
+    if (m_errorBar) {
+        m_ui->previewLabel->setText(tr("%n entries to import", "", entryList.count()));
+    } else {
+        m_ui->previewLabel->setText(tr("Entry count: %1").arg(entryList.count()));
+    }
 
     QStringList headerLabels({tr("Group"), tr("Title"), tr("Username"), tr("Password"), tr("Url")});
 
@@ -184,6 +245,14 @@ void ImportWizardPageReview::setupDatabasePreview()
     tableWidget->horizontalHeader()->setMaximumSectionSize(200);
     tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     tableWidget->horizontalHeader()->setStretchLastSection(true);
+    if (m_errorBar) {
+        tableWidget->setObjectName("importPreviewTable");
+        tableWidget->setShowGrid(false);
+        tableWidget->setAlternatingRowColors(true);
+        tableWidget->verticalHeader()->hide();
+        tableWidget->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        m_ui->scrollAreaContents->layout()->addItem(new QSpacerItem(0, 8, QSizePolicy::Minimum, QSizePolicy::Fixed));
+    }
 
     m_ui->scrollAreaContents->layout()->addWidget(tableWidget);
 }
@@ -193,7 +262,7 @@ QSharedPointer<Database> ImportWizardPageReview::importOPUX(const QString& filen
     OPUXReader reader;
     auto db = reader.convert(filename);
     if (reader.hasError()) {
-        m_ui->messageWidget->showMessage(reader.errorString(), KMessageWidget::Error, -1);
+        showError(reader.errorString());
     }
     return db;
 }
@@ -203,7 +272,7 @@ QSharedPointer<Database> ImportWizardPageReview::importBitwarden(const QString& 
     BitwardenReader reader;
     auto db = reader.convert(filename, password);
     if (reader.hasError()) {
-        m_ui->messageWidget->showMessage(reader.errorString(), KMessageWidget::Error, -1);
+        showError(reader.errorString());
     }
     return db;
 }
@@ -214,7 +283,7 @@ QSharedPointer<Database> ImportWizardPageReview::importOPVault(const QString& fi
     QDir opVault(filename);
     auto db = reader.convert(opVault, password);
     if (reader.hasError()) {
-        m_ui->messageWidget->showMessage(reader.errorString(), KMessageWidget::Error, -1);
+        showError(reader.errorString());
     }
     return db;
 }
@@ -228,7 +297,7 @@ ImportWizardPageReview::importKeePass1(const QString& filename, const QString& p
 
     auto db = reader.readDatabase(filename, password, keyfile);
     if (reader.hasError()) {
-        m_ui->messageWidget->showMessage(reader.errorString(), KMessageWidget::Error, -1);
+        showError(reader.errorString());
     }
 
     return db;
@@ -239,7 +308,7 @@ QSharedPointer<Database> ImportWizardPageReview::importProtonPass(const QString&
     ProtonPassReader reader;
     auto db = reader.convert(filename);
     if (reader.hasError()) {
-        m_ui->messageWidget->showMessage(reader.errorString(), KMessageWidget::Error, -1);
+        showError(reader.errorString());
     }
     return db;
 }
@@ -262,7 +331,7 @@ QSharedPointer<Database> ImportWizardPageReview::importRemote(const QString& dow
     delete params;
 
     if (!result.success) {
-        m_ui->messageWidget->showMessage(result.errorMessage, KMessageWidget::Error, -1);
+        showError(result.errorMessage);
         return {};
     }
 
@@ -272,8 +341,7 @@ QSharedPointer<Database> ImportWizardPageReview::importRemote(const QString& dow
     QSharedPointer<Database> remoteDb = QSharedPointer<Database>::create();
     if (!remoteDb->open(result.filePath, key, &error)) {
         QFile::remove(result.filePath);
-        m_ui->messageWidget->showMessage(
-            tr("Could not open remote database. Password or key file may be incorrect."), KMessageWidget::Error, -1);
+        showError(tr("Could not open remote database. Password or key file may be incorrect."));
         return {};
     }
     remoteDb->markAsTemporaryDatabase();
@@ -297,14 +365,11 @@ QSharedPointer<Database> ImportWizardPageReview::importSyncServer(const QString&
 
     auto result = m_remoteHandler->download(&params);
     if (!result.success) {
-        m_ui->messageWidget->showMessage(result.errorMessage, KMessageWidget::Error, -1);
+        showError(result.errorMessage);
         return {};
     }
     if (result.remoteMissing) {
-        m_ui->messageWidget->showMessage(
-            tr("The database '%1' does not exist on the sync server.").arg(params.serverDatabaseId),
-            KMessageWidget::Error,
-            -1);
+        showError(tr("The database '%1' does not exist on the sync server.").arg(params.serverDatabaseId));
         return {};
     }
 
@@ -312,10 +377,7 @@ QSharedPointer<Database> ImportWizardPageReview::importSyncServer(const QString&
     auto db = QSharedPointer<Database>::create();
     if (!db->open(result.filePath, buildKey(password, keyfile), &error)) {
         QFile::remove(result.filePath);
-        m_ui->messageWidget->showMessage(
-            tr("Could not open the database from the sync server. Password or key file may be incorrect."),
-            KMessageWidget::Error,
-            -1);
+        showError(tr("Could not open the database from the sync server. Password or key file may be incorrect."));
         return {};
     }
 
@@ -372,7 +434,7 @@ QSharedPointer<CompositeKey> ImportWizardPageReview::buildKey(const QString& pas
         if (Utils::loadFileKey(keyfile, fileKey)) {
             key->addKey(fileKey);
         } else {
-            m_ui->messageWidget->showMessage(tr("Could not load key file."), KMessageWidget::Error, -1);
+            showError(tr("Could not load key file."));
         }
     }
     return key;
