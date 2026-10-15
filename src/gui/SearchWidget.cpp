@@ -28,8 +28,9 @@
 #include "core/SignalMultiplexer.h"
 #include "gui/Icons.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/vault/VaultWidgets.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultSearchHelp.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/PopupHelpWidget.h"
 
 #include <components/textfields/AutoSuggestBox.h>
@@ -46,9 +47,20 @@ SearchWidget::SearchWidget(QWidget* parent)
     }
     setFocusProxy(m_ui->searchEdit);
 
-    m_helpWidget = new PopupHelpWidget(m_ui->searchEdit);
-    Ui::SearchHelpWidget helpUi;
-    helpUi.setupUi(m_helpWidget);
+    if (m_fluentSearch) {
+        m_vaultHelp = new VaultSearchHelp(this);
+        connect(m_vaultHelp, &VaultSearchHelp::insertRequested, this, &SearchWidget::insertSearchTerm);
+        connect(m_vaultHelp, &VaultSearchHelp::searchRequested, this, [this](const QString& text) {
+            m_ui->searchEdit->setText(text);
+            m_searchTimer->stop();
+            startSearch();
+            m_ui->searchEdit->setFocus();
+        });
+    } else {
+        m_helpWidget = new PopupHelpWidget(m_ui->searchEdit);
+        Ui::SearchHelpWidget helpUi;
+        helpUi.setupUi(m_helpWidget);
+    }
 
     m_searchTimer->setSingleShot(true);
     m_clearSearchTimer->setSingleShot(true);
@@ -130,11 +142,14 @@ void SearchWidget::addFluentSearchButtons()
         auto* button = Vault::iconButton(glyph, toolTip, this);
         Vault::bindAction(button, action);
         layout()->addWidget(button);
+        return button;
     };
     layout()->setSpacing(4);
     addButton(m_ui->searchIcon, Typography::Icons::Filter, tr("Search options"));
     addButton(m_ui->saveIcon, Typography::Icons::Save, tr("Save search"));
-    addButton(m_ui->helpIcon, Typography::Icons::Info, tr("Search help"));
+    m_helpButton = addButton(m_ui->helpIcon, Typography::Icons::Info, tr("Search tips"));
+    // Let the help button close the flyout instead of reopening it
+    m_vaultHelp->addLightDismissPassthrough(m_helpButton);
 }
 
 bool SearchWidget::eventFilter(QObject* obj, QEvent* event)
@@ -284,11 +299,28 @@ void SearchWidget::clearSearch()
 
 void SearchWidget::toggleHelp()
 {
+    if (m_vaultHelp) {
+        if (m_vaultHelp->isOpen()) {
+            m_vaultHelp->close();
+        } else {
+            m_vaultHelp->showAt(m_helpButton);
+        }
+        return;
+    }
     if (m_helpWidget->isVisible()) {
         m_helpWidget->hide();
     } else {
         m_helpWidget->show();
     }
+}
+
+// Adds a field such as "user:" at the cursor, starting a new term if needed
+void SearchWidget::insertSearchTerm(const QString& text)
+{
+    auto* edit = m_ui->searchEdit;
+    const auto before = edit->text().left(edit->cursorPosition());
+    edit->insert(before.isEmpty() || before.endsWith(' ') ? text : ' ' + text);
+    edit->setFocus();
 }
 
 void SearchWidget::showSearchMenu()
