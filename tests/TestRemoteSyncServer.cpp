@@ -146,6 +146,39 @@ namespace
     {
         return db->metadata()->customData()->value(CustomData::RemoteProgramSettings);
     }
+
+    // A system store that can be switched off and counts its reads
+    class FakeSystemStore : public SyncTokenStore::Backend
+    {
+    public:
+        bool isAvailable() override
+        {
+            return available;
+        }
+        QString load(const QString& key) override
+        {
+            ++loads;
+            return tokens.value(key);
+        }
+        bool save(const QString& key, const QString& token) override
+        {
+            tokens.insert(key, token);
+            return true;
+        }
+        bool remove(const QString& key) override
+        {
+            tokens.remove(key);
+            return true;
+        }
+        QString description() const override
+        {
+            return "fake";
+        }
+
+        bool available = true;
+        int loads = 0;
+        QHash<QString, QString> tokens;
+    };
 } // namespace
 
 void TestRemoteSyncServer::testTokenStaysOnThisDevice()
@@ -214,22 +247,102 @@ void TestRemoteSyncServer::testForgetsTokensOfRemovedRemotes()
     QVERIFY(SyncTokenStore::load(key).isEmpty());
 }
 
+void TestRemoteSyncServer::testTokenFileWithoutSystemStore()
+{
+    QTemporaryDir dir;
+    // The settings folder doesn't exist yet on a fresh install
+    const auto path = dir.filePath("config/sync-tokens.json");
+    auto system = std::make_unique<FakeSystemStore>();
+    system->available = false;
+    auto* fake = system.get();
+    SyncTokenStore::setBackend(
+        SyncTokenStore::createFallbackBackend(std::move(system), SyncTokenStore::createFileBackend(path)));
+    auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
+
+    QVERIFY(SyncTokenStore::save("key", "file-token"));
+    QVERIFY(fake->tokens.isEmpty());
+    QVERIFY(QFile::exists(path));
+    QCOMPARE(QFile::permissions(path) & (QFile::ReadGroup | QFile::ReadOther), QFile::Permissions());
+    QCOMPARE(SyncTokenStore::description(), SyncTokenStore::createFileBackend(path)->description());
+
+    // Removing the last token leaves no file behind
+    QVERIFY(SyncTokenStore::remove("key"));
+    QVERIFY(!QFile::exists(path));
+}
+
+void TestRemoteSyncServer::testTokenMovesFromFileToSystemStore()
+{
+    QTemporaryDir dir;
+    const auto path = dir.filePath("sync-tokens.json");
+    // Kept while the keyring couldn't be reached
+    QVERIFY(SyncTokenStore::createFileBackend(path)->save("key", "file-token"));
+    QVERIFY(SyncTokenStore::createFileBackend(path)->save("other", "other-token"));
+
+    auto system = std::make_unique<FakeSystemStore>();
+    auto* fake = system.get();
+    SyncTokenStore::setBackend(
+        SyncTokenStore::createFallbackBackend(std::move(system), SyncTokenStore::createFileBackend(path)));
+    auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
+    QCOMPARE(SyncTokenStore::description(), QString("fake"));
+
+    QCOMPARE(SyncTokenStore::load("key"), QString("file-token"));
+    QCOMPARE(fake->tokens.value("key"), QString("file-token"));
+    QVERIFY(SyncTokenStore::createFileBackend(path)->load("key").isEmpty());
+    QCOMPARE(SyncTokenStore::createFileBackend(path)->load("other"), QString("other-token"));
+
+    // A token saved now goes to the system store and takes the file's copy with it
+    QVERIFY(SyncTokenStore::save("other", "new-token"));
+    QCOMPARE(fake->tokens.value("other"), QString("new-token"));
+    QVERIFY(!QFile::exists(path));
+}
+
+void TestRemoteSyncServer::testTokensAreReadOnce()
+{
+    auto system = std::make_unique<FakeSystemStore>();
+    auto* fake = system.get();
+    fake->tokens.insert("key", "token");
+    SyncTokenStore::setBackend(std::move(system));
+    auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
+
+    // The remote settings are read again after every change to the database
+    QCOMPARE(SyncTokenStore::load("key"), QString("token"));
+    QCOMPARE(SyncTokenStore::load("key"), QString("token"));
+    QCOMPARE(fake->loads, 1);
+
+    // A token that isn't there yet is looked up again, since it may be added later
+    QVERIFY(SyncTokenStore::load("missing").isEmpty());
+    fake->tokens.insert("missing", "added");
+    QCOMPARE(SyncTokenStore::load("missing"), QString("added"));
+
+    QVERIFY(SyncTokenStore::save("key", "changed"));
+    QCOMPARE(SyncTokenStore::load("key"), QString("changed"));
+    QVERIFY(SyncTokenStore::remove("key"));
+    QVERIFY(SyncTokenStore::load("key").isEmpty());
+    QVERIFY(!fake->tokens.contains("key"));
+}
+
 void TestRemoteSyncServer::testPlatformTokenStore()
 {
-    // Writes to the real Keychain (macOS) or token file, so only on request
+    // Writes to the real Keychain, Credential Manager, keyring or token file, so only on request
     if (qEnvironmentVariable("KPXC_TEST_KEYCHAIN") != "1") {
         QSKIP("Set KPXC_TEST_KEYCHAIN=1 to test the platform token store");
     }
-    SyncTokenStore::setBackend(nullptr);
+    // A fresh platform store each time, so that reads reach it instead of the cache
+    auto reopen = [] { SyncTokenStore::setBackend(nullptr); };
+    reopen();
     auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
+    qInfo("Platform token store: %s", qPrintable(SyncTokenStore::description()));
 
     const auto key = "keepassxc-test-" + QUuid::createUuid().toString(QUuid::Id128);
     QVERIFY(SyncTokenStore::load(key).isEmpty());
     QVERIFY(SyncTokenStore::save(key, "first-token"));
+    reopen();
     QCOMPARE(SyncTokenStore::load(key), QString("first-token"));
     QVERIFY(SyncTokenStore::save(key, "second-tökén"));
+    reopen();
     QCOMPARE(SyncTokenStore::load(key), QString("second-tökén"));
     QVERIFY(SyncTokenStore::remove(key));
+    reopen();
     QVERIFY(SyncTokenStore::load(key).isEmpty());
     QVERIFY(SyncTokenStore::remove(key));
 }

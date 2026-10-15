@@ -257,6 +257,7 @@ if(UNIX AND NOT APPLE)
             gui/osutils/nixutils/NixUtils.cpp
             gui/osutils/nixutils/RemoteDesktopPortal.cpp
             gui/osutils/nixutils/ScreenLockListenerDBus.cpp
+            gui/remote/SyncTokenSecretService.cpp
     )
     if("${CMAKE_SYSTEM}" MATCHES "Linux")
         list(APPEND core_SOURCES
@@ -424,7 +425,7 @@ if(UNIX AND NOT APPLE)
     endif()
 endif()
 if(WIN32)
-    target_link_libraries(keepassxc_gui Wtsapi32.lib Ws2_32.lib)
+    target_link_libraries(keepassxc_gui Wtsapi32.lib Ws2_32.lib Advapi32.lib)
     if (WINSDK)
         target_link_libraries(keepassxc_gui WindowsApp.lib)
     endif()
