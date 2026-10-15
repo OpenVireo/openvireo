@@ -30,8 +30,9 @@ struct RemoteParams;
  *
  * Every device has its own token (see sync_server's "devices add"), so a lost device can be
  * revoked on its own. The token therefore can't live in the database file, which every device
- * shares: it goes to the macOS Keychain, or elsewhere to a file only the user can read next to
- * the local config.
+ * shares: it goes to the macOS Keychain, the Windows Credential Manager or the desktop's keyring
+ * (Secret Service). Without one of those it goes to a file only the user can read next to the
+ * local config, and moves to the system store once that becomes available.
  */
 class SyncTokenStore
 {
@@ -40,6 +41,11 @@ public:
     {
     public:
         virtual ~Backend() = default;
+        // False when the store can't be reached on this system right now
+        virtual bool isAvailable()
+        {
+            return true;
+        }
         virtual QString load(const QString& key) = 0;
         virtual bool save(const QString& key, const QString& token) = 0;
         virtual bool remove(const QString& key) = 0;
@@ -60,6 +66,12 @@ public:
     static void setBackend(std::unique_ptr<Backend> backend);
     // An in-memory store, for tests
     static std::unique_ptr<Backend> createMemoryBackend();
+    // The private file, for tests
+    static std::unique_ptr<Backend> createFileBackend(const QString& filePath);
+    // Uses the system store when it is available and the file otherwise; tokens found in the
+    // file move to the system store when they are next read
+    static std::unique_ptr<Backend> createFallbackBackend(std::unique_ptr<Backend> system,
+                                                          std::unique_ptr<Backend> file);
 
 private:
     static Backend& backend();
