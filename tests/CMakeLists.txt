@@ -118,6 +118,9 @@ add_unit_test(NAME testmerge SOURCES TestMerge.cpp
 add_unit_test(NAME testremotesyncserver SOURCES TestRemoteSyncServer.cpp
         LIBS ${TEST_LIBRARIES})
 
+add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
+        LIBS ${TEST_LIBRARIES})
+
 add_unit_test(NAME testpasswordgenerator SOURCES TestPasswordGenerator.cpp
         LIBS ${TEST_LIBRARIES})
 
