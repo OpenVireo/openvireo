@@ -25,11 +25,7 @@
 class Database;
 class DatabaseSettingsWidget;
 class QStackedWidget;
-
-namespace Vault
-{
-    class NewDatabaseSteps;
-}
+class VaultStepList;
 
 /**
  * Creates a new database in a modal card over the main window, standing in for
@@ -77,7 +73,7 @@ private:
     QSharedPointer<Database> m_db;
     int m_current = 0;
 
-    Vault::NewDatabaseSteps* m_stepList;
+    VaultStepList* m_stepList;
     QLabel* m_stepTitle;
     QLabel* m_stepSubtitle;
     QStackedWidget* m_stack;

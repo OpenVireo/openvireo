@@ -21,7 +21,9 @@
 
 #include "core/Global.h"
 #include "core/Group.h"
+#include "gui/styles/FluentTheme.h"
 
+#include <QAbstractButton>
 #include <QFrame>
 #include <QPalette>
 
@@ -30,14 +32,30 @@ ImportWizard::ImportWizard(QWidget* parent)
     , m_pageSelect(new ImportWizardPageSelect)
     , m_pageReview(new ImportWizardPageReview)
 {
-    setWizardStyle(MacStyle);
-    setOption(HaveHelpButton, false);
-    setOption(NoDefaultButton, false); // Needed for macOS
-
     addPage(m_pageSelect.data());
     addPage(m_pageReview.data());
 
     setWindowTitle(tr("Import Wizard"));
+
+    if (FluentTheme::vaultLayoutEnabled()) {
+        // The wizard is the content of a modal over the window, which names the steps and moves between them
+        setWizardStyle(ClassicStyle);
+        setOption(NoDefaultButton, true);
+        setButtonLayout({});
+        // The modal's footer has its own divider. Beside the frame holding the pages, the wizard has its ruler above
+        // the buttons, which it shows again on each layout, so give it no height instead.
+        auto pageFrame = m_pageSelect->parentWidget();
+        for (auto widget : pageFrame->parentWidget()->findChildren<QWidget*>(Qt::FindDirectChildrenOnly)) {
+            if (widget != pageFrame && !qobject_cast<QAbstractButton*>(widget)) {
+                widget->setFixedHeight(0);
+            }
+        }
+        return;
+    }
+
+    setWizardStyle(MacStyle);
+    setOption(HaveHelpButton, false);
+    setOption(NoDefaultButton, false); // Needed for macOS
 
     Q_INIT_RESOURCE(wizard);
     setPixmap(BackgroundPixmap, QPixmap(":/wizard/background-pixmap.png"));

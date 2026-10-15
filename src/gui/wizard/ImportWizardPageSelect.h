@@ -41,6 +41,14 @@ public:
     bool validatePage() override;
     bool isComplete() const override;
 
+    // In the Vault Index layout, the modal shows the choice of source and the rest of the page as separate steps
+    void setSourceStep(bool sourceStep);
+    QString sourceName() const;
+
+signals:
+    // A source was double-clicked, which moves on to the next step
+    void sourceActivated();
+
 private slots:
     void itemSelected(QListWidgetItem* current, QListWidgetItem* previous);
     void chooseImportFile();
@@ -49,12 +57,16 @@ private slots:
     void loadSyncServerDatabases();
 
 private:
+    void setupVaultLayout();
     QString importFileFilter();
     void setCredentialState(bool passwordEnabled, bool keyFileEnable = false);
     void setDownloadCommand(bool downloadCommandEnabled);
     void setSyncServer(bool syncServerEnabled);
 
     QScopedPointer<Ui::ImportWizardPageSelect> m_ui;
+    bool m_vaultLayout = false;
+    // The cards below the choice of source in the Vault Index layout
+    QWidget* m_details = nullptr;
 };
 
 #endif

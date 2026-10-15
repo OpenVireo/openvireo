@@ -43,10 +43,12 @@
 #include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
+#include "gui/wizard/ImportWizard.h"
 
 #include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/textfields/AutoSuggestBox.h>
@@ -69,6 +71,7 @@
 #include <QMenu>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableWidget>
 #include <QTest>
 #include <QTimer>
 #include <QToolBar>
@@ -1226,6 +1229,140 @@ void TestGuiVault::testNewDatabaseModal()
     QTRY_VERIFY(!m_mainWindow->findChild<VaultNewDatabaseModal*>());
     QCOMPARE(m_tabWidget->count(), tabsBefore);
     m_tabWidget->setCurrentWidget(m_dbWidget);
+}
+
+void TestGuiVault::testImportModal()
+{
+    const int tabsBefore = m_tabWidget->count();
+    const int entriesBefore = m_db->rootGroup()->entriesRecursive().size();
+    const auto groupsBefore = m_db->rootGroup()->children();
+    // Wide enough for the tiles to share it in columns
+    const auto sizeBefore = m_mainWindow->size();
+    m_mainWindow->resize(1180, 720);
+    auto* importAction = m_mainWindow->findChild<QAction*>("actionImport");
+    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    auto screenshot = [&](const QString& name) {
+        if (!dir.isEmpty()) {
+            m_mainWindow->grab().save(QDir(dir).absoluteFilePath(name));
+        }
+    };
+
+    importAction->trigger();
+    auto* modal = m_mainWindow->findChild<VaultImportModal*>("vaultImportModal");
+    QVERIFY(modal);
+    QVERIFY(modal->isOpen());
+    QCOMPARE(modal->geometry(), m_mainWindow->rect());
+    // The wizard shows in the modal, not in a window of its own
+    auto* wizard = modal->findChild<ImportWizard*>();
+    QVERIFY(wizard);
+    QVERIFY(!wizard->isWindow());
+
+    auto* title = modal->findChild<QLabel*>("vaultImportStepTitle");
+    auto* back = modal->findChild<QPushButton*>("vaultImportBack");
+    auto* next = modal->findChild<QPushButton*>("vaultImportContinue");
+    auto* sources = modal->findChild<QListWidget*>("importTypeList");
+    auto* fileEdit = modal->findChild<QLineEdit*>("importFileEdit");
+    QVERIFY(title && back && next && sources && fileEdit);
+
+    // Choosing the source is a step of its own
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::SourceStep));
+    QCOMPARE(title->text(), QString("Choose a source"));
+    QVERIFY(back->isHidden());
+    QVERIFY(next->isEnabled());
+    QVERIFY(sources->isVisible());
+    QVERIFY(!fileEdit->isVisible());
+    QCOMPARE(m_mainWindow->focusWidget(), sources);
+    // The tiles share the width in columns
+    QTRY_COMPARE(sources->visualItemRect(sources->item(1)).top(), sources->visualItemRect(sources->item(0)).top());
+    for (int i = 0; i < sources->count(); ++i) {
+        if (sources->item(i)->data(Qt::UserRole) == ImportWizard::IMPORT_BITWARDEN) {
+            sources->setCurrentRow(i);
+        }
+    }
+    screenshot("vault-import-source.png");
+
+    // Double-clicking a tile moves on to its details, which ask for a file before continuing
+    const auto tile = sources->visualItemRect(sources->currentItem()).center();
+    QTest::mouseClick(sources->viewport(), Qt::LeftButton, Qt::NoModifier, tile);
+    QTest::mouseDClick(sources->viewport(), Qt::LeftButton, Qt::NoModifier, tile);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::DetailsStep));
+    QCOMPARE(title->text(), QString("Bitwarden"));
+    QVERIFY(!back->isHidden());
+    QVERIFY(!sources->isVisible());
+    QVERIFY(fileEdit->isVisible());
+    QVERIFY(modal->findChild<PasswordWidget*>("passwordEdit")->isVisible());
+    QVERIFY(!modal->findChild<QLineEdit*>("keyFileEdit")->isVisible());
+    QVERIFY(!modal->findChild<QLineEdit*>("downloadCommand")->isVisible());
+    QVERIFY(!modal->findChild<QLineEdit*>("serverUrlEdit")->isVisible());
+    QVERIFY(!next->isEnabled());
+    fileEdit->setText(QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath("bitwarden_export.json"));
+    QVERIFY(next->isEnabled());
+    auto* existing = modal->findChild<QRadioButton*>("existingDatabaseRadio");
+    QVERIFY(existing->isEnabled());
+    QTest::mouseClick(existing, Qt::LeftButton);
+    screenshot("vault-import-details.png");
+
+    // The review previews what the file holds
+    QTest::mouseClick(next, Qt::LeftButton);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::ReviewStep));
+    QCOMPARE(next->text(), QString("Import"));
+    QVERIFY(next->isEnabled());
+    auto* table = modal->findChild<QTableWidget*>("importPreviewTable");
+    QVERIFY(table);
+    QCOMPARE(table->rowCount(), 4);
+    QVERIFY(!modal->findChild<QWidget*>("importErrorBar")->isVisible());
+    screenshot("vault-import-review.png");
+
+    // Back keeps what was entered, and a finished step in the sidebar goes back to it
+    QTest::mouseClick(back, Qt::LeftButton);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::DetailsStep));
+    QCOMPARE(fileEdit->text(), QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath("bitwarden_export.json"));
+    QVERIFY(existing->isChecked());
+    QTest::mouseClick(next, Qt::LeftButton);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::ReviewStep));
+
+    QTest::mouseClick(next, Qt::LeftButton);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultImportModal*>());
+    QCOMPARE(m_tabWidget->count(), tabsBefore);
+    QCOMPARE(m_db->rootGroup()->entriesRecursive().size(), entriesBefore + 4);
+
+    // A file that can't be read shows its error in the modal and can't be imported
+    importAction->trigger();
+    modal = m_mainWindow->findChild<VaultImportModal*>("vaultImportModal");
+    QVERIFY(modal && modal->isOpen());
+    next = modal->findChild<QPushButton*>("vaultImportContinue");
+    sources = modal->findChild<QListWidget*>("importTypeList");
+    for (int i = 0; i < sources->count(); ++i) {
+        if (sources->item(i)->data(Qt::UserRole) == ImportWizard::IMPORT_PROTONPASS) {
+            sources->setCurrentRow(i);
+        }
+    }
+    QTest::keyClick(sources, Qt::Key_Enter);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::DetailsStep));
+    // Proton Pass exports aren't locked, so there are no credentials to ask for
+    QVERIFY(!modal->findChild<PasswordWidget*>("passwordEdit")->isVisible());
+    modal->findChild<QLineEdit*>("importFileEdit")
+        ->setText(QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath("missing_protonpass_export.json"));
+    QTest::mouseClick(next, Qt::LeftButton);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::ReviewStep));
+    QTRY_VERIFY(modal->findChild<QWidget*>("importErrorBar")->isVisible());
+    QVERIFY(!next->isEnabled());
+    screenshot("vault-import-error.png");
+
+    // Escape sets it aside
+    QTest::keyClick(m_mainWindow->focusWidget(), Qt::Key_Escape);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultImportModal*>());
+    QCOMPARE(m_tabWidget->count(), tabsBefore);
+    QCOMPARE(m_db->rootGroup()->entriesRecursive().size(), entriesBefore + 4);
+
+    // Leave the database as the other tests expect it
+    for (auto group : m_db->rootGroup()->children()) {
+        if (!groupsBefore.contains(group)) {
+            delete group;
+        }
+    }
+    QCOMPARE(m_db->rootGroup()->entriesRecursive().size(), entriesBefore);
+    m_mainWindow->resize(sizeBefore);
 }
 
 void TestGuiVault::testMenuClickSurvivesLostHighlight()
