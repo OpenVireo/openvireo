@@ -83,4 +83,23 @@ private:
     bool m_hovered = false;
 };
 
+/**
+ * Holds content whose text wraps, such as settings cards, and asks for the height the content needs at the width it
+ * gets. Wrapping widgets otherwise ask for their height at their narrowest width, which leaves a content dialog
+ * sized for that much taller.
+ */
+class VaultFittedContent : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit VaultFittedContent(QWidget* content, QWidget* parent = nullptr);
+
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
+private:
+    int fittedHeight() const;
+};
+
 #endif // KEEPASSXC_VAULTWIDGETS_H
