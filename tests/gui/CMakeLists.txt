@@ -20,6 +20,17 @@ add_unit_test(NAME testguipixmaps SOURCES TestGuiPixmaps.cpp LIBS ${TEST_LIBRARI
 add_unit_test(NAME testguivault SOURCES TestGuiVault.cpp ../util/TemporaryFile.cpp LIBS ${TEST_LIBRARIES})
 add_unit_test(NAME testguiautosync SOURCES TestGuiAutoSync.cpp ../util/TemporaryFile.cpp LIBS ${TEST_LIBRARIES})
 
+# Regenerates docs/images from the Vault Index layout. As a test it skips itself; build the
+# docs_screenshots target to write the images (or run it with KPXC_DOCS_SCREENSHOT_DIR set).
+add_unit_test(NAME testdocsscreenshots SOURCES TestDocsScreenshots.cpp LIBS ${TEST_LIBRARIES})
+add_custom_target(docs_screenshots
+        COMMAND ${CMAKE_COMMAND} -E env LANG=en_US.UTF-8 KPXC_DOCS_SCREENSHOT_DIR=${PROJECT_SOURCE_DIR}/docs/images
+                $<TARGET_FILE:testdocsscreenshots>
+        DEPENDS testdocsscreenshots
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Regenerating documentation screenshots in docs/images"
+        USES_TERMINAL)
+
 file(GLOB_RECURSE ATTACHMENTS_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/attachments/*.cpp)
 add_unit_test(NAME testguiattachments SOURCES ${ATTACHMENTS_TEST_SOURCES} LIBS ${TEST_LIBRARIES})
 include_directories(testguiattachments PRIVATE ${PROJECT_SOURCE_DIR}/src/gui/entry)
