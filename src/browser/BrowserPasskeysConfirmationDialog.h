@@ -23,10 +23,21 @@
 #include <QTimer>
 
 class Entry;
+class QButtonGroup;
 
 namespace Ui
 {
     class BrowserPasskeysConfirmationDialog;
+}
+
+namespace fluent::status_info
+{
+    class ProgressBar;
+}
+
+namespace fluent::textfields
+{
+    class Label;
 }
 
 class BrowserPasskeysConfirmationDialog : public QDialog
@@ -45,6 +56,8 @@ public:
     Entry* getSelectedEntry() const;
     bool isPasskeyUpdated() const;
 
+    int exec() override;
+
 protected:
     void showEvent(QShowEvent* event) override;
 
@@ -57,6 +70,9 @@ private:
     void startCounter(int timeout);
     void updateTimeoutLabel();
     void updateEntriesToTable(const QList<Entry*>& entries);
+    void setupVaultLayout();
+    void setVaultText(const QString& title, const QString& message, const QString& hint = {});
+    int execVaultDialog();
 
 private:
     QScopedPointer<Ui::BrowserPasskeysConfirmationDialog> m_ui;
@@ -64,6 +80,18 @@ private:
     QTimer m_timer;
     int m_counter;
     bool m_passkeyUpdated;
+
+    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these cards
+    QWidget* m_vaultCards = nullptr;
+    QString m_vaultTitle;
+    fluent::textfields::Label* m_vaultMessage = nullptr;
+    fluent::textfields::Label* m_vaultRelyingParty = nullptr;
+    fluent::textfields::Label* m_vaultUsername = nullptr;
+    fluent::textfields::Label* m_vaultHint = nullptr;
+    fluent::textfields::Label* m_vaultTimeout = nullptr;
+    fluent::status_info::ProgressBar* m_vaultProgress = nullptr;
+    QWidget* m_vaultEntryList = nullptr;
+    QButtonGroup* m_vaultEntryChoices = nullptr;
 };
 
 #endif // KEEPASSXC_BROWSERPASSKEYSCONFIRMATIONDIALOG_H
