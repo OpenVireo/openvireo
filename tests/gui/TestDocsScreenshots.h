@@ -32,9 +32,11 @@ class Entry;
 class Group;
 class VaultModal;
 
-// Regenerates the documentation screenshots in docs/images from the Vault Index layout.
-// Each slot drives the app into the state a docs image shows and saves it under that image's
-// name. Run through the `docs_screenshots` target, or set KPXC_DOCS_SCREENSHOT_DIR.
+// Regenerates the documentation screenshots in docs/images, and the website's product
+// screenshots, from the Vault Index layout. Each slot drives the app into the state an image
+// shows and saves it under that image's name. Docs images go to KPXC_DOCS_SCREENSHOT_DIR (the
+// docs_screenshots target sets it to docs/images); websiteScreenshots writes to
+// KPXC_SITE_SCREENSHOT_DIR. Slots whose folder isn't set are skipped.
 class TestDocsScreenshots : public QObject
 {
     Q_OBJECT
@@ -55,6 +57,7 @@ private slots:
     void totpSetup();
     void importWizard();
     void themeComparison();
+    void websiteScreenshots();
 
 private:
     struct Callout
@@ -65,6 +68,7 @@ private:
     };
 
     void populate();
+    void unlock();
     void selectGroup(Group* group);
     void selectEntry(Entry* entry);
     bool selectPage(QWidget* root, const QString& name);
@@ -79,9 +83,13 @@ private:
     void save(const QString& name, const QList<Callout>& callouts = {}, QRect area = {});
     void saveCard(const QString& name, VaultModal* modal, const QList<Callout>& callouts = {});
     QImage capture(QRect area);
+    void writeImage(const QString& file, const QImage& image);
 
+    QString m_docsDir;
+    QString m_siteDir;
     QDir m_outputDir;
     QStringList m_saved;
+    QStringList m_unchanged;
     QScopedPointer<MainWindow> m_mainWindow;
     QPointer<DatabaseTabWidget> m_tabWidget;
     QPointer<DatabaseWidget> m_dbWidget;
