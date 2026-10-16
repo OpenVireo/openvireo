@@ -26,6 +26,9 @@
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
 #include "gui/AboutDialog.h"
+#ifdef KPXC_FEATURE_BROWSER
+#include "browser/BrowserPasskeysConfirmationDialog.h"
+#endif
 #include "gui/Application.h"
 #include "gui/ApplicationSettingsWidget.h"
 #include "gui/DatabaseTabWidget.h"
@@ -58,6 +61,7 @@
 
 #include <QClipboard>
 #include <QDialogButtonBox>
+#include <QElapsedTimer>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -1181,6 +1185,104 @@ void TestGuiVault::testFluentMessageBox()
     });
     MessageBox::warning(m_dbWidget, "Warning", "Something happened.");
     QCOMPARE(primaryText, QMessageBox().addButton(QMessageBox::Ok)->text());
+}
+
+void TestGuiVault::testPasskeyConfirmationDialog()
+{
+#ifdef KPXC_FEATURE_BROWSER
+    using fluent::dialogs_flyouts::ContentDialog;
+    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+
+    auto* first = new Entry();
+    first->setTitle("Example");
+    first->setUsername("alice");
+    first->setGroup(m_workGroup);
+    auto* second = new Entry();
+    second->setTitle("Example (old)");
+    second->setUsername("alice");
+    second->setGroup(m_workGroup);
+
+    // Registering over existing passkeys shows a content dialog over the window, with the passkeys as choices
+    // and Update as its secondary command
+    {
+        BrowserPasskeysConfirmationDialog dialog(m_dbWidget);
+        dialog.registerCredential("alice", "example.com", {first, second}, 60000);
+        bool shown = false;
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("passkeyConfirmationDialog");
+            QVERIFY(content);
+            QTRY_VERIFY(content->isVisible());
+            shown = true;
+            QCOMPARE(content->title(), BrowserPasskeysConfirmationDialog::tr("Existing passkey found"));
+            QCOMPARE(content->primaryButtonText(), BrowserPasskeysConfirmationDialog::tr("Register new"));
+            QCOMPARE(content->secondaryButtonText(), BrowserPasskeysConfirmationDialog::tr("Update"));
+            QCOMPARE(content->defaultButton(), int(ContentDialog::Primary));
+            QCOMPARE(content->findChild<QLabel*>("passkeyRelyingParty")->text(), QString("example.com"));
+            QVERIFY(content->findChild<QWidget*>("passkeyUsername")->isVisible());
+            QVERIFY(content->findChild<QWidget*>("passkeyHint")->isVisible());
+            QVERIFY(content->findChild<QWidget*>("passkeyTimeoutProgress")->isVisible());
+            QVERIFY(!content->findChild<QWidget*>("passkeyTimeout")->property("text").toString().isEmpty());
+            auto choices = content->findChild<QWidget*>("passkeyEntryList")->findChildren<QRadioButton*>();
+            QCOMPARE(choices.size(), 2);
+            QVERIFY(choices[0]->isChecked());
+            QVERIFY(choices[1]->isVisible());
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-passkey-register.png"));
+            }
+            // Picking the old passkey and updating replaces it
+            choices[1]->setChecked(true);
+            emit content->secondaryButtonClicked();
+            content->done(ContentDialog::ResultSecondary);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QVERIFY(shown);
+        QVERIFY(dialog.isPasskeyUpdated());
+        QCOMPARE(dialog.getSelectedEntry(), second);
+    }
+    QTRY_VERIFY(!m_mainWindow->findChild<ContentDialog*>("passkeyConfirmationDialog"));
+
+    // Authenticating offers no update and no username, and Escape cancels
+    {
+        BrowserPasskeysConfirmationDialog dialog(m_dbWidget);
+        dialog.authenticateCredential({first}, "example.com", 60000);
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("passkeyConfirmationDialog");
+            QVERIFY(content);
+            QTRY_VERIFY(content->isVisible());
+            QCOMPARE(content->title(), BrowserPasskeysConfirmationDialog::tr("Authenticate passkey"));
+            QCOMPARE(content->secondaryButtonText(), QString());
+            QVERIFY(!content->findChild<QWidget*>("passkeyUsername")->isVisible());
+            QVERIFY(!content->findChild<QWidget*>("passkeyHint")->isVisible());
+            QTest::keyClick(content, Qt::Key_Escape);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+        QVERIFY(!dialog.isPasskeyUpdated());
+    }
+
+    // Registering without existing passkeys shows no choices, and running out of time cancels
+    {
+        BrowserPasskeysConfirmationDialog dialog(m_dbWidget);
+        dialog.registerCredential("alice", "example.com", {}, 1000);
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("passkeyConfirmationDialog");
+            QVERIFY(content);
+            QCOMPARE(content->title(), BrowserPasskeysConfirmationDialog::tr("Register passkey"));
+            QCOMPARE(content->secondaryButtonText(), BrowserPasskeysConfirmationDialog::tr("Add to existing entry"));
+            QVERIFY(content->findChild<QWidget*>("passkeyEntryList")->isHidden());
+        });
+        QElapsedTimer elapsed;
+        elapsed.start();
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+        QVERIFY(elapsed.elapsed() < 5000);
+        QCOMPARE(dialog.getSelectedEntry(), nullptr);
+    }
+
+    delete first;
+    delete second;
+#else
+    QSKIP("Browser integration is not built");
+#endif
 }
 
 void TestGuiVault::testNewDatabaseModal()
