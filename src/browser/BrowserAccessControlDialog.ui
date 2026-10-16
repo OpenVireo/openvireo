@@ -71,7 +71,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QCheckBox" name="rememberDecisionCheckBox">
+      <widget class="VaultCheckBox" name="rememberDecisionCheckBox">
        <property name="toolTip">
         <string>Remember access to checked entries</string>
        </property>
@@ -119,6 +119,11 @@
   <tabstop>denyButton</tabstop>
  </tabstops>
  <customwidgets>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
   <customwidget>
    <class>CustomTableWidget</class>
    <extends>QTableWidget</extends>

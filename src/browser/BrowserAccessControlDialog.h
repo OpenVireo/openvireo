@@ -23,6 +23,13 @@
 #include <QTableWidget>
 
 class Entry;
+class QAbstractButton;
+class VaultButton;
+
+namespace fluent::textfields
+{
+    class Label;
+}
 
 namespace Ui
 {
@@ -48,8 +55,12 @@ public:
     bool remember() const;
     QList<QTableWidgetItem*> getEntries(SelectionType selectionType) const;
 
+    int exec() override;
+
 signals:
     void disableAccess(QTableWidgetItem* item);
+    // A choice in the Vault Index layout changed, so whether there is anything to allow may have too
+    void vaultChoicesChanged();
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -61,10 +72,27 @@ private:
     void addEntryToList(const Entry* entry, int row);
     bool areAllDisabled() const;
     QList<QTableWidgetItem*> getAllItems() const;
+    void setupVaultLayout();
+    void addVaultEntryRow(int row);
+    void syncVaultEntryRow(int row);
+    bool hasVaultChoice() const;
+    int execVaultDialog();
 
 private:
     QScopedPointer<Ui::BrowserAccessControlDialog> m_ui;
     QList<Entry*> m_entriesToConfirm;
+
+    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these cards
+    struct VaultEntryRow
+    {
+        QAbstractButton* choice;
+        fluent::textfields::Label* username;
+        VaultButton* disable;
+    };
+    QWidget* m_vaultCards = nullptr;
+    fluent::textfields::Label* m_vaultMessage = nullptr;
+    QWidget* m_vaultEntryList = nullptr;
+    QList<VaultEntryRow> m_vaultEntryRows;
 };
 
 #endif // KEEPASSXC_BROWSERACCESSCONTROLDIALOG_H

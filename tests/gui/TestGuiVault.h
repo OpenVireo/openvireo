@@ -60,6 +60,7 @@ private slots:
     void testAboutModal();
     void testFluentMessageBox();
     void testPasskeyConfirmationDialog();
+    void testAccessControlDialog();
     void testNewDatabaseModal();
     void testImportModal();
     void testMenuClickSurvivesLostHighlight();
