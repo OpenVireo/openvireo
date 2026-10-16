@@ -35,6 +35,7 @@
 #include "gui/UrlTools.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/passkeys/PasskeyImporter.h"
+#include "gui/styles/FluentTheme.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
@@ -465,7 +466,12 @@ QList<Entry*> BrowserService::confirmEntries(QList<Entry*>& entriesToConfirm,
     }
 
     m_dialogActive = true;
-    updateWindowState();
+    // In the Vault Index layout, the dialog shows over the window, so the window comes forward with it
+    if (FluentTheme::vaultLayoutEnabled()) {
+        raiseWindow(true);
+    } else {
+        updateWindowState();
+    }
     BrowserAccessControlDialog accessControlDialog(m_currentDatabaseWidget);
 
     connect(m_currentDatabaseWidget, SIGNAL(databaseLockRequested()), &accessControlDialog, SLOT(reject()));

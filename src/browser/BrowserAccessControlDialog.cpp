@@ -23,6 +23,23 @@
 #include "core/Entry.h"
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
+
+#include <components/dialogs_flyouts/ContentDialog.h>
+#include <components/textfields/Label.h>
+
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QVBoxLayout>
+
+namespace
+{
+    // Width of the content dialog's card, a little wider than an alert's for the entries
+    constexpr int VaultDialogWidth = 480;
+} // namespace
 
 BrowserAccessControlDialog::BrowserAccessControlDialog(QWidget* parent)
     : QDialog(parent)
@@ -41,10 +58,191 @@ BrowserAccessControlDialog::BrowserAccessControlDialog(QWidget* parent)
             SLOT(selectionChanged()));
     connect(m_ui->itemsTable, SIGNAL(acceptSelections()), SLOT(accept()));
     connect(m_ui->itemsTable, SIGNAL(focusInWithoutSelections()), this, SLOT(selectionChanged()));
+
+    // The browser brings the window forward before asking, when the dialog can show over it
+    if (FluentTheme::vaultLayoutEnabled() && parent && parent->window()->isVisible()
+        && !parent->window()->isMinimized()) {
+        setupVaultLayout();
+    }
 }
 
 BrowserAccessControlDialog::~BrowserAccessControlDialog()
 {
+}
+
+// In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, which provides the title
+// and the commands. Each entry is a check box on a card, with a button that disables it for the site, and remembering
+// the decision is a toggle card. The table stays out of sight and keeps the selection, so the rest of the dialog's
+// code works as it did.
+void BrowserAccessControlDialog::setupVaultLayout()
+{
+    using fluent::textfields::Label;
+    auto ui = m_ui.data();
+    VaultSettingsPage page(this, {});
+
+    m_vaultMessage = new Label(this);
+    m_vaultMessage->setObjectName("accessMessage");
+    m_vaultMessage->setFluentTypography(Typography::FontRole::Body);
+    m_vaultMessage->setTextColorRole(Label::TextColorRole::Primary);
+    m_vaultMessage->setTextFormat(Qt::PlainText);
+    m_vaultMessage->setWordWrap(true);
+    page.addWidget(m_vaultMessage);
+
+    auto entries = page.addSection(tr("Entries"));
+    m_vaultEntryList = new QWidget(this);
+    m_vaultEntryList->setObjectName("accessEntryList");
+    auto entryLayout = new QVBoxLayout(m_vaultEntryList);
+    entryLayout->setContentsMargins(0, 0, 0, 0);
+    entryLayout->setSpacing(4);
+    entries->addWidget(m_vaultEntryList);
+
+    auto decision = page.addSection();
+    decision->addToggle(ui->rememberDecisionCheckBox,
+                        tr("Allow the checked entries and deny the others for this site without asking again"));
+
+    // The content dialog's commands replace the dialog's buttons, and the check boxes its table
+    for (auto widget : QList<QWidget*>{ui->siteLabel, ui->allowButton, ui->denyButton, ui->itemsTable}) {
+        widget->hide();
+    }
+    page.finish();
+
+    m_vaultCards = findChild<QWidget*>(objectName() + QStringLiteral("Cards"), Qt::FindDirectChildrenOnly);
+    Q_ASSERT(m_vaultCards);
+    // The content dialog has margins of its own
+    m_vaultCards->layout()->setContentsMargins(0, 0, 0, 0);
+}
+
+void BrowserAccessControlDialog::addVaultEntryRow(int row)
+{
+    using fluent::textfields::Label;
+    auto rowWidget = new QWidget(m_vaultEntryList);
+    auto layout = new QHBoxLayout(rowWidget);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(12);
+
+    auto title = m_ui->itemsTable->item(row, 0);
+    auto choice = new VaultCheckBox(title->text(), rowWidget);
+    choice->setObjectName(QStringLiteral("accessEntryChoice%1").arg(row));
+    choice->setToolTip(title->toolTip());
+    layout->addWidget(choice);
+
+    auto username = new Label(rowWidget);
+    username->setFluentTypography(Typography::FontRole::Body);
+    username->setTextColorRole(Label::TextColorRole::Secondary);
+    username->setTextFormat(Qt::PlainText);
+    username->setText(m_ui->itemsTable->item(row, 1)->text());
+    layout->addWidget(username, 1);
+
+    auto disable = new VaultButton(rowWidget);
+    disable->setObjectName(QStringLiteral("accessEntryDisable%1").arg(row));
+    disable->setFluentStyle(fluent::basicinput::Button::Subtle);
+    layout->addWidget(disable);
+    m_vaultEntryList->layout()->addWidget(rowWidget);
+    m_vaultEntryRows.append({choice, username, disable});
+
+    // Checking an entry selects its row of the table, which is what allowing goes by
+    connect(choice, &QAbstractButton::toggled, this, [this, row](bool checked) {
+        for (int column = 0; column < 2; ++column) {
+            m_ui->itemsTable->item(row, column)->setSelected(checked);
+        }
+        emit vaultChoicesChanged();
+    });
+    // The table's button disables the entry or brings it back
+    connect(disable, &QAbstractButton::clicked, this, [this, row] {
+        if (auto button = qobject_cast<QAbstractButton*>(m_ui->itemsTable->cellWidget(row, 2))) {
+            emit button->pressed();
+        }
+        syncVaultEntryRow(row);
+        emit vaultChoicesChanged();
+    });
+    syncVaultEntryRow(row);
+}
+
+void BrowserAccessControlDialog::syncVaultEntryRow(int row)
+{
+    const auto& vaultRow = m_vaultEntryRows[row];
+    const auto title = m_ui->itemsTable->item(row, 0);
+    const bool disabled = title->flags() == Qt::NoItemFlags;
+
+    {
+        QSignalBlocker blocker(vaultRow.choice);
+        vaultRow.choice->setChecked(!disabled && title->isSelected());
+    }
+    vaultRow.choice->setEnabled(!disabled);
+    for (QWidget* widget : {static_cast<QWidget*>(vaultRow.choice), static_cast<QWidget*>(vaultRow.username)}) {
+        auto font = widget->font();
+        font.setStrikeOut(disabled);
+        widget->setFont(font);
+    }
+
+    auto button = qobject_cast<QAbstractButton*>(m_ui->itemsTable->cellWidget(row, 2));
+    vaultRow.disable->setIcon(button->icon());
+    vaultRow.disable->setToolTip(button->toolTip());
+    vaultRow.disable->setAccessibleName(button->toolTip());
+}
+
+bool BrowserAccessControlDialog::hasVaultChoice() const
+{
+    for (const auto& row : m_vaultEntryRows) {
+        if (row.choice->isEnabled() && row.choice->isChecked()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int BrowserAccessControlDialog::exec()
+{
+    return m_vaultCards ? execVaultDialog() : QDialog::exec();
+}
+
+int BrowserAccessControlDialog::execVaultDialog()
+{
+    using fluent::dialogs_flyouts::ContentDialog;
+    auto window = parentWidget()->window();
+    ContentDialog dialog(window);
+    dialog.setObjectName("accessControlDialog");
+    dialog.setThemeSource(window);
+    dialog.setTitle(tr("Allow access?"));
+    dialog.setPrimaryButtonText(tr("Allow"));
+    dialog.setCloseButtonText(m_ui->denyButton->text());
+    dialog.setDefaultButton(ContentDialog::Primary);
+    // The cards' text wraps, so they ask for their height at the width the dialog gives them
+    dialog.setContent(new VaultFittedContent(m_vaultCards));
+    m_vaultCards->show();
+    dialog.resize(VaultDialogWidth + 2 * dialog.shadowSize(), dialog.minimumHeight());
+
+    // Allowing needs an entry to allow
+    QAbstractButton* allow = nullptr;
+    for (auto button : dialog.findChildren<fluent::basicinput::Button*>()) {
+        if (button->text() == dialog.primaryButtonText()) {
+            allow = button;
+        }
+    }
+    Q_ASSERT(allow);
+    // Enter presses it; not focused, since the dialog takes focus on opening
+    if (auto button = qobject_cast<QPushButton*>(allow)) {
+        button->setDefault(true);
+    }
+    auto updateAllow = [this, allow] { allow->setEnabled(hasVaultChoice()); };
+    auto choicesChanged = connect(this, &BrowserAccessControlDialog::vaultChoicesChanged, &dialog, updateAllow);
+    updateAllow();
+
+    // Locking the database finishes this dialog, which takes the content dialog with it
+    auto finished = connect(this, &QDialog::finished, &dialog, [&dialog](int result) {
+        dialog.done(result == QDialog::Accepted ? ContentDialog::ResultPrimary : ContentDialog::ResultNone);
+    });
+    const int result = dialog.exec();
+    disconnect(finished);
+    disconnect(choicesChanged);
+
+    // Take the cards back, so they outlive the content dialog
+    m_vaultCards->setParent(this);
+    layout()->addWidget(m_vaultCards);
+
+    const int answer = result == ContentDialog::ResultPrimary ? QDialog::Accepted : QDialog::Rejected;
+    setResult(answer);
+    return answer;
 }
 
 void BrowserAccessControlDialog::showEvent(QShowEvent* event)
@@ -79,6 +277,13 @@ void BrowserAccessControlDialog::setEntries(const QList<Entry*>& entriesToConfir
     m_ui->itemsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_ui->itemsTable->selectAll();
     m_ui->allowButton->setFocus();
+
+    if (m_vaultCards) {
+        m_vaultMessage->setText(m_ui->siteLabel->text());
+        for (int i = 0; i < entriesToConfirm.count(); ++i) {
+            addVaultEntryRow(i);
+        }
+    }
 }
 
 void BrowserAccessControlDialog::addEntryToList(const Entry* entry, int row)
