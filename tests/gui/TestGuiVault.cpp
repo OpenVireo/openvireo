@@ -1260,6 +1260,21 @@ void TestGuiVault::testPasskeyConfirmationDialog()
         QVERIFY(!dialog.isPasskeyUpdated());
     }
 
+    // Enter uses the chosen passkey
+    {
+        BrowserPasskeysConfirmationDialog dialog(m_dbWidget);
+        dialog.authenticateCredential({first, second}, "example.com", 60000);
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("passkeyConfirmationDialog");
+            QVERIFY(content);
+            QTRY_VERIFY(content->isVisible());
+            QTest::keyClick(content, Qt::Key_Return);
+        });
+        QTimer::singleShot(5000, &dialog, &QDialog::reject);
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QCOMPARE(dialog.getSelectedEntry(), first);
+    }
+
     // Registering without existing passkeys shows no choices, and running out of time cancels
     {
         BrowserPasskeysConfirmationDialog dialog(m_dbWidget);

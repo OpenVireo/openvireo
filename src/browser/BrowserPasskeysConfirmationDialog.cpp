@@ -23,6 +23,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
 
 #include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/status_info/ProgressBar.h>
@@ -30,6 +31,7 @@
 
 #include <QButtonGroup>
 #include <QCloseEvent>
+#include <QPushButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -175,9 +177,16 @@ int BrowserPasskeysConfirmationDialog::execVaultDialog()
     dialog.setSecondaryButtonText(m_ui->updateButton->isHidden() ? QString() : m_ui->updateButton->text());
     dialog.setCloseButtonText(m_ui->cancelButton->text());
     dialog.setDefaultButton(ContentDialog::Primary);
-    dialog.setContent(m_vaultCards);
+    // The cards' text wraps, so they ask for their height at the width the dialog gives them
+    dialog.setContent(new VaultFittedContent(m_vaultCards));
     m_vaultCards->show();
     dialog.resize(VaultDialogWidth + 2 * dialog.shadowSize(), dialog.minimumHeight());
+    // Enter presses the primary command; not focused, since the dialog takes focus on opening
+    for (auto button : dialog.findChildren<QPushButton*>()) {
+        if (button->text() == dialog.primaryButtonText()) {
+            button->setDefault(true);
+        }
+    }
 
     // Running out of time finishes this dialog, which takes the content dialog with it
     auto finished = connect(this, &QDialog::finished, &dialog, [&dialog](int result) {

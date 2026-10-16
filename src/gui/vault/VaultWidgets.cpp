@@ -28,6 +28,7 @@
 #include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
+#include <QVBoxLayout>
 
 namespace
 {
@@ -241,4 +242,40 @@ void VaultFieldRow::paintEvent(QPaintEvent* event)
     QPainterPath path;
     path.addRoundedRect(QRectF(rect()).adjusted(2, 2, -2, -2), 4, 4);
     painter.fillPath(path, FluentTheme::palette().subtleHover);
+}
+
+VaultFittedContent::VaultFittedContent(QWidget* content, QWidget* parent)
+    : QWidget(parent)
+{
+    auto layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(content);
+
+    // Content built while hidden hasn't laid itself out yet, so its height for a width would be stale. Lay it out
+    // from the inside out, so each layout sees the sizes of the ones inside it.
+    auto widgets = content->findChildren<QWidget*>();
+    widgets.prepend(content);
+    for (auto it = widgets.crbegin(); it != widgets.crend(); ++it) {
+        if (auto widgetLayout = (*it)->layout()) {
+            widgetLayout->invalidate();
+            widgetLayout->activate();
+        }
+    }
+}
+
+QSize VaultFittedContent::sizeHint() const
+{
+    return {QWidget::sizeHint().width(), fittedHeight()};
+}
+
+QSize VaultFittedContent::minimumSizeHint() const
+{
+    return {QWidget::minimumSizeHint().width(), fittedHeight()};
+}
+
+int VaultFittedContent::fittedHeight() const
+{
+    const int width = this->width() > 0 ? this->width() : QWidget::sizeHint().width();
+    const int height = heightForWidth(width);
+    return height > 0 ? height : QWidget::sizeHint().height();
 }
