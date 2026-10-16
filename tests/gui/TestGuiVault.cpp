@@ -27,6 +27,7 @@
 #include "crypto/Crypto.h"
 #include "gui/AboutDialog.h"
 #ifdef KPXC_FEATURE_BROWSER
+#include "browser/BrowserAccessControlDialog.h"
 #include "browser/BrowserPasskeysConfirmationDialog.h"
 #endif
 #include "gui/Application.h"
@@ -59,6 +60,7 @@
 #include <components/textfields/AutoSuggestBox.h>
 #include <components/windowing/TitleBar.h>
 
+#include <QCheckBox>
 #include <QClipboard>
 #include <QDialogButtonBox>
 #include <QElapsedTimer>
@@ -1295,6 +1297,118 @@ void TestGuiVault::testPasskeyConfirmationDialog()
 
     delete first;
     delete second;
+#else
+    QSKIP("Browser integration is not built");
+#endif
+}
+
+void TestGuiVault::testAccessControlDialog()
+{
+#ifdef KPXC_FEATURE_BROWSER
+    using fluent::dialogs_flyouts::ContentDialog;
+    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+
+    auto* first = new Entry();
+    first->setTitle("Example");
+    first->setUsername("alice");
+    first->setGroup(m_workGroup);
+    auto* second = new Entry();
+    second->setTitle("Example (work)");
+    second->setUsername("alice@work");
+    second->setGroup(m_workGroup);
+    auto* third = new Entry();
+    third->setTitle("Example (old)");
+    third->setUsername("bob");
+    third->setGroup(m_workGroup);
+    const QList<Entry*> entries{first, second, third};
+
+    // The request shows as a content dialog over the window, with each entry checked and Remember as a toggle
+    {
+        BrowserAccessControlDialog dialog(m_dbWidget);
+        dialog.setEntries(entries, "https://example.com/login", false);
+        // A failed check above leaves the dialog open, so it closes itself rather than hang the test
+        QTimer::singleShot(10000, &dialog, &QDialog::reject);
+        bool shown = false;
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("accessControlDialog");
+            QVERIFY(content);
+            QTRY_VERIFY(content->isVisible());
+            shown = true;
+            QCOMPARE(content->title(), BrowserAccessControlDialog::tr("Allow access?"));
+            QCOMPARE(content->primaryButtonText(), BrowserAccessControlDialog::tr("Allow"));
+            QCOMPARE(content->secondaryButtonText(), QString());
+            QCOMPARE(content->defaultButton(), int(ContentDialog::Primary));
+            QVERIFY(content->findChild<QLabel*>("accessMessage")->text().contains("https://example.com"));
+            auto* remember = content->findChild<QCheckBox*>("rememberDecisionCheckBox");
+            QVERIFY(remember->isVisible());
+            for (int i = 0; i < 3; ++i) {
+                QVERIFY(content->findChild<QAbstractButton*>(QString("accessEntryChoice%1").arg(i))->isChecked());
+            }
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-access-control.png"));
+            }
+
+            // Unchecking one entry and disabling another allows the rest
+            content->findChild<QAbstractButton*>("accessEntryChoice1")->setChecked(false);
+            auto* disable = content->findChild<QAbstractButton*>("accessEntryDisable2");
+            disable->click();
+            auto* disabledChoice = content->findChild<QAbstractButton*>("accessEntryChoice2");
+            QVERIFY(!disabledChoice->isEnabled());
+            QVERIFY(!disabledChoice->isChecked());
+            QVERIFY(disabledChoice->font().strikeOut());
+            remember->setChecked(true);
+            QTest::keyClick(content, Qt::Key_Return);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QVERIFY(shown);
+        QVERIFY(dialog.remember());
+        const auto selected = dialog.getEntries(SelectionType::Selected);
+        QCOMPARE(selected.size(), 1);
+        QCOMPARE(selected.first()->row(), 0);
+        const auto disabled = dialog.getEntries(SelectionType::Disabled);
+        QCOMPARE(disabled.size(), 1);
+        QCOMPARE(disabled.first()->row(), 2);
+    }
+    QTRY_VERIFY(!m_mainWindow->findChild<ContentDialog*>("accessControlDialog"));
+
+    // Nothing to allow leaves only Deny All, and Escape denies; HTTP authentication has nothing to remember
+    {
+        BrowserAccessControlDialog dialog(m_dbWidget);
+        dialog.setEntries({first}, "https://example.com", true);
+        QTimer::singleShot(0, this, [&] {
+            auto* content = m_mainWindow->findChild<ContentDialog*>("accessControlDialog");
+            QVERIFY(content);
+            QTRY_VERIFY(content->isVisible());
+            QVERIFY(!content->findChild<QCheckBox*>("rememberDecisionCheckBox")->isVisible());
+            QPushButton* allow = nullptr;
+            for (auto* button : content->findChildren<QPushButton*>()) {
+                if (button->text() == content->primaryButtonText()) {
+                    allow = button;
+                }
+            }
+            QVERIFY(allow);
+            QVERIFY(allow->isEnabled());
+            content->findChild<QAbstractButton*>("accessEntryChoice0")->setChecked(false);
+            QVERIFY(!allow->isEnabled());
+            QTest::keyClick(content, Qt::Key_Escape);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+        QVERIFY(!dialog.remember());
+    }
+
+    // Locking the database denies the request
+    {
+        BrowserAccessControlDialog dialog(m_dbWidget);
+        dialog.setEntries({first}, "https://example.com", false);
+        QTimer::singleShot(0, this, [&] {
+            QVERIFY(m_mainWindow->findChild<ContentDialog*>("accessControlDialog"));
+            dialog.reject();
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+    }
+
+    qDeleteAll(entries);
 #else
     QSKIP("Browser integration is not built");
 #endif
