@@ -116,10 +116,6 @@ MainWindow::MainWindow()
 
     setAcceptDrops(true);
 
-    if (config()->get(Config::GUI_CompactMode).toBool()) {
-        m_ui->toolBar->setIconSize({20, 20});
-    }
-
     // Setup the search widget in the toolbar, or in the header for the Vault Index layout
     m_vaultLayout = FluentTheme::vaultLayoutEnabled();
     m_searchWidget = new SearchWidget();
@@ -2137,29 +2133,9 @@ void MainWindow::initViewMenu()
         }
     });
 
-    auto vaultLayoutAction = new QAction(tr("Vault Index Layout"), this);
-    vaultLayoutAction->setObjectName("actionVaultLayout");
-    vaultLayoutAction->setCheckable(true);
-    vaultLayoutAction->setChecked(m_vaultLayout);
-    m_ui->menuView->insertAction(m_ui->actionCompactMode, vaultLayoutAction);
-    connect(vaultLayoutAction, &QAction::toggled, this, [this](bool checked) {
-        config()->set(Config::GUI_VaultLayout, checked);
-        if (checked != m_vaultLayout) {
-            restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
-        }
-    });
     // The Vault Index layout has no toolbar or preview panel
     m_ui->actionShowToolbar->setVisible(!m_vaultLayout);
     m_ui->actionShowPreviewPanel->setVisible(!m_vaultLayout);
-
-    bool compact = config()->get(Config::GUI_CompactMode).toBool();
-    m_ui->actionCompactMode->setChecked(compact);
-    connect(m_ui->actionCompactMode, &QAction::toggled, this, [this, compact](bool checked) {
-        config()->set(Config::GUI_CompactMode, checked);
-        if (checked != compact) {
-            restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
-        }
-    });
 
 #ifdef Q_OS_MACOS
     m_ui->actionShowMenubar->setVisible(false);
@@ -2281,7 +2257,6 @@ void MainWindow::initActionCollection()
                     m_ui->actionThemeLight,
                     m_ui->actionThemeDark,
                     m_ui->actionThemeClassic,
-                    m_ui->actionCompactMode,
 #ifndef Q_OS_MACOS
                     m_ui->actionShowMenubar,
 #endif

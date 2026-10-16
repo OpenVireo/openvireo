@@ -17,7 +17,6 @@
 
 #include "DatabaseIcons.h"
 
-#include "core/Config.h"
 #include "core/Global.h"
 
 #include <QDir>
@@ -40,9 +39,6 @@ DatabaseIcons::DatabaseIcons()
 {
     iconList = QDir(iconDir).entryList(QDir::NoFilter, QDir::Name);
     badgeList = QDir(badgeDir).entryList(QDir::NoFilter, QDir::Name);
-
-    // Set this early and once to ensure consistent icon size until app restart
-    m_compactMode = config()->get(Config::GUI_CompactMode).toBool();
 }
 
 DatabaseIcons* DatabaseIcons::instance()
@@ -110,10 +106,10 @@ int DatabaseIcons::iconSize(IconSize size)
 {
     switch (size) {
     case Medium:
-        return m_compactMode ? 26 : 30;
+        return 30;
     case Large:
-        return m_compactMode ? 30 : 36;
+        return 36;
     default:
-        return m_compactMode ? 16 : 22;
+        return 22;
     }
 }

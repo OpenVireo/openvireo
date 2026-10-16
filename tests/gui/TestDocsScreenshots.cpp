@@ -890,9 +890,6 @@ void TestDocsScreenshots::websiteMainWindow()
     stack->setCurrentIndex(MainWindow::WelcomeScreen);
     saveSite("welcome_screen");
     stack->setCurrentIndex(index);
-
-    // Last, since it leaves the dark theme on
-    saveSite("theme_comparison", themeComparisonImage());
 }
 
 void TestDocsScreenshots::websiteEntryEditor()

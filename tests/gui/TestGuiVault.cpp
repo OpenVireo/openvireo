@@ -120,7 +120,6 @@ void TestGuiVault::initTestCase()
     QLocale::setDefault(QLocale::c());
     Application::bootstrap();
 
-    config()->set(Config::GUI_VaultLayout, true);
     config()->set(Config::AutoSaveAfterEveryChange, false);
     config()->set(Config::AutoSaveOnExit, false);
     config()->set(Config::UpdateCheckMessageShown, true);

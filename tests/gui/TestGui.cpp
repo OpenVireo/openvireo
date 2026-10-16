@@ -64,6 +64,7 @@
 #include "gui/group/GroupView.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagsEdit.h"
 #include "gui/wizard/NewDatabaseWizard.h"
 #include "keys/FileKey.h"
@@ -106,7 +107,7 @@ void TestGui::initTestCase()
     Application::bootstrap();
 
     // These tests drive the classic toolbar and entry table
-    config()->set(Config::GUI_VaultLayout, false);
+    FluentTheme::setVaultLayoutEnabledForTests(false);
     m_mainWindow.reset(new MainWindow());
     m_tabWidget = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
     m_mainWindow->show();

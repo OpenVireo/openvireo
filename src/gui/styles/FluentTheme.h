@@ -33,6 +33,9 @@ namespace FluentTheme
 {
     // True when the Vault Index main window layout is enabled
     bool vaultLayoutEnabled();
+    // The classic layout is no longer offered to users; only the tests that drive it still turn it on.
+    // Call before creating the main window.
+    void setVaultLayoutEnabledForTests(bool enabled);
 
     // Point Fluent-Qt at the light or dark palette and the KeePassXC accent
     void apply(bool dark);
