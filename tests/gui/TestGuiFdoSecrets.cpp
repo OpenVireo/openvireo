@@ -36,6 +36,7 @@
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/wizard/NewDatabaseWizard.h"
 #include "util/FdoSecretsProxy.h"
 #include "util/TemporaryFile.h"
@@ -154,7 +155,7 @@ void TestGuiFdoSecrets::initTestCase()
     Application::bootstrap();
 
     // These tests drive the classic toolbar and entry table
-    config()->set(Config::GUI_VaultLayout, false);
+    FluentTheme::setVaultLayoutEnabledForTests(false);
     m_mainWindow.reset(new MainWindow());
     m_tabWidget = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
     VERIFY(m_tabWidget);

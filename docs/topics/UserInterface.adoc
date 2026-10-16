@@ -54,12 +54,6 @@ KeePassXC ships with light and dark themes specifically designed to meet accessi
 .Setting the theme
 image::theme_selection.png[]
 
-==== Compact Mode
-For users with smaller screens or those who desire seeing more entries at once, KeePassXC offers a compact view mode. This mode shows smaller toolbar, group, and entry icons. The effect of compact mode (left side) can be seen below.
-
-.Compact mode comparison
-image::compact_mode_comparison.png[]
-
 === Application Settings
 Users can configure KeePassXC to their personal tastes with a wide variety of general and security settings that apply to the whole application. These settings are accessible from _Tools_ -> _Settings_ or the cog wheel icon from the toolbar. Settings include: startup options, file management, entry management, user interface, language, security controls, and integration settings (Auto-Type, Browser, etc).
 

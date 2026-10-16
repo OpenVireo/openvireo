@@ -38,6 +38,7 @@
 #include "gui/PasswordWidget.h"
 #include "gui/entry/EditEntryWidget.h"
 #include "gui/entry/EntryView.h"
+#include "gui/styles/FluentTheme.h"
 
 int main(int argc, char* argv[])
 {
@@ -71,7 +72,7 @@ void TestGuiBrowser::initTestCase()
     config()->set(Config::Security_QuickUnlock, false);
 
     // These tests drive the classic toolbar and entry table
-    config()->set(Config::GUI_VaultLayout, false);
+    FluentTheme::setVaultLayoutEnabledForTests(false);
     m_mainWindow.reset(new MainWindow());
     m_tabWidget = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
     m_mainWindow->show();
