@@ -44,6 +44,9 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/wizard/ImportWizard.h"
+#include "keeshare/KeeShare.h"
+#include "keeshare/KeeShareSettings.h"
+#include "mock/MockClock.h"
 
 #include <QAbstractButton>
 #include <QComboBox>
@@ -84,7 +87,49 @@ namespace
     // window comes out kOutputWidth pixels wide, crops proportionally smaller.
     constexpr int kOutputWidth = 1600;
     const QSize kWindowSize(1180, 760);
+    // The website frames its screenshots at roughly 4:3
+    const QSize kSiteWindowSize(1180, 900);
+    const auto kSiteSlot = QLatin1String("websiteScreenshots");
     const QColor kCalloutColor(0x3c, 0x7d, 0x20); // KeePassXC brand green
+
+    // Everything shown is fixed, so re-running only changes images whose UI changed: the clock
+    // (timestamps, expiry, TOTP codes), entry and group ids, generated passwords, and the
+    // KeeShare certificate all come from here.
+    const QUuid kUuidNamespace("{6b3a2e1c-5d4f-4c8e-9a7b-1f2e3d4c5b6a}");
+    const auto kPassword = QStringLiteral("q7#Vt2!mWz9$kLp4Rx8@");
+    const auto kPassphrase = QStringLiteral("orbit-candle-maple-river-signal-velvet");
+    const auto kKeeShareFixture = QStringLiteral("DocsScreenshotsKeeShare.txt");
+
+    QUuid uuidFor(const QString& name)
+    {
+        return QUuid::createUuidV5(kUuidNamespace, name);
+    }
+
+    // Whether an existing screenshot already shows the same thing. A handful of pixels can still
+    // vary between runs (hover highlights follow wherever the real mouse pointer is), so up to
+    // 0.2% of pixels may differ before the file counts as changed.
+    bool sameScreenshot(const QString& file, const QImage& image)
+    {
+        auto existing = QImage(file);
+        if (existing.isNull() || existing.size() != image.size()) {
+            return false;
+        }
+        existing = existing.convertToFormat(QImage::Format_RGB888);
+        qint64 differing = 0;
+        const qint64 allowed = qint64(image.width()) * image.height() / 500;
+        for (int y = 0; y < image.height(); ++y) {
+            const auto* a = existing.constScanLine(y);
+            const auto* b = image.constScanLine(y);
+            for (int x = 0; x < image.width() * 3; x += 3) {
+                if (a[x] != b[x] || a[x + 1] != b[x + 1] || a[x + 2] != b[x + 2]) {
+                    if (++differing > allowed) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
     // Lets a modal's nested event loop run a block, as the new database wizard needs
     template <typename F> void whileOpen(QObject* context, F&& body)
@@ -97,18 +142,36 @@ namespace
 
 void TestDocsScreenshots::initTestCase()
 {
-    const auto dir = qEnvironmentVariable("KPXC_DOCS_SCREENSHOT_DIR");
-    if (dir.isEmpty()) {
-        QSKIP("Set KPXC_DOCS_SCREENSHOT_DIR (or build the docs_screenshots target) to regenerate docs images");
+    m_docsDir = qEnvironmentVariable("KPXC_DOCS_SCREENSHOT_DIR");
+    m_siteDir = qEnvironmentVariable("KPXC_SITE_SCREENSHOT_DIR");
+    if (m_docsDir.isEmpty() && m_siteDir.isEmpty()) {
+        QSKIP("Set KPXC_DOCS_SCREENSHOT_DIR (docs/images) and/or KPXC_SITE_SCREENSHOT_DIR (website) to save "
+              "screenshots, or build the docs_screenshots target");
     }
-    m_outputDir = QDir(dir);
-    QVERIFY(m_outputDir.mkpath("."));
     QVERIFY(m_tempDir.isValid());
 
     QVERIFY(Crypto::init());
     Config::createConfigFromFile(m_tempDir.filePath("config.ini"), m_tempDir.filePath("local.ini"));
     QLocale::setDefault(QLocale::c());
     Application::bootstrap();
+    MockClock::setup(new MockClock(2026, 1, 15, 9, 30, 0));
+    QApplication::setCursorFlashTime(0); // a steady caret, not one caught mid-blink
+
+    // KeeShare signs with a generated certificate, so keep one as a fixture. The first run
+    // creates it; commit it so later runs (and other machines) show the same one.
+    const auto fixture = QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath(kKeeShareFixture);
+    QFile keeShareFile(fixture);
+    if (keeShareFile.open(QIODevice::ReadOnly)) {
+        config()->set(Config::KeeShare_Own, QString::fromUtf8(keeShareFile.readAll()));
+    } else {
+        auto own = KeeShareSettings::Own::generate();
+        own.certificate.signer = QStringLiteral("John Doe"); // not the account running the tool
+        const auto serialized = KeeShareSettings::Own::serialize(own);
+        config()->set(Config::KeeShare_Own, serialized);
+        QVERIFY(keeShareFile.open(QIODevice::WriteOnly));
+        keeShareFile.write(serialized.toUtf8());
+        qInfo().noquote() << "Created" << fixture << "- commit it so screenshots stay the same";
+    }
 
     config()->set(Config::GUI_VaultLayout, true);
     config()->set(Config::GUI_ApplicationTheme, "light");
@@ -161,6 +224,14 @@ void TestDocsScreenshots::initTestCase()
 // Return to the plain main view between screenshots, whatever the last one left open
 void TestDocsScreenshots::init()
 {
+    // Docs and website screenshots each run only when their folder is set
+    const bool site = QLatin1String(QTest::currentTestFunction()) == kSiteSlot;
+    const auto& dir = site ? m_siteDir : m_docsDir;
+    if (dir.isEmpty()) {
+        QSKIP(site ? "KPXC_SITE_SCREENSHOT_DIR not set" : "KPXC_DOCS_SCREENSHOT_DIR not set");
+    }
+    m_outputDir = QDir(dir);
+    QVERIFY(m_outputDir.mkpath("."));
     if (!m_dbWidget) {
         return;
     }
@@ -170,13 +241,14 @@ void TestDocsScreenshots::init()
     m_dbWidget->switchToMainView();
     config()->set(Config::GUI_ApplicationTheme, "light");
     kpxcApp->applyTheme();
-    m_mainWindow->resize(kWindowSize);
+    m_mainWindow->resize(site ? kSiteWindowSize : kWindowSize);
     selectGroup(m_workGroup);
     selectEntry(m_github);
 }
 
 void TestDocsScreenshots::cleanupTestCase()
 {
+    MockClock::teardown();
     if (m_db) {
         m_db->markAsClean();
         MessageBox::setNextAnswer(MessageBox::No);
@@ -188,16 +260,11 @@ void TestDocsScreenshots::cleanupTestCase()
     // Losslessly shrink what was written, when optipng is installed
     const auto optipng = QStandardPaths::findExecutable("optipng");
     if (!optipng.isEmpty() && !m_saved.isEmpty()) {
-        QStringList files;
-        for (const auto& name : m_saved) {
-            files << m_outputDir.absoluteFilePath(name);
-        }
-        QProcess::execute(optipng, QStringList({"-quiet", "-o2", "-strip", "all"}) + files);
+        QProcess::execute(optipng, QStringList({"-quiet", "-o2", "-strip", "all"}) + m_saved);
     }
+    qInfo().noquote() << QString("%1 screenshots updated, %2 unchanged").arg(m_saved.size()).arg(m_unchanged.size());
     if (!m_saved.isEmpty()) {
-        qInfo().noquote() << QString("Saved %1 screenshots to %2:\n  %3")
-                                 .arg(m_saved.size())
-                                 .arg(m_outputDir.absolutePath(), m_saved.join("\n  "));
+        qInfo().noquote() << "Updated:\n  " + m_saved.join("\n  ");
     }
 }
 
@@ -216,7 +283,7 @@ void TestDocsScreenshots::populate()
 
     auto addGroup = [root](const QString& name) {
         auto* group = new Group();
-        group->setUuid(QUuid::createUuid());
+        group->setUuid(uuidFor(name));
         group->setName(name);
         group->setParent(root);
         return group;
@@ -224,7 +291,7 @@ void TestDocsScreenshots::populate()
     auto addEntry = [](Group* group, const QString& title, const QString& username, const QString& url,
                        const QString& password) {
         auto* entry = new Entry();
-        entry->setUuid(QUuid::createUuid());
+        entry->setUuid(uuidFor(title));
         entry->setTitle(title);
         entry->setUsername(username);
         entry->setUrl(url);
@@ -254,7 +321,7 @@ void TestDocsScreenshots::populate()
     addEntry(m_workGroup, "Atlassian Cloud", "jdoe@example.com", "https://id.atlassian.com", "Vt8$kq2#Nw5!zRp7Lc");
     auto* vpn = addEntry(m_workGroup, "Office VPN", "jdoe", "https://vpn.example.com", "Mx4!qZ8#tR2wLp6v");
     vpn->setExpires(true);
-    vpn->setExpiryTime(QDateTime::currentDateTimeUtc().addDays(-3));
+    vpn->setExpiryTime(Clock::currentDateTimeUtc().addDays(-3));
     addEntry(m_workGroup, "Postgres (staging)", "app_rw", "db-staging.example.com:5432", "staging1");
     addEntry(m_workGroup, "Slack", "jdoe@example.com", "https://example.slack.com", "Hq7#vN3!pX9zKt2w");
     addEntry(m_workGroup, "Docker Hub", "jdoe", "https://hub.docker.com", "Rz5!mK8#wQ2tVp4x");
@@ -437,9 +504,20 @@ void TestDocsScreenshots::save(const QString& name, const QList<Callout>& callou
     }
     painter.end();
 
-    const auto file = m_outputDir.absoluteFilePath(name + ".png");
-    QVERIFY2(image.convertToFormat(QImage::Format_RGB888).save(file), qPrintable(file));
-    m_saved << name + ".png";
+    writeImage(m_outputDir.absoluteFilePath(name + ".png"), image);
+}
+
+// Saves a screenshot, leaving the file alone when it already shows the same thing, so re-runs
+// only touch images whose UI changed
+void TestDocsScreenshots::writeImage(const QString& file, const QImage& image)
+{
+    const auto rgb = image.convertToFormat(QImage::Format_RGB888);
+    if (sameScreenshot(file, rgb)) {
+        m_unchanged << file;
+        return;
+    }
+    QVERIFY2(rgb.save(file), qPrintable(file));
+    m_saved << file;
 }
 
 void TestDocsScreenshots::saveCard(const QString& name, VaultModal* modal, const QList<Callout>& callouts)
@@ -484,7 +562,12 @@ void TestDocsScreenshots::welcomeAndUnlock()
     auto* keyFile = m_dbWidget->findChild<QWidget*>("addKeyFileLinkLabel");
     save("unlock_database", {{"A", rectOf(passwordWidget)}, {"B", rectOf(keyFile)}});
 
-    auto* editPassword = passwordWidget->findChild<QLineEdit*>("passwordEdit");
+    unlock();
+}
+
+void TestDocsScreenshots::unlock()
+{
+    auto* editPassword = m_dbWidget->findChild<PasswordWidget*>("editPassword")->findChild<QLineEdit*>("passwordEdit");
     editPassword->setFocus();
     QTest::keyClicks(editPassword, "a");
     QTest::keyClick(editPassword, Qt::Key_Enter);
@@ -689,14 +772,19 @@ void TestDocsScreenshots::passwordGenerator()
     auto* generator = m_mainWindow->findChild<PasswordGeneratorWidget*>("passwordGeneratorWidget");
     auto* tabs = generator->findChild<QTabWidget*>("tabWidget");
 
+    // Each change regenerates the password, so pin what it shows just before every capture
+    auto* output = generator->findChild<PasswordWidget*>("editNewPassword");
     tabs->setCurrentIndex(PasswordGeneratorWidget::Password);
+    output->setText(kPassword);
     saveCard("password_generator", modal);
     if (auto* advanced = generator->findChild<QAbstractButton*>("advancedModeToggle")) {
         advanced->setChecked(true);
+        output->setText(kPassword);
         saveCard("password_generator_advanced", modal);
         advanced->setChecked(false);
     }
     tabs->setCurrentIndex(PasswordGeneratorWidget::Diceware);
+    output->setText(kPassphrase);
     saveCard("passphrase_generator", modal);
     tabs->setCurrentIndex(PasswordGeneratorWidget::Password);
     closeModal(modal);
@@ -745,7 +833,59 @@ void TestDocsScreenshots::themeComparison()
     painter.drawImage(QPoint(half, 0), dark, QRect(half, 0, dark.width() - half, dark.height()));
     painter.end();
 
-    const auto file = m_outputDir.absoluteFilePath("theme_comparison.png");
-    QVERIFY2(combined.convertToFormat(QImage::Format_RGB888).save(file), qPrintable(file));
-    m_saved << "theme_comparison.png";
+    writeImage(m_outputDir.absoluteFilePath("theme_comparison.png"), combined);
 }
+
+// The website's product screenshots (landing page, Screenshots page, download carousel):
+// whole windows without callouts, each with a half-size thumbnail in thumbs/
+void TestDocsScreenshots::websiteScreenshots()
+{
+    auto saveWithThumbnail = [this](const QString& name) {
+        save(name);
+        const QImage image(m_outputDir.absoluteFilePath(name + ".png"));
+        QVERIFY(m_outputDir.mkpath("thumbs"));
+        writeImage(m_outputDir.absoluteFilePath("thumbs/" + name + ".png"),
+                   image.scaledToWidth(image.width() / 2, Qt::SmoothTransformation));
+    };
+
+    // The hero: the main window with a fully featured entry selected
+    saveWithThumbnail("database_view");
+
+    // Configuring Auto-Type for that entry
+    m_dbWidget->switchToEntryEdit();
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* editor = m_mainWindow->findChild<VaultEntryEditCard*>("vaultEntryEditCard")->editor();
+    if (selectPage(editor, "Auto-Type")) {
+        // A window association, so the page shows what Auto-Type can be tuned with
+        if (auto* add = editor->findChild<QAbstractButton*>("assocAddButton")) {
+            QTest::mouseClick(add, Qt::LeftButton);
+            if (auto* window = editor->findChild<QComboBox*>("windowTitleCombo")) {
+                window->setEditText("*GitHub*");
+            }
+        }
+        saveWithThumbnail("autotype_entrylevel");
+    }
+    MessageBox::setNextAnswer(MessageBox::Discard);
+    QTest::mouseClick(editor->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    MessageBox::setNextAnswer(MessageBox::NoButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+
+    // The health check, with its weak and expired passwords
+    if (auto* reports = openModal("actionReports", "vaultReportsModal")) {
+        auto* dialog = m_mainWindow->findChild<QWidget*>("reportsDialog");
+        selectPage(dialog, "Health Check");
+        for (auto* box : dialog->findChildren<QAbstractButton*>()) {
+            if (box->isVisible() && box->text() == "Show expired entries") {
+                box->click();
+            }
+        }
+        saveWithThumbnail("database_reports");
+        closeModal(reports);
+    }
+
+    // Unlocking, last, since it reloads the database
+    QVERIFY(m_dbWidget->lock());
+    saveWithThumbnail("unlock_database");
+    unlock();
+}
+
