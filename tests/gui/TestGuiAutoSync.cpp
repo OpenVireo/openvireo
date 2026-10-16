@@ -31,7 +31,6 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncHistoryDialog.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "gui/styles/FluentTheme.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
 
@@ -189,10 +188,6 @@ void TestGuiAutoSync::initTestCase()
     KeeShare::init(this);
     config()->set(Config::AutoSaveAfterEveryChange, false);
     config()->set(Config::AutoSaveOnExit, false);
-    // The layout is read once per run, so the Vault Index layout's tests need a run of their own
-    if (qEnvironmentVariable("KPXC_TEST_VAULT_LAYOUT") == "1") {
-        config()->set(Config::GUI_VaultLayout, true);
-    }
 }
 
 void TestGuiAutoSync::testSyncsInTheBackgroundAfterSaves()
@@ -396,9 +391,6 @@ void TestGuiAutoSync::testOpensAnOlderVersion()
 void TestGuiAutoSync::testOpensAnOlderVersionFromTheVaultCard()
 {
     SKIP_WITHOUT_SERVER();
-    if (!FluentTheme::vaultLayoutEnabled()) {
-        QSKIP("Set KPXC_TEST_VAULT_LAYOUT=1 to test the Vault Index layout");
-    }
 
     using State = DatabaseWidget::SyncStatus::State;
     const auto params = serverParams();

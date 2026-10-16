@@ -17,7 +17,6 @@
 
 #include "FluentTheme.h"
 
-#include "core/Config.h"
 #include "gui/ActionCollection.h"
 
 #include <FluentQt/FluentQt.h>
@@ -32,6 +31,7 @@ namespace
     const QColor DarkOnAccent(0x0f, 0x1a, 0x0b);
 
     bool g_initialized = false;
+    bool g_vaultLayout = true;
 
     QColor withAlpha(QColor color, int alpha)
     {
@@ -74,9 +74,12 @@ namespace
 
 bool FluentTheme::vaultLayoutEnabled()
 {
-    // Read once: switching layouts takes effect after a restart
-    static const bool enabled = config()->get(Config::GUI_VaultLayout).toBool();
-    return enabled;
+    return g_vaultLayout;
+}
+
+void FluentTheme::setVaultLayoutEnabledForTests(bool enabled)
+{
+    g_vaultLayout = enabled;
 }
 
 void FluentTheme::apply(bool dark)

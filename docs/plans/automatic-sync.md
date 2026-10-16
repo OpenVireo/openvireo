@@ -370,8 +370,7 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 - **A Fluent version of the history dialog** ✅ In the Vault Index layout `SyncHistoryDialog` opens as a `VaultModal`
   card (prefix `vaultSyncHistory`), the way the TOTP setup dialog does: its own buttons hide and the card's footer has
   Close and Open, with Open following `canOpenChanged`. Locking the database now closes the dialog in both layouts.
-  `testOpensAnOlderVersionFromTheVaultCard` covers it; it needs `KPXC_TEST_VAULT_LAYOUT=1`, because the layout is read
-  once per run.
+  `testOpensAnOlderVersionFromTheVaultCard` covers it.
 - **Opening the downloaded database off the GUI thread** ✅ The readers already derived the key on a worker, but
   waited for it in a nested event loop, so the user could open an editor, lock the database or start another sync in
   the middle of `mergeDownload`, which then merged anyway. Now the engine reads the downloaded copy and the base with
