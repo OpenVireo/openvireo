@@ -67,6 +67,8 @@
 #include <QTest>
 #include <QTimer>
 
+#include <functional>
+
 int main(int argc, char* argv[])
 {
     Application app(argc, argv);
@@ -89,7 +91,8 @@ namespace
     const QSize kWindowSize(1180, 760);
     // The website frames its screenshots at roughly 4:3
     const QSize kSiteWindowSize(1180, 900);
-    const auto kSiteSlot = QLatin1String("websiteScreenshots");
+    // Slots named website* capture the website's product screenshots
+    const auto kSitePrefix = QLatin1String("website");
     const QColor kCalloutColor(0x3c, 0x7d, 0x20); // KeePassXC brand green
 
     // Everything shown is fixed, so re-running only changes images whose UI changed: the clock
@@ -173,7 +176,6 @@ void TestDocsScreenshots::initTestCase()
         qInfo().noquote() << "Created" << fixture << "- commit it so screenshots stay the same";
     }
 
-    config()->set(Config::GUI_VaultLayout, true);
     config()->set(Config::GUI_ApplicationTheme, "light");
     config()->set(Config::AutoSaveAfterEveryChange, false);
     config()->set(Config::AutoSaveOnExit, false);
@@ -225,7 +227,7 @@ void TestDocsScreenshots::initTestCase()
 void TestDocsScreenshots::init()
 {
     // Docs and website screenshots each run only when their folder is set
-    const bool site = QLatin1String(QTest::currentTestFunction()) == kSiteSlot;
+    const bool site = QLatin1String(QTest::currentTestFunction()).startsWith(kSitePrefix);
     const auto& dir = site ? m_siteDir : m_docsDir;
     if (dir.isEmpty()) {
         QSKIP(site ? "KPXC_SITE_SCREENSHOT_DIR not set" : "KPXC_DOCS_SCREENSHOT_DIR not set");
@@ -526,6 +528,19 @@ void TestDocsScreenshots::saveCard(const QString& name, VaultModal* modal, const
     save(name, callouts, cardRect(modal));
 }
 
+// A website screenshot: the whole window without callouts (or the given image), plus a half-size
+// thumbnail in thumbs/
+void TestDocsScreenshots::saveSite(const QString& name, QImage image)
+{
+    if (image.isNull()) {
+        image = capture({});
+    }
+    writeImage(m_outputDir.absoluteFilePath(name + ".png"), image);
+    QVERIFY(m_outputDir.mkpath("thumbs"));
+    writeImage(m_outputDir.absoluteFilePath("thumbs/" + name + ".png"),
+               image.scaledToWidth(image.width() / 2, Qt::SmoothTransformation));
+}
+
 // Screenshots -----------------------------------------------------------------------------------
 
 // The main window, its regions labelled as in the "Application Layout" section
@@ -581,6 +596,13 @@ void TestDocsScreenshots::unlock()
 
 void TestDocsScreenshots::newDatabase()
 {
+    walkNewDatabaseWizard([this](VaultModal* modal, const QString& name) { saveCard(name, modal); });
+}
+
+// Fills in the new database wizard page by page (new_db_wizard_1 to _3), handing each to shot,
+// then cancels it
+void TestDocsScreenshots::walkNewDatabaseWizard(const Shot& shot)
+{
     bool done = false;
     whileOpen(this, [&] {
         auto* modal = m_mainWindow->findChild<VaultNewDatabaseModal*>("vaultNewDatabaseModal");
@@ -589,15 +611,15 @@ void TestDocsScreenshots::newDatabase()
         }
         auto* next = modal->findChild<QPushButton*>("vaultNewDatabaseContinue");
         QTest::keyClicks(modal->findChild<QLineEdit*>("databaseName"), "Passwords");
-        saveCard("new_db_wizard_1", modal);
+        shot(modal, "new_db_wizard_1");
         QTest::mouseClick(next, Qt::LeftButton);
-        saveCard("new_db_wizard_2", modal);
+        shot(modal, "new_db_wizard_2");
         QTest::mouseClick(next, Qt::LeftButton);
         auto* password = modal->findChild<PasswordWidget*>("enterPasswordEdit");
         QTest::keyClicks(password->findChild<QLineEdit*>("passwordEdit"), "correct horse battery staple");
         QTest::keyClicks(modal->findChild<PasswordWidget*>("repeatPasswordEdit")->findChild<QLineEdit*>("passwordEdit"),
                          "correct horse battery staple");
-        saveCard("new_db_wizard_3", modal);
+        shot(modal, "new_db_wizard_3");
         QTest::mouseClick(modal->findChild<QPushButton*>("vaultNewDatabaseCancel"), Qt::LeftButton);
         done = true;
     });
@@ -767,6 +789,13 @@ void TestDocsScreenshots::databaseSettings()
 
 void TestDocsScreenshots::passwordGenerator()
 {
+    walkPasswordGenerator([this](VaultModal* modal, const QString& name) { saveCard(name, modal); });
+}
+
+// The password generator in its simple and advanced modes and the passphrase generator
+// (password_generator, password_generator_advanced, passphrase_generator)
+void TestDocsScreenshots::walkPasswordGenerator(const Shot& shot)
+{
     auto* modal = openModal("actionPasswordGenerator", "vaultPasswordGeneratorModal");
     QVERIFY(modal);
     auto* generator = m_mainWindow->findChild<PasswordGeneratorWidget*>("passwordGeneratorWidget");
@@ -776,16 +805,16 @@ void TestDocsScreenshots::passwordGenerator()
     auto* output = generator->findChild<PasswordWidget*>("editNewPassword");
     tabs->setCurrentIndex(PasswordGeneratorWidget::Password);
     output->setText(kPassword);
-    saveCard("password_generator", modal);
+    shot(modal, "password_generator");
     if (auto* advanced = generator->findChild<QAbstractButton*>("advancedModeToggle")) {
         advanced->setChecked(true);
         output->setText(kPassword);
-        saveCard("password_generator_advanced", modal);
+        shot(modal, "password_generator_advanced");
         advanced->setChecked(false);
     }
     tabs->setCurrentIndex(PasswordGeneratorWidget::Diceware);
     output->setText(kPassphrase);
-    saveCard("passphrase_generator", modal);
+    shot(modal, "passphrase_generator");
     tabs->setCurrentIndex(PasswordGeneratorWidget::Password);
     closeModal(modal);
 }
@@ -800,12 +829,18 @@ void TestDocsScreenshots::totpSetup()
 
 void TestDocsScreenshots::importWizard()
 {
+    walkImportWizard([this](VaultModal* modal, const QString& name) { saveCard(name, modal); });
+}
+
+// The import wizard's choice of source (import_wizard), then its CSV step with a sample file
+// loaded (csv_import)
+void TestDocsScreenshots::walkImportWizard(const Shot& shot)
+{
     auto* modal = qobject_cast<VaultImportModal*>(openModal("actionImport", "vaultImportModal"));
     QVERIFY(modal);
     auto* sources = modal->findChild<QListWidget*>("importTypeList");
-    saveCard("import_wizard", modal);
+    shot(modal, "import_wizard");
 
-    // The CSV import step, with a sample file loaded
     for (int i = 0; i < sources->count(); ++i) {
         if (sources->item(i)->data(Qt::UserRole) == ImportWizard::IMPORT_CSV) {
             sources->setCurrentRow(i);
@@ -813,13 +848,19 @@ void TestDocsScreenshots::importWizard()
     }
     QTest::mouseClick(modal->findChild<QPushButton*>("vaultImportContinue"), Qt::LeftButton);
     if (modal->currentStep() == int(VaultImportModal::DetailsStep)) {
-        saveCard("csv_import", modal);
+        shot(modal, "csv_import");
     }
     closeModal(modal);
 }
 
-// Light and dark side by side: the left half of the light window, the right half of the dark one
 void TestDocsScreenshots::themeComparison()
+{
+    writeImage(m_outputDir.absoluteFilePath("theme_comparison.png"), themeComparisonImage());
+}
+
+// Light and dark side by side: the left half of the light window, the right half of the dark one.
+// Leaves the dark theme on; init() restores the light one.
+QImage TestDocsScreenshots::themeComparisonImage()
 {
     const auto light = capture({});
     config()->set(Config::GUI_ApplicationTheme, "dark");
@@ -832,29 +873,38 @@ void TestDocsScreenshots::themeComparison()
     painter.drawImage(QPoint(0, 0), light, QRect(0, 0, half, light.height()));
     painter.drawImage(QPoint(half, 0), dark, QRect(half, 0, dark.width() - half, dark.height()));
     painter.end();
-
-    writeImage(m_outputDir.absoluteFilePath("theme_comparison.png"), combined);
+    return combined;
 }
 
-// The website's product screenshots (landing page, Screenshots page, download carousel):
-// whole windows without callouts, each with a half-size thumbnail in thumbs/
-void TestDocsScreenshots::websiteScreenshots()
+// Website -----------------------------------------------------------------------------------------
+// The product screenshots on the landing page, the Screenshots page and the download carousel:
+// whole windows without callouts, each with a thumbnail (see saveSite)
+
+void TestDocsScreenshots::websiteMainWindow()
 {
-    auto saveWithThumbnail = [this](const QString& name) {
-        save(name);
-        const QImage image(m_outputDir.absoluteFilePath(name + ".png"));
-        QVERIFY(m_outputDir.mkpath("thumbs"));
-        writeImage(m_outputDir.absoluteFilePath("thumbs/" + name + ".png"),
-                   image.scaledToWidth(image.width() / 2, Qt::SmoothTransformation));
-    };
-
     // The hero: the main window with a fully featured entry selected
-    saveWithThumbnail("database_view");
+    saveSite("database_view");
 
-    // Configuring Auto-Type for that entry
+    auto* stack = m_mainWindow->findChild<QStackedWidget*>("stackedWidget");
+    const auto index = stack->currentIndex();
+    stack->setCurrentIndex(MainWindow::WelcomeScreen);
+    saveSite("welcome_screen");
+    stack->setCurrentIndex(index);
+
+    // Last, since it leaves the dark theme on
+    saveSite("theme_comparison", themeComparisonImage());
+}
+
+void TestDocsScreenshots::websiteEntryEditor()
+{
     m_dbWidget->switchToEntryEdit();
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
     auto* editor = m_mainWindow->findChild<VaultEntryEditCard*>("vaultEntryEditCard")->editor();
+
+    saveSite("edit_entry");
+    if (selectPage(editor, "Icon")) {
+        saveSite("edit_entry_icons");
+    }
     if (selectPage(editor, "Auto-Type")) {
         // A window association, so the page shows what Auto-Type can be tuned with
         if (auto* add = editor->findChild<QAbstractButton*>("assocAddButton")) {
@@ -863,12 +913,36 @@ void TestDocsScreenshots::websiteScreenshots()
                 window->setEditText("*GitHub*");
             }
         }
-        saveWithThumbnail("autotype_entrylevel");
+        saveSite("autotype_entrylevel");
     }
+    if (selectPage(editor, "SSH Agent")) {
+        saveSite("sshagent_entry_settings");
+    }
+
+    // Leave without keeping the association added above
     MessageBox::setNextAnswer(MessageBox::Discard);
     QTest::mouseClick(editor->buttonBox()->button(QDialogButtonBox::Cancel), Qt::LeftButton);
     MessageBox::setNextAnswer(MessageBox::NoButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
+}
+
+void TestDocsScreenshots::websiteDialogs()
+{
+    // The site shows only some of what the walkthroughs offer
+    const QStringList shown = {"new_db_wizard_1",
+                               "new_db_wizard_2",
+                               "import_wizard",
+                               "csv_import",
+                               "password_generator_advanced",
+                               "passphrase_generator"};
+    const auto shot = [this, &shown](VaultModal*, const QString& name) {
+        if (shown.contains(name)) {
+            saveSite(name);
+        }
+    };
+    walkNewDatabaseWizard(shot);
+    walkImportWizard(shot);
+    walkPasswordGenerator(shot);
 
     // The health check, with its weak and expired passwords
     if (auto* reports = openModal("actionReports", "vaultReportsModal")) {
@@ -879,13 +953,16 @@ void TestDocsScreenshots::websiteScreenshots()
                 box->click();
             }
         }
-        saveWithThumbnail("database_reports");
+        saveSite("database_reports");
         closeModal(reports);
     }
+}
 
-    // Unlocking, last, since it reloads the database
+// Last, since unlocking reloads the database
+void TestDocsScreenshots::websiteUnlock()
+{
     QVERIFY(m_dbWidget->lock());
-    saveWithThumbnail("unlock_database");
+    saveSite("unlock_database");
     unlock();
 }
 

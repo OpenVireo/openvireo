@@ -25,6 +25,8 @@
 #include <QScopedPointer>
 #include <QTemporaryDir>
 
+#include <functional>
+
 class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
@@ -35,7 +37,7 @@ class VaultModal;
 // Regenerates the documentation screenshots in docs/images, and the website's product
 // screenshots, from the Vault Index layout. Each slot drives the app into the state an image
 // shows and saves it under that image's name. Docs images go to KPXC_DOCS_SCREENSHOT_DIR (the
-// docs_screenshots target sets it to docs/images); websiteScreenshots writes to
+// docs_screenshots target sets it to docs/images); the website* slots write to
 // KPXC_SITE_SCREENSHOT_DIR. Slots whose folder isn't set are skipped.
 class TestDocsScreenshots : public QObject
 {
@@ -57,7 +59,10 @@ private slots:
     void totpSetup();
     void importWizard();
     void themeComparison();
-    void websiteScreenshots();
+    void websiteMainWindow();
+    void websiteEntryEditor();
+    void websiteDialogs();
+    void websiteUnlock();
 
 private:
     struct Callout
@@ -66,9 +71,15 @@ private:
         QRect rect; // in main window coordinates
         bool box = false; // outline the area as well as labelling it
     };
+    // Captures one step of a walkthrough under the given name
+    using Shot = std::function<void(VaultModal* modal, const QString& name)>;
 
     void populate();
     void unlock();
+    void walkNewDatabaseWizard(const Shot& shot);
+    void walkImportWizard(const Shot& shot);
+    void walkPasswordGenerator(const Shot& shot);
+    QImage themeComparisonImage();
     void selectGroup(Group* group);
     void selectEntry(Entry* entry);
     bool selectPage(QWidget* root, const QString& name);
@@ -82,6 +93,7 @@ private:
 
     void save(const QString& name, const QList<Callout>& callouts = {}, QRect area = {});
     void saveCard(const QString& name, VaultModal* modal, const QList<Callout>& callouts = {});
+    void saveSite(const QString& name, QImage image = {});
     QImage capture(QRect area);
     void writeImage(const QString& file, const QImage& image);
 
