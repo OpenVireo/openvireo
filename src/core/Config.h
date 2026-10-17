@@ -187,6 +187,10 @@ public:
         FdoSecrets_ConfirmAccessItem,
         FdoSecrets_UnlockBeforeSearch,
 
+        Account_StartMode,
+        Account_ServerUrl,
+        Account_SelfHostedServerUrl,
+
         KeeShare_QuietSuccess,
         KeeShare_Own,
         KeeShare_Foreign,

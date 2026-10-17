@@ -134,6 +134,9 @@ endif()
 add_unit_test(NAME testmergefixtures SOURCES TestMergeFixtures.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 
+add_unit_test(NAME testvaultsharing SOURCES TestVaultSharing.cpp util/FakeAccountServer.cpp
+        LIBS ${TEST_LIBRARIES})
+
 add_unit_test(NAME testsyncscheduler SOURCES TestSyncScheduler.cpp
         LIBS ${TEST_LIBRARIES})
 

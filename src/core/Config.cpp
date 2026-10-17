@@ -213,6 +213,12 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::FdoSecrets_UnlockBeforeSearch, {QS("FdoSecrets/UnlockBeforeSearch"), Roaming, true}},
 
     // KeeShare
+    // How the start screen was left: "account", "selfhosted" or "local"; empty shows the start screen
+    {Config::Account_StartMode, {QS("Account/StartMode"), Local, {}}},
+    // The hosted account server (its issuer URL), when it isn't the built-in default
+    {Config::Account_ServerUrl, {QS("Account/ServerUrl"), Local, {}}},
+    {Config::Account_SelfHostedServerUrl, {QS("Account/SelfHostedServerUrl"), Local, {}}},
+
     {Config::KeeShare_QuietSuccess, {QS("KeeShare/QuietSuccess"), Roaming, false}},
     {Config::KeeShare_Own, {QS("KeeShare/Own"), Roaming, {}}},
     {Config::KeeShare_Foreign, {QS("KeeShare/Foreign"), Roaming, {}}},

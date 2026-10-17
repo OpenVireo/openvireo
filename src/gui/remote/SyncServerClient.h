@@ -90,6 +90,8 @@ public:
     void createPairingCode(Callback callback);
     // Sent without a token, the code stands in for it: {"user", "deviceId", "token"}
     void claimPairingCode(const QString& code, const QString& deviceName, Callback callback);
+    // GET health, sent without a token: whether a sync server answers at the URL
+    void health(Callback callback);
 
     // Drop all requests in flight; their callbacks are never called
     void abort();
