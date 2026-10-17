@@ -1,0 +1,95 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "tags": "finance",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "description": "Local added a protected custom attribute and an attachment, remote changed the tags: everything is combined.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attachments": {
+                        "note.txt": "aGVsbG8="
+                    },
+                    "attributes": {
+                        "API key": "sk-123",
+                        "Notes": "PIN in safe",
+                        "Password": "old-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "history_count": 2,
+                    "modified": "2026-03-01T12:00:00Z",
+                    "protected": [
+                        "API key"
+                    ],
+                    "tags": "finance,shared",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attachments": {
+                    "note.txt": "aGVsbG8="
+                },
+                "attributes": {
+                    "API key": "sk-123",
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T11:00:00Z",
+                "protected": [
+                    "API key"
+                ],
+                "tags": "finance",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:00:00Z",
+                "tags": "finance;shared",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    }
+}
