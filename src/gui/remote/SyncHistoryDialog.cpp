@@ -55,7 +55,7 @@ SyncHistoryDialog::SyncHistoryDialog(const RemoteParams& params, QWidget* parent
     auto* intro = new QLabel(tr("The sync server keeps the latest versions of \"%1\". Opening one shows it in its "
                                 "own tab, where you can copy entries from it or merge it into this database. "
                                 "Nothing on the server changes.")
-                                 .arg(params.serverDatabaseId),
+                                 .arg(params.remoteDatabaseId()),
                              this);
     intro->setWordWrap(true);
 
@@ -155,7 +155,7 @@ void SyncHistoryDialog::openSelected()
         // because the tab keeps using the file
         const auto dir = QDir::temp().filePath("KeePassXC-version-" + QUuid::createUuid().toString(QUuid::Id128));
         const auto filePath =
-            QDir(dir).filePath(tr("%1 (version %2).kdbx").arg(m_params.serverDatabaseId).arg(revision));
+            QDir(dir).filePath(tr("%1 (version %2).kdbx").arg(m_params.remoteDatabaseId()).arg(revision));
         QFile file(filePath);
         if (!QDir().mkpath(dir) || !file.open(QIODevice::WriteOnly)
             || file.write(response.body) != response.body.size()) {

@@ -21,6 +21,7 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QThread>
 #ifdef KPXC_FEATURE_NETWORK
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -74,6 +75,8 @@ void SyncEventStream::start()
 void SyncEventStream::stop()
 {
     m_running = false;
+    m_connecting = false;
+    ++m_generation;
     m_retryTimer.stop();
     m_silenceTimer.stop();
 #ifdef KPXC_FEATURE_NETWORK
@@ -91,11 +94,42 @@ void SyncEventStream::stop()
 void SyncEventStream::connectToServer()
 {
 #ifdef KPXC_FEATURE_NETWORK
+    if (!m_running || m_reply || m_connecting) {
+        return;
+    }
+    m_connecting = true;
+    const auto generation = m_generation;
+    QPointer<SyncEventStream> guard(this);
+    auto* thread = QThread::currentThread();
+    auto proceed = [guard, generation](const QString& token) {
+        if (guard && guard->m_generation == generation) {
+            guard->m_connecting = false;
+            guard->openConnection(token);
+        }
+    };
+    SyncServerClient::tokenProviderFor(m_params)([guard, thread, proceed](const QString& token) {
+        if (QThread::currentThread() == thread) {
+            proceed(token);
+        } else if (auto* stream = guard.data()) {
+            QMetaObject::invokeMethod(stream, [proceed, token] { proceed(token); }, Qt::QueuedConnection);
+        }
+    });
+#endif
+}
+
+void SyncEventStream::openConnection(const QString& token)
+{
+#ifdef KPXC_FEATURE_NETWORK
     if (!m_running || m_reply) {
         return;
     }
+    if (token.trimmed().isEmpty()) {
+        // Signed out, or the account couldn't refresh its token: try again later
+        connectionEnded();
+        return;
+    }
     QNetworkRequest request(SyncServerClient::endpoint(m_params, "events"));
-    request.setRawHeader("Authorization", "Bearer " + m_params.serverToken.trimmed().toUtf8());
+    request.setRawHeader("Authorization", "Bearer " + token.trimmed().toUtf8());
     request.setRawHeader("User-Agent", "KeePassXC");
     request.setRawHeader("Accept", "text/event-stream");
     // Never follow redirects, they could forward the access token to another host
@@ -112,6 +146,8 @@ void SyncEventStream::connectToServer()
     connect(m_reply, &QNetworkReply::readyRead, this, &SyncEventStream::readEvents);
     connect(m_reply, &QNetworkReply::finished, this, &SyncEventStream::connectionEnded);
     m_silenceTimer.start();
+#else
+    Q_UNUSED(token)
 #endif
 }
 
@@ -132,7 +168,11 @@ void SyncEventStream::readEvents()
 
     m_buffer.append(m_reply->readAll());
     for (const auto& event : takeEvents(m_buffer)) {
-        emit databaseChanged(event);
+        if (event.type == Event::Type::Access) {
+            emit accessChanged(event);
+        } else {
+            emit databaseChanged(event);
+        }
     }
 #endif
 }
@@ -189,11 +229,19 @@ QList<SyncEventStream::Event> SyncEventStream::takeEvents(QByteArray& buffer)
                 data += (data.isEmpty() ? QByteArray() : QByteArray("\n")) + value;
             }
         }
-        if (type != "database") {
-            continue;
-        }
         const auto json = QJsonDocument::fromJson(data).object();
         Event event;
+        if (type == "access") {
+            event.type = Event::Type::Access;
+            event.vault = json.value("vault").toString();
+            event.change = json.value("change").toString();
+            events << event;
+            continue;
+        }
+        // Device-token streams send `database`, account streams `vault`, with the same data
+        if (type != "database" && type != "vault") {
+            continue;
+        }
         event.databaseId = json.value("id").toString();
         event.etag = json.value("etag").toString();
         event.revision = json.value("revision").toVariant().toLongLong();

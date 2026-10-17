@@ -442,7 +442,7 @@ QString VaultSyncChip::remoteName() const
     const auto params = m_dbWidget->getRemoteParams();
     // Prefer a sync server over command-based remotes
     for (const auto* param : params) {
-        if (param->type == RemoteParams::Type::SyncServer) {
+        if (param->isServer()) {
             return param->name;
         }
     }

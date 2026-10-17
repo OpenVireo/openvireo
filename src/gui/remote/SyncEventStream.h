@@ -34,7 +34,11 @@ class QNetworkReply;
  * so a device can sync as soon as another one uploads instead of waiting for its next poll.
  *
  * Reconnects by itself after errors, waiting longer each time, and when the server has been
- * silent for longer than its keep-alive interval.
+ * silent for longer than its keep-alive interval. Each connection asks the remote's token provider
+ * for a token, so a stream the server ends when its access token expires comes back with a fresh one.
+ *
+ * Device-token streams carry `database` events. Account streams (SPEC §11) carry `vault` events,
+ * reported the same way, and `access` events, which mean the account's vault access changed.
  */
 class SyncEventStream : public QObject
 {
@@ -43,10 +47,23 @@ class SyncEventStream : public QObject
 public:
     struct Event
     {
+        enum class Type
+        {
+            // A database or vault changed: `database` and `vault` events
+            Database,
+            // Vault access changed: `access` events, see `vault` and `change`
+            Access
+        };
+        Type type = Type::Database;
+        // The database or vault id
         QString databaseId;
         QString etag;
         qint64 revision = -1;
         bool deleted = false;
+        // Access events: the vault concerned (empty for org-wide changes) and granted, revoked, rotating,
+        // rotated or org
+        QString vault;
+        QString change;
     };
 
     static constexpr int SilenceTimeoutMsec = 60 * 1000;
@@ -66,10 +83,12 @@ public:
 
 signals:
     void databaseChanged(const SyncEventStream::Event& event);
+    void accessChanged(const SyncEventStream::Event& event);
     void connectedChanged(bool connected);
 
 private:
     void connectToServer();
+    void openConnection(const QString& token);
     void readEvents();
     void connectionEnded();
     void setConnected(bool connected);
@@ -77,6 +96,10 @@ private:
     RemoteParams m_params;
     bool m_running = false;
     bool m_connected = false;
+    // Waiting for the token provider
+    bool m_connecting = false;
+    // Bumped by stop() so a token arriving afterwards is dropped
+    quint64 m_generation = 0;
     int m_retryMsec = FirstRetryMsec;
     QByteArray m_buffer;
     QTimer m_retryTimer;
