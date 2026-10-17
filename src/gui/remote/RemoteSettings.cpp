@@ -117,6 +117,13 @@ QString RemoteSettings::toConfig() const
             object["serverUrl"] = params->serverUrl;
             object["serverDatabaseId"] = params->serverDatabaseId;
             object["autoSync"] = params->autoSync;
+        } else if (params->type == RemoteParams::Type::AccountVault) {
+            // No token: account vaults get theirs from the signed-in account
+            object["type"] = "accountVault";
+            object["serverUrl"] = params->serverUrl;
+            object["accountId"] = params->accountId;
+            object["vaultId"] = params->vaultId;
+            object["autoSync"] = params->autoSync;
         }
         object["downloadCommand"] = params->downloadCommand;
         object["downloadCommandInput"] = params->downloadInput;
@@ -154,6 +161,12 @@ void RemoteSettings::fromConfig(const QString& data)
                 SyncTokenStore::save(key, embeddedToken);
             }
             m_tokenKeys.insert(key);
+            params->autoSync = itemMap["autoSync"].toBool();
+        } else if (itemMap["type"].toString() == "accountVault") {
+            params->type = RemoteParams::Type::AccountVault;
+            params->serverUrl = itemMap["serverUrl"].toString();
+            params->accountId = itemMap["accountId"].toString();
+            params->vaultId = itemMap["vaultId"].toString();
             params->autoSync = itemMap["autoSync"].toBool();
         }
         params->downloadCommand = itemMap["downloadCommand"].toString();

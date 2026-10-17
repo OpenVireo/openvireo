@@ -37,6 +37,10 @@ class QNetworkReply;
  * Every request finishes by calling its callback on the thread that owns the client,
  * unless abort() was called first. The client copies the remote parameters, so later
  * edits to the Remote Sync settings don't affect requests already in flight.
+ *
+ * The bearer token comes from a token provider, asked before every request: the remote's own
+ * provider if it has one, the signed-in account's for account vaults (vaults/<id> instead of
+ * databases/<id>), and otherwise the remote's static device token.
  */
 class SyncServerClient : public QObject
 {
@@ -58,6 +62,20 @@ public:
 
     explicit SyncServerClient(const RemoteParams& params, QObject* parent = nullptr);
     ~SyncServerClient() override;
+
+    // A client for `params`, made by the factory tests can install
+    static SyncServerClient* create(const RemoteParams& params, QObject* parent = nullptr);
+    // Replaces how create() makes clients, for tests; nullptr restores the default
+    static void setFactory(std::function<SyncServerClient*(const RemoteParams&)> factory);
+
+    // Replace the token provider this client got from its parameters
+    void setTokenProvider(AccessTokenProvider provider);
+    // The provider for `params`: its own, its account's, or one handing out its static token
+    static AccessTokenProvider tokenProviderFor(const RemoteParams& params);
+    // Whether a request for `params` would carry a token: a static token, or a signed-in account
+    static bool hasCredentials(const RemoteParams& params);
+    // Account vaults of `accountId` use this provider from now on; nullptr when the account signs out
+    static void setAccountTokenProvider(const QString& accountId, AccessTokenProvider provider);
 
     // HEAD with If-None-Match: 304 when the server still has that version
     void check(const QString& etag, Callback callback);
@@ -87,7 +105,7 @@ public:
     static bool isPairingCode(const QString& text);
 
 protected:
-    // Overridden by tests to answer without a network
+    // Overridden by tests to answer without a network. `headers` already carry the Authorization header.
     virtual void send(const QByteArray& verb,
                       const QUrl& url,
                       const Headers& headers,
@@ -100,8 +118,16 @@ protected:
 
 private:
     QUrl databaseUrl(const QString& suffix = {}) const;
+    // Gets a token from the provider, then sends with it
+    void request(const QByteArray& verb,
+                 const QUrl& url,
+                 const Headers& headers,
+                 const QByteArray& body,
+                 int timeoutMsec,
+                 Callback callback);
 
     RemoteParams m_params;
+    AccessTokenProvider m_tokenProvider;
     // Bumped by abort() so late replies are ignored
     quint64 m_generation = 0;
 #ifdef KPXC_FEATURE_NETWORK
