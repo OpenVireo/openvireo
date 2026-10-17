@@ -4,12 +4,18 @@ Checks that the libopaque JS/WASM build (client) and the libopaque C core throug
 (server) complete registration and login together. Result on 2026-10-17, libopaque `6e9ac92`,
 liboprf `f925b87`, libsodium 1.0.22:
 
-| Client build | Right password | Wrong password |
-|---|---|---|
-| repo `js/dist/libopaque.js` @ 6e9ac92 | login OK, `sk` and `export_key` match | `RecoverCredentials failed` |
-| npm `libopaque@0.0.0-alpha.2` | **fails in `finalizeRequest`** (incompatible) | — |
+| Client build | Right password | Wrong password | Random nonces |
+|---|---|---|---|
+| release rebuild of 6e9ac92 (`build-libopaque-wasm.sh`) | login OK, `sk` and `export_key` match | `RecoverCredentials failed` | yes |
+| upstream `js/dist/libopaque.js` @ 6e9ac92 | login OK | rejected | **no**: KE1 nonce is always `000102…1f` |
+| npm `libopaque@0.0.0-alpha.2` | **fails in `finalizeRequest`** (incompatible) | — | — |
 
-## Reproduce (macOS)
+Upstream's `js/dist` file is a `-DTRACE -DNORANDOM` debug build (its `js/Makefile` sets those
+`DEFINES`). A login succeeding proves nothing about randomness, so the spike alone didn't catch it;
+`build-libopaque-wasm.sh` now checks the KE1 nonce after building. Use only the release build
+(SHA-256 in SPEC §8).
+
+## Reproduce the interop check (macOS)
 
 ```sh
 brew install libsodium pkg-config

@@ -144,7 +144,7 @@ paths:
     post:
       tags: [auth]
       security: []
-      summary: Second factor (rate limit 5/min per mfa_token)
+      summary: Second factor (rate limit 5/min per mfa_token). A wrong code returns 401 invalid_mfa and keeps the token; the 5th wrong code invalidates it.
       requestBody:
         required: true
         content:
@@ -407,7 +407,7 @@ paths:
             schema:
               type: object
               properties:
-                grants: { type: array, items: { $ref: '#/components/schemas/Grant' } }
+                grants: { type: array, items: { $ref: '#/components/schemas/VaultGrant' }, description: 'one per org vault, each at that vault''s current key version' }
                 sa_master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } } }
   /orgs/{org}/invitations:
@@ -735,6 +735,14 @@ components:
         user: { type: object, properties: { id: { type: string, format: uuid }, email: { type: string } } }
         kdf: { $ref: '#/components/schemas/Kdf' }
         keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+    VaultGrant:
+      description: A Grant that names its vault, for routes that grant several vaults at once
+      allOf:
+        - $ref: '#/components/schemas/Grant'
+        - type: object
+          required: [vault_id]
+          properties:
+            vault_id: { type: string, format: uuid }
     Grant:
       type: object
       required: [principal, role, key_version, sealed_key]
