@@ -1,0 +1,77 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "description": "Local changed Notes, remote changed Password: both changes are kept, no conflict. The combined entry gets max(now, local, remote) as its modification time.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Notes": "PIN changed",
+                        "Password": "new-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "history_count": 2,
+                    "modified": "2026-03-01T12:00:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN changed",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T11:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "new-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:30:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    }
+}

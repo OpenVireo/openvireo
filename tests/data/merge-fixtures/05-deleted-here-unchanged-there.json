@@ -1,0 +1,107 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            },
+            {
+                "attributes": {
+                    "Password": "x",
+                    "Title": "Old"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "b2000000-0000-4000-8000-000000000002"
+            }
+        ]
+    },
+    "description": "Local deleted the entry after the last sync, remote left it unchanged: it stays deleted on both.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+                "b2000000-0000-4000-8000-000000000002"
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Notes": "PIN in safe",
+                        "Password": "old-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "history_count": 0,
+                    "modified": "2026-03-01T09:00:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                },
+                {
+                    "attributes": {
+                        "Password": "x",
+                        "Title": "Old"
+                    },
+                    "history_count": 0,
+                    "modified": "2026-03-01T09:00:00Z",
+                    "uuid": "b2000000-0000-4000-8000-000000000002"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+            {
+                "time": "2026-03-01T11:00:00Z",
+                "uuid": "b2000000-0000-4000-8000-000000000002"
+            }
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            },
+            {
+                "attributes": {
+                    "Password": "x",
+                    "Title": "Old"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "b2000000-0000-4000-8000-000000000002"
+            }
+        ]
+    }
+}

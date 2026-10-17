@@ -1,0 +1,61 @@
+{
+    "base": null,
+    "description": "No base copy (first sync of this pair): both edited the entry, so the newer entry wins as a whole (Merger), the older one goes to its history.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Notes": "PIN in safe",
+                        "Password": "remote-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "history_count": 1,
+                    "modified": "2026-03-01T11:00:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "local notes",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "remote-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T11:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    }
+}

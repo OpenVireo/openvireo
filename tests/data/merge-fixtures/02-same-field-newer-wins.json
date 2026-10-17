@@ -1,0 +1,80 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "description": "Both sides changed Password differently: the newer side (remote) wins and Password is reported as a conflict; local's Notes change is still kept.",
+    "expected": {
+        "conflicts": {
+            "a1000000-0000-4000-8000-000000000001": [
+                "Password"
+            ]
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Notes": "local notes",
+                        "Password": "remote-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "history_count": 2,
+                    "modified": "2026-03-01T12:00:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "local notes",
+                    "Password": "local-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:00:10Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "remote-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:00:20Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ]
+    }
+}

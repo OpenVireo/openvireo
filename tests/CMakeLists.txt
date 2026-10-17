@@ -131,6 +131,9 @@ if(KPXC_FEATURE_ACCOUNTS)
     target_include_directories(testaccountmanager SYSTEM PRIVATE ${OPAQUE_INCLUDE_DIRS})
 endif()
 
+add_unit_test(NAME testmergefixtures SOURCES TestMergeFixtures.cpp
+        LIBS testsupport ${TEST_LIBRARIES})
+
 add_unit_test(NAME testsyncscheduler SOURCES TestSyncScheduler.cpp
         LIBS ${TEST_LIBRARIES})
 
