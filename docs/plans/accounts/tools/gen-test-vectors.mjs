@@ -131,7 +131,7 @@ vectors.jwt = {
   signing_seed_hex: hex(jwtSeed), jwks, now: iat + 60,
   valid: [{ claims: userClaims, token: mkJwt(userClaims) }, { claims: saClaims, token: mkJwt(saClaims) }],
   invalid: [
-    { case: "expired", token: mkJwt({ ...userClaims, exp: iat + 30 }), expect: 401 },
+    { case: "expired (exp + 60s skew < now)", token: mkJwt({ ...userClaims, iat: iat - 700, nbf: iat - 700, exp: iat - 1 }), expect: 401 },
     { case: "not yet valid", token: mkJwt({ ...userClaims, nbf: iat + 3600 }), expect: 401 },
     { case: "wrong audience", token: mkJwt({ ...userClaims, aud: ["kpx-api"] }), expect: 401 },
     { case: "wrong issuer", token: mkJwt({ ...userClaims, iss: "https://evil.example" }), expect: 401 },
