@@ -208,6 +208,11 @@ set(gui_SOURCES
         gui/remote/SyncServerClient.cpp
         gui/remote/SyncStateStore.cpp
         gui/remote/SyncTokenStore.cpp
+        account/AccountCrypto.cpp
+        account/AccountManager.cpp
+        account/AuthClient.cpp
+        account/OpaqueClient.cpp
+        account/VaultKeyring.cpp
         gui/reports/ReportsWidget.cpp
         gui/reports/ReportsDialog.cpp
         gui/reports/ReportsWidgetHealthcheck.cpp
@@ -406,6 +411,10 @@ target_link_libraries(keepassxc_gui
         ${fdosecrets_LIB}
         ${keeshare_LIB}
         ${sshagent_LIB})
+if(KPXC_FEATURE_ACCOUNTS)
+    target_include_directories(keepassxc_gui SYSTEM PRIVATE ${OPAQUE_INCLUDE_DIRS})
+    target_link_libraries(keepassxc_gui ${OPAQUE_LIBRARIES})
+endif()
 
 if(APPLE)
     target_link_libraries(keepassxc_gui "-framework Foundation -framework AppKit -framework Carbon -framework Security -framework LocalAuthentication -framework ScreenCaptureKit")

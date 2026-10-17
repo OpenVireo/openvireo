@@ -121,6 +121,16 @@ add_unit_test(NAME testremotesyncserver SOURCES TestRemoteSyncServer.cpp
 add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 
+add_unit_test(NAME testaccountcrypto SOURCES TestAccountCrypto.cpp
+        LIBS ${TEST_LIBRARIES})
+
+add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp
+        LIBS ${TEST_LIBRARIES})
+if(KPXC_FEATURE_ACCOUNTS)
+    # The test stands in for the auth server, with libopaque's server half
+    target_include_directories(testaccountmanager SYSTEM PRIVATE ${OPAQUE_INCLUDE_DIRS})
+endif()
+
 add_unit_test(NAME testsyncscheduler SOURCES TestSyncScheduler.cpp
         LIBS ${TEST_LIBRARIES})
 
