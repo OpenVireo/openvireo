@@ -49,7 +49,7 @@ QTEST_GUILESS_MAIN(TestRemoteSyncServer)
 namespace
 {
     /*
-     * The sync server tests run against a live server from sync_server/, e.g.:
+     * The sync server tests run against a live server from keepassxc-sync-server, e.g.:
      *   ./build/keepassxc-sync-server users add test && ./build/keepassxc-sync-server
      *   KPXC_SYNC_SERVER_URL=http://127.0.0.1:8787 KPXC_SYNC_SERVER_TOKEN=<token> ./testremotesyncserver
      */

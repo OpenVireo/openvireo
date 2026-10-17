@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 namespace
 {
     /*
-     * These tests run against a live server from sync_server/, like testremotesyncserver:
+     * These tests run against a live server from keepassxc-sync-server, like testremotesyncserver:
      *   KPXC_SYNC_SERVER_URL=http://127.0.0.1:8787 KPXC_SYNC_SERVER_TOKEN=<token> ./testguiautosync
      */
     RemoteParams serverParams()

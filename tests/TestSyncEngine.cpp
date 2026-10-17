@@ -44,7 +44,7 @@ QTEST_GUILESS_MAIN(TestSyncEngine)
 namespace
 {
     /*
-     * An in-memory sync server with the same concurrency rules as sync_server/.
+     * An in-memory sync server with the same concurrency rules as keepassxc-sync-server.
      * beforePut runs before each upload is judged, to let "another device" upload first.
      */
     struct ServerData
