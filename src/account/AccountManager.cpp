@@ -424,8 +424,8 @@ void AccountManager::submitMfa(const QString& totp)
             return;
         }
         if (!response.isSuccess()) {
-            if (response.status == 401) {
-                // Let the user try another code
+            if (response.errorCode() == "invalid_mfa") {
+                // Let the user try another code; after the 5th wrong one the server drops the token
                 setState(State::NeedsMfa);
                 emit error(tr("The code is wrong or has expired."));
                 return;
