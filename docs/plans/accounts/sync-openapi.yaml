@@ -3,7 +3,7 @@ info:
   title: KeePassXC sync server JWT routes (kpx v1)
   version: 1.0.0
   description: |
-    New routes on `keepassxc-sync-server` when SYNC_AUTH_MODE is `jwt` or `both` (SPEC.md §11-12).
+    New routes on `keepassxc-sync-server` when SYNC_AUTH_MODE is `jwt` or `both` (SPEC.md §11 and §13).
     Shared schemas and the error format come from openapi.yaml. Legacy routes (`/databases/*`,
     `/devices/pairing*`, `/health`, legacy `/events`) are unchanged and not repeated here.
     CORS: every route answers preflight for origins in SYNC_ALLOWED_ORIGINS and exposes
@@ -61,7 +61,28 @@ paths:
     get:
       tags: [sync]
       summary: Version history (read), the same shape as the existing per-database history
-      responses: { '200': { description: as for databases } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versions: { type: array, items: { $ref: './openapi.yaml#/components/schemas/BlobMeta' } }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './openapi.yaml#/components/responses/Error' }
+  /vaults/{vault}/history/{revision}:
+    parameters:
+      - { $ref: './openapi.yaml#/components/parameters/Vault' }
+      - { name: revision, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      tags: [sync]
+      summary: One kept version's bytes (read)
+      responses:
+        '200': { description: OK, content: { application/octet-stream: {} } }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './openapi.yaml#/components/responses/Error' }
   /events:
     get:
       tags: [sync]
