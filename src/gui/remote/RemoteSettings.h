@@ -23,7 +23,16 @@
 #include <QSet>
 #include <QSharedPointer>
 
+#include <functional>
+
 class Database;
+
+/**
+ * Hands out the bearer token for one request. It is asked again before every request (and every
+ * event stream connection), so it can refresh an expiring token first. `done` may be called later
+ * and on any thread; an empty token means there is none.
+ */
+using AccessTokenProvider = std::function<void(std::function<void(const QString& token)> done)>;
 
 struct RemoteParams
 {
@@ -32,7 +41,10 @@ struct RemoteParams
         // Run user-supplied shell commands (scp, sftp, rclone, ...)
         Command,
         // Talk to a KeePassXC sync server over its REST API (see keepassxc-sync-server)
-        SyncServer
+        SyncServer,
+        // A vault of a KeePassXC account: the account's sync server, vaults/<vaultId>, with the account's
+        // access tokens (see docs/plans/accounts/SPEC.md)
+        AccountVault
     };
 
     QString name;
@@ -48,16 +60,32 @@ struct RemoteParams
     QString serverDatabaseId;
     // Kept on this device only (SyncTokenStore), never written into the database
     QString serverToken;
+    // Account vaults: the account (its user id, or the service account id) and the vault id. The token
+    // comes from the account's AccessTokenProvider, see SyncServerClient::setAccountTokenProvider().
+    QString accountId;
+    QString vaultId;
+    // Overrides serverToken and the account's provider when set; not saved
+    AccessTokenProvider tokenProvider;
     // Sync server only: sync in the background after saves, on unlock and periodically
     bool autoSync = false;
 
+    // Whether the remote is a sync server, whose own or an account's
+    bool isServer() const
+    {
+        return type == Type::SyncServer || type == Type::AccountVault;
+    }
+    // The id of the database on the server: the vault id for account vaults
+    QString remoteDatabaseId() const
+    {
+        return (type == Type::AccountVault ? vaultId : serverDatabaseId).trimmed();
+    }
     bool hasDownload() const
     {
-        return type == Type::SyncServer || !downloadCommand.isEmpty();
+        return isServer() || !downloadCommand.isEmpty();
     }
     bool hasUpload() const
     {
-        return type == Type::SyncServer || !uploadCommand.isEmpty();
+        return isServer() || !uploadCommand.isEmpty();
     }
 };
 Q_DECLARE_METATYPE(RemoteParams)

@@ -1348,14 +1348,14 @@ void MainWindow::updateRemoteSyncMenuEntries()
             auto* remoteSyncAction = new QAction(params->name, this);
             m_ui->menuRemoteSync->addAction(remoteSyncAction);
             connect(remoteSyncAction, &QAction::triggered, dbWidget, [=] { dbWidget->syncWithRemote(params); });
-            hasServer |= params->type == RemoteParams::Type::SyncServer;
+            hasServer |= params->isServer();
         }
 
         // The versions a sync server keeps
         if (hasServer) {
             m_ui->menuRemoteSync->addSeparator();
             for (const auto params : dbWidget->getRemoteParams()) {
-                if (params->type == RemoteParams::Type::SyncServer) {
+                if (params->isServer()) {
                     auto* historyAction = new QAction(tr("Versions on %1…").arg(params->name), this);
                     historyAction->setObjectName("syncHistoryAction");
                     m_ui->menuRemoteSync->addAction(historyAction);

@@ -88,7 +88,7 @@ RemoteHandler::RemoteResult RemoteHandler::download(const RemoteParams* params)
             return result;
         }
 
-        if (params->type == RemoteParams::Type::SyncServer) {
+        if (params->isServer()) {
             return downloadFromSyncServer(params);
         }
 
@@ -145,7 +145,7 @@ RemoteHandler::upload(const QString& filePath, const RemoteParams* params, const
             return result;
         }
 
-        if (params->type == RemoteParams::Type::SyncServer) {
+        if (params->isServer()) {
             return uploadToSyncServer(filePath, params, etag);
         }
 
@@ -298,7 +298,9 @@ RemoteHandler::SyncServerPairing RemoteHandler::claimSyncServerPairingCode(const
 {
     // The code stands in for a token; never send one along with it
     RemoteParams anonymous = *params;
+    anonymous.type = RemoteParams::Type::SyncServer;
     anonymous.serverToken.clear();
+    anonymous.tokenProvider = nullptr;
     const auto name = deviceName();
     return AsyncTask::runAndWaitForFuture([anonymous, code, name] {
         SyncServerPairing pairing;

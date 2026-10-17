@@ -359,10 +359,9 @@ namespace
 
 QString SyncTokenStore::keyFor(const QUuid& databaseId, const RemoteParams& params)
 {
-    auto identity = QStringList{databaseId.toString(QUuid::WithoutBraces),
-                                params.serverUrl.trimmed(),
-                                params.serverDatabaseId.trimmed()}
-                        .join('\n');
+    auto identity =
+        QStringList{databaseId.toString(QUuid::WithoutBraces), params.serverUrl.trimmed(), params.remoteDatabaseId()}
+            .join('\n');
     return QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha256).toHex());
 }
 

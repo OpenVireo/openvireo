@@ -74,6 +74,7 @@
 #include "remote/SyncEventStream.h"
 #include "remote/SyncHistoryDialog.h"
 #include "remote/SyncScheduler.h"
+#include "remote/SyncServerClient.h"
 
 #ifdef KPXC_FEATURE_NETWORK
 #include "gui/IconDownloaderDialog.h"
@@ -278,7 +279,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
         if (m_syncStatus.state == SyncStatus::State::NeedsToken) {
             const auto params = getRemoteParams();
             const bool allHaveTokens = std::all_of(params.begin(), params.end(), [](const RemoteParams* p) {
-                return p->type != RemoteParams::Type::SyncServer || !p->serverToken.trimmed().isEmpty();
+                return !p->isServer() || SyncServerClient::hasCredentials(*p);
             });
             if (allHaveTokens) {
                 setSyncStatus(SyncStatus::State::Idle);
@@ -1608,7 +1609,7 @@ int DatabaseWidget::addChildWidget(QWidget* w)
 
 void DatabaseWidget::syncWithRemote(const RemoteParams* params)
 {
-    if (params->type == RemoteParams::Type::SyncServer) {
+    if (params->isServer()) {
         syncWithServer(*params);
         return;
     }
@@ -1713,7 +1714,7 @@ void DatabaseWidget::setSyncStatus(SyncStatus::State state, const QString& error
 const RemoteParams* DatabaseWidget::autoSyncParams() const
 {
     for (const auto* params : m_remoteSettings->getAllRemoteParams()) {
-        if (params->type == RemoteParams::Type::SyncServer && params->autoSync) {
+        if (params->isServer() && params->autoSync) {
             return params;
         }
     }
@@ -1724,7 +1725,8 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
 {
     // Keep one engine per database and server, so a scheduled retry survives between syncs
     const auto sameServer = [](const RemoteParams& a, const RemoteParams& b) {
-        return a.name == b.name && a.serverUrl == b.serverUrl && a.serverDatabaseId == b.serverDatabaseId
+        return a.name == b.name && a.type == b.type && a.serverUrl == b.serverUrl
+               && a.serverDatabaseId == b.serverDatabaseId && a.accountId == b.accountId && a.vaultId == b.vaultId
                && a.serverToken == b.serverToken && a.downloadTimeoutMsec == b.downloadTimeoutMsec
                && a.uploadTimeoutMsec == b.uploadTimeoutMsec;
     };
@@ -1734,7 +1736,7 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
     }
 
     if (!m_syncEngine) {
-        auto* engine = new SyncEngine(m_db, new SyncServerClient(params), SyncStateStore(), this);
+        auto* engine = new SyncEngine(m_db, SyncServerClient::create(params), SyncStateStore(), this);
         engine->setMergeHandler([this](const QSharedPointer<Database>& remoteDb, const Database* base, QString* error) {
             return syncWithDatabase(remoteDb, *error, base);
         });
@@ -1788,14 +1790,22 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
     m_syncEngine->setRetryOnNetworkError(params.autoSync);
 }
 
+QString DatabaseWidget::missingTokenMessage(const RemoteParams& params)
+{
+    if (params.type == RemoteParams::Type::AccountVault) {
+        return tr("Sign in to your KeePassXC account to sync %1.").arg(params.name);
+    }
+    return tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.").arg(params.name);
+}
+
 void DatabaseWidget::syncWithServer(const RemoteParams& params)
 {
-    if (params.serverToken.trimmed().isEmpty()) {
+    if (!SyncServerClient::hasCredentials(params)) {
         // Each device needs its own token, and a database set up on another device comes without one
-        setSyncStatus(
-            SyncStatus::State::NeedsToken,
-            tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.").arg(params.name));
-        switchToRemoteSettings();
+        setSyncStatus(SyncStatus::State::NeedsToken, missingTokenMessage(params));
+        if (params.type != RemoteParams::Type::AccountVault) {
+            switchToRemoteSettings();
+        }
         return;
     }
     ensureSyncEngine(params);
@@ -1872,11 +1882,9 @@ void DatabaseWidget::backgroundSync()
     if (!params || isLocked()) {
         return;
     }
-    if (params->serverToken.trimmed().isEmpty()) {
+    if (!SyncServerClient::hasCredentials(*params)) {
         if (m_syncStatus.state != SyncStatus::State::NeedsToken) {
-            setSyncStatus(SyncStatus::State::NeedsToken,
-                          tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.")
-                              .arg(params->name));
+            setSyncStatus(SyncStatus::State::NeedsToken, missingTokenMessage(*params));
         }
         return;
     }
@@ -1966,12 +1974,14 @@ void DatabaseWidget::unlockServerCopyForSync(const QString& filePath)
 void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
 {
     const bool same = m_syncEvents && params && m_syncEvents->params().serverUrl == params->serverUrl
+                      && m_syncEvents->params().type == params->type
+                      && m_syncEvents->params().accountId == params->accountId
                       && m_syncEvents->params().serverToken == params->serverToken;
     if (same) {
         return;
     }
     delete m_syncEvents.data();
-    if (!params || params->serverToken.trimmed().isEmpty()) {
+    if (!params || !SyncServerClient::hasCredentials(*params)) {
         m_syncScheduler->setPollInterval(SyncScheduler::DefaultPollIntervalMsec);
         return;
     }
@@ -1979,7 +1989,7 @@ void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
     m_syncEvents = new SyncEventStream(*params, this);
     connect(m_syncEvents, &SyncEventStream::databaseChanged, this, [this](const SyncEventStream::Event& event) {
         const auto* params = autoSyncParams();
-        if (!params || event.databaseId != params->serverDatabaseId.trimmed()) {
+        if (!params || event.databaseId != params->remoteDatabaseId()) {
             return;
         }
         // Our own uploads come back as events too; only sync for versions we haven't got
@@ -2001,10 +2011,10 @@ void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
 
 void DatabaseWidget::showServerHistory(const RemoteParams* params)
 {
-    if (!params || params->type != RemoteParams::Type::SyncServer) {
+    if (!params || !params->isServer()) {
         return;
     }
-    if (params->serverToken.trimmed().isEmpty()) {
+    if (!SyncServerClient::hasCredentials(*params)) {
         syncWithServer(*params);
         return;
     }

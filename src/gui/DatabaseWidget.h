@@ -338,6 +338,7 @@ private slots:
                     SyncStatus::State failureState = SyncStatus::State::Failed);
     void syncWithServer(const RemoteParams& params);
     void ensureSyncEngine(const RemoteParams& params);
+    static QString missingTokenMessage(const RemoteParams& params);
     void unlockServerCopyForSync(const QString& filePath);
     void stopServerSync();
     void setSyncStatus(SyncStatus::State state, const QString& error = {});

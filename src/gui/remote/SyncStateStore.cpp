@@ -83,8 +83,7 @@ QString SyncStateStore::keyFor(const QString& databasePath, const RemoteParams& 
     if (canonicalPath.isEmpty()) {
         canonicalPath = QFileInfo(databasePath).absoluteFilePath();
     }
-    auto identity =
-        QStringList{canonicalPath, params.serverUrl.trimmed(), params.serverDatabaseId.trimmed()}.join('\n');
+    auto identity = QStringList{canonicalPath, params.serverUrl.trimmed(), params.remoteDatabaseId()}.join('\n');
     return QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha256).toHex());
 }
 
