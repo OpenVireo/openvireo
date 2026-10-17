@@ -29,6 +29,7 @@ private slots:
     void init();
     void testRegisterAndSignIn();
     void testSignInWithMfa();
+    void testFifthWrongMfaCodeEndsSignIn();
     void testWrongPasswordOrSecretKey();
     void testRefreshRotatesTokens();
     void testRefreshesExpiringTokens();

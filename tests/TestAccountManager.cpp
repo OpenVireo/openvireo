@@ -239,6 +239,7 @@ namespace
         QHash<QString, QPair<QString, QByteArray>> registrations;
         QHash<QString, OpaqueServer::Login> logins;
         QHash<QString, QString> mfaTokens;
+        QHash<QString, int> mfaAttempts;
         QHash<QString, Family> families;
         QHash<QString, QString> refreshFamily;
         QHash<QString, QString> accessTokens;
@@ -361,7 +362,13 @@ namespace
                 }
             } else if (path == "auth/login/mfa") {
                 const auto token = json.value("mfa_token").toString();
-                if (!server.mfaTokens.contains(token) || json.value("totp").toString() != "123456") {
+                if (!server.mfaTokens.contains(token)) {
+                    error(401, "unauthorized");
+                } else if (json.value("totp").toString() != "123456") {
+                    // SPEC.md §8: the token survives a wrong code, the 5th wrong code invalidates it
+                    if (++server.mfaAttempts[token] >= 5) {
+                        server.mfaTokens.remove(token);
+                    }
                     error(401, "invalid_mfa");
                 } else {
                     reply(200, server.newSession(server.users.value(server.mfaTokens.take(token))));
@@ -595,6 +602,31 @@ void TestAccountManager::testSignInWithMfa()
     QVERIFY(!manager->keyset().isNull());
     // The device is trusted now
     QCOMPARE(AccountManager::storedSecretKey(ServerId, Email), secretKey);
+}
+
+void TestAccountManager::testFifthWrongMfaCodeEndsSignIn()
+{
+    Fixture fixture;
+    const auto secretKey = registerAlice(fixture, this, true);
+    QVERIFY(!secretKey.isEmpty());
+
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    auto* manager = fixture.manager(this);
+    QSignalSpy errors(manager, &AccountManager::error);
+    manager->signIn(Email, Password, secretKey);
+    QVERIFY(waitForState(manager, AccountManager::State::NeedsMfa));
+
+    for (int i = 1; i <= 5; ++i) {
+        manager->submitMfa("000000");
+        QTRY_COMPARE(errors.count(), i);
+        QCOMPARE(manager->state(), AccountManager::State::NeedsMfa);
+    }
+
+    // The server dropped the token: the right code no longer works and sign-in starts over
+    manager->submitMfa("123456");
+    QVERIFY(waitForState(manager, AccountManager::State::SignedOut));
+    QCOMPARE(errors.count(), 6);
+    QVERIFY(manager->keyset().isNull());
 }
 
 void TestAccountManager::testWrongPasswordOrSecretKey()
