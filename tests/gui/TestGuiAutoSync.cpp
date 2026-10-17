@@ -18,10 +18,13 @@
 #include "TestGuiAutoSync.h"
 
 #include "../util/TemporaryFile.h"
+#include "account/AccountCrypto.h"
+#include "account/VaultKeyring.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/Group.h"
+#include "core/Metadata.h"
 #include "crypto/Crypto.h"
 #include "crypto/kdf/AesKdf.h"
 #include "gui/Application.h"
@@ -30,6 +33,7 @@
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncHistoryDialog.h"
+#include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
 #include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
@@ -39,6 +43,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -470,4 +475,157 @@ void TestGuiAutoSync::testCombinesChangesToDifferentFields()
     QTRY_COMPARE_WITH_TIMEOUT(entry()->password(), QString("changed elsewhere"), 10000);
     QCOMPARE(entry()->notes(), QString("changed here"));
     QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+}
+
+namespace
+{
+    // An in-memory sync server for account vaults that records the path and token of every request
+    struct VaultServer
+    {
+        QByteArray stored;
+        QString etag;
+        qint64 revision = 0;
+        QStringList requests;
+        QStringList tokens;
+    };
+
+    class FakeVaultClient : public SyncServerClient
+    {
+    public:
+        FakeVaultClient(const RemoteParams& params, QSharedPointer<VaultServer> server)
+            : SyncServerClient(params)
+            , m_server(std::move(server))
+        {
+        }
+
+    protected:
+        void send(const QByteArray& verb,
+                  const QUrl& url,
+                  const Headers& headers,
+                  const QByteArray& body,
+                  int,
+                  Callback callback) override
+        {
+            auto& server = *m_server;
+            server.requests << QString::fromLatin1(verb) + " " + url.path();
+            QString ifMatch, ifNoneMatch, token;
+            for (const auto& header : headers) {
+                if (header.first == "Authorization") {
+                    token = QString::fromLatin1(header.second);
+                } else if (header.first == "If-Match") {
+                    ifMatch = QString::fromLatin1(header.second);
+                } else if (header.first == "If-None-Match") {
+                    ifNoneMatch = QString::fromLatin1(header.second);
+                }
+            }
+            server.tokens << token;
+            Response response;
+            if (token.isEmpty()) {
+                response.status = 401;
+            } else if (verb == "PUT") {
+                if (ifMatch.isEmpty() && ifNoneMatch.isEmpty()) {
+                    response.status = 428;
+                } else if ((ifNoneMatch == "*" && !server.stored.isEmpty())
+                           || (!ifMatch.isEmpty() && ifMatch != server.etag)) {
+                    response.status = 412;
+                } else {
+                    response.status = server.stored.isEmpty() ? 201 : 200;
+                    server.stored = body;
+                    server.etag = etagFor(body);
+                    ++server.revision;
+                }
+            } else if (server.stored.isEmpty()) {
+                response.status = 404;
+            } else if (verb == "HEAD" && ifNoneMatch == server.etag) {
+                response.status = 304;
+            } else {
+                response.status = 200;
+                if (verb == "GET") {
+                    response.body = server.stored;
+                }
+            }
+            if (!server.stored.isEmpty()) {
+                response.etag = server.etag;
+                response.revision = server.revision;
+            }
+            deliverLater(response, std::move(callback));
+        }
+
+    private:
+        QSharedPointer<VaultServer> m_server;
+    };
+} // namespace
+
+void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
+{
+    // No server needed: the sync server client is replaced by an in-memory one
+    using State = DatabaseWidget::SyncStatus::State;
+    auto server = QSharedPointer<VaultServer>::create();
+    SyncServerClient::setFactory(
+        [server](const RemoteParams& params) -> SyncServerClient* { return new FakeVaultClient(params, server); });
+    const auto restoreFactory = qScopeGuard([] { SyncServerClient::setFactory(nullptr); });
+
+    const auto accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    RemoteParams params;
+    params.name = "KeePassXC account";
+    params.type = RemoteParams::Type::AccountVault;
+    // Nothing listens here; the event stream just keeps retrying
+    params.serverUrl = "http://127.0.0.1:9/api/v1";
+    params.accountId = accountId;
+    params.vaultId = vaultId;
+    params.autoSync = true;
+
+    // An account vault: its key is the vault key as a key file, and there is no password
+    const auto vaultKey = AccountCrypto::generateVaultKey();
+    QTemporaryDir dir;
+    auto db = VaultKeyring::createVaultDatabase("Personal", vaultKey);
+    {
+        RemoteSettings settings(db);
+        settings.addRemoteParams(new RemoteParams(params));
+        settings.saveSettings();
+    }
+    QVERIFY(db->saveAs(dir.filePath("vault.kdbx")));
+    // The database carries no token for the vault
+    QVERIFY(!db->metadata()->customData()->value(CustomData::RemoteProgramSettings).contains("Bearer"));
+
+    // Signed out: nothing is sent
+    DatabaseWidget widget(db);
+    addEntry(db.data(), "First");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsToken, 5000);
+    QVERIFY(widget.syncStatus().error.contains("Sign in"));
+    QVERIFY(server->requests.isEmpty());
+
+    // The account signs in: its provider hands out the current access token
+    QString accessToken = "jwt-1";
+    SyncServerClient::setAccountTokenProvider(
+        accountId, [&accessToken](std::function<void(const QString&)> done) { done(accessToken); });
+    const auto signOut = qScopeGuard([accountId] { SyncServerClient::setAccountTokenProvider(accountId, nullptr); });
+    addEntry(db.data(), "Second");
+    QVERIFY(widget.save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    QVERIFY(server->requests.contains("PUT /api/v1/vaults/" + vaultId));
+    for (const auto& request : server->requests) {
+        QVERIFY2(request.contains("/api/v1/vaults/" + vaultId), qPrintable(request));
+    }
+    QVERIFY(!server->tokens.isEmpty());
+    for (const auto& token : server->tokens) {
+        QCOMPARE(token, QString("Bearer jwt-1"));
+    }
+    auto uploaded = VaultKeyring::readVault(server->stored, VaultKeyring::compositeKeyFor(vaultKey));
+    QVERIFY(uploaded);
+    QCOMPARE(titles(uploaded.data()), QStringList({"First", "Second"}));
+
+    // After a refresh the next sync goes out with the new token
+    accessToken = "jwt-2";
+    server->tokens.clear();
+    addEntry(db.data(), "Third");
+    QVERIFY(widget.save());
+    QTRY_VERIFY_WITH_TIMEOUT(server->tokens.contains("Bearer jwt-2"), 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
+    QVERIFY(!server->tokens.contains("Bearer jwt-1"));
+    uploaded = VaultKeyring::readVault(server->stored, VaultKeyring::compositeKeyFor(vaultKey));
+    QVERIFY(uploaded);
+    QCOMPARE(titles(uploaded.data()), QStringList({"First", "Second", "Third"}));
 }
