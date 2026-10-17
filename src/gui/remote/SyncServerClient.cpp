@@ -200,6 +200,11 @@ void SyncServerClient::createPairingCode(Callback callback)
             std::move(callback));
 }
 
+void SyncServerClient::health(Callback callback)
+{
+    send("GET", endpoint(m_params, "health"), {}, {}, m_params.downloadTimeoutMsec, std::move(callback));
+}
+
 void SyncServerClient::claimPairingCode(const QString& code, const QString& deviceName, Callback callback)
 {
     QJsonObject body{{"code", code.trimmed()}, {"deviceName", deviceName}};

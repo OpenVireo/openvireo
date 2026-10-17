@@ -212,7 +212,9 @@ set(gui_SOURCES
         account/AccountManager.cpp
         account/AuthClient.cpp
         account/OpaqueClient.cpp
+        account/ServiceAccountAdmin.cpp
         account/VaultKeyring.cpp
+        account/VaultSharing.cpp
         gui/reports/ReportsWidget.cpp
         gui/reports/ReportsDialog.cpp
         gui/reports/ReportsWidgetHealthcheck.cpp
