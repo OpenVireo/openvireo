@@ -32,7 +32,7 @@ class QNetworkAccessManager;
 class QNetworkReply;
 
 /**
- * Asynchronous REST client for the KeePassXC sync server (see sync_server/).
+ * Asynchronous REST client for the KeePassXC sync server (see keepassxc-sync-server).
  *
  * Every request finishes by calling its callback on the thread that owns the client,
  * unless abort() was called first. The client copies the remote parameters, so later

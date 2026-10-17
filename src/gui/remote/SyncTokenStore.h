@@ -28,7 +28,7 @@ struct RemoteParams;
 /**
  * Keeps sync server access tokens on this device only.
  *
- * Every device has its own token (see sync_server's "devices add"), so a lost device can be
+ * Every device has its own token (see keepassxc-sync-server's "devices add"), so a lost device can be
  * revoked on its own. The token therefore can't live in the database file, which every device
  * shares: it goes to the macOS Keychain, the Windows Credential Manager or the desktop's keyring
  * (Secret Service). Without one of those it goes to a file only the user can read next to the

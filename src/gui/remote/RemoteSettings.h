@@ -31,7 +31,7 @@ struct RemoteParams
     {
         // Run user-supplied shell commands (scp, sftp, rclone, ...)
         Command,
-        // Talk to a KeePassXC sync server over its REST API (see sync_server/)
+        // Talk to a KeePassXC sync server over its REST API (see keepassxc-sync-server)
         SyncServer
     };
 
