@@ -103,7 +103,8 @@ The AAD binds a sealed key to its vault, so the server can't move one between va
 ### Key versions and rotation
 
 `vault_access` rows carry a `key_version`. A vault has one `current_key_version`, plus at most one
-pending version during a rotation. Rotating is required when a member is removed and optional at
+pending version during a rotation. A new vault starts at key version **1**: every grant in
+`POST /api/v1/vaults` uses it, and the caller must be one of the grantees. Rotating is required when a member is removed and optional at
 any other time:
 
 1. The client (needs `manage`) creates a new vault key and seals it to every remaining member.
@@ -125,10 +126,19 @@ removes a member without a new key version.
 
 - Library: **libopaque** (stef/libopaque) pinned at commit `6e9ac92` (v1.0.1-4) with liboprf
   `f925b87` and libsodium ≥ 1.0.19. It is used through the C core (Qt), the Python binding
-  `libopaque/python` (Flask, which needs `pysodium`), and the JS/WASM build **from the repo's
-  `js/dist/libopaque.js` at that commit**. The npm package `libopaque@0.0.0-alpha.2` is NOT
-  compatible (it fails at `finalizeRequest`) and must not be used. `opaque-spike/` holds a
-  reproducible cross-implementation check (WASM client against the C/Python server).
+  `libopaque/python` (Flask, which needs `pysodium`), and a JS/WASM **release build** of that
+  commit made by `opaque-spike/build-libopaque-wasm.sh` (`DEFINES=` empty, emsdk 1.40.1;
+  SHA-256 `5135049e647894325acc6ec2d832853afe6591ad770bd2d02029a400d0a98495`). Two builds must
+  **never** be used:
+  - upstream's `js/dist/libopaque.js` at 6e9ac92, which is built with `-DTRACE -DNORANDOM`: its
+    randomness is the fixed sequence 00 01 02 …, so every login sends the same client nonce and key
+    share, and it prints passwords and keys to the console;
+  - the npm package `libopaque@0.0.0-alpha.2`, which is incompatible (it fails at `finalizeRequest`).
+
+  Clients refuse to run a build whose login request (KE1 bytes 32–63) carries the nonce
+  00 01 … 1f. `opaque-spike/` holds the build script and a cross-implementation check.
+- Passwords go into OPAQUE as their real NFKC UTF-8 bytes. The stock libopaque.js wrapper passes
+  the UTF-16 length and truncates non-ASCII passwords, so JS clients call the raw exports.
 - Ids: `idU` = the account email, lowercased and trimmed. `idS` = the issuer host
   (e.g. `accounts.keepassxc.org`). Context = `kpx-opaque-v1`.
 - The server uses a **per-user server keypair** (`CreateRegistrationResponse` with `skS = null`).
@@ -141,6 +151,9 @@ removes a member without a new key version.
 - **Unknown email:** `login/start` still answers, with a fake record derived from
   `HMAC(server secret, email)`, so the response looks the same and accounts can't be listed.
   `login/finish` then fails with the same 401 as a wrong password.
+- **MFA:** when TOTP is on, `login/finish` returns `mfa_token` (5 minutes). A wrong code returns 401
+  `invalid_mfa` and keeps the token, so the user can retry; the 5th wrong code invalidates it. The
+  first correct code consumes it.
 - The OPAQUE `export_key` is not used in v1.
 
 ## 9. Tokens
@@ -215,14 +228,25 @@ The sync server's `GET /api/v1/events` is the only event stream. With a JWT:
   skew allowance), and the client reconnects with a fresh token. Browsers must read the stream with
   `fetch`, because `EventSource` can't send an `Authorization` header.
 - Legacy device-token streams keep sending `event: database` unchanged.
+- History: `GET {sync}/vaults/{id}/history` returns `{"versions":[BlobMeta…]}` and
+  `GET {sync}/vaults/{id}/history/{revision}` returns that version's bytes (role `read`), as for
+  legacy databases.
 
-**Auth → sync notification:** `POST {sync}/api/v1/internal/notify` with
+**Auth → sync notification:** `POST {sync}/internal/notify`, where `{sync}` is the discovery value
+and already ends in `/api/v1` (so the full path is `/api/v1/internal/notify`; never add `/api/v1`
+twice). It carries
 `Authorization: Bearer <SYNC_INTERNAL_TOKEN>` (a shared secret; the route is disabled when the
 variable is unset) and body `{"subjects":["user:…","sa:…"],"event":"access","data":{…}}`, returning
 `204`. The sync server sends the event to every open stream of those subjects. The call is best
 effort: the auth server sends it after the commit and logs failures.
 
-## 12. Modes
+## 12. Invitations
+
+An org invitation token is `kpx_inv_` + base64url(32 random bytes); the server stores only its
+SHA-256. It reaches the invitee only by email, as a link to `KPX_INVITATION_URL#token=<token>` (in
+the fragment, so it never reaches a server log), and is accepted with `POST /api/v1/invitations/accept`.
+
+## 13. Modes
 
 | `SYNC_AUTH_MODE` | Accepted tokens | Routes |
 |---|---|---|
