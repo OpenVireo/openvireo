@@ -1,0 +1,828 @@
+openapi: 3.1.0
+info:
+  title: KeePassXC auth server API (kpx v1)
+  version: 1.0.0
+  description: |
+    The contract between the auth server (Flask, `keepassxc-auth`), the sync server (Drogon,
+    `keepassxc-sync-server`) and the clients (Qt, `kpnx-sdk`). Crypto formats are in SPEC.md.
+
+    Paths tagged `auth` are served by the auth server under `{api}` (e.g. https://accounts.keepassxc.org/api/v1).
+    Paths tagged `sync` are served by the sync server under `{sync}` (e.g. https://sync.keepassxc.org/api/v1).
+    The existing legacy sync routes (`/databases/*`, `/devices/pairing*`, `/health`) are unchanged and not repeated here.
+
+    Conventions:
+    - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
+      `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`,
+      `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`. (The sync server
+      today sends only `error`; it adds `code` on the new routes.)
+    - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
+    - Binary fields are base64url without padding (`B64`). Ids are UUIDv4 strings.
+    - Timestamps are RFC 3339 UTC strings.
+    - Auth server JSON routes are CSRF-exempt and use only bearer auth; they don't read cookies.
+servers:
+  - url: https://accounts.keepassxc.org/api/v1
+    description: auth server ({api}); the sync server's JWT routes are in sync-openapi.yaml
+tags:
+  - name: auth
+  - name: sync
+security:
+  - bearer: []
+
+paths:
+  # ---------------------------------------------------------------- auth server: authentication
+  /auth/register/start:
+    post:
+      tags: [auth]
+      security: []
+      summary: OPAQUE registration, step 1 (rate limit 5/min/IP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, request]
+              properties:
+                email: { type: string, format: email }
+                request: { $ref: '#/components/schemas/B64', description: OPAQUE registration request (M) }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, response, user_id]
+                properties:
+                  session_id: { type: string, description: Redis key; expires in 5 minutes }
+                  response: { $ref: '#/components/schemas/B64', description: OPAQUE registration response (pub) }
+                  user_id: { type: string, format: uuid, description: the id the new user will have; it goes into the principal "user:<id>" }
+        '409': { $ref: '#/components/responses/Error', description: email already registered }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/register/finish:
+    post:
+      tags: [auth]
+      security: []
+      summary: OPAQUE registration, step 2. Creates the user and the first device, then logs in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, record, kdf, keyset, device]
+              properties:
+                session_id: { type: string }
+                record: { $ref: '#/components/schemas/B64', description: OPAQUE registration record }
+                kdf: { $ref: '#/components/schemas/Kdf' }
+                keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+                device: { $ref: '#/components/schemas/DeviceInfo' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error', description: session_expired }
+  /auth/login/start:
+    post:
+      tags: [auth]
+      security: []
+      summary: OPAQUE login, step 1 (rate limit 10/min/IP and 20/hour/email). Unknown emails get a fake record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, ke1]
+              properties:
+                email: { type: string, format: email }
+                ke1: { $ref: '#/components/schemas/B64', description: OPAQUE credential request (pub) }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, ke2]
+                properties:
+                  session_id: { type: string }
+                  ke2: { $ref: '#/components/schemas/B64', description: OPAQUE credential response (resp) }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/login/finish:
+    post:
+      tags: [auth]
+      security: []
+      summary: OPAQUE login, step 2. Returns a session, or an MFA challenge when TOTP is on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, auth_u, device]
+              properties:
+                session_id: { type: string }
+                auth_u: { $ref: '#/components/schemas/B64', description: OPAQUE authU }
+                device: { $ref: '#/components/schemas/DeviceInfo' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Session'
+                  - type: object
+                    required: [mfa_required, mfa_token]
+                    properties:
+                      mfa_required: { const: true }
+                      mfa_token: { type: string, description: single use; expires in 5 minutes }
+                      methods: { type: array, items: { enum: [totp] } }
+        '401': { $ref: '#/components/responses/Error', description: wrong password or unknown email (same response) }
+        '410': { $ref: '#/components/responses/Error' }
+  /auth/login/mfa:
+    post:
+      tags: [auth]
+      security: []
+      summary: Second factor (rate limit 5/min per mfa_token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfa_token, totp]
+              properties:
+                mfa_token: { type: string }
+                totp: { type: string, pattern: '^[0-9]{6}$' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      summary: Rotate a refresh token. Reusing a rotated token revokes the device session (code token_reused).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, refresh_token, expires_in]
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  expires_in: { type: integer, example: 600 }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke this device's refresh token family
+      responses:
+        '204': { description: logged out }
+  /auth/service-account:
+    post:
+      tags: [auth]
+      security: []
+      summary: Exchange an SA secret for an access token (rate limit 60/min per sa_id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sa_id, secret]
+              properties:
+                sa_id: { type: string, format: uuid }
+                secret: { $ref: '#/components/schemas/B64' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, expires_in, wrapped_master, keyset]
+                properties:
+                  access_token: { type: string }
+                  expires_in: { type: integer }
+                  wrapped_master: { $ref: '#/components/schemas/B64', description: 'wrap(kek, master, "kpx-sa-master-v1|<sa>")' }
+                  keyset: { $ref: '#/components/schemas/WrappedKeyset', description: wrapped with the SA master key }
+        '401': { $ref: '#/components/responses/Error', description: 'unknown, revoked or expired secret' }
+
+  # ---------------------------------------------------------------- auth server: me, keys, devices
+  /me:
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, email, kdf, keyset, mfa]
+                properties:
+                  id: { type: string, format: uuid }
+                  email: { type: string }
+                  name: { type: [string, 'null'] }
+                  kdf: { $ref: '#/components/schemas/Kdf' }
+                  keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+                  mfa: { type: object, properties: { totp: { type: boolean } } }
+                  orgs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        role: { $ref: '#/components/schemas/OrgRole' }
+                        status: { $ref: '#/components/schemas/MemberStatus' }
+  /me/password/start:
+    post:
+      tags: [auth]
+      summary: Change the master password, step 1 (OPAQUE re-registration). Needs a token issued in the last 5 minutes.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [request], properties: { request: { $ref: '#/components/schemas/B64' } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [session_id, response], properties: { session_id: { type: string }, response: { $ref: '#/components/schemas/B64' } } }
+        '403': { $ref: '#/components/responses/Error', description: token too old; log in again }
+  /me/password/finish:
+    post:
+      tags: [auth]
+      summary: Change the master password, step 2. Replaces the OPAQUE record, the kdf and the keyset (re-wrapped with the new AUK) atomically, and revokes other devices' refresh tokens.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, record, kdf, keyset]
+              properties:
+                session_id: { type: string }
+                record: { $ref: '#/components/schemas/B64' }
+                kdf: { $ref: '#/components/schemas/Kdf' }
+                keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+      responses:
+        '204': { description: changed }
+  /me/totp:
+    post:
+      tags: [auth]
+      summary: Start TOTP enrolment
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { secret: { type: string }, otpauth_uri: { type: string } } } } } }
+    put:
+      tags: [auth]
+      summary: Confirm TOTP enrolment
+      requestBody: { content: { application/json: { schema: { type: object, required: [totp], properties: { totp: { type: string } } } } } }
+      responses: { '204': { description: enabled } }
+    delete:
+      tags: [auth]
+      requestBody: { content: { application/json: { schema: { type: object, required: [totp], properties: { totp: { type: string } } } } } }
+      responses: { '204': { description: disabled } }
+  /users/lookup:
+    get:
+      tags: [auth]
+      summary: Find a user's public keys by exact email, for sharing (rate limit 30/min per user)
+      parameters:
+        - { name: email, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PublicPrincipal' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /principals/{principal}/public-key:
+    get:
+      tags: [auth]
+      summary: Public keys of user:<id> or sa:<id> (any authenticated caller)
+      parameters:
+        - { name: principal, in: path, required: true, schema: { $ref: '#/components/schemas/Principal' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PublicPrincipal' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /devices:
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        platform: { $ref: '#/components/schemas/Platform' }
+                        created_at: { type: string, format: date-time }
+                        last_seen_at: { type: string, format: date-time }
+                        current: { type: boolean }
+  /devices/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke a device (its refresh tokens; its access token expires within 10 minutes)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '204': { description: revoked } }
+
+  # ---------------------------------------------------------------- auth server: orgs
+  /orgs:
+    post:
+      tags: [auth]
+      summary: Create an org; the caller becomes its owner
+      requestBody: { content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 128 } } } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
+  /orgs/{org}:
+    parameters: [ { $ref: '#/components/parameters/Org' } ]
+    get:
+      tags: [auth]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
+    patch:
+      tags: [auth]
+      summary: Rename (owner/admin)
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string } } } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
+    delete:
+      tags: [auth]
+      summary: Delete the org and its vaults' access rows (owner only). Clients delete the blobs from the sync server first.
+      responses: { '204': { description: deleted } }
+  /orgs/{org}/members:
+    parameters: [ { $ref: '#/components/parameters/Org' } ]
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members: { type: array, items: { $ref: '#/components/schemas/Member' } }
+  /orgs/{org}/members/{user}:
+    parameters: [ { $ref: '#/components/parameters/Org' }, { name: user, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [auth]
+      summary: Change role (owner/admin; only owners create owners). Promotion to admin includes the SA master keys sealed to the member.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: '#/components/schemas/OrgRole' }
+                sa_master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } } }
+    delete:
+      tags: [auth]
+      summary: Remove a member. Their vault_access rows are deleted and every affected vault is flagged for rotation (rotation_required in GET /vaults).
+      responses: { '204': { description: removed } }
+  /orgs/{org}/members/{user}/confirm:
+    parameters: [ { $ref: '#/components/parameters/Org' }, { name: user, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [auth]
+      summary: Confirm an accepted member (owner/admin). An admin client checks the member's public key signature and seals the vault keys (and the SA master keys for admins).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grants: { type: array, items: { $ref: '#/components/schemas/Grant' } }
+                sa_master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } } }
+  /orgs/{org}/invitations:
+    parameters: [ { $ref: '#/components/parameters/Org' } ]
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitations: { type: array, items: { $ref: '#/components/schemas/Invitation' } }
+    post:
+      tags: [auth]
+      summary: Invite by email (owner/admin). The email holds a single-use token valid for 7 days.
+      requestBody: { content: { application/json: { schema: { type: object, required: [email, role], properties: { email: { type: string }, role: { $ref: '#/components/schemas/OrgRole' } } } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } } } }
+  /orgs/{org}/invitations/{id}:
+    parameters: [ { $ref: '#/components/parameters/Org' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    delete:
+      tags: [auth]
+      responses: { '204': { description: cancelled } }
+  /invitations/accept:
+    post:
+      tags: [auth]
+      summary: Accept an invitation as the logged-in user whose email matches. The status becomes `accepted`; an admin must confirm the member before they get any keys.
+      requestBody: { content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string } } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } }
+        '403': { $ref: '#/components/responses/Error', description: email mismatch }
+        '410': { $ref: '#/components/responses/Error', description: expired or used }
+
+  # ---------------------------------------------------------------- auth server: vaults
+  /vaults:
+    get:
+      tags: [auth]
+      summary: Every vault the caller can open, with the caller's sealed keys (current and pending version)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vaults: { type: array, items: { $ref: '#/components/schemas/Vault' } }
+    post:
+      tags: [auth]
+      summary: |
+        Create a vault (personal when org_id is absent; in an org it needs owner or admin). The client generates the id and the vault key,
+        seals it to itself (and to the org's owners/admins), then refreshes its token and PUTs the blob to the sync server with
+        `If-None-Match: *`. Owners/admins seal it to themselves at creation.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, encrypted_name, grants]
+              properties:
+                id: { type: string, format: uuid }
+                org_id: { type: [string, 'null'], format: uuid }
+                encrypted_name: { $ref: '#/components/schemas/B64' }
+                grants: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Grant' } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Vault' } } } }
+        '409': { $ref: '#/components/responses/Error', description: id taken }
+  /vaults/{vault}:
+    parameters: [ { $ref: '#/components/parameters/Vault' } ]
+    get:
+      tags: [auth]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Vault' } } } } }
+    patch:
+      tags: [auth]
+      summary: Rename (manage)
+      requestBody: { content: { application/json: { schema: { type: object, required: [encrypted_name], properties: { encrypted_name: { $ref: '#/components/schemas/B64' } } } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Vault' } } } } }
+    delete:
+      tags: [auth]
+      summary: Delete the vault's metadata and access (manage). Clients DELETE the blob on the sync server first.
+      responses: { '204': { description: deleted } }
+  /vaults/{vault}/access:
+    parameters: [ { $ref: '#/components/parameters/Vault' } ]
+    get:
+      tags: [auth]
+      summary: Who has access (any member). Doesn't return other members' sealed keys.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        principal: { $ref: '#/components/schemas/Principal' }
+                        role: { $ref: '#/components/schemas/VaultRole' }
+                        key_version: { type: integer }
+                        display: { type: string, description: email or SA name }
+                        granted_by: { $ref: '#/components/schemas/Principal' }
+                        granted_at: { type: string, format: date-time }
+    post:
+      tags: [auth]
+      summary: Grant access with keys sealed for the current key version, or change roles (manage). Sends access/granted to the grantees.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [grants], properties: { grants: { type: array, items: { $ref: '#/components/schemas/Grant' } } } }
+      responses:
+        '200': { description: updated }
+        '409': { $ref: '#/components/responses/Error', description: key_version is not the current version }
+  /vaults/{vault}/keys:
+    parameters: [ { $ref: '#/components/parameters/Vault' } ]
+    post:
+      tags: [auth]
+      summary: Start a rotation (SPEC §7). Removes the listed principals at once, stores the grants as pending, and sends access/revoked and access/rotating.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key_version, grants]
+              properties:
+                key_version: { type: integer, description: must be current_key_version + 1 }
+                grants: { type: array, items: { $ref: '#/components/schemas/Grant' }, description: 'every remaining member, including the caller' }
+                remove: { type: array, items: { $ref: '#/components/schemas/Principal' } }
+      responses:
+        '202': { description: pending }
+        '409': { $ref: '#/components/responses/Error', description: 'another rotation is pending, or a remaining member is missing from grants' }
+  /vaults/{vault}/keys/{version}/activate:
+    parameters: [ { $ref: '#/components/parameters/Vault' }, { name: version, in: path, required: true, schema: { type: integer } } ]
+    post:
+      tags: [auth]
+      summary: Finish a rotation after the re-keyed blob is uploaded. Sends access/rotated.
+      responses: { '204': { description: active } }
+
+  # ---------------------------------------------------------------- auth server: service accounts
+  /orgs/{org}/service-accounts:
+    parameters: [ { $ref: '#/components/parameters/Org' } ]
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { service_accounts: { type: array, items: { $ref: '#/components/schemas/ServiceAccount' } } } }
+    post:
+      tags: [auth]
+      summary: |
+        Create an SA (owner/admin). The client generates the SA keyset and master key, wraps the keyset with the master key,
+        seals the master key to every owner and admin, and creates the first secret in the same request.
+        Vault grants are sealed to the SA's enc_pk and added through POST /vaults/{id}/access.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, name, keyset, master_keys, secret]
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string, maxLength: 128 }
+                expires_at: { type: [string, 'null'], format: date-time }
+                keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+                master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
+                secret: { $ref: '#/components/schemas/NewSaSecret' }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } } }
+  /service-accounts/{sa}:
+    parameters: [ { name: sa, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [auth]
+      summary: Owners/admins get master_key (their sealed copy) too
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } } }
+    patch:
+      tags: [auth]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, expires_at: { type: [string, 'null'], format: date-time }, disabled: { type: boolean } } } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } } }
+    delete:
+      tags: [auth]
+      summary: Delete the SA, its secrets and its vault access. Its vaults are flagged rotation_required.
+      responses: { '204': { description: deleted } }
+  /service-accounts/{sa}/secrets:
+    parameters: [ { name: sa, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [auth]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secrets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        prefix: { type: string }
+                        name: { type: string }
+                        created_at: { type: string, format: date-time }
+                        last_used_at: { type: [string, 'null'], format: date-time }
+                        expires_at: { type: [string, 'null'], format: date-time }
+    post:
+      tags: [auth]
+      summary: Issue a secret (owner/admin). The client builds the token and shows it once.
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/NewSaSecret' } } } }
+      responses: { '201': { description: issued } }
+  /service-accounts/{sa}/secrets/{id}:
+    parameters: [ { name: sa, in: path, required: true, schema: { type: string, format: uuid } }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    delete:
+      tags: [auth]
+      responses: { '204': { description: revoked } }
+
+  # ---------------------------------------------------------------- auth server: audit
+  /orgs/{org}/audit:
+    parameters: [ { $ref: '#/components/parameters/Org' } ]
+    get:
+      tags: [auth]
+      summary: Org audit log (owner/admin), newest first, cursor paginated
+      parameters:
+        - { name: before, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        at: { type: string, format: date-time }
+                        actor: { $ref: '#/components/schemas/Principal' }
+                        action: { type: string, example: vault.access.grant }
+                        target: { type: string }
+                        ip: { type: string }
+                        details: { type: object }
+                  next: { type: [string, 'null'] }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'an access token (JWT), or a device token on the sync server in legacy/both mode' }
+    internal: { type: http, scheme: bearer, description: SYNC_INTERNAL_TOKEN shared secret }
+  parameters:
+    Org: { name: org, in: path, required: true, schema: { type: string, format: uuid } }
+    Vault: { name: vault, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Error:
+      description: error
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error: { type: string }
+              code: { type: string }
+  schemas:
+    B64: { type: string, pattern: '^[A-Za-z0-9_-]*$', description: base64url without padding }
+    Principal: { type: string, pattern: '^(user|sa):[0-9a-f-]{36}$' }
+    OrgRole: { enum: [owner, admin, member] }
+    MemberStatus: { enum: [invited, accepted, confirmed] }
+    VaultRole: { enum: [read, write, manage] }
+    Platform: { enum: [qt-linux, qt-macos, qt-windows, web, cli, connect] }
+    Kdf:
+      type: object
+      required: [alg, salt, m, t, p]
+      properties:
+        alg: { const: argon2id }
+        salt: { $ref: '#/components/schemas/B64' }
+        m: { type: integer, description: KiB }
+        t: { type: integer }
+        p: { type: integer }
+    PublicKeys:
+      type: object
+      required: [enc_pk, sign_pk, sig]
+      properties:
+        enc_pk: { $ref: '#/components/schemas/B64' }
+        sign_pk: { $ref: '#/components/schemas/B64' }
+        sig: { $ref: '#/components/schemas/B64' }
+    WrappedKeyset:
+      allOf:
+        - $ref: '#/components/schemas/PublicKeys'
+        - type: object
+          required: [wrapped]
+          properties:
+            wrapped: { $ref: '#/components/schemas/B64', description: 'wrap(AUK or SA master, enc_sk ‖ sign_seed, "kpx-keyset-v1")' }
+    PublicPrincipal:
+      allOf:
+        - $ref: '#/components/schemas/PublicKeys'
+        - type: object
+          required: [principal]
+          properties:
+            principal: { $ref: '#/components/schemas/Principal' }
+            email: { type: string }
+            name: { type: string }
+    DeviceInfo:
+      type: object
+      required: [name, platform]
+      properties:
+        id: { type: string, format: uuid, description: absent on a device's first login; the server assigns one }
+        name: { type: string, maxLength: 64 }
+        platform: { $ref: '#/components/schemas/Platform' }
+    Session:
+      type: object
+      required: [access_token, refresh_token, expires_in, device_id, user, kdf, keyset]
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        expires_in: { type: integer }
+        device_id: { type: string, format: uuid }
+        user: { type: object, properties: { id: { type: string, format: uuid }, email: { type: string } } }
+        kdf: { $ref: '#/components/schemas/Kdf' }
+        keyset: { $ref: '#/components/schemas/WrappedKeyset' }
+    Grant:
+      type: object
+      required: [principal, role, key_version, sealed_key]
+      properties:
+        principal: { $ref: '#/components/schemas/Principal' }
+        role: { $ref: '#/components/schemas/VaultRole' }
+        key_version: { type: integer }
+        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, vault key, "kpx-vault-key|<vault>")' }
+    SaMasterGrant:
+      type: object
+      required: [sa_id, principal, sealed_key]
+      properties:
+        sa_id: { type: string, format: uuid }
+        principal: { $ref: '#/components/schemas/Principal' }
+        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, SA master key, "kpx-sa-master-v1|<sa>")' }
+    NewSaSecret:
+      type: object
+      required: [id, secret_hash, prefix, wrapped_master]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        secret_hash: { type: string, description: hex SHA-256 of the 32 raw secret bytes }
+        prefix: { type: string, minLength: 8, maxLength: 8 }
+        wrapped_master: { $ref: '#/components/schemas/B64' }
+        expires_at: { type: [string, 'null'], format: date-time }
+    Vault:
+      type: object
+      required: [id, encrypted_name, role, current_key_version, keys]
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: [string, 'null'], format: uuid }
+        owner_id: { type: [string, 'null'], format: uuid }
+        encrypted_name: { $ref: '#/components/schemas/B64' }
+        role: { $ref: '#/components/schemas/VaultRole' }
+        current_key_version: { type: integer }
+        pending_key_version: { type: [integer, 'null'] }
+        rotation_required: { type: boolean, description: a member was removed without a rotation }
+        keys:
+          type: array
+          description: the caller's sealed keys for the current and pending versions, newest first
+          items:
+            type: object
+            properties:
+              key_version: { type: integer }
+              sealed_key: { $ref: '#/components/schemas/B64' }
+        created_at: { type: string, format: date-time }
+    BlobMeta:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        etag: { type: string }
+        revision: { type: integer }
+        size: { type: integer }
+        updatedAt: { type: string, format: date-time, description: camelCase to match the existing DatabaseMeta JSON }
+    Org:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { $ref: '#/components/schemas/OrgRole' }
+        created_at: { type: string, format: date-time }
+    Member:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/OrgRole' }
+        status: { $ref: '#/components/schemas/MemberStatus' }
+        public: { $ref: '#/components/schemas/PublicKeys' }
+    Invitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/OrgRole' }
+        expires_at: { type: string, format: date-time }
+        invited_by: { $ref: '#/components/schemas/Principal' }
+    ServiceAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        name: { type: string }
+        public: { $ref: '#/components/schemas/PublicKeys' }
+        keyset: { $ref: '#/components/schemas/WrappedKeyset', description: owners/admins only }
+        master_key: { $ref: '#/components/schemas/B64', description: the caller's sealed copy; owners/admins only }
+        created_by: { $ref: '#/components/schemas/Principal' }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+        disabled: { type: boolean }
