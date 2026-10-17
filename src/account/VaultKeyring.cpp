@@ -21,6 +21,7 @@
 #include "core/Group.h"
 #include "crypto/kdf/Argon2Kdf.h"
 #include "format/KeePass2Reader.h"
+#include "format/KeePass2Writer.h"
 #include "keys/CompositeKey.h"
 #include "keys/FileKey.h"
 
@@ -196,6 +197,21 @@ VaultKeyring::readVault(const QByteArray& data, const QSharedPointer<const Compo
         return {};
     }
     return db;
+}
+
+bool VaultKeyring::writeVault(Database* db, QByteArray* data, QString* error)
+{
+    data->clear();
+    QBuffer buffer(data);
+    buffer.open(QIODevice::WriteOnly);
+    KeePass2Writer writer;
+    if (!writer.writeDatabase(&buffer, db)) {
+        if (error) {
+            *error = writer.errorString();
+        }
+        return false;
+    }
+    return true;
 }
 
 QSharedPointer<Database>

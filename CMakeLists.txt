@@ -583,6 +583,9 @@ if(KPXC_FEATURE_ACCOUNTS AND NOT OPAQUE_FOUND)
     message(FATAL_ERROR "KPXC_FEATURE_ACCOUNTS needs libopaque, liboprf and libsodium; set OPAQUE_ROOT to where they are installed")
 endif()
 add_feature_info("Accounts" KPXC_FEATURE_ACCOUNTS "Sign in to KeePassXC accounts (OPAQUE)")
+# The hosted account server offered on the start screen; clients find its sync server through
+# <server>/.well-known/kpx-configuration
+set(KPXC_DEFAULT_ACCOUNT_SERVER "https://accounts.keepassxc.org" CACHE STRING "Issuer URL of the default KeePassXC account server")
 
 # Find zlib
 find_package(ZLIB REQUIRED)

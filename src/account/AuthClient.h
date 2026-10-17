@@ -130,6 +130,26 @@ public:
                        Callback callback);
     void activateKey(const QString& vaultId, int keyVersion, Callback callback);
 
+    // Orgs (the caller's orgs and roles come with me())
+    void orgMembers(const QString& orgId, Callback callback);
+
+    // Service accounts of an org (owner/admin)
+    void listServiceAccounts(const QString& orgId, Callback callback);
+    // `body` is {id, name, expires_at, keyset, master_keys, secret}, see openapi.yaml
+    void createServiceAccount(const QString& orgId, const QJsonObject& body, Callback callback);
+    // Owners and admins also get their sealed copy of the master key (`master_key`)
+    void getServiceAccount(const QString& saId, Callback callback);
+    // Any of {name, expires_at, disabled}
+    void updateServiceAccount(const QString& saId, const QJsonObject& changes, Callback callback);
+    void deleteServiceAccount(const QString& saId, Callback callback);
+    void listServiceAccountSecrets(const QString& saId, Callback callback);
+    // `secret` is a NewSaSecret: {id, name, secret_hash, prefix, wrapped_master, expires_at}
+    void issueServiceAccountSecret(const QString& saId, const QJsonObject& secret, Callback callback);
+    void revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback);
+
+    // The org's audit log, newest first; `before` is the `next` cursor of the previous page
+    void auditLog(const QString& orgId, const QString& before, int limit, Callback callback);
+
     // A Grant for POST /vaults, /vaults/{id}/access and /vaults/{id}/keys
     static QJsonObject
     grant(const QString& principal, const QString& role, int keyVersion, const QByteArray& sealedKey);
@@ -154,6 +174,7 @@ protected:
 private:
     void post(const QString& path, const QJsonObject& body, Callback callback, bool authenticated = false);
     void get(const QString& path, Callback callback);
+    void sendJson(const QByteArray& verb, const QString& path, const QJsonObject& body, Callback callback);
     void
     request(const QByteArray& verb, const QUrl& url, const QByteArray& body, bool authenticated, Callback callback);
 

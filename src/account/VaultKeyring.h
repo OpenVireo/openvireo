@@ -103,6 +103,8 @@ public:
     static QSharedPointer<Database> createVaultDatabase(const QString& name, const SecureBytes& vaultKey);
     static QSharedPointer<Database>
     readVault(const QByteArray& data, const QSharedPointer<const CompositeKey>& key, QString* error = nullptr);
+    // The database as a KDBX file under its current key, e.g. for an upload
+    static bool writeVault(Database* db, QByteArray* data, QString* error = nullptr);
 
 private:
     QMap<QString, Vault> m_vaults;

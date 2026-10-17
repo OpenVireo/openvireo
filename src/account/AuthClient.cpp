@@ -278,6 +278,64 @@ void AuthClient::activateKey(const QString& vaultId, int keyVersion, Callback ca
          true);
 }
 
+void AuthClient::orgMembers(const QString& orgId, Callback callback)
+{
+    get("orgs/" + encoded(orgId) + "/members", std::move(callback));
+}
+
+void AuthClient::listServiceAccounts(const QString& orgId, Callback callback)
+{
+    get("orgs/" + encoded(orgId) + "/service-accounts", std::move(callback));
+}
+
+void AuthClient::createServiceAccount(const QString& orgId, const QJsonObject& body, Callback callback)
+{
+    post("orgs/" + encoded(orgId) + "/service-accounts", body, std::move(callback), true);
+}
+
+void AuthClient::getServiceAccount(const QString& saId, Callback callback)
+{
+    get("service-accounts/" + encoded(saId), std::move(callback));
+}
+
+void AuthClient::updateServiceAccount(const QString& saId, const QJsonObject& changes, Callback callback)
+{
+    sendJson("PATCH", "service-accounts/" + encoded(saId), changes, std::move(callback));
+}
+
+void AuthClient::deleteServiceAccount(const QString& saId, Callback callback)
+{
+    request("DELETE", endpoint("service-accounts/" + encoded(saId)), {}, true, std::move(callback));
+}
+
+void AuthClient::listServiceAccountSecrets(const QString& saId, Callback callback)
+{
+    get("service-accounts/" + encoded(saId) + "/secrets", std::move(callback));
+}
+
+void AuthClient::issueServiceAccountSecret(const QString& saId, const QJsonObject& secret, Callback callback)
+{
+    post("service-accounts/" + encoded(saId) + "/secrets", secret, std::move(callback), true);
+}
+
+void AuthClient::revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback)
+{
+    request("DELETE",
+            endpoint("service-accounts/" + encoded(saId) + "/secrets/" + encoded(secretId)),
+            {},
+            true,
+            std::move(callback));
+}
+
+void AuthClient::auditLog(const QString& orgId, const QString& before, int limit, Callback callback)
+{
+    auto path = "orgs/" + encoded(orgId) + "/audit?limit=" + QString::number(limit);
+    if (!before.isEmpty()) {
+        path += "&before=" + encoded(before);
+    }
+    get(path, std::move(callback));
+}
+
 void AuthClient::post(const QString& path, const QJsonObject& body, Callback callback, bool authenticated)
 {
     request(
@@ -287,6 +345,11 @@ void AuthClient::post(const QString& path, const QJsonObject& body, Callback cal
 void AuthClient::get(const QString& path, Callback callback)
 {
     request("GET", endpoint(path), {}, true, std::move(callback));
+}
+
+void AuthClient::sendJson(const QByteArray& verb, const QString& path, const QJsonObject& body, Callback callback)
+{
+    request(verb, endpoint(path), QJsonDocument(body).toJson(QJsonDocument::Compact), true, std::move(callback));
 }
 
 void AuthClient::request(const QByteArray& verb,
