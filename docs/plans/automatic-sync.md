@@ -1,6 +1,6 @@
 # Automatic Sync with the Sync Server — Plan
 
-**Status:** Phases 1–6 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `sync_server` from `feature/sync-server`
+**Status:** Phases 1–6 implemented on `feature/auto-sync` (see 5.6); builds on the manual Remote Sync and `keepassxc-sync-server` from `feature/sync-server` (the server now lives in its own repository, [keepassxc-sync-server](https://github.com/bongani-m/keepassxc-sync-server))
 **Branch target:** `develop`
 **Last updated:** 2026-10-14
 
@@ -17,13 +17,13 @@ sync is out of scope.
 
 | Requirement | Where |
 |---|---|
-| Server never decrypts the database | `sync_server` stores bytes and checks only the KDBX signature (`415` otherwise) |
-| Conditional uploads (`If-Match` / `If-None-Match`, `412`, `428`) | `src/gui/remote/RemoteHandler.cpp:316-327`, `sync_server/src/SyncApi.cpp` |
-| Atomic check-and-commit on the server | `sync_server/src/DatabaseStore.cpp:119-145` (a lock per database, temp file + rename) |
+| Server never decrypts the database | `keepassxc-sync-server` stores bytes and checks only the KDBX signature (`415` otherwise) |
+| Conditional uploads (`If-Match` / `If-None-Match`, `412`, `428`) | `src/gui/remote/RemoteHandler.cpp:316-327`, `keepassxc-sync-server/src/SyncApi.cpp` |
+| Atomic check-and-commit on the server | `keepassxc-sync-server/src/DatabaseStore.cpp:119-145` (a lock per database, temp file + rename) |
 | Encrypted version history | `data/databases/<user>/.history/<id>/<rev>.kdbx`, bounded by `SYNC_HISTORY_SIZE` |
 | Client-side merge | `DatabaseWidget::syncWithDatabase` (`src/gui/DatabaseWidget.cpp:1899`), two-way `Merger` |
 | No upload when nothing changed | `RemoteHandler.cpp:306` compares the SHA-256 ETag. Works because the downloaded copy is only re-saved when the merge changed something. |
-| Simultaneous uploads | `ConcurrentConditionalWritesExactlyOneWins` in `sync_server/test/ApiTest.cpp` |
+| Simultaneous uploads | `ConcurrentConditionalWritesExactlyOneWins` in `keepassxc-sync-server/test/ApiTest.cpp` |
 
 ## 3. Gaps
 
@@ -106,7 +106,7 @@ lost, but the user isn't told about the conflict, and the result depends on devi
 ### 5.1 Client architecture
 
 ```
-DatabaseWidget ──owns──▶ SyncEngine ──uses──▶ SyncServerClient ──▶ sync_server (REST)
+DatabaseWidget ──owns──▶ SyncEngine ──uses──▶ SyncServerClient ──▶ keepassxc-sync-server (REST)
       ▲                    │  │
       │ merge + save       │  └──▶ SyncStateStore   (local, per database UUID)
       └────────────────────┘
@@ -394,6 +394,6 @@ Each phase is one PR, and the feature stays off unless `autoSync` is turned on f
 - **Integration:** extend `tests/TestRemoteSyncServer.cpp`, which runs against a real server when
   `KPXC_SYNC_SERVER_URL` / `KPXC_SYNC_SERVER_TOKEN` are set. Cover two `Database` instances syncing the same ID with
   interleaved edits, a delete on one side with an edit on the other, and attachments.
-- **Server:** extend `sync_server/test/ApiTest.cpp` for history, device revocation and events.
+- **Server:** extend `keepassxc-sync-server/test/ApiTest.cpp` for history, device revocation and events.
 - **Manual:** two machines, one going offline for a while; kill the app during an upload; restore an old file on the server
   by hand (must be detected as a rollback).
