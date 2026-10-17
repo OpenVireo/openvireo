@@ -211,8 +211,9 @@ The sync server's `GET /api/v1/events` is the only event stream. With a JWT:
   The auth server sends these through the sync server (below). On any `access` event the client
   refreshes its JWT (picking up new `vlt` claims), calls `GET /api/v1/vaults` again, and
   reconnects the stream.
-- The sync server ends a JWT stream when its token's `exp` passes, and the client reconnects with a
-  fresh token.
+- The sync server ends a JWT stream when its token's `exp` passes (exactly `exp`, without the
+  skew allowance), and the client reconnects with a fresh token. Browsers must read the stream with
+  `fetch`, because `EventSource` can't send an `Authorization` header.
 - Legacy device-token streams keep sending `event: database` unchanged.
 
 **Auth → sync notification:** `POST {sync}/api/v1/internal/notify` with
@@ -229,5 +230,10 @@ effort: the auth server sends it after the commit and logs failures.
 | `jwt` | JWTs | `vaults/*`, `events`, `internal/notify` |
 | `both` | either; a token with two `.` separators is a JWT | all of the above |
 
-`vaults/*` and `internal/notify` return 404 in `legacy` mode. Legacy namespaces (`databases/{id}`
+`vaults/*` and `internal/notify` return 404 in `legacy` mode. In `both` mode, a JWT on a legacy route or a
+device token on a vault route gets 403 `forbidden`. Creating a vault blob needs `If-None-Match: *`
+and updating it needs `If-Match`; a vault PUT with neither gets 428, even when the blob doesn't
+exist (unlike legacy databases, which can be created without a header). The sync server stores
+vault blobs under `<data>/vaults/<uuid>.kdbx` on disk and the `_vaults/` prefix in S3; the
+exact layout is up to the server. Legacy namespaces (`databases/{id}`
 under a user) and vault blobs (`vaults/{id}`) never share storage keys.
