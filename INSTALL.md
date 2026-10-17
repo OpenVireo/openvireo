@@ -86,6 +86,8 @@ KeePassXC comes with a variety of build options that can turn on/off features. E
 -DKPXC_FEATURE_NETWORK=[ON|OFF] Include code that reaches out to external networks (e.g. downloading icons) (default: ON)
 -DKPXC_FEATURE_UPDATES=[ON|OFF] Include automatic update checks; disable for managed distributions (requires networking) (default: ON)
 -DKPXC_FEATURE_DOCS=[ON|OFF] Build offline documentation; requires asciidoctor tool (default: ON)
+-DKPXC_FEATURE_ACCOUNTS=[ON|OFF] Sign in to KeePassXC accounts with OPAQUE; requires libopaque, liboprf and libsodium (default: ON when they are found)
+-DOPAQUE_ROOT=[path] Where libopaque and liboprf are installed, if not in a standard location
 
 -DWITH_TESTS=[ON|OFF] Enable/Disable building of unit tests (default: ON)
 -DWITH_GUI_TESTS=[ON|OFF] Enable/Disable building of GUI tests (default: OFF)
@@ -104,6 +106,25 @@ KeePassXC comes with a variety of build options that can turn on/off features. E
 
 Note: Even though you can build the application with all TCP/IP networking code disabled, we still require and link against
 Qt6's network library to use local named pipes on all operating systems.
+
+### KeePassXC accounts (OPAQUE)
+
+Signing in to a KeePassXC account uses OPAQUE through the C core of [libopaque](https://github.com/stef/libopaque),
+which needs [liboprf](https://github.com/stef/liboprf) and libsodium (1.0.19 or newer). Without them KeePassXC builds
+as usual and only account sign-in is unavailable. The versions are pinned by the accounts spec
+(`docs/plans/accounts/SPEC.md`, §8). To build them as static libraries on macOS or Linux:
+
+```shell
+# macOS: brew install libsodium pkgconf; Debian/Ubuntu: apt install libsodium-dev pkgconf
+git clone https://github.com/stef/liboprf && git -C liboprf checkout f925b87
+git clone https://github.com/stef/libopaque && git -C libopaque checkout 6e9ac92
+PREFIX=$PWD/opaque-prefix && mkdir -p $PREFIX/include/oprf $PREFIX/lib
+(cd liboprf/src && make CC=cc liboprf.a) && cp liboprf/src/*.h $PREFIX/include/oprf/ && cp liboprf/src/liboprf.a $PREFIX/lib/
+(cd libopaque/src && CPATH=$PREFIX/include:$(pkgconf --variable=includedir libsodium) \
+    make CC=cc OPRFHOME=$PWD/../../liboprf/src libopaque.a) \
+  && cp libopaque/src/opaque.h $PREFIX/include/ && cp libopaque/src/libopaque.a $PREFIX/lib/
+cmake -DOPAQUE_ROOT=$PREFIX -DKPXC_FEATURE_ACCOUNTS=ON ..
+```
 
 ## Installation
 

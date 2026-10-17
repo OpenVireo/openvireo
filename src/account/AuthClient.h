@@ -1,0 +1,171 @@
+/*
+ *  Copyright (C) 2026 KeePassXC Team <team@keepassxc.org>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 2 or (at your option)
+ *  version 3 of the License.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef KEEPASSXC_AUTHCLIENT_H
+#define KEEPASSXC_AUTHCLIENT_H
+
+#include "config-keepassx.h"
+
+#include "gui/remote/RemoteSettings.h"
+
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QObject>
+#include <QSet>
+#include <QUrl>
+
+#include <functional>
+
+class QNetworkAccessManager;
+class QNetworkReply;
+
+/**
+ * Asynchronous JSON client for the KeePassXC auth server (docs/plans/accounts/openapi.yaml), in the
+ * style of SyncServerClient: every request ends by calling its callback on the client's thread,
+ * unless abort() runs first, and tests override send() to answer without a network.
+ *
+ * Routes that need a signed-in caller get their bearer token from the token provider; the others
+ * (registration, login, refresh, service account exchange, discovery) never send one.
+ */
+class AuthClient : public QObject
+{
+    Q_OBJECT
+
+public:
+    struct Response
+    {
+        // HTTP status, 0 when the request never got a response
+        int status = 0;
+        QByteArray body;
+        QString networkError;
+
+        bool isSuccess() const
+        {
+            return status >= 200 && status < 300;
+        }
+        QJsonObject json() const;
+        // The machine readable error code, e.g. token_reused
+        QString errorCode() const;
+    };
+    using Callback = std::function<void(const Response&)>;
+    using Headers = QList<QPair<QByteArray, QByteArray>>;
+
+    struct DeviceInfo
+    {
+        // Empty on this device's first sign-in; the server assigns one
+        QString id;
+        QString name;
+        // qt-linux, qt-macos or qt-windows
+        QString platform;
+
+        QJsonObject toJson() const;
+        static DeviceInfo current(const QString& id = {});
+    };
+
+    static constexpr int TimeoutMsec = 30000;
+
+    // `apiUrl` is the auth server's API, e.g. https://accounts.keepassxc.org/api/v1
+    explicit AuthClient(const QString& apiUrl = {}, QObject* parent = nullptr);
+    ~AuthClient() override;
+
+    void setApiUrl(const QString& apiUrl);
+    QString apiUrl() const;
+    void setTokenProvider(AccessTokenProvider provider);
+
+    // GET <issuer>/.well-known/kpx-configuration: {issuer, api, sync, jwks_uri, opaque, kdf_min}
+    void discover(const QString& issuerUrl, Callback callback);
+
+    void registerStart(const QString& email, const QByteArray& request, Callback callback);
+    void registerFinish(const QString& sessionId,
+                        const QByteArray& record,
+                        const QJsonObject& kdf,
+                        const QJsonObject& keyset,
+                        const DeviceInfo& device,
+                        Callback callback);
+    void loginStart(const QString& email, const QByteArray& ke1, Callback callback);
+    // A Session, or {mfa_required: true, mfa_token, methods}
+    void loginFinish(const QString& sessionId, const QByteArray& authU, const DeviceInfo& device, Callback callback);
+    void loginMfa(const QString& mfaToken, const QString& totp, Callback callback);
+    void refresh(const QString& refreshToken, Callback callback);
+    void logout(Callback callback);
+    void exchangeServiceAccount(const QString& saId, const QString& secret, Callback callback);
+
+    void me(Callback callback);
+    void lookupUser(const QString& email, Callback callback);
+    // `principal` is user:<id> or sa:<id>
+    void publicKey(const QString& principal, Callback callback);
+    void listDevices(Callback callback);
+    void revokeDevice(const QString& deviceId, Callback callback);
+
+    void listVaults(Callback callback);
+    void getVault(const QString& vaultId, Callback callback);
+    void createVault(const QString& vaultId,
+                     const QString& orgId,
+                     const QByteArray& encryptedName,
+                     const QJsonArray& grants,
+                     Callback callback);
+    void renameVault(const QString& vaultId, const QByteArray& encryptedName, Callback callback);
+    void deleteVault(const QString& vaultId, Callback callback);
+    void vaultAccess(const QString& vaultId, Callback callback);
+    void grantAccess(const QString& vaultId, const QJsonArray& grants, Callback callback);
+    // Start a key rotation (SPEC §7): `grants` for every remaining member, `remove` the principals to drop
+    void startRotation(const QString& vaultId,
+                       int keyVersion,
+                       const QJsonArray& grants,
+                       const QStringList& remove,
+                       Callback callback);
+    void activateKey(const QString& vaultId, int keyVersion, Callback callback);
+
+    // A Grant for POST /vaults, /vaults/{id}/access and /vaults/{id}/keys
+    static QJsonObject
+    grant(const QString& principal, const QString& role, int keyVersion, const QByteArray& sealedKey);
+
+    // Drop all requests in flight; their callbacks are never called
+    void abort();
+
+    QUrl endpoint(const QString& path) const;
+    static QString errorMessage(const Response& response);
+
+protected:
+    // Overridden by tests to answer without a network. Authenticated requests carry the Authorization header.
+    virtual void send(const QByteArray& verb,
+                      const QUrl& url,
+                      const Headers& headers,
+                      const QByteArray& body,
+                      int timeoutMsec,
+                      Callback callback);
+
+    void deliverLater(const Response& response, Callback callback);
+
+private:
+    void post(const QString& path, const QJsonObject& body, Callback callback, bool authenticated = false);
+    void get(const QString& path, Callback callback);
+    void
+    request(const QByteArray& verb, const QUrl& url, const QByteArray& body, bool authenticated, Callback callback);
+
+    QString m_apiUrl;
+    AccessTokenProvider m_tokenProvider;
+    quint64 m_generation = 0;
+#ifdef KPXC_FEATURE_NETWORK
+    QNetworkAccessManager* m_nam = nullptr;
+    QSet<QNetworkReply*> m_replies;
+#endif
+
+    Q_DISABLE_COPY(AuthClient)
+};
+
+#endif // KEEPASSXC_AUTHCLIENT_H

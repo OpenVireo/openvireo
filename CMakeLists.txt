@@ -575,6 +575,15 @@ elseif(BOTAN_VERSION VERSION_LESS "2.19.1")
 endif()
 include_directories(SYSTEM ${BOTAN_INCLUDE_DIR})
 
+# KeePassXC accounts sign in with OPAQUE through the libopaque C core (with liboprf and libsodium).
+# Everything else about accounts only needs Botan, so builds without these libraries still have it.
+find_package(Opaque)
+option(KPXC_FEATURE_ACCOUNTS "OPAQUE sign-in to KeePassXC accounts; needs libopaque, liboprf and libsodium" ${OPAQUE_FOUND})
+if(KPXC_FEATURE_ACCOUNTS AND NOT OPAQUE_FOUND)
+    message(FATAL_ERROR "KPXC_FEATURE_ACCOUNTS needs libopaque, liboprf and libsodium; set OPAQUE_ROOT to where they are installed")
+endif()
+add_feature_info("Accounts" KPXC_FEATURE_ACCOUNTS "Sign in to KeePassXC accounts (OPAQUE)")
+
 # Find zlib
 find_package(ZLIB REQUIRED)
 if(ZLIB_VERSION_STRING VERSION_LESS "1.2.0")
