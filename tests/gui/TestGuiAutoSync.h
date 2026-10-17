@@ -35,6 +35,7 @@ private slots:
     void testOpensAnOlderVersion();
     void testOpensAnOlderVersionFromTheVaultCard();
     void testCombinesChangesToDifferentFields();
+    void testSyncsAnAccountVaultWithTheAccountsToken();
 };
 
 #endif // KEEPASSXC_TESTGUIAUTOSYNC_H
