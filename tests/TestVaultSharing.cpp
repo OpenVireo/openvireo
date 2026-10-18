@@ -65,12 +65,13 @@ namespace
                    && vaults.wait(5000) && (sharing.reset(new VaultSharing(alice.data())), true);
         }
 
-        // A vault of Alice's with a blob on the sync server
-        QString createVault(const QString& name, QString* error = nullptr)
+        // A vault of Alice's (or of her org) with a blob on the sync server
+        QString createVault(const QString& name, QString* error = nullptr, const QString& orgId = {})
         {
             QString vaultId;
             bool finished = false;
-            sharing->createVault(name, [&](const QString& id, const QSharedPointer<Database>&, const QString& message) {
+            sharing->createVault(
+                name, orgId, [&](const QString& id, const QSharedPointer<Database>&, const QString& message) {
                 vaultId = id;
                 if (error) {
                     *error = message;
@@ -83,6 +84,63 @@ namespace
             return vaultId;
         }
     };
+
+    // Another account, signed in and unlocked on this device
+    AccountManager* signUpAs(const QSharedPointer<Server>& server, const QString& email)
+    {
+        auto* manager = createManager(server);
+        manager->setServer(serverConfig());
+        manager->registerAccount(email, Password);
+        std::ignore = QTest::qWaitFor([&] { return manager->state() == AccountManager::State::Unlocked; }, 10000);
+        return manager;
+    }
+
+    // Waits for an asynchronous admin operation that ends with (bool ok, QString error)
+    bool done(const std::function<void(ServiceAccountAdmin::Done)>& operation, QString* error = nullptr)
+    {
+        bool finished = false;
+        bool result = false;
+        operation([&](bool ok, const QString& message) {
+            result = ok;
+            if (error) {
+                *error = message;
+            }
+            finished = true;
+        });
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 10000);
+        return finished && result;
+    }
+
+    QList<ServiceAccountAdmin::Member> members(ServiceAccountAdmin* admin, const QString& orgId)
+    {
+        QList<ServiceAccountAdmin::Member> result;
+        bool finished = false;
+        admin->listMembers(orgId, [&](const QList<ServiceAccountAdmin::Member>& list, const QString&) {
+            result = list;
+            finished = true;
+        });
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 5000);
+        return result;
+    }
+
+    ServiceAccountAdmin::Member memberFor(ServiceAccountAdmin* admin, const QString& orgId, const QString& email)
+    {
+        for (const auto& member : members(admin, orgId)) {
+            if (member.email == email) {
+                return member;
+            }
+        }
+        return {};
+    }
+
+    QStringList auditActions(const QSharedPointer<Server>& server)
+    {
+        QStringList actions;
+        for (const auto& event : server->audit) {
+            actions << event.toObject().value("action").toString();
+        }
+        return actions;
+    }
 
     bool run(VaultSharing* sharing,
              const std::function<void(VaultSharing*, VaultSharing::Done)>& operation,
@@ -822,4 +880,354 @@ void TestVaultSharing::testConfirmsOrgMembers()
     QTRY_VERIFY(finished);
     QVERIFY(!ok);
     QVERIFY(f.server->roleOf(vaultB, bob).isEmpty());
+}
+
+void TestVaultSharing::testCreatesAnOrgAndItsVaults()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    ServiceAccountAdmin admin(f.alice.data());
+
+    // The creator is the org's owner
+    ServiceAccountAdmin::Org org;
+    bool finished = false;
+    admin.createOrg("  Acme  ", [&](const ServiceAccountAdmin::Org& created, const QString&) {
+        org = created;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY(!org.id.isEmpty());
+    QCOMPARE(org.name, QString("Acme"));
+    QCOMPARE(org.role, QString("owner"));
+    QCOMPARE(f.server->orgs.value(org.id).members.size(), 1);
+    QCOMPARE(f.server->orgs.value(org.id).members.first().userId, f.alice->accountId());
+    QCOMPARE(auditActions(f.server).first(), QString("org.create"));
+    // The org shows in /me, which the sidebar groups vaults by
+    QTRY_COMPARE(f.alice->orgs().size(), 1);
+    QCOMPARE(f.alice->org(org.id).name, QString("Acme"));
+    QVERIFY(f.alice->org(org.id).canAdminister());
+
+    // An org vault is sealed to every confirmed owner and admin with manage, at key version 1
+    QString carol, bob, dan;
+    const auto carolKeys = f.server->addUser("carol@example.com", &carol);
+    f.server->addOrgMember(org.id, "carol@example.com", "admin");
+    f.server->addUser("bob@example.com", &bob);
+    f.server->addOrgMember(org.id, "bob@example.com", "member");
+    // Invited or not yet confirmed admins get it when they are confirmed
+    f.server->addUser("dan@example.com", &dan);
+    f.server->addOrgMember(org.id, "dan@example.com", "admin", "accepted");
+    QString error;
+    const auto vaultId = f.createVault("Deploy", &error, org.id);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    const auto vault = f.server->vaults.value(vaultId);
+    QCOMPARE(vault.orgId, org.id);
+    QVERIFY(vault.ownerId.isEmpty());
+    QCOMPARE(vault.current, 1);
+    QCOMPARE(vault.access.size(), 2);
+    for (const auto& access : vault.access) {
+        QCOMPARE(access.role, QString("manage"));
+        QCOMPARE(access.keyVersion, 1);
+    }
+    QCOMPARE(f.server->roleOf(vaultId, f.alice->principal()), QString("manage"));
+    QVERIFY(f.server->vaultKeyFor(vaultId, carol, carolKeys.encSk) == f.alice->keyring().vaultKey(vaultId));
+    QVERIFY(f.server->roleOf(vaultId, bob).isEmpty());
+    QVERIFY(f.server->roleOf(vaultId, dan).isEmpty());
+    // The blob is uploaded, and the keyring knows the vault's org
+    QCOMPARE(f.server->blobs.value(vaultId).revision, 1);
+    QCOMPARE(f.alice->keyring().vault(vaultId).orgId, org.id);
+    QCOMPARE(f.alice->keyring().vault(vaultId).name, QString("Deploy"));
+    QVERIFY(auditActions(f.server).contains("vault.create"));
+}
+
+void TestVaultSharing::testOrgVaultsNeedEveryOwnerAndAdmin()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto orgId = f.server->addOrg("Acme", AliceEmail);
+
+    // The server refuses an org vault that leaves a confirmed admin out (SPEC §7) and names who is missing.
+    // A client can't seal to an admin without public keys, so it creates nothing.
+    QString erin;
+    f.server->addUser("erin@example.com", &erin);
+    f.server->directory.remove(erin);
+    f.server->addOrgMember(orgId, "erin@example.com", "admin");
+    QString error;
+    f.createVault("Deploy", &error, orgId);
+    QVERIFY2(error.contains("400"), qPrintable(error));
+    QVERIFY2(error.contains("missing: " + erin), qPrintable(error));
+    QVERIFY(f.server->vaults.isEmpty());
+    QVERIFY(f.server->blobs.isEmpty());
+    f.server->orgs[orgId].members.removeLast();
+
+    // An admin whose keys don't carry a valid signature gets nothing: the client refuses before asking
+    QString frank;
+    f.server->addUser("frank@example.com", &frank);
+    f.server->directory[frank]["enc_pk"] = toBase64Url(generateKeyset().publicKeys.encPk);
+    f.server->addOrgMember(orgId, "frank@example.com", "admin");
+    const auto requests = f.server->requests.filter("POST vaults").size();
+    f.createVault("Deploy", &error, orgId);
+    QVERIFY2(error.contains("frank@example.com"), qPrintable(error));
+    QCOMPARE(f.server->requests.filter("POST vaults").size(), requests);
+    QVERIFY(f.server->vaults.isEmpty());
+    f.server->orgs[orgId].members.removeLast();
+
+    // A plain member can't create vaults in the org
+    f.server->orgs[orgId].members.first().role = "member";
+    f.server->addUser("owner@example.com");
+    f.server->addOrgMember(orgId, "owner@example.com", "owner");
+    f.createVault("Deploy", &error, orgId);
+    QVERIFY2(error.contains("403"), qPrintable(error));
+    QVERIFY(f.server->vaults.isEmpty());
+}
+
+void TestVaultSharing::testInvitesAndAcceptsMembers()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto orgId = f.server->addOrg("Acme", AliceEmail);
+    const auto vaultId = f.createVault("Deploy", nullptr, orgId);
+    QVERIFY(!vaultId.isEmpty());
+    ServiceAccountAdmin admin(f.alice.data());
+
+    // Bob has an account already; the invitation reaches him by email, with the token in the fragment
+    QScopedPointer<AccountManager> bob(signUpAs(f.server, "bob@example.com"));
+    QCOMPARE(bob->state(), AccountManager::State::Unlocked);
+    QString error;
+    QVERIFY2(done([&](auto cb) { admin.invite(orgId, "Bob@Example.com", "member", cb); }, &error), qPrintable(error));
+    QCOMPARE(f.server->sentInvitations.size(), 1);
+    const auto link = f.server->sentInvitations.first().second;
+    QCOMPARE(f.server->sentInvitations.first().first, QString("bob@example.com"));
+    QVERIFY(link.startsWith(InvitationUrl + "#token=kpx_inv_"));
+    // The server keeps only the token's hash
+    QVERIFY(!f.server->invitations.constBegin()->tokenHash.contains("kpx_inv_"));
+    QCOMPARE(memberFor(&admin, orgId, "bob@example.com").status, QString("invited"));
+
+    QList<ServiceAccountAdmin::Invitation> pending;
+    bool finished = false;
+    admin.listInvitations(orgId, [&](const QList<ServiceAccountAdmin::Invitation>& list, const QString&) {
+        pending = list;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QCOMPARE(pending.size(), 1);
+    QCOMPARE(pending.first().email, QString("bob@example.com"));
+    QCOMPARE(pending.first().role, QString("member"));
+    QVERIFY(pending.first().expiresAt > QDateTime::currentDateTimeUtc().addDays(6));
+
+    // Someone else signed in can't use it
+    QScopedPointer<AccountManager> mallory(signUpAs(f.server, "mallory@example.com"));
+    ServiceAccountAdmin malloryAdmin(mallory.data());
+    QVERIFY(!done([&](auto cb) { malloryAdmin.acceptInvitation(link, cb); }, &error));
+    QVERIFY2(error.contains("another email"), qPrintable(error));
+
+    // Bob pastes the link and waits for an admin; he has no keys yet
+    ServiceAccountAdmin bobAdmin(bob.data());
+    QVERIFY2(done([&](auto cb) { bobAdmin.acceptInvitation(link, cb); }, &error), qPrintable(error));
+    QCOMPARE(memberFor(&admin, orgId, "bob@example.com").status, QString("accepted"));
+    QTRY_COMPARE(bob->orgs().size(), 1);
+    QVERIFY(!bob->org(orgId).isConfirmed());
+    QVERIFY(!bob->keyring().contains(vaultId));
+    QVERIFY(auditActions(f.server).contains("org.member.accept"));
+    // A token works once
+    QVERIFY(!done([&](auto cb) { bobAdmin.acceptInvitation(link, cb); }, &error));
+    QVERIFY2(error.contains("already used"), qPrintable(error));
+
+    // An admin confirms him with the vault picked for him
+    QVERIFY2(done([&](auto cb) {
+                 admin.confirmMember(orgId, memberFor(&admin, orgId, "bob@example.com"), {{vaultId, "write"}}, cb);
+             },
+             &error),
+             qPrintable(error));
+    QCOMPARE(f.server->roleOf(vaultId, bob->principal()), QString("write"));
+    QSignalSpy reloaded(bob.data(), &AccountManager::vaultsChanged);
+    bob->refreshAccessToken();
+    bob->reloadVaults();
+    QVERIFY(reloaded.wait());
+    QVERIFY(bob->keyring().vaultKey(vaultId) == f.alice->keyring().vaultKey(vaultId));
+    // Confirming twice is refused
+    QVERIFY(!done([&](auto cb) { admin.confirmMember(orgId, memberFor(&admin, orgId, "bob@example.com"), {}, cb); }));
+
+    // An invitation for an address without an account yet can be cancelled
+    QVERIFY(done([&](auto cb) { admin.invite(orgId, "carol@example.com", "admin", cb); }));
+    finished = false;
+    admin.listInvitations(orgId, [&](const QList<ServiceAccountAdmin::Invitation>& list, const QString&) {
+        pending = list;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QCOMPARE(pending.size(), 1);
+    QVERIFY(done([&](auto cb) { admin.cancelInvitation(orgId, pending.first().id, cb); }));
+    QVERIFY(f.server->invitations.size() == 1);
+    QCOMPARE(auditActions(f.server).first(), QString("org.invitation.cancel"));
+    QScopedPointer<AccountManager> carol(signUpAs(f.server, "carol@example.com"));
+    ServiceAccountAdmin carolAdmin(carol.data());
+    QVERIFY(!done([&](auto cb) { carolAdmin.acceptInvitation(f.server->sentInvitations.last().second, cb); }));
+
+    // A member already in the org can't be invited again
+    QVERIFY(!done([&](auto cb) { admin.invite(orgId, "bob@example.com", "member", cb); }, &error));
+    QVERIFY2(error.contains("already a member"), qPrintable(error));
+}
+
+void TestVaultSharing::testParsesInvitationLinks()
+{
+    const auto token = QStringLiteral("kpx_inv_") + toBase64Url(randomSecure(32));
+    QCOMPARE(ServiceAccountAdmin::invitationToken(token), token);
+    QCOMPARE(ServiceAccountAdmin::invitationToken("  " + token + "\n"), token);
+    QCOMPARE(ServiceAccountAdmin::invitationToken(InvitationUrl + "#token=" + token), token);
+    QCOMPARE(ServiceAccountAdmin::invitationToken("https://x.example/i#token=" + token + "&from=mail"), token);
+    QCOMPARE(ServiceAccountAdmin::invitationToken("https://x.example/i#token="
+                                                  + QString::fromLatin1(QUrl::toPercentEncoding(token))),
+             token);
+    QVERIFY(ServiceAccountAdmin::invitationToken("https://x.example/i").isEmpty());
+    QVERIFY(ServiceAccountAdmin::invitationToken("kpx_rt_abc").isEmpty());
+    QVERIFY(ServiceAccountAdmin::invitationToken("kpx_inv_ab cd").isEmpty());
+    QVERIFY(ServiceAccountAdmin::invitationToken({}).isEmpty());
+}
+
+void TestVaultSharing::testPromotesAndDemotesMembers()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto orgId = f.server->addOrg("Acme", AliceEmail);
+    const auto vaultA = f.createVault("Deploy", nullptr, orgId);
+    const auto vaultB = f.createVault("Finance", nullptr, orgId);
+    const auto personal = f.createVault("Mine");
+    ServiceAccountAdmin admin(f.alice.data());
+    ServiceAccountAdmin::ServiceAccount sa;
+    bool finished = false;
+    admin.create(orgId, "CI", {}, [&](const ServiceAccountAdmin::ServiceAccount& account, const QString&, const QString&) {
+        sa = account;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+
+    QString bob;
+    const auto bobKeys = f.server->addUser("bob@example.com", &bob);
+    f.server->addOrgMember(orgId, "bob@example.com", "member");
+    QString error;
+
+    // Promoting a confirmed member to admin hands over every SA master key and manage on every org vault
+    QVERIFY2(done([&](auto cb) { admin.setMemberRole(orgId, memberFor(&admin, orgId, "bob@example.com"), "admin", cb); },
+                  &error),
+             qPrintable(error));
+    QCOMPARE(f.server->orgMember(orgId, bob.mid(5))->role, QString("admin"));
+    SecureBytes master;
+    QVERIFY(unseal(bobKeys.encSk,
+                   fromBase64Url(f.server->serviceAccounts.value(sa.id).masterKeys.value(bob)),
+                   saMasterAad(sa.id),
+                   &master));
+    for (const auto& id : {vaultA, vaultB}) {
+        QCOMPARE(f.server->roleOf(id, bob), QString("manage"));
+        QVERIFY(f.server->vaultKeyFor(id, bob, bobKeys.encSk) == f.alice->keyring().vaultKey(id));
+    }
+    // Personal vaults stay personal
+    QVERIFY(f.server->roleOf(personal, bob).isEmpty());
+    QVERIFY(auditActions(f.server).contains("org.member.role"));
+    // The PATCH carried the master keys, the grants followed it
+    const auto patch = f.server->requests.lastIndexOf("PATCH orgs/" + orgId + "/members/" + bob.mid(5));
+    QVERIFY(patch >= 0);
+    QVERIFY(f.server->requests.lastIndexOf("POST vaults/" + vaultA + "/access") > patch);
+
+    // Demoting to member drops the master keys on the server
+    QVERIFY2(done([&](auto cb) { admin.setMemberRole(orgId, memberFor(&admin, orgId, "bob@example.com"), "member", cb); },
+                  &error),
+             qPrintable(error));
+    QCOMPARE(f.server->orgMember(orgId, bob.mid(5))->role, QString("member"));
+    QVERIFY(!f.server->serviceAccounts.value(sa.id).masterKeys.contains(bob));
+
+    // Promoting a member who isn't confirmed yet seals nothing: they get their keys on confirmation
+    QString carol;
+    f.server->addUser("carol@example.com", &carol);
+    f.server->addOrgMember(orgId, "carol@example.com", "member", "accepted");
+    QVERIFY(done([&](auto cb) { admin.setMemberRole(orgId, memberFor(&admin, orgId, "carol@example.com"), "admin", cb); }));
+    QVERIFY(!f.server->serviceAccounts.value(sa.id).masterKeys.contains(carol));
+    QVERIFY(f.server->roleOf(vaultA, carol).isEmpty());
+
+    // Keys without a valid signature get nothing
+    auto forged = memberFor(&admin, orgId, "bob@example.com");
+    forged.publicKeys.encPk = generateKeyset().publicKeys.encPk;
+    forged.verified = verifyPublicKeys(forged.publicKeys);
+    QVERIFY(!done([&](auto cb) { admin.setMemberRole(orgId, forged, "admin", cb); }));
+    QCOMPARE(f.server->orgMember(orgId, bob.mid(5))->role, QString("member"));
+
+    // The last owner can't step down
+    QVERIFY(!done([&](auto cb) { admin.setMemberRole(orgId, memberFor(&admin, orgId, AliceEmail), "admin", cb); },
+                  &error));
+    QVERIFY2(error.contains("at least one owner"), qPrintable(error));
+    QCOMPARE(ServiceAccountAdmin::assignableRoles("owner"), QStringList({"owner", "admin", "member"}));
+    QCOMPARE(ServiceAccountAdmin::assignableRoles("admin"), QStringList({"admin", "member"}));
+    QVERIFY(ServiceAccountAdmin::assignableRoles("member").isEmpty());
+
+    // Only owners make owners
+    f.server->orgMember(orgId, f.alice->accountId())->role = "admin";
+    f.server->addUser("owner@example.com");
+    f.server->addOrgMember(orgId, "owner@example.com", "owner");
+    QVERIFY(!done([&](auto cb) { admin.setMemberRole(orgId, memberFor(&admin, orgId, "bob@example.com"), "owner", cb); },
+                  &error));
+    QVERIFY2(error.contains("403"), qPrintable(error));
+}
+
+void TestVaultSharing::testRemovingAMemberRotatesTheirVaults()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto orgId = f.server->addOrg("Acme", AliceEmail);
+    const auto vaultA = f.createVault("Deploy", nullptr, orgId);
+    const auto vaultB = f.createVault("Finance", nullptr, orgId);
+    const auto personal = f.createVault("Mine");
+    ServiceAccountAdmin admin(f.alice.data());
+
+    QString bob;
+    const auto bobKeys = f.server->addUser("bob@example.com", &bob);
+    f.server->addOrgMember(orgId, "bob@example.com", "member", "accepted");
+    QVERIFY(done([&](auto cb) {
+        admin.confirmMember(orgId, memberFor(&admin, orgId, "bob@example.com"), {{vaultA, "write"}}, cb);
+    }));
+    const auto oldKey = f.alice->keyring().vaultKey(vaultA);
+    QVERIFY(f.server->vaultKeyFor(vaultA, bob, bobKeys.encSk) == oldKey);
+
+    // Removing him flags the vaults he could open; this account manages them, so it rotates them at once
+    QStringList rotated, failed;
+    QString error;
+    bool finished = false;
+    admin.removeMember(orgId, bob.mid(5), [&](const QStringList& r, const QStringList& fl, const QString& e) {
+        rotated = r;
+        failed = fl;
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(finished, 10000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY2(failed.isEmpty(), qPrintable(failed.join("; ")));
+    QCOMPARE(rotated, QStringList{vaultA});
+    QVERIFY(!f.server->orgMember(orgId, bob.mid(5)));
+    QVERIFY(f.server->roleOf(vaultA, bob).isEmpty());
+    QCOMPARE(f.server->vaults.value(vaultA).current, 2);
+    QVERIFY(!f.server->vaults.value(vaultA).rotationRequired);
+    QCOMPARE(f.server->vaults.value(vaultB).current, 1);
+    QCOMPARE(f.server->vaults.value(personal).current, 1);
+    // The blob is under the new key, which Bob never got
+    QTRY_VERIFY(f.alice->keyring().vault(vaultA).currentKeyVersion == 2);
+    const auto newKey = f.alice->keyring().vaultKey(vaultA);
+    QVERIFY(newKey != oldKey);
+    QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultA).data, VaultKeyring::compositeKeyFor(newKey)));
+    QVERIFY(!VaultKeyring::readVault(f.server->blobs.value(vaultA).data, VaultKeyring::compositeKeyFor(oldKey)));
+    const auto actions = auditActions(f.server);
+    QVERIFY(actions.contains("org.member.remove"));
+    QVERIFY(actions.contains("vault.access.revoke"));
+    QVERIFY(actions.contains("vault.key.activate"));
+
+    // The last owner can't be removed
+    finished = false;
+    admin.removeMember(orgId, f.alice->accountId(), [&](const QStringList&, const QStringList&, const QString& e) {
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY2(error.contains("at least one owner"), qPrintable(error));
 }

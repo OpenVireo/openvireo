@@ -131,13 +131,29 @@ public:
     void activateKey(const QString& vaultId, int keyVersion, Callback callback);
 
     // Orgs (the caller's orgs and roles come with me())
+    // A new org; the caller becomes its owner
+    void createOrg(const QString& name, Callback callback);
     void orgMembers(const QString& orgId, Callback callback);
+    // A new role for a member. `saMasterKeys` (SaMasterGrant) go along when promoting to owner or admin.
+    void setMemberRole(const QString& orgId,
+                       const QString& userId,
+                       const QString& role,
+                       const QJsonArray& saMasterKeys,
+                       Callback callback);
+    // The server deletes their vault access and flags the org vaults they could open (rotation_required)
+    void removeMember(const QString& orgId, const QString& userId, Callback callback);
     // Confirm an accepted member with their vault grants (VaultGrant) and, for admins, the SA master keys
     void confirmMember(const QString& orgId,
                        const QString& userId,
                        const QJsonArray& grants,
                        const QJsonArray& saMasterKeys,
                        Callback callback);
+    // Invitations (owner/admin); the invitee gets the token by email only (SPEC §12)
+    void listInvitations(const QString& orgId, Callback callback);
+    void invite(const QString& orgId, const QString& email, const QString& role, Callback callback);
+    void cancelInvitation(const QString& orgId, const QString& invitationId, Callback callback);
+    // Accept as the signed-in user; an owner or admin confirms the member afterwards
+    void acceptInvitation(const QString& token, Callback callback);
 
     // Service accounts of an org (owner/admin)
     void listServiceAccounts(const QString& orgId, Callback callback);

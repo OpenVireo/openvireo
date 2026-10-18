@@ -574,19 +574,27 @@ void VaultSharing::moveToAccount(const QSharedPointer<Database>& source, const Q
         done({}, {}, error);
         return;
     }
-    createFromDatabase(copy, name, done);
+    createFromDatabase(copy, name, {}, done);
 }
 
 void VaultSharing::createVault(const QString& name, VaultCallback done)
+{
+    createVault(name, {}, std::move(done));
+}
+
+void VaultSharing::createVault(const QString& name, const QString& orgId, VaultCallback done)
 {
     if (!m_account || m_account->state() != AccountManager::State::Unlocked || m_account->isServiceAccount()) {
         done({}, {}, tr("Unlock your account first."));
         return;
     }
-    createFromDatabase(QSharedPointer<Database>::create(), name, done);
+    createFromDatabase(QSharedPointer<Database>::create(), name, orgId, done);
 }
 
-void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db, const QString& name, VaultCallback done)
+void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
+                                      const QString& name,
+                                      const QString& orgId,
+                                      VaultCallback done)
 {
     const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const auto vaultKey = generateVaultKey();
@@ -606,11 +614,62 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db, const 
 
     emit progress(tr("Creating the vault…"));
     // Key version 1, sealed to this account, which is among the grantees (SPEC §7)
+    const auto self = m_account->principal();
     const auto sealed = seal(m_account->keyset().publicKeys.encPk, vaultKey, vaultKeyAad(vaultId));
-    const QJsonArray grants{AuthClient::grant(m_account->principal(), "manage", 1, sealed)};
+    QJsonArray grants{AuthClient::grant(self, "manage", 1, sealed)};
+    if (orgId.isEmpty()) {
+        createWithGrants(db, vaultId, {}, vaultName, vaultKey, grants, done);
+        return;
+    }
+
+    // An org vault is sealed to every confirmed owner and admin as well, with manage; the server refuses
+    // one that leaves any of them out (SPEC §7)
+    QPointer<VaultSharing> guard(this);
+    m_account->client()->orgMembers(
+        orgId,
+        [guard, db, vaultId, orgId, vaultName, vaultKey, grants, self, done](const AuthClient::Response& response) mutable {
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!response.isSuccess()) {
+                done({}, {}, AuthClient::errorMessage(response));
+                return;
+            }
+            for (const auto& value : response.json().value("members").toArray()) {
+                const auto member = value.toObject();
+                const auto role = member.value("role").toString();
+                const auto principal = "user:" + member.value("user_id").toString();
+                if (principal == self || (role != "owner" && role != "admin")
+                    || member.value("status").toString() != "confirmed" || !member.value("public").isObject()) {
+                    continue;
+                }
+                bool ok = false;
+                const auto keys = PublicKeys::fromJson(member.value("public").toObject(), &ok);
+                if (!ok || !verifyPublicKeys(keys)) {
+                    // Never seal to keys that aren't self-signed
+                    done({},
+                         {},
+                         tr("The public keys of %1 don't carry a valid signature, so the vault wasn't created.")
+                             .arg(member.value("email").toString()));
+                    return;
+                }
+                grants << AuthClient::grant(principal, "manage", 1, seal(keys.encPk, vaultKey, vaultKeyAad(vaultId)));
+            }
+            guard->createWithGrants(db, vaultId, orgId, vaultName, vaultKey, grants, done);
+        });
+}
+
+void VaultSharing::createWithGrants(const QSharedPointer<Database>& db,
+                                    const QString& vaultId,
+                                    const QString& orgId,
+                                    const QString& vaultName,
+                                    const SecureBytes& vaultKey,
+                                    const QJsonArray& grants,
+                                    VaultCallback done)
+{
     QPointer<VaultSharing> guard(this);
     m_account->client()->createVault(vaultId,
-                                     {},
+                                     orgId,
                                      encryptVaultName(vaultKey, vaultId, vaultName),
                                      grants,
                                      [guard, vaultId, db, done](const AuthClient::Response& response) {

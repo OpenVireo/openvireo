@@ -207,6 +207,21 @@ AuthClient* AccountManager::client() const
     return m_client;
 }
 
+QList<AccountManager::Org> AccountManager::orgs() const
+{
+    return m_orgs;
+}
+
+AccountManager::Org AccountManager::org(const QString& orgId) const
+{
+    for (const auto& org : m_orgs) {
+        if (org.id == orgId) {
+            return org;
+        }
+    }
+    return {};
+}
+
 void AccountManager::setState(State state)
 {
     if (m_state != state) {
@@ -556,11 +571,16 @@ void AccountManager::unlock(const QString& password)
                     emit error(message);
                     return;
                 }
-                setState(State::Unlocked);
-                reloadVaults();
-                startEvents();
+                finishUnlock();
             });
     });
+}
+
+void AccountManager::finishUnlock()
+{
+    setState(State::Unlocked);
+    reloadVaults();
+    startEvents();
 }
 
 void AccountManager::lock()
@@ -568,6 +588,7 @@ void AccountManager::lock()
     m_pending.reset();
     m_keyring.clear();
     m_keyset.clear();
+    m_orgs.clear();
     if (m_state == State::Unlocked || m_state == State::SigningIn || m_state == State::NeedsMfa) {
         if (m_serviceAccount) {
             // A service account has no session to keep without its token
@@ -594,6 +615,7 @@ void AccountManager::endSession(const QString& reason)
     stopEvents();
     m_refreshTimer.stop();
     m_pending.reset();
+    m_orgs.clear();
     if (!m_accountId.isEmpty()) {
         SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);
         if (!m_serviceAccount) {
@@ -839,6 +861,30 @@ void AccountManager::reloadVaults()
         }
         m_keyring.setVaults(response.json().value("vaults").toArray(), m_keyset.encSk);
         emit vaultsChanged();
+    });
+    reloadOrgs();
+}
+
+void AccountManager::reloadOrgs()
+{
+    // Service accounts belong to one org and have no /me
+    if (m_serviceAccount) {
+        return;
+    }
+    m_client->me([this](const AuthClient::Response& response) {
+        if (m_state != State::Unlocked || !response.isSuccess()) {
+            return;
+        }
+        QList<Org> orgs;
+        for (const auto& value : response.json().value("orgs").toArray()) {
+            const auto json = value.toObject();
+            orgs << Org{json.value("id").toString(),
+                        json.value("name").toString(),
+                        json.value("role").toString(),
+                        json.value("status").toString()};
+        }
+        m_orgs = orgs;
+        emit orgsChanged();
     });
 }
 

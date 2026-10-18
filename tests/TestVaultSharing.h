@@ -40,6 +40,12 @@ private slots:
     void testGrantsAServiceAccountAVault();
     void testPagesTheAuditLog();
     void testConfirmsOrgMembers();
+    void testCreatesAnOrgAndItsVaults();
+    void testOrgVaultsNeedEveryOwnerAndAdmin();
+    void testInvitesAndAcceptsMembers();
+    void testParsesInvitationLinks();
+    void testPromotesAndDemotesMembers();
+    void testRemovingAMemberRotatesTheirVaults();
 };
 
 #endif // KEEPASSXC_TESTVAULTSHARING_H

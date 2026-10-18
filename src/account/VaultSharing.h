@@ -39,7 +39,8 @@ class Database;
  * - revoke: rotate the vault key in one step. The new key is sealed to every remaining member, the
  *   server drops the removed ones at once and keeps the new grants pending, the blob is re-keyed
  *   (download, re-key, conditional PUT, again on 412), then the new version is activated;
- * - create a vault, empty or from an existing database ("Move to account"), and upload its first blob.
+ * - create a vault, empty or from an existing database ("Move to account"), and upload its first blob. A
+ *   vault in an org is also sealed, with manage, to every confirmed owner and admin of the org.
  *
  * Every operation runs asynchronously and ends with its callback; nothing here blocks on the network.
  * The account must be unlocked.
@@ -50,6 +51,7 @@ class VaultSharing : public QObject
 
 public:
     using Done = std::function<void(bool ok, const QString& error)>;
+    using SecureBytes = AccountCrypto::SecureBytes;
 
     // A principal's public keys, checked before anything is sealed to them
     struct Recipient
@@ -115,8 +117,9 @@ public:
     // Create a vault (key version 1, sealed to this account) from a copy of `source` re-keyed to a fresh
     // vault key, upload it and hand back the vault database. `source` itself isn't changed.
     void moveToAccount(const QSharedPointer<Database>& source, const QString& name, VaultCallback done);
-    // Create an empty vault and upload it
+    // Create an empty vault and upload it: a personal one, or one of the org `orgId` (owners and admins only)
     void createVault(const QString& name, VaultCallback done);
+    void createVault(const QString& name, const QString& orgId, VaultCallback done);
 
 signals:
     // A step of a longer operation, for a progress label
@@ -128,7 +131,17 @@ private:
     void startRotation(const QSharedPointer<Rotation>& rotation);
     void rekey(const QSharedPointer<Rotation>& rotation, int attempt);
     void activate(const QSharedPointer<Rotation>& rotation);
-    void createFromDatabase(const QSharedPointer<Database>& db, const QString& name, VaultCallback done);
+    void createFromDatabase(const QSharedPointer<Database>& db,
+                            const QString& name,
+                            const QString& orgId,
+                            VaultCallback done);
+    void createWithGrants(const QSharedPointer<Database>& db,
+                          const QString& vaultId,
+                          const QString& orgId,
+                          const QString& vaultName,
+                          const SecureBytes& vaultKey,
+                          const QJsonArray& grants,
+                          VaultCallback done);
     void uploadNewVault(const QString& vaultId, const QSharedPointer<Database>& db, VaultCallback done);
     void collectRecipients(const QStringList& principals,
                            std::function<void(const QList<Recipient>&, const QString& error)> done);
