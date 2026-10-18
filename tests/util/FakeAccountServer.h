@@ -23,6 +23,7 @@
 #include "account/OpaqueClient.h"
 #include "gui/remote/SyncServerClient.h"
 
+#include <QDateTime>
 #include <QHash>
 #include <QJsonArray>
 #include <QSet>
@@ -43,6 +44,8 @@ namespace FakeAccount
     extern const QString SyncUrl;
     extern const QString SelfHostedUrl;
     extern const QString Totp;
+    // KPX_INVITATION_URL: invitation emails link to it with the token in the fragment (SPEC §12)
+    extern const QString InvitationUrl;
 
     AccountManager::ServerConfig serverConfig();
     // The cheapest settings clients accept
@@ -112,6 +115,18 @@ namespace FakeAccount
             QString name;
             QList<OrgMember> members;
         };
+        struct Invitation
+        {
+            QString id;
+            QString orgId;
+            QString email;
+            QString role;
+            // SHA-256 of the kpx_inv_ token; the token itself is only in the email
+            QString tokenHash;
+            QString invitedBy;
+            QDateTime expiresAt;
+            bool accepted = false;
+        };
         struct ServiceAccount
         {
             QJsonObject json;
@@ -149,6 +164,9 @@ namespace FakeAccount
         QHash<QString, Org> orgs;
         QHash<QString, ServiceAccount> serviceAccounts;
         QHash<QString, SaSecret> secrets;
+        QHash<QString, Invitation> invitations;
+        // Every invitation email sent: the address and the link in it
+        QList<QPair<QString, QString>> sentInvitations;
         QJsonArray audit;
         // Self-hosted sync server: pairing code -> device token
         QHash<QString, QString> pairingCodes;
@@ -165,8 +183,15 @@ namespace FakeAccount
         QString next(const QString& prefix);
         QString issueAccessToken(const QString& principal);
         QJsonObject newSession(const User& user);
+        // The role `principal`'s grants give it on a vault
         QString roleOf(const QString& vaultId, const QString& principal) const;
-        void log(const QString& actor, const QString& action, const QString& target);
+        // What the server lets it do: a personal vault's owner and an org's confirmed owners and admins
+        // manage the vault even without a grant (and without its key), as on the real server
+        QString effectiveRole(const QString& vaultId, const QString& principal) const;
+        // A confirmed owner or admin of the org
+        bool isOrgManager(const QString& orgId, const QString& principal) const;
+        OrgMember* orgMember(const QString& orgId, const QString& userId);
+        void log(const QString& actor, const QString& action, const QString& target, const QString& orgId = {});
 
         // A user that exists only on the server, e.g. someone to share with; their private keys are
         // returned so tests can act as them
