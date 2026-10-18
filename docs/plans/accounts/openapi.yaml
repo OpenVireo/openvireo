@@ -281,6 +281,16 @@ paths:
                 keyset: { $ref: '#/components/schemas/WrappedKeyset' }
       responses:
         '204': { description: changed }
+  /me/web-session:
+    post:
+      tags: [auth]
+      summary: One-time code that signs the browser in to the auth website (SPEC.md §16). Valid 60 seconds, single use.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [code, expires_in], properties: { code: { type: string, description: 'kpx_ws_ + base64url(32 bytes)' }, expires_in: { type: integer } } }
   /me/totp:
     post:
       tags: [auth]
