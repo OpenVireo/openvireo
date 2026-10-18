@@ -18,9 +18,13 @@
 #include "AccountManager.h"
 
 #include "core/AsyncTask.h"
+#include "core/Config.h"
 #include "core/Database.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "quickunlock/QuickUnlockInterface.h"
+
+#include <botan/mem_ops.h>
 
 #include <QDateTime>
 #include <QJsonDocument>
@@ -58,6 +62,9 @@ namespace
     {
         return QUrl(url).host();
     }
+
+    // Quick Unlock entries of accounts live beside those of databases, keyed by a name-based uuid
+    const QUuid QuickUnlockNamespace("8c0d3f4e-5a6b-4c7d-9e8f-0a1b2c3d4e5f");
 } // namespace
 
 QString AccountManager::ServerConfig::serverId() const
@@ -220,6 +227,56 @@ AccountManager::Org AccountManager::org(const QString& orgId) const
         }
     }
     return {};
+}
+
+void AccountManager::setQuickUnlock(QuickUnlockInterface* quickUnlock)
+{
+    m_quickUnlock = quickUnlock;
+}
+
+bool AccountManager::isQuickUnlockAvailable() const
+{
+    // The same switch as the databases' Quick Unlock (Settings, Security)
+    if (m_serviceAccount || !config()->get(Config::Security_QuickUnlock).toBool()) {
+        return false;
+    }
+    auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+    return provider->isAvailable();
+}
+
+bool AccountManager::canQuickUnlock() const
+{
+    if (m_state != State::Locked || m_accountId.isEmpty() || !isQuickUnlockAvailable()) {
+        return false;
+    }
+    auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+    return provider->hasKey(quickUnlockId());
+}
+
+QUuid AccountManager::quickUnlockId() const
+{
+    return QUuid::createUuidV5(QuickUnlockNamespace, "kpx-account:" + defaultServerId() + ":" + m_accountId);
+}
+
+void AccountManager::rememberAuk(const SecureBytes& auk)
+{
+    if (!isQuickUnlockAvailable() || m_accountId.isEmpty()) {
+        return;
+    }
+    // The provider encrypts it right away and keeps it in memory only, as it does a database key
+    auto key = fromSecure(auk);
+    auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+    provider->setKey(quickUnlockId(), key);
+    Botan::secure_scrub_memory(key.data(), key.size());
+}
+
+void AccountManager::forgetAuk()
+{
+    if (m_accountId.isEmpty()) {
+        return;
+    }
+    auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+    provider->reset(quickUnlockId());
 }
 
 void AccountManager::setState(State state)
@@ -515,6 +572,8 @@ void AccountManager::deriveKeyset(const QJsonObject& kdfJson,
                 return;
             }
             m_keyset = keyset;
+            // From now on Quick Unlock can stand in for the master password
+            rememberAuk(auk);
             done(true, {});
         });
 }
@@ -576,6 +635,50 @@ void AccountManager::unlock(const QString& password)
     });
 }
 
+void AccountManager::quickUnlock()
+{
+    if (!canQuickUnlock()) {
+        return;
+    }
+    auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+    // Asks for Touch ID, Windows Hello or Polkit, as a database's Quick Unlock does
+    QByteArray key;
+    if (!provider->getKey(quickUnlockId(), key)) {
+        emit error(tr("Failed to authenticate with Quick Unlock: %1").arg(provider->errorString()));
+        return;
+    }
+    if (key.isEmpty()) {
+        // The user cancelled
+        return;
+    }
+    const auto auk = toSecure(key);
+    Botan::secure_scrub_memory(key.data(), key.size());
+    m_pending = std::make_unique<Pending>();
+    m_pending->email = m_email;
+    setState(State::SigningIn);
+    m_client->me([this, auk](const AuthClient::Response& response) {
+        if (!m_pending) {
+            return;
+        }
+        if (!response.isSuccess()) {
+            fail(AuthClient::errorMessage(response));
+            return;
+        }
+        m_pending.reset();
+        Keyset keyset;
+        if (!unwrapKeyset(auk, response.json().value("keyset").toObject(), &keyset)) {
+            // The keyset was wrapped again, e.g. the master password changed on another device
+            forgetAuk();
+            setState(State::Locked);
+            emit error(tr("Quick Unlock no longer opens this account, e.g. because its master password changed. "
+                          "Unlock it with the master password."));
+            return;
+        }
+        m_keyset = keyset;
+        finishUnlock();
+    });
+}
+
 void AccountManager::finishUnlock()
 {
     setState(State::Unlocked);
@@ -615,6 +718,8 @@ void AccountManager::endSession(const QString& reason)
     stopEvents();
     m_refreshTimer.stop();
     m_pending.reset();
+    // Like closing a database: its Quick Unlock goes with the session
+    forgetAuk();
     m_orgs.clear();
     if (!m_accountId.isEmpty()) {
         SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);

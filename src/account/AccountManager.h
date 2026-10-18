@@ -29,10 +29,12 @@
 #include <QObject>
 #include <QPointer>
 #include <QTimer>
+#include <QUuid>
 
 #include <memory>
 
 class Database;
+class QuickUnlockInterface;
 
 /**
  * One KeePassXC account on this device (docs/plans/accounts/SPEC.md): signing up and in with OPAQUE and
@@ -52,6 +54,12 @@ class Database;
  *
  * Account vaults get their tokens from this manager: it registers itself as the token provider of
  * its account with SyncServerClient while signed in.
+ *
+ * Quick Unlock (Touch ID, Windows Hello, Polkit) works as it does for databases: after the master password
+ * unlocks the account once, the AUK is handed to the platform's Quick Unlock provider, which keeps it
+ * encrypted in memory under a key the OS only releases after the user authenticates. Locking keeps it, so
+ * the next unlock can use quickUnlock() instead of the password; signing out drops it, and like a
+ * database's it doesn't survive a restart of the app.
  */
 class AccountManager : public QObject
 {
@@ -149,6 +157,13 @@ public:
     QList<Org> orgs() const;
     Org org(const QString& orgId) const;
 
+    // The Quick Unlock provider; tests set a mock, the default is the platform's (getQuickUnlock())
+    void setQuickUnlock(QuickUnlockInterface* quickUnlock);
+    // Quick Unlock is on in the settings and this platform has a provider
+    bool isQuickUnlockAvailable() const;
+    // The account is locked and its AUK is held by the Quick Unlock provider
+    bool canQuickUnlock() const;
+
     // Hands out a fresh access token, refreshing it first when it is about to expire. Thread safe.
     void accessToken(std::function<void(const QString& token)> done);
     AccessTokenProvider tokenProvider();
@@ -177,6 +192,8 @@ public slots:
     // After a restart: pick the session up from the keychain, Locked until unlock()
     bool restoreSession(const QString& accountId);
     void unlock(const QString& password);
+    // Unlock with the AUK the Quick Unlock provider holds; it asks the user to authenticate first
+    void quickUnlock();
     // Wipe the keyset and the vault keys from memory; the session stays
     void lock();
     // End the session on the server and forget it here; the Secret Key stays on the device
@@ -214,6 +231,9 @@ private:
                       std::function<void(bool ok, const QString& error)> done);
     void finishUnlock();
     void reloadOrgs();
+    QUuid quickUnlockId() const;
+    void rememberAuk(const SecureBytes& auk);
+    void forgetAuk();
     void setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn);
     void exchangeServiceAccount();
     void finishRefresh(bool ok);
@@ -253,6 +273,7 @@ private:
     AccountCrypto::Keyset m_keyset;
     VaultKeyring m_keyring;
     QList<Org> m_orgs;
+    QuickUnlockInterface* m_quickUnlock = nullptr;
     QPointer<SyncEventStream> m_events;
 };
 

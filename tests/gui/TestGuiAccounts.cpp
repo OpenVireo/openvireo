@@ -49,6 +49,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
 #include "keys/PasswordKey.h"
+#include "quickunlock/QuickUnlockInterface.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -1006,4 +1007,227 @@ void TestGuiAccounts::testInvitesPromotesAndRemovesMembers()
     QVERIFY(actions.contains("org.member.role"));
     QVERIFY(actions.contains("org.invitation.cancel"));
     dialog->close();
+}
+
+namespace
+{
+    // Stands in for Touch ID, Windows Hello and Polkit: keeps the keys in memory, scrambled
+    class MockQuickUnlock : public QuickUnlockInterface
+    {
+    public:
+        bool available = true;
+        // What the user does at the prompt
+        enum class Answer
+        {
+            Authenticate,
+            Cancel,
+            Fail
+        } answer = Answer::Authenticate;
+        int prompts = 0;
+        QHash<QUuid, QByteArray> keys;
+
+        bool isAvailable() const override
+        {
+            return available;
+        }
+        QString errorString() const override
+        {
+            return QStringLiteral("the user could not be authenticated");
+        }
+        bool setKey(const QUuid& uuid, const QByteArray& key) override
+        {
+            keys.insert(uuid, scramble(key));
+            return true;
+        }
+        bool getKey(const QUuid& uuid, QByteArray& key) override
+        {
+            ++prompts;
+            key.clear();
+            if (answer == Answer::Fail || !keys.contains(uuid)) {
+                return false;
+            }
+            if (answer == Answer::Authenticate) {
+                key = scramble(keys.value(uuid));
+            }
+            // A cancelled prompt succeeds with no key, as TouchID does
+            return true;
+        }
+        bool hasKey(const QUuid& uuid) const override
+        {
+            return keys.contains(uuid);
+        }
+        void reset(const QUuid& uuid) override
+        {
+            keys.remove(uuid);
+        }
+        void reset() override
+        {
+            keys.clear();
+        }
+
+    private:
+        static QByteArray scramble(QByteArray data)
+        {
+            for (auto& byte : data) {
+                byte = static_cast<char>(byte ^ 0x5a);
+            }
+            return data;
+        }
+    };
+    // The keychain, keeping every value ever saved so a test can check what reached it
+    class RecordingBackend : public SyncTokenStore::Backend
+    {
+    public:
+        explicit RecordingBackend(QStringList* saved)
+            : m_saved(saved)
+        {
+        }
+        QString load(const QString& key) override
+        {
+            return m_values.value(key);
+        }
+        bool save(const QString& key, const QString& token) override
+        {
+            m_values.insert(key, token);
+            *m_saved << token;
+            return true;
+        }
+        bool remove(const QString& key) override
+        {
+            m_values.remove(key);
+            return true;
+        }
+        QString description() const override
+        {
+            return QStringLiteral("test");
+        }
+
+    private:
+        QHash<QString, QString> m_values;
+        QStringList* m_saved;
+    };
+} // namespace
+
+void TestGuiAccounts::testQuickUnlocksTheAccount()
+{
+    MockQuickUnlock quickUnlock;
+    const auto server = m_server;
+    AccountController::setAccountManagerFactory([server, &quickUnlock] {
+        auto* manager = createManager(server);
+        manager->setQuickUnlock(&quickUnlock);
+        return manager;
+    });
+    const auto secretKey = registerElsewhere(Email);
+    QStringList saved;
+    SyncTokenStore::setBackend(std::make_unique<RecordingBackend>(&saved));
+    createWindow({});
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    // The window's manager was made before this test; give it the mock too
+    account->setQuickUnlock(&quickUnlock);
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    controller->createVault("Personal");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+
+    // Signing in with the password handed the AUK (32 bytes) to the provider, never to the keychain
+    QCOMPARE(quickUnlock.keys.size(), 1);
+    QCOMPARE(quickUnlock.keys.constBegin()->size(), 32);
+    const auto auk = [&] {
+        auto key = quickUnlock.keys.constBegin().value();
+        for (auto& byte : key) {
+            byte = static_cast<char>(byte ^ 0x5a);
+        }
+        return key;
+    }();
+    QVERIFY(!saved.isEmpty());
+    for (const auto& value : saved) {
+        const auto bytes = value.toUtf8();
+        QVERIFY(!bytes.contains(auk) && !bytes.contains(auk.toHex())
+                && !value.contains(AccountCrypto::toBase64Url(auk)) && !bytes.contains(auk.toBase64()));
+    }
+
+    // Locked, the sidebar offers Quick Unlock beside the password
+    auto* pane = m_mainWindow->accountVaultsPane();
+    auto* quickButton = child<QPushButton>(pane, "accountVaultsQuickUnlock");
+    QVERIFY(quickButton->isHidden());
+    controller->lockAccount();
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+    QTRY_COMPARE(tabs->count(), 0);
+    QVERIFY(account->canQuickUnlock());
+    QVERIFY(!quickButton->isHidden());
+    QVERIFY(!child<QWidget>(pane, "accountVaultsPassword")->isHidden());
+
+    // Cancelling the prompt leaves the account locked and says nothing
+    quickUnlock.answer = MockQuickUnlock::Answer::Cancel;
+    QTest::mouseClick(quickButton, Qt::LeftButton);
+    QCOMPARE(quickUnlock.prompts, 1);
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+    QVERIFY(child<QLabel>(pane, "accountVaultsError")->isHidden());
+
+    // A failed prompt shows why
+    quickUnlock.answer = MockQuickUnlock::Answer::Fail;
+    QTest::mouseClick(quickButton, Qt::LeftButton);
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+    QTRY_VERIFY(!child<QLabel>(pane, "accountVaultsError")->isHidden());
+    QVERIFY(child<QLabel>(pane, "accountVaultsError")->text().contains("Quick Unlock"));
+
+    // Authenticating opens every vault without the master password
+    quickUnlock.answer = MockQuickUnlock::Answer::Authenticate;
+    QTest::mouseClick(quickButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+    QVERIFY(!tabs->databaseWidgetFromIndex(0)->isLocked());
+    QVERIFY(quickButton->isHidden());
+
+    // Off in the settings, or without a provider, the button is gone
+    controller->lockAccount();
+    QTRY_COMPARE(tabs->count(), 0);
+    config()->set(Config::Security_QuickUnlock, false);
+    QMetaObject::invokeMethod(pane, "refresh");
+    QVERIFY(!account->canQuickUnlock());
+    QVERIFY(quickButton->isHidden());
+    config()->set(Config::Security_QuickUnlock, true);
+    quickUnlock.available = false;
+    QMetaObject::invokeMethod(pane, "refresh");
+    QVERIFY(quickButton->isHidden());
+    quickUnlock.available = true;
+    QMetaObject::invokeMethod(pane, "refresh");
+    QVERIFY(!quickButton->isHidden());
+
+    // A restart starts without it: the provider only keeps it in memory, as for databases
+    {
+        MockQuickUnlock afterRestart;
+        DatabaseTabWidget otherTabs;
+        AccountController nextLaunch(&otherTabs);
+        nextLaunch.account()->setQuickUnlock(&afterRestart);
+        nextLaunch.restore();
+        QCOMPARE(nextLaunch.account()->state(), AccountManager::State::Locked);
+        QVERIFY(!nextLaunch.account()->canQuickUnlock());
+        // Don't end the session the window still uses
+        SyncServerClient::setAccountTokenProvider(account->accountId(), account->tokenProvider());
+    }
+
+    // When the master password changed elsewhere the old AUK no longer opens the keyset: it is dropped
+    auto wrapped = m_server->users[Email].keyset;
+    auto changed = wrapped;
+    changed["wrapped"] = AccountCrypto::toBase64Url(AccountCrypto::randomSecure(80));
+    m_server->users[Email].keyset = changed;
+    QTest::mouseClick(quickButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Locked, 10000);
+    QTRY_VERIFY(child<QLabel>(pane, "accountVaultsError")->text().contains("master password"));
+    QVERIFY(quickUnlock.keys.isEmpty());
+    QTRY_VERIFY(quickButton->isHidden());
+    m_server->users[Email].keyset = wrapped;
+
+    // Signing out forgets it as well
+    controller->unlockAccount(Password);
+    QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
+    QCOMPARE(quickUnlock.keys.size(), 1);
+    controller->signOut();
+    QVERIFY(quickUnlock.keys.isEmpty());
+    account->setQuickUnlock(nullptr);
+    const auto restored = m_server;
+    AccountController::setAccountManagerFactory([restored] { return createManager(restored); });
 }

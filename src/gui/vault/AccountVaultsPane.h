@@ -31,7 +31,8 @@ class QPushButton;
 /**
  * Sidebar with the signed-in KeePassXC account and its vaults: personal vaults first, then each org's
  * under the org's name. While the account is locked it asks for the master password once ("Unlock
- * account"), which opens every vault. Selecting a vault shows it. It is hidden in the self-hosted and
+ * account"), or offers Quick Unlock when the platform has it and the password unlocked the account
+ * before; either opens every vault. Selecting a vault shows it. It is hidden in the self-hosted and
  * no-account modes.
  */
 class AccountVaultsPane : public QWidget
@@ -57,6 +58,7 @@ signals:
 private slots:
     void refresh();
     void unlock();
+    void quickUnlock();
     void openItem(QListWidgetItem* item);
     void updateButtons();
 
@@ -67,6 +69,7 @@ private:
     QWidget* m_unlockBox;
     QLineEdit* m_passwordEdit;
     QPushButton* m_unlockButton;
+    QPushButton* m_quickUnlockButton;
     QLabel* m_errorLabel;
     QListWidget* m_vaultList;
     QPushButton* m_newVaultButton;
