@@ -106,6 +106,8 @@ public:
 
 public slots:
     void unlockAccount(const QString& password);
+    // Unlock with Touch ID, Windows Hello or Polkit after the password unlocked the account once
+    void quickUnlockAccount();
     // Save and close the open vaults, then wipe the keys
     void lockAccount();
     // Close the vaults, end the session and go back to the start screen; local databases stay open

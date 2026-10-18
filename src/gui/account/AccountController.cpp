@@ -334,6 +334,12 @@ void AccountController::unlockAccount(const QString& password)
     m_account->unlock(password);
 }
 
+void AccountController::quickUnlockAccount()
+{
+    m_openOnUnlock = true;
+    m_account->quickUnlock();
+}
+
 void AccountController::handleStateChanged()
 {
     const auto state = m_account->state();
