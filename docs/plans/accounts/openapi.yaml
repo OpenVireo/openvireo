@@ -461,8 +461,8 @@ paths:
       tags: [auth]
       summary: |
         Create a vault (personal when org_id is absent; in an org it needs owner or admin). The client generates the id and the vault key,
-        seals it to itself (and to the org's owners/admins), then refreshes its token and PUTs the blob to the sync server with
-        `If-None-Match: *`. Owners/admins seal it to themselves at creation.
+        seals it to itself and, for an org vault, to every confirmed owner and admin with `manage` (400 otherwise, SPEC.md §7),
+        then refreshes its token and PUTs the blob to the sync server with `If-None-Match: *`.
       requestBody:
         content:
           application/json:
@@ -609,15 +609,7 @@ paths:
                 properties:
                   secrets:
                     type: array
-                    items:
-                      type: object
-                      properties:
-                        id: { type: string, format: uuid }
-                        prefix: { type: string }
-                        name: { type: string }
-                        created_at: { type: string, format: date-time }
-                        last_used_at: { type: [string, 'null'], format: date-time }
-                        expires_at: { type: [string, 'null'], format: date-time }
+                    items: { $ref: '#/components/schemas/SaSecret' }
     post:
       tags: [auth]
       summary: Issue a secret (owner/admin). The client builds the token and shows it once.
@@ -625,6 +617,22 @@ paths:
       responses: { '201': { description: issued } }
   /service-accounts/{sa}/secrets/{id}:
     parameters: [ { name: sa, in: path, required: true, schema: { type: string, format: uuid } }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [auth]
+      summary: Change when a secret expires (owner/admin). A past time expires it at once, null never. The token is unchanged. Audited as sa.secret.update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expires_at]
+              properties:
+                expires_at: { type: [string, 'null'], format: date-time }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SaSecret' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     delete:
       tags: [auth]
       responses: { '204': { description: revoked } }
@@ -758,6 +766,15 @@ components:
         sa_id: { type: string, format: uuid }
         principal: { $ref: '#/components/schemas/Principal' }
         sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, SA master key, "kpx-sa-master-v1|<sa>")' }
+    SaSecret:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        prefix: { type: string }
+        name: { type: string }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, 'null'], format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
     NewSaSecret:
       type: object
       required: [id, secret_hash, prefix, wrapped_master]
