@@ -20,6 +20,7 @@
 #include "config-keepassx.h"
 
 #include "account/AccountManager.h"
+#include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
 #include "account/VaultSharing.h"
 #include "core/Config.h"
@@ -593,10 +594,30 @@ void AccountController::signOut()
     emit startScreenRequested();
 }
 
-void AccountController::createVault(const QString& name)
+void AccountController::acceptInvitation(const QString& linkOrToken)
+{
+    auto* admin = new ServiceAccountAdmin(m_account, this);
+    QPointer<AccountController> guard(this);
+    admin->acceptInvitation(linkOrToken, [guard, admin](bool ok, const QString& error) {
+        admin->deleteLater();
+        if (!guard) {
+            return;
+        }
+        if (!ok) {
+            emit guard->message(error, MessageWidget::Error);
+            return;
+        }
+        emit guard->message(tr("Invitation accepted. An owner or admin of the organization has to confirm you "
+                               "before you can open its vaults."),
+                            MessageWidget::Positive);
+    });
+}
+
+void AccountController::createVault(const QString& name, const QString& orgId)
 {
     QPointer<AccountController> guard(this);
     m_sharing->createVault(name,
+                           orgId,
                            [guard](const QString& vaultId, const QSharedPointer<Database>& db, const QString& error) {
                                if (!guard) {
                                    return;

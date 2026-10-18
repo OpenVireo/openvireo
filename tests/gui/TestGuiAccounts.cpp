@@ -21,6 +21,7 @@
 #include "../util/TemporaryFile.h"
 
 #include "account/AccountManager.h"
+#include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
 #include "account/VaultSharing.h"
 #include "core/Config.h"
@@ -53,6 +54,7 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFile>
+#include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -62,6 +64,7 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
 #include <QTreeWidget>
 
 using namespace FakeAccount;
@@ -739,4 +742,268 @@ void TestGuiAccounts::testSignOutReturnsToTheStartScreen()
     QVERIFY(m_mainWindow->isStartScreenShown());
     QCOMPARE(controller->mode(), AccountController::Mode::Unset);
     QVERIFY(m_mainWindow->accountVaultsPane()->isHidden());
+}
+
+namespace
+{
+    // The vaults and headings the sidebar shows, in order
+    QStringList sidebarRows(AccountVaultsPane* pane)
+    {
+        QStringList rows;
+        for (int i = 0; i < pane->vaultList()->count(); ++i) {
+            rows << pane->vaultList()->item(i)->text();
+        }
+        return rows;
+    }
+
+    ServiceAccountsDialog* openOrgDialog(MainWindow* window)
+    {
+        window->showServiceAccounts();
+        ServiceAccountsDialog* dialog = nullptr;
+        std::ignore = QTest::qWaitFor([&] { return (dialog = window->findChild<ServiceAccountsDialog*>()); }, 5000);
+        return dialog;
+    }
+
+    QTreeWidgetItem* row(QTreeWidget* tree, const QString& text)
+    {
+        for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+            if (tree->topLevelItem(i)->text(0) == text) {
+                return tree->topLevelItem(i);
+            }
+        }
+        return nullptr;
+    }
+} // namespace
+
+void TestGuiAccounts::testCreatesAnOrgAndOrgVaults()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    controller->createVault("Mine");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+
+    // Create the org from the admin dialog; it is selected right away
+    auto* dialog = openOrgDialog(m_mainWindow.data());
+    QVERIFY(dialog);
+    QTRY_VERIFY(!dialog->isBusy());
+    QVERIFY(child<QPushButton>(dialog, "newOrgButton")->isEnabled());
+    dialog->createOrg("Acme");
+    QTRY_COMPARE(m_server->orgs.size(), 1);
+    const auto orgId = m_server->orgs.constBegin()->id;
+    QTRY_COMPARE(dialog->currentOrg(), orgId);
+    QCOMPARE(dialog->currentRole(), QString("owner"));
+    QTRY_COMPARE(child<QTreeWidget>(dialog, "membersTree")->topLevelItemCount(), 1);
+    dialog->close();
+    QTRY_VERIFY(account->org(orgId).canAdminister());
+
+    // New vault: the dialog offers the org, and the vault is sealed to the org's other admin too
+    QString carol;
+    const auto carolKeys = m_server->addUser("carol@example.com", &carol);
+    m_server->addOrgMember(orgId, "carol@example.com", "admin");
+    QTimer::singleShot(0, this, [this] {
+        auto* newVault = m_mainWindow->findChild<QDialog*>("newAccountVaultDialog");
+        QVERIFY(newVault);
+        child<QLineEdit>(newVault, "newVaultNameEdit")->setText("Deploy");
+        auto* owner = child<QComboBox>(newVault, "newVaultOwnerCombo");
+        QCOMPARE(owner->count(), 2);
+        owner->setCurrentIndex(owner->findData(m_server->orgs.constBegin()->id));
+        newVault->accept();
+    });
+    m_mainWindow->createAccountVault();
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
+    QTRY_COMPARE(account->keyring().vaults().size(), 2);
+    QString vaultId;
+    for (const auto& vault : m_server->vaults) {
+        if (vault.orgId == orgId) {
+            vaultId = vault.id;
+        }
+    }
+    QVERIFY(!vaultId.isEmpty());
+    QCOMPARE(m_server->roleOf(vaultId, carol), QString("manage"));
+    QVERIFY(m_server->vaultKeyFor(vaultId, carol, carolKeys.encSk) == account->keyring().vaultKey(vaultId));
+
+    // The sidebar groups the vaults: personal ones first, then each org's under its name
+    auto* pane = m_mainWindow->accountVaultsPane();
+    QTRY_COMPARE(sidebarRows(pane), QStringList({"Personal", "Mine", "Acme", "Deploy"}));
+    QVERIFY(!(pane->vaultList()->item(2)->flags() & Qt::ItemIsSelectable));
+    QCOMPARE(pane->vaultList()->item(3)->data(AccountVaultsPane::OrgIdRole).toString(), orgId);
+
+    // A confirmed admin the client can't seal to: the server answers 400, nothing is created
+    QString erin;
+    m_server->addUser("erin@example.com", &erin);
+    m_server->directory.remove(erin);
+    m_server->addOrgMember(orgId, "erin@example.com", "admin");
+    QSignalSpy messages(controller, &AccountController::message);
+    controller->createVault("Finance", orgId);
+    QTRY_VERIFY(!messages.isEmpty());
+    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Error);
+    QVERIFY2(messages.last().at(0).toString().contains("missing: " + erin),
+             qPrintable(messages.last().at(0).toString()));
+    QCOMPARE(m_server->vaults.size(), 2);
+    QCOMPARE(tabs->count(), 2);
+}
+
+void TestGuiAccounts::testAcceptsAnInvitation()
+{
+    // Olivia owns an org on another device and invites Alice by email
+    QScopedPointer<AccountManager> olivia(createManager(m_server));
+    olivia->setServer(serverConfig());
+    olivia->registerAccount("olivia@example.com", Password);
+    QTRY_COMPARE_WITH_TIMEOUT(olivia->state(), AccountManager::State::Unlocked, 10000);
+    const auto orgId = m_server->addOrg("Acme", "olivia@example.com");
+    VaultSharing oliviaSharing(olivia.data());
+    QString vaultId;
+    oliviaSharing.createVault("Deploy", orgId, [&](const QString& id, const QSharedPointer<Database>&, const QString&) {
+        vaultId = id;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(!vaultId.isEmpty() && olivia->keyring().contains(vaultId), 10000);
+    ServiceAccountAdmin oliviaAdmin(olivia.data());
+    bool invited = false;
+    oliviaAdmin.invite(orgId, Email, "member", [&](bool ok, const QString&) { invited = ok; });
+    QTRY_VERIFY(invited);
+    const auto link = m_server->sentInvitations.last().second;
+
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    auto* pane = m_mainWindow->accountVaultsPane();
+
+    // A pasted code that isn't one is refused before anything is sent
+    QSignalSpy messages(controller, &AccountController::message);
+    controller->acceptInvitation("https://app.keepassxc.example/invitations");
+    QTRY_COMPARE(messages.size(), 1);
+    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Error);
+    QVERIFY(m_server->requests.filter("invitations/accept").isEmpty());
+
+    // The link from the email, pasted into the Accept Invitation box
+    QTimer::singleShot(0, this, [this, link] {
+        auto* input = m_mainWindow->findChild<QInputDialog*>();
+        QVERIFY(input);
+        input->setTextValue(link);
+        input->accept();
+    });
+    m_mainWindow->acceptAccountInvitation();
+    QTRY_COMPARE(messages.size(), 2);
+    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Positive);
+    QCOMPARE(m_server->orgMember(orgId, account->accountId())->status, QString("accepted"));
+    // Alice waits for an admin: the org shows, without vaults
+    QTRY_COMPARE(sidebarRows(pane), QStringList({"Acme (waiting for confirmation)"}));
+    QVERIFY(!account->keyring().contains(vaultId));
+
+    // Olivia confirms her with the vault; the access event makes this device reload
+    ServiceAccountAdmin::Member alice;
+    bool listed = false;
+    oliviaAdmin.listMembers(orgId, [&](const QList<ServiceAccountAdmin::Member>& members, const QString&) {
+        for (const auto& member : members) {
+            if (member.email == Email) {
+                alice = member;
+            }
+        }
+        listed = true;
+    });
+    QTRY_VERIFY(listed);
+    bool confirmed = false;
+    oliviaAdmin.confirmMember(orgId, alice, {{vaultId, "write"}}, [&](bool ok, const QString&) { confirmed = ok; });
+    QTRY_VERIFY(confirmed);
+    account->handleAccessEvent({});
+    QTRY_VERIFY_WITH_TIMEOUT(account->keyring().contains(vaultId), 10000);
+    QTRY_COMPARE(sidebarRows(pane), QStringList({"Acme", "Deploy"}));
+}
+
+void TestGuiAccounts::testInvitesPromotesAndRemovesMembers()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    const auto orgId = m_server->addOrg("Acme", Email);
+    controller->account()->reloadVaults();
+    QTRY_VERIFY(controller->account()->org(orgId).canAdminister());
+    controller->createVault("Deploy", orgId);
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+    QTRY_COMPARE(controller->account()->keyring().vaults().size(), 1);
+    const auto vaultId = controller->account()->keyring().vaults().first().id;
+    QString bob;
+    const auto bobKeys = m_server->addUser("bob@example.com", &bob);
+    m_server->addOrgMember(orgId, "bob@example.com", "member", "accepted");
+
+    auto* dialog = openOrgDialog(m_mainWindow.data());
+    QVERIFY(dialog);
+    QTRY_COMPARE(dialog->currentOrg(), orgId);
+    auto* members = child<QTreeWidget>(dialog, "membersTree");
+    auto* invitations = child<QTreeWidget>(dialog, "invitationsTree");
+    QTRY_COMPARE(members->topLevelItemCount(), 2);
+
+    // Invite by email, with a role; the pending invitation shows and can be cancelled
+    QVERIFY(child<QPushButton>(dialog, "inviteButton")->isEnabled());
+    dialog->invite("carol@example.com", "admin");
+    QTRY_COMPARE(invitations->topLevelItemCount(), 1);
+    QCOMPARE(invitations->topLevelItem(0)->text(1), QString("Admin"));
+    QCOMPARE(m_server->sentInvitations.last().first, QString("carol@example.com"));
+    QTRY_VERIFY(!dialog->isBusy());
+    invitations->topLevelItem(0)->setSelected(true);
+    QVERIFY(child<QPushButton>(dialog, "cancelInvitationButton")->isEnabled());
+    dialog->cancelSelectedInvitation();
+    QTRY_COMPARE(invitations->topLevelItemCount(), 0);
+    QVERIFY(m_server->invitations.isEmpty());
+
+    // Confirm Bob with the vault, then promote him: he gets manage on the org vaults
+    QTRY_VERIFY(!dialog->isBusy());
+    dialog->confirmMember(bob.mid(5), {{vaultId, "read"}});
+    QTRY_COMPARE(m_server->roleOf(vaultId, bob), QString("read"));
+    QTRY_VERIFY(!dialog->isBusy());
+    QTRY_COMPARE(row(members, "bob@example.com")->text(2), QString("confirmed"));
+    row(members, "bob@example.com")->setSelected(true);
+    QVERIFY(child<QPushButton>(dialog, "changeRoleButton")->isEnabled());
+    dialog->setMemberRole(bob.mid(5), "admin");
+    QTRY_COMPARE(m_server->orgMember(orgId, bob.mid(5))->role, QString("admin"));
+    QTRY_COMPARE(m_server->roleOf(vaultId, bob), QString("manage"));
+    QTRY_COMPARE(row(members, "bob@example.com")->text(1), QString("Admin"));
+    QTRY_VERIFY(!dialog->isBusy());
+    dialog->setMemberRole(bob.mid(5), "member");
+    QTRY_COMPARE(m_server->orgMember(orgId, bob.mid(5))->role, QString("member"));
+    QTRY_VERIFY(!dialog->isBusy());
+
+    // Removing him rotates the vault he could open
+    const auto oldKey = controller->account()->keyring().vaultKey(vaultId);
+    QTRY_VERIFY(row(members, "bob@example.com"));
+    row(members, "bob@example.com")->setSelected(true);
+    MessageBox::setNextAnswer(MessageBox::Remove);
+    QTest::mouseClick(child<QPushButton>(dialog, "removeMemberButton"), Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!dialog->isBusy() && members->topLevelItemCount() == 1, 10000);
+    QVERIFY(!m_server->orgMember(orgId, bob.mid(5)));
+    QCOMPARE(m_server->vaults.value(vaultId).current, 2);
+    QTRY_VERIFY(controller->account()->keyring().vaultKey(vaultId) != oldKey);
+    QVERIFY(m_server->vaultKeyFor(vaultId, bob, bobKeys.encSk, 2).empty());
+    // The open vault follows the new key
+    auto* widget = controller->vaultWidget(vaultId);
+    QVERIFY(widget);
+    QTRY_VERIFY(widget->database()->key()->rawKey()
+                == VaultKeyring::compositeKeyFor(controller->account()->keyring().vaultKey(vaultId))->rawKey());
+    // Only the owner is left; the last owner can't leave
+    members->topLevelItem(0)->setSelected(true);
+    QCOMPARE(child<QPushButton>(dialog, "removeMemberButton")->text(), QString("Leave…"));
+    QVERIFY(!child<QPushButton>(dialog, "changeRoleButton")->isEnabled());
+    auto* audit = child<QTreeWidget>(dialog, "auditTree");
+    QStringList actions;
+    QTRY_VERIFY([&] {
+        actions.clear();
+        for (int i = 0; i < audit->topLevelItemCount(); ++i) {
+            actions << audit->topLevelItem(i)->text(2);
+        }
+        return actions.contains("org.member.remove");
+    }());
+    QVERIFY(actions.contains("org.member.role"));
+    QVERIFY(actions.contains("org.invitation.cancel"));
+    dialog->close();
 }

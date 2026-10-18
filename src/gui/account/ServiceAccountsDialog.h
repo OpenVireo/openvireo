@@ -33,8 +33,9 @@ namespace Ui
 }
 
 /**
- * Org administration for owners and admins: service accounts (create, disable, expire, delete), their
- * secrets (issue, revoke) and vault grants (read or write), and the org's audit log.
+ * Org administration for owners and admins: creating an org, its members (invite, confirm, change roles,
+ * remove) and pending invitations, service accounts (create, disable, expire, delete), their secrets
+ * (issue, revoke) and vault grants (read or write), and the org's audit log.
  *
  * A new service account's keys and every secret are made on this device. The token `kpx_sa_…` is shown
  * once, in a window of its own, and isn't kept anywhere.
@@ -48,6 +49,8 @@ public:
     ~ServiceAccountsDialog() override;
 
     QString currentOrg() const;
+    // This account's role in the current org
+    QString currentRole() const;
     QString currentServiceAccount() const;
     bool isBusy() const;
     // The window that shows the last token, while it is open
@@ -68,12 +71,24 @@ public slots:
     void loadMembers();
     // Confirm an accepted member; `vaults` (vault id -> role) only matters for regular members
     void confirmMember(const QString& userId, const QHash<QString, QString>& vaults = {});
+    void setMemberRole(const QString& userId, const QString& role);
+    // Removing a member rotates the keys of the org vaults they could open
+    void removeMember(const QString& userId);
+    void createOrg(const QString& name);
+    void loadInvitations();
+    void invite(const QString& email, const QString& role);
+    void cancelSelectedInvitation();
 
 private slots:
     void askForNewServiceAccount();
     void askForNewSecret();
     void askForSecretExpiry();
     void askToConfirmMember();
+    void askForMemberRole();
+    void askToRemoveMember();
+    void askForNewOrg();
+    void askToInvite();
+    void updateMemberButtons();
     void showDetails();
 
 private:
@@ -82,6 +97,9 @@ private:
     void showToken(const QString& title, const QString& token);
     void loadServiceAccounts(const QString& select = {});
     ServiceAccountAdmin::ServiceAccount selected() const;
+    ServiceAccountAdmin::Member member(const QString& userId) const;
+    QString selectedMember() const;
+    static QString roleName(const QString& role);
 
     const QScopedPointer<Ui::ServiceAccountsDialog> m_ui;
     QPointer<AccountManager> m_account;
@@ -89,6 +107,10 @@ private:
     QList<ServiceAccountAdmin::ServiceAccount> m_accounts;
     QList<ServiceAccountAdmin::Secret> m_secrets;
     QList<ServiceAccountAdmin::Member> m_members;
+    QList<ServiceAccountAdmin::Org> m_orgs;
+    QList<ServiceAccountAdmin::Invitation> m_invitations;
+    // The org to select once the orgs are loaded again, e.g. a new one
+    QString m_selectOrg;
     QString m_auditCursor;
     QPointer<QDialog> m_tokenDialog;
     bool m_busy = false;

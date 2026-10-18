@@ -21,10 +21,13 @@
 
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QLabel>
 #include <QList>
 #include <QMimeData>
 #include <QShortcut>
@@ -744,8 +747,10 @@ void MainWindow::setupAccounts()
     m_actionAccountShare = m_accountMenu->addAction(tr("&Share Vault…"), this, [this] { showShareVaultDialog(); });
     m_actionAccountMove =
         m_accountMenu->addAction(tr("&Move Database to Account…"), this, &MainWindow::moveDatabaseToAccount);
-    m_actionAccountServiceAccounts =
-        m_accountMenu->addAction(tr("Service Accounts and &Audit Log…"), this, &MainWindow::showServiceAccounts);
+    m_actionAccountServiceAccounts = m_accountMenu->addAction(
+        tr("&Organizations, Service Accounts and Audit Log…"), this, &MainWindow::showServiceAccounts);
+    m_actionAccountAcceptInvitation =
+        m_accountMenu->addAction(tr("Accept &Invitation…"), this, &MainWindow::acceptAccountInvitation);
     m_accountMenu->addSeparator();
     m_actionAccountSignOut =
         m_accountMenu->addAction(tr("Sign &Out"), m_accountController, &AccountController::signOut);
@@ -861,11 +866,64 @@ void MainWindow::showServiceAccounts()
 
 void MainWindow::createAccountVault()
 {
+    // Owners and admins can also create a vault in their org, which is then sealed to every owner and admin
+    QList<AccountManager::Org> orgs;
+    for (const auto& org : m_accountController->account()->orgs()) {
+        if (org.canAdminister()) {
+            orgs << org;
+        }
+    }
+    if (orgs.isEmpty()) {
+        bool ok = false;
+        const auto name = QInputDialog::getText(
+            this, tr("New vault"), tr("Name of the new vault:"), QLineEdit::Normal, tr("Personal"), &ok);
+        if (ok && !name.trimmed().isEmpty()) {
+            m_accountController->createVault(name.trimmed());
+        }
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setObjectName("newAccountVaultDialog");
+    dialog.setWindowTitle(tr("New vault"));
+    auto* nameEdit = new VaultLineEdit(&dialog);
+    nameEdit->setObjectName("newVaultNameEdit");
+    nameEdit->setText(tr("Personal"));
+    nameEdit->selectAll();
+    auto* ownerCombo = new VaultComboBox(&dialog);
+    ownerCombo->setObjectName("newVaultOwnerCombo");
+    ownerCombo->addItem(tr("Personal vault"), QString());
+    for (const auto& org : orgs) {
+        ownerCombo->addItem(org.name, org.id);
+    }
+    auto* hint = new QLabel(tr("A vault of an organization opens for all of its owners and admins; share it with "
+                               "other members afterwards."),
+                            &dialog);
+    hint->setWordWrap(true);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    auto* form = new QFormLayout(&dialog);
+    form->addRow(tr("Name:"), nameEdit);
+    form->addRow(tr("Belongs to:"), ownerCombo);
+    form->addRow(hint);
+    form->addRow(buttons);
+    if (dialog.exec() == QDialog::Accepted && !nameEdit->text().trimmed().isEmpty()) {
+        m_accountController->createVault(nameEdit->text().trimmed(), ownerCombo->currentData().toString());
+    }
+}
+
+void MainWindow::acceptAccountInvitation()
+{
     bool ok = false;
-    const auto name = QInputDialog::getText(
-        this, tr("New vault"), tr("Name of the new vault:"), QLineEdit::Normal, tr("Personal"), &ok);
-    if (ok && !name.trimmed().isEmpty()) {
-        m_accountController->createVault(name.trimmed());
+    const auto link = QInputDialog::getText(this,
+                                            tr("Accept invitation"),
+                                            tr("Paste the link or the invitation code from the email:"),
+                                            QLineEdit::Normal,
+                                            {},
+                                            &ok);
+    if (ok && !link.trimmed().isEmpty()) {
+        m_accountController->acceptInvitation(link.trimmed());
     }
 }
 
@@ -915,6 +973,7 @@ void MainWindow::updateAccountActions()
     m_actionAccountNewVault->setEnabled(unlocked);
     m_actionAccountShare->setEnabled(unlocked);
     m_actionAccountServiceAccounts->setEnabled(unlocked);
+    m_actionAccountAcceptInvitation->setEnabled(unlocked);
     m_actionAccountMove->setEnabled(unlocked && dbWidget && !dbWidget->isLocked()
                                     && !m_accountController->isAccountVault(dbWidget));
 }

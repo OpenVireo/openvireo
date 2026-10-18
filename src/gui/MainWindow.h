@@ -115,6 +115,8 @@ public slots:
     void showShareVaultDialog(const QString& vaultId = {});
     void showServiceAccounts();
     void createAccountVault();
+    // Paste the link or code from an org invitation email
+    void acceptAccountInvitation();
     void moveDatabaseToAccount();
 
 protected:
@@ -229,6 +231,7 @@ private:
     QPointer<QAction> m_actionAccountShare;
     QPointer<QAction> m_actionAccountMove;
     QPointer<QAction> m_actionAccountServiceAccounts;
+    QPointer<QAction> m_actionAccountAcceptInvitation;
     QPointer<QProgressBar> m_progressBar;
     QPointer<QLabel> m_progressBarLabel;
 

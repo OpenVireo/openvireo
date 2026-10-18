@@ -27,6 +27,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
+#include <QMap>
 #include <QVBoxLayout>
 
 namespace
@@ -138,6 +139,7 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
         auto* account = m_controller->account();
         connect(account, &AccountManager::stateChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::vaultsChanged, this, &AccountVaultsPane::refresh);
+        connect(account, &AccountManager::orgsChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::error, this, [this](const QString& message) {
             if (m_controller && m_controller->account()->state() == AccountManager::State::Locked) {
                 m_errorLabel->setText(message);
@@ -188,9 +190,41 @@ void AccountVaultsPane::refresh()
         std::sort(vaults.begin(), vaults.end(), [](const VaultKeyring::Vault& a, const VaultKeyring::Vault& b) {
             return a.name.localeAwareCompare(b.name) < 0;
         });
+        // Personal vaults first, then one group per org in the order of the org names
+        QMap<QString, QList<VaultKeyring::Vault>> byOrg;
         for (const auto& vault : vaults) {
+            byOrg[vault.orgId] << vault;
+        }
+        QList<AccountManager::Org> orgs;
+        for (const auto& org : account->orgs()) {
+            if (byOrg.contains(org.id) || !org.isConfirmed()) {
+                orgs << org;
+            }
+        }
+        for (const auto& orgId : byOrg.keys()) {
+            if (!orgId.isEmpty() && account->org(orgId).id.isEmpty()) {
+                // Not in /me (yet): still listed, under a generic heading
+                orgs << AccountManager::Org{orgId, {}, {}, {}};
+            }
+        }
+        std::sort(orgs.begin(), orgs.end(), [](const AccountManager::Org& a, const AccountManager::Org& b) {
+            return a.name.localeAwareCompare(b.name) < 0;
+        });
+
+        const auto addHeading = [this](const QString& text, const QString& orgId, const QString& tip) {
+            auto* heading = new QListWidgetItem(text);
+            heading->setFlags(Qt::NoItemFlags);
+            heading->setData(OrgIdRole, orgId);
+            heading->setToolTip(tip);
+            auto font = heading->font();
+            font.setBold(true);
+            heading->setFont(font);
+            m_vaultList->addItem(heading);
+        };
+        const auto addVault = [this, &selected](const VaultKeyring::Vault& vault) {
             auto* item = new QListWidgetItem(icons()->icon("database"), vault.name.isEmpty() ? vault.id : vault.name);
             item->setData(VaultIdRole, vault.id);
+            item->setData(OrgIdRole, vault.orgId);
             auto tip = roleText(vault.role);
             if (vault.rotationRequired) {
                 tip += "\n" + tr("A member was removed: rotate the key from the Share dialog.");
@@ -199,6 +233,27 @@ void AccountVaultsPane::refresh()
             m_vaultList->addItem(item);
             if (vault.id == selected) {
                 m_vaultList->setCurrentItem(item);
+            }
+        };
+
+        // Without any org the list stays as plain as it always was
+        if (!orgs.isEmpty() && byOrg.contains({})) {
+            addHeading(tr("Personal"), {}, {});
+        }
+        for (const auto& vault : byOrg.value({})) {
+            addVault(vault);
+        }
+        for (const auto& org : orgs) {
+            const auto name = org.name.isEmpty() ? tr("Organization") : org.name;
+            if (!org.isConfirmed()) {
+                addHeading(tr("%1 (waiting for confirmation)").arg(name),
+                           org.id,
+                           tr("An owner or admin of %1 has to confirm you before you can open its vaults.").arg(name));
+                continue;
+            }
+            addHeading(name, org.id, {});
+            for (const auto& vault : byOrg.value(org.id)) {
+                addVault(vault);
             }
         }
     }
@@ -228,7 +283,8 @@ void AccountVaultsPane::unlock()
 
 void AccountVaultsPane::openItem(QListWidgetItem* item)
 {
-    if (m_controller && item) {
+    // Headings carry no vault
+    if (m_controller && item && !item->data(VaultIdRole).toString().isEmpty()) {
         m_controller->openVault(item->data(VaultIdRole).toString());
     }
 }
