@@ -35,6 +35,9 @@ namespace Ui
     class MainWindow;
 }
 
+class AccountController;
+class AccountStartWidget;
+class AccountVaultsPane;
 class InactivityTimer;
 class SearchWidget;
 class VaultHeaderBar;
@@ -57,6 +60,11 @@ public:
 
     QList<DatabaseWidget*> getOpenDatabases();
     void restoreConfigState();
+    AccountController* accountController() const;
+    AccountStartWidget* startScreen() const;
+    AccountVaultsPane* accountVaultsPane() const;
+    // Whether the start screen shows in place of the welcome screen
+    bool isStartScreenShown() const;
     void setAllowScreenCapture(bool state);
 
     enum StackedWidgetIndex
@@ -101,6 +109,13 @@ public slots:
     void closeModalWindow();
     void displayDesktopNotification(const QString& msg, QString title = "", int msTimeoutHint = 10000);
     void restartApp(const QString& message);
+    // The start screen: sign in, create an account, use a sync server of your own, or no account
+    void showStartScreen();
+    void showSignUpWizard();
+    void showShareVaultDialog(const QString& vaultId = {});
+    void showServiceAccounts();
+    void createAccountVault();
+    void moveDatabaseToAccount();
 
 protected:
     bool event(QEvent* event) override;
@@ -160,7 +175,12 @@ private slots:
     void disableMenuAndToolbar();
     void clearSSHAgent();
 
+private slots:
+    void finishStartScreen();
+    void updateAccountActions();
+
 private:
+    void setupAccounts();
     void setupVaultPasswordGenerator();
     void closeVaultModals();
     static const QString BaseWindowTitle;
@@ -198,6 +218,17 @@ private:
     QPointer<VaultSettingsModal> m_settingsModal;
     QPointer<VaultModal> m_passwordGeneratorModal;
     bool m_vaultLayout = false;
+    QPointer<AccountController> m_accountController;
+    AccountStartWidget* m_startScreen = nullptr;
+    AccountVaultsPane* m_accountPane = nullptr;
+    QPointer<QMenu> m_accountMenu;
+    QPointer<QAction> m_actionAccountSignIn;
+    QPointer<QAction> m_actionAccountLock;
+    QPointer<QAction> m_actionAccountSignOut;
+    QPointer<QAction> m_actionAccountNewVault;
+    QPointer<QAction> m_actionAccountShare;
+    QPointer<QAction> m_actionAccountMove;
+    QPointer<QAction> m_actionAccountServiceAccounts;
     QPointer<QProgressBar> m_progressBar;
     QPointer<QLabel> m_progressBarLabel;
 

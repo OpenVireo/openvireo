@@ -23,6 +23,8 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
+#include <QHBoxLayout>
+#include <QInputDialog>
 #include <QList>
 #include <QMimeData>
 #include <QShortcut>
@@ -37,6 +39,7 @@
 
 #include "Application.h"
 #include "Clipboard.h"
+#include "account/AccountManager.h"
 #include "autotype/AutoType.h"
 #include "core/InactivityTimer.h"
 #include "core/Resources.h"
@@ -46,17 +49,23 @@
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
 #include "gui/SearchWidget.h"
+#include "gui/ShortcutSettingsPage.h"
+#include "gui/account/AccountController.h"
+#include "gui/account/AccountStartWidget.h"
+#include "gui/account/ServiceAccountsDialog.h"
+#include "gui/account/ShareVaultDialog.h"
+#include "gui/account/SignUpWizard.h"
+#include "gui/entry/EntryView.h"
+#include "gui/osutils/OSUtils.h"
+#include "gui/remote/RemoteSettings.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
 #include "gui/vault/VaultWindowFrame.h"
-#include "gui/ShortcutSettingsPage.h"
-#include "gui/entry/EntryView.h"
-#include "gui/osutils/OSUtils.h"
-#include "gui/remote/RemoteSettings.h"
 #include "keeshare/KeeShare.h"
 #include "keeshare/SettingsPageKeeShare.h"
 #include "keys/drivers/YubiKey.h"
@@ -691,8 +700,223 @@ MainWindow::MainWindow()
     m_actionMultiplexer.connect(SIGNAL(databaseSyncCompleted(QString)), this, SLOT(enableMenuAndToolbar()));
     m_actionMultiplexer.connect(SIGNAL(databaseSyncFailed(QString, const QString)), this, SLOT(enableMenuAndToolbar()));
 
+    setupAccounts();
     restoreConfigState();
     updateMenuActionState();
+}
+
+void MainWindow::setupAccounts()
+{
+    m_accountController = new AccountController(m_ui->tabWidget, nullptr, this);
+
+    // The start screen takes the welcome screen's place until a mode is chosen
+    m_startScreen = new AccountStartWidget(m_ui->welcomeWidget->parentWidget());
+    m_startScreen->setObjectName("accountStartScreen");
+    m_startScreen->setController(m_accountController);
+    m_startScreen->setVisible(false);
+    m_ui->horizontalLayout->insertWidget(m_ui->horizontalLayout->indexOf(m_ui->welcomeWidget), m_startScreen);
+    connect(m_startScreen, &AccountStartWidget::finished, this, &MainWindow::finishStartScreen);
+    connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
+
+    // The account's vaults beside the databases
+    m_accountPane = new AccountVaultsPane(m_accountController, m_ui->centralwidget);
+    auto* row = new QWidget(m_ui->centralwidget);
+    auto* rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->setSpacing(0);
+    const auto index = m_ui->verticalLayout->indexOf(m_ui->stackedWidget);
+    m_ui->verticalLayout->removeWidget(m_ui->stackedWidget);
+    rowLayout->addWidget(m_accountPane);
+    rowLayout->addWidget(m_ui->stackedWidget, 1);
+    m_ui->verticalLayout->insertWidget(index, row, 1);
+    connect(m_accountPane, &AccountVaultsPane::shareRequested, this, &MainWindow::showShareVaultDialog);
+    connect(m_accountPane, &AccountVaultsPane::newVaultRequested, this, &MainWindow::createAccountVault);
+    connect(m_accountPane, &AccountVaultsPane::serviceAccountsRequested, this, &MainWindow::showServiceAccounts);
+
+    m_accountMenu = new VaultMenu(tr("&Account"), this);
+    m_accountMenu->setObjectName("menuAccount");
+    m_actionAccountSignIn =
+        m_accountMenu->addAction(tr("Sign In or Create Account…"), this, &MainWindow::showStartScreen);
+    m_actionAccountLock =
+        m_accountMenu->addAction(tr("&Lock Account"), m_accountController, &AccountController::lockAccount);
+    m_accountMenu->addSeparator();
+    m_actionAccountNewVault = m_accountMenu->addAction(tr("&New Vault…"), this, &MainWindow::createAccountVault);
+    m_actionAccountShare = m_accountMenu->addAction(tr("&Share Vault…"), this, [this] { showShareVaultDialog(); });
+    m_actionAccountMove =
+        m_accountMenu->addAction(tr("&Move Database to Account…"), this, &MainWindow::moveDatabaseToAccount);
+    m_actionAccountServiceAccounts =
+        m_accountMenu->addAction(tr("Service Accounts and &Audit Log…"), this, &MainWindow::showServiceAccounts);
+    m_accountMenu->addSeparator();
+    m_actionAccountSignOut =
+        m_accountMenu->addAction(tr("Sign &Out"), m_accountController, &AccountController::signOut);
+    m_ui->menubar->insertMenu(m_ui->menuHelp->menuAction(), m_accountMenu);
+
+    auto* account = m_accountController->account();
+    connect(account, &AccountManager::stateChanged, this, &MainWindow::updateAccountActions);
+    connect(account, &AccountManager::vaultsChanged, this, &MainWindow::updateAccountActions);
+    connect(m_accountController, &AccountController::modeChanged, this, &MainWindow::updateAccountActions);
+    connect(m_ui->tabWidget, &DatabaseTabWidget::activeDatabaseChanged, this, &MainWindow::updateAccountActions);
+    connect(m_accountController, &AccountController::startScreenRequested, this, &MainWindow::showStartScreen);
+    connect(m_accountController,
+            &AccountController::message,
+            this,
+            [this](const QString& text, MessageWidget::MessageType type) { displayGlobalMessage(text, type); });
+    connect(m_accountController, &AccountController::moveFinished, this, [this](bool ok, const QString& error) {
+        if (!ok) {
+            displayGlobalMessage(error, MessageWidget::Error);
+        }
+    });
+    connect(m_accountController, &AccountController::busyChanged, this, [this](const QString& message) {
+        statusBar()->setVisible(!message.isEmpty());
+        if (message.isEmpty()) {
+            statusBar()->clearMessage();
+        } else {
+            statusBar()->showMessage(message);
+        }
+    });
+
+    // An account session from the last run comes back locked; nothing goes out on the network before unlocking
+    m_accountController->restore();
+    if (m_accountController->needsStartScreen()) {
+        showStartScreen();
+    }
+    updateAccountActions();
+}
+
+AccountController* MainWindow::accountController() const
+{
+    return m_accountController;
+}
+
+AccountStartWidget* MainWindow::startScreen() const
+{
+    return m_startScreen;
+}
+
+AccountVaultsPane* MainWindow::accountVaultsPane() const
+{
+    return m_accountPane;
+}
+
+bool MainWindow::isStartScreenShown() const
+{
+    return m_startScreen && !m_startScreen->isHidden();
+}
+
+void MainWindow::showStartScreen()
+{
+    if (!m_startScreen) {
+        return;
+    }
+    closeVaultModals();
+    m_startScreen->reset();
+    m_ui->welcomeWidget->setVisible(false);
+    m_startScreen->setVisible(true);
+    m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
+    statusBar()->setAutoFillBackground(false);
+    updateAccountActions();
+}
+
+void MainWindow::finishStartScreen()
+{
+    m_startScreen->setVisible(false);
+    m_ui->welcomeWidget->setVisible(true);
+    m_ui->welcomeWidget->refreshLastDatabases();
+    switchToDatabases();
+    updateAccountActions();
+}
+
+void MainWindow::showSignUpWizard()
+{
+    auto* wizard = new SignUpWizard(m_accountController, this);
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    connect(wizard, &QDialog::accepted, this, &MainWindow::finishStartScreen);
+    wizard->open();
+}
+
+void MainWindow::showShareVaultDialog(const QString& vaultId)
+{
+    auto id = vaultId;
+    if (id.isEmpty()) {
+        id = m_accountController->vaultIdOf(m_ui->tabWidget->currentDatabaseWidget());
+    }
+    if (id.isEmpty() && m_accountPane) {
+        id = m_accountPane->selectedVault();
+    }
+    if (id.isEmpty()) {
+        displayGlobalMessage(tr("Select a vault of your account to share."), MessageWidget::Information);
+        return;
+    }
+    auto* dialog = new ShareVaultDialog(m_accountController->sharing(), id, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
+void MainWindow::showServiceAccounts()
+{
+    auto* dialog = new ServiceAccountsDialog(m_accountController->account(), this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
+void MainWindow::createAccountVault()
+{
+    bool ok = false;
+    const auto name = QInputDialog::getText(
+        this, tr("New vault"), tr("Name of the new vault:"), QLineEdit::Normal, tr("Personal"), &ok);
+    if (ok && !name.trimmed().isEmpty()) {
+        m_accountController->createVault(name.trimmed());
+    }
+}
+
+void MainWindow::moveDatabaseToAccount()
+{
+    auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
+    if (!dbWidget || dbWidget->isLocked()) {
+        displayGlobalMessage(tr("Open and unlock the database to move first."), MessageWidget::Information);
+        return;
+    }
+    if (m_accountController->account()->state() != AccountManager::State::Unlocked) {
+        displayGlobalMessage(tr("Sign in to your KeePassXC account and unlock it first."), MessageWidget::Information);
+        return;
+    }
+    auto name = dbWidget->database()->metadata()->name();
+    if (name.isEmpty()) {
+        name = QFileInfo(dbWidget->database()->filePath()).completeBaseName();
+    }
+    bool ok = false;
+    name = QInputDialog::getText(this,
+                                 tr("Move to account"),
+                                 tr("A copy of this database becomes a vault of your account, encrypted with a new "
+                                    "vault key instead of its master password, and syncs with your account from now "
+                                    "on. The file itself isn't changed.\n\nName of the vault:"),
+                                 QLineEdit::Normal,
+                                 name,
+                                 &ok);
+    if (ok && !name.trimmed().isEmpty()) {
+        m_accountController->moveToAccount(dbWidget, name.trimmed());
+    }
+}
+
+void MainWindow::updateAccountActions()
+{
+    if (!m_accountController || !m_accountMenu) {
+        return;
+    }
+    auto* account = m_accountController->account();
+    const auto state = account->state();
+    const bool accountMode = m_accountController->mode() == AccountController::Mode::Account;
+    const bool signedIn = accountMode && state != AccountManager::State::SignedOut;
+    const bool unlocked = signedIn && state == AccountManager::State::Unlocked && !account->isServiceAccount();
+    auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
+    m_actionAccountSignIn->setEnabled(!isStartScreenShown());
+    m_actionAccountLock->setEnabled(unlocked);
+    m_actionAccountSignOut->setEnabled(signedIn);
+    m_actionAccountNewVault->setEnabled(unlocked);
+    m_actionAccountShare->setEnabled(unlocked);
+    m_actionAccountServiceAccounts->setEnabled(unlocked);
+    m_actionAccountMove->setEnabled(unlocked && dbWidget && !dbWidget->isLocked()
+                                    && !m_accountController->isAccountVault(dbWidget));
 }
 
 MainWindow::~MainWindow()
@@ -710,12 +934,12 @@ void MainWindow::restoreConfigState()
     if (config()->get(Config::OpenPreviousDatabasesOnStartup).toBool()) {
         const QStringList fileNames = config()->get(Config::LastOpenedDatabases).toStringList();
         for (const QString& filename : fileNames) {
-            if (!filename.isEmpty() && QFile::exists(filename)) {
+            if (!filename.isEmpty() && QFile::exists(filename) && !AccountController::isAccountVaultPath(filename)) {
                 openDatabase(filename);
             }
         }
         auto lastActiveFile = config()->get(Config::LastActiveDatabase).toString();
-        if (!lastActiveFile.isEmpty()) {
+        if (!lastActiveFile.isEmpty() && !AccountController::isAccountVaultPath(lastActiveFile)) {
             openDatabase(lastActiveFile);
         }
     }
@@ -1644,7 +1868,9 @@ bool MainWindow::saveLastDatabases()
         QStringList openDatabases;
         for (int i = 0; i < m_ui->tabWidget->count(); ++i) {
             auto dbWidget = m_ui->tabWidget->databaseWidgetFromIndex(i);
-            if (!dbWidget->database()->isTemporaryDatabase()) {
+            // Account vaults open with the account, not on their own
+            if (!dbWidget->database()->isTemporaryDatabase()
+                && !AccountController::isAccountVaultPath(dbWidget->database()->filePath())) {
                 openDatabases.append(QDir::toNativeSeparators(dbWidget->database()->filePath()));
             }
         }

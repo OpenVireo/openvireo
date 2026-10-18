@@ -186,6 +186,10 @@ void TestDocsScreenshots::initTestCase()
     config()->set(Config::Messages_HidePreReleaseWarning, KEEPASSXC_VERSION);
     kpxcApp->applyTheme();
 
+    // Today's local experience, without the account start screen
+
+    config()->set(Config::Account_StartMode, "local");
+
     m_mainWindow.reset(new MainWindow());
     m_mainWindow->setAllowScreenCapture(true);
     // Editors only offer their Browser Integration page while it is enabled. Turned on after the

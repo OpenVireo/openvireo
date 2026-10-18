@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ShareVaultDialog</class>
+ <widget class="QDialog" name="ShareVaultDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Share vault</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="MessageWidget" name="messageWidget" native="true"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="introLabel">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="rotationLayout">
+     <item>
+      <widget class="QLabel" name="rotationLabel">
+       <property name="text">
+        <string>A member was removed without a new key. Rotate the key so that what they kept can't open the vault's future versions.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="VaultButton" name="rotateButton">
+       <property name="text">
+        <string>Rotate key</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="membersTree">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="accessibleName">
+      <string>Members</string>
+     </property>
+     <column>
+      <property name="text">
+       <string>Member</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Access</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Fingerprint</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="memberButtons">
+     <item>
+      <widget class="QLabel" name="selectedRoleLabel">
+       <property name="text">
+        <string>Access:</string>
+       </property>
+       <property name="buddy">
+        <cstring>selectedRoleCombo</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="VaultComboBox" name="selectedRoleCombo"/>
+     </item>
+     <item>
+      <widget class="VaultButton" name="changeRoleButton">
+       <property name="text">
+        <string>Change</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="memberButtonsSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="VaultButton" name="removeButton">
+       <property name="text">
+        <string>Remove…</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="addGroup">
+     <property name="title">
+      <string>Share with someone</string>
+     </property>
+     <layout class="QVBoxLayout" name="addLayout">
+      <item>
+       <layout class="QHBoxLayout" name="addRow">
+        <item>
+         <widget class="VaultLineEdit" name="emailEdit">
+          <property name="accessibleName">
+           <string>Email of the person to share with</string>
+          </property>
+          <property name="placeholderText">
+           <string>Email address</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="VaultComboBox" name="addRoleCombo"/>
+        </item>
+        <item>
+         <widget class="VaultButton" name="lookupButton">
+          <property name="text">
+           <string>Look up</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="recipientLabel">
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="shareRow">
+        <item>
+         <spacer name="shareRowSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="VaultButton" name="shareButton">
+          <property name="text">
+           <string>Share</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="ownFingerprintLabel">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::TextSelectableByMouse</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="statusLabel"/>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MessageWidget</class>
+   <extends>QWidget</extends>
+   <header>gui/MessageWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultComboBox</class>
+   <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

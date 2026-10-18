@@ -132,6 +132,12 @@ public:
 
     // Orgs (the caller's orgs and roles come with me())
     void orgMembers(const QString& orgId, Callback callback);
+    // Confirm an accepted member with their vault grants (VaultGrant) and, for admins, the SA master keys
+    void confirmMember(const QString& orgId,
+                       const QString& userId,
+                       const QJsonArray& grants,
+                       const QJsonArray& saMasterKeys,
+                       Callback callback);
 
     // Service accounts of an org (owner/admin)
     void listServiceAccounts(const QString& orgId, Callback callback);

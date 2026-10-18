@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SignUpWizard</class>
+ <widget class="QDialog" name="SignUpWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>520</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Create a KeePassXC account</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="MessageWidget" name="messageWidget" native="true"/>
+   </item>
+   <item>
+    <widget class="QStackedWidget" name="pages">
+     <widget class="QWidget" name="detailsPage">
+      <layout class="QVBoxLayout" name="detailsLayout">
+       <item>
+        <widget class="QLabel" name="detailsIntro">
+         <property name="text">
+          <string>Your account keeps your vaults in sync on all your devices and lets you share them. Everything is encrypted on your devices with your master password and a Secret Key that only you have.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="detailsForm">
+         <item row="0" column="0">
+          <widget class="QLabel" name="emailLabel">
+           <property name="text">
+            <string>Email:</string>
+           </property>
+           <property name="buddy">
+            <cstring>emailEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="VaultLineEdit" name="emailEdit">
+           <property name="accessibleName">
+            <string>Email</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="passwordLabel">
+           <property name="text">
+            <string>Master password:</string>
+           </property>
+           <property name="buddy">
+            <cstring>passwordEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="VaultLineEdit" name="passwordEdit">
+           <property name="echoMode">
+            <enum>QLineEdit::Password</enum>
+           </property>
+           <property name="accessibleName">
+            <string>Master password</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="confirmLabel">
+           <property name="text">
+            <string>Confirm password:</string>
+           </property>
+           <property name="buddy">
+            <cstring>confirmEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="VaultLineEdit" name="confirmEdit">
+           <property name="echoMode">
+            <enum>QLineEdit::Password</enum>
+           </property>
+           <property name="accessibleName">
+            <string>Confirm master password</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="serverLabel">
+           <property name="text">
+            <string>Server:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLabel" name="serverValue"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="passwordHint">
+         <property name="text">
+          <string>Nobody can reset your master password, not even the server's operators. Choose one you will remember.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="detailsSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="kitPage">
+      <layout class="QVBoxLayout" name="kitLayout">
+       <item>
+        <widget class="QLabel" name="kitIntro">
+         <property name="text">
+          <string>This is your Secret Key. You need it, with your master password, to sign in on a new device. It is shown only now: save your Emergency Kit and keep it safe.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="secretKeyLabel">
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="kitButtons">
+         <item>
+          <spacer name="kitButtonsSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="VaultButton" name="saveKitButton">
+           <property name="text">
+            <string>Save Emergency Kit…</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="VaultCheckBox" name="savedCheckBox">
+         <property name="text">
+          <string>I have saved or printed my Emergency Kit</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="kitSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="busyLabel"/>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MessageWidget</class>
+   <extends>QWidget</extends>
+   <header>gui/MessageWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

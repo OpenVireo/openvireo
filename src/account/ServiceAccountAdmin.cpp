@@ -18,9 +18,11 @@
 #include "ServiceAccountAdmin.h"
 
 #include "AccountManager.h"
+#include "VaultKeyring.h"
 #include "VaultSharing.h"
 
 #include <QJsonArray>
+#include <QSharedPointer>
 #include <QUuid>
 
 using namespace AccountCrypto;
@@ -79,6 +81,147 @@ void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
             orgs << Org{json.value("id").toString(), json.value("name").toString(), json.value("role").toString()};
         }
         done(orgs, {});
+    });
+}
+
+void ServiceAccountAdmin::listMembers(const QString& orgId, MembersCallback done)
+{
+    m_account->client()->orgMembers(orgId, [done](const AuthClient::Response& response) {
+        if (!response.isSuccess()) {
+            done({}, AuthClient::errorMessage(response));
+            return;
+        }
+        QList<Member> members;
+        for (const auto& value : response.json().value("members").toArray()) {
+            const auto json = value.toObject();
+            Member member;
+            member.userId = json.value("user_id").toString();
+            member.email = json.value("email").toString();
+            member.role = json.value("role").toString();
+            member.status = json.value("status").toString();
+            bool ok = false;
+            member.publicKeys = PublicKeys::fromJson(json.value("public").toObject(), &ok);
+            member.verified = ok && verifyPublicKeys(member.publicKeys);
+            members << member;
+        }
+        done(members, {});
+    });
+}
+
+QList<QPair<QString, QString>> ServiceAccountAdmin::orgVaults(const QString& orgId) const
+{
+    QList<QPair<QString, QString>> vaults;
+    if (!m_account) {
+        return vaults;
+    }
+    for (const auto& vault : m_account->keyring().vaults()) {
+        if (vault.orgId == orgId) {
+            vaults << qMakePair(vault.id, vault.name.isEmpty() ? vault.id : vault.name);
+        }
+    }
+    return vaults;
+}
+
+void ServiceAccountAdmin::confirmMember(const QString& orgId,
+                                        const Member& member,
+                                        const QHash<QString, QString>& vaults,
+                                        Done done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked) {
+        done(false, tr("Unlock your account first."));
+        return;
+    }
+    if (!member.verified) {
+        done(false,
+             tr("The public keys of %1 don't carry a valid signature. Nothing was sealed to them.").arg(member.email));
+        return;
+    }
+    // Owners and admins get every org vault with manage; a regular member what the admin picked
+    const auto& keyring = m_account->keyring();
+    QJsonArray grants;
+    for (const auto& vault : orgVaults(orgId)) {
+        QString role = member.isAdmin() ? QStringLiteral("manage") : vaults.value(vault.first);
+        if (role.isEmpty()) {
+            continue;
+        }
+        if (!member.isAdmin() && role != "read" && role != "write" && role != "manage") {
+            done(false, tr("Unknown role: %1").arg(role));
+            return;
+        }
+        const auto current = keyring.vault(vault.first).currentKeyVersion;
+        const auto key = keyring.vaultKey(vault.first, current);
+        if (key.empty()) {
+            continue;
+        }
+        auto grant = AuthClient::grant(
+            member.principal(), role, current, seal(member.publicKeys.encPk, key, vaultKeyAad(vault.first)));
+        grant["vault_id"] = vault.first;
+        grants << grant;
+    }
+
+    QPointer<ServiceAccountAdmin> guard(this);
+    auto send = [guard, orgId, member, grants, done](const QJsonArray& masterKeys) {
+        if (!guard || !guard->m_account) {
+            return;
+        }
+        guard->m_account->client()->confirmMember(
+            orgId, member.userId, grants, masterKeys, [guard, done](const AuthClient::Response& response) {
+                if (!response.isSuccess()) {
+                    done(false, AuthClient::errorMessage(response));
+                    return;
+                }
+                if (guard && guard->m_account) {
+                    guard->m_account->reloadVaults();
+                }
+                done(true, {});
+            });
+    };
+    if (!member.isAdmin()) {
+        send({});
+        return;
+    }
+    // An admin can issue secrets for every service account, so they get each master key too
+    list(orgId, [guard, member, send, done](const QList<ServiceAccount>& accounts, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!error.isEmpty()) {
+            done(false, error);
+            return;
+        }
+        if (accounts.isEmpty()) {
+            send({});
+            return;
+        }
+        struct Gather
+        {
+            QJsonArray masterKeys;
+            int left = 0;
+        };
+        auto gather = QSharedPointer<Gather>::create();
+        gather->left = accounts.size();
+        for (const auto& account : accounts) {
+            guard->m_account->client()->getServiceAccount(
+                account.id, [guard, gather, member, send, saId = account.id](const AuthClient::Response& response) {
+                    if (!guard || !guard->m_account) {
+                        return;
+                    }
+                    SecureBytes master;
+                    if (response.isSuccess()
+                        && unseal(guard->m_account->keyset().encSk,
+                                  fromBase64Url(response.json().value("master_key").toString()),
+                                  saMasterAad(saId),
+                                  &master)) {
+                        gather->masterKeys << QJsonObject{
+                            {"sa_id", saId},
+                            {"principal", member.principal()},
+                            {"sealed_key", toBase64Url(seal(member.publicKeys.encPk, master, saMasterAad(saId)))}};
+                    }
+                    if (--gather->left == 0) {
+                        send(gather->masterKeys);
+                    }
+                });
+        }
     });
 }
 
