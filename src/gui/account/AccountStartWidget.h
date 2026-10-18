@@ -18,7 +18,9 @@
 #ifndef KEEPASSXC_ACCOUNTSTARTWIDGET_H
 #define KEEPASSXC_ACCOUNTSTARTWIDGET_H
 
+#include <QLabel>
 #include <QPointer>
+#include <QPushButton>
 #include <QScopedPointer>
 #include <QWidget>
 
@@ -28,6 +30,39 @@ namespace Ui
 {
     class AccountStartWidget;
 }
+
+// A full-width row on the start screen for another way to use KeePassXC: a Fluent glyph and the text, left-aligned
+class AccountStartOptionButton : public QPushButton
+{
+    Q_OBJECT
+
+public:
+    explicit AccountStartOptionButton(QWidget* parent = nullptr);
+
+    void setGlyph(const QString& glyph);
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    QString m_glyph;
+};
+
+// A one-line label that elides its text to the width it gets, so a long value doesn't widen the card
+class AccountStartElidedLabel : public QLabel
+{
+    Q_OBJECT
+
+public:
+    using QLabel::QLabel;
+
+    QSize minimumSizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+};
 
 /**
  * The start screen, shown before the welcome screen until a mode is chosen (and again after signing out):
@@ -60,6 +95,10 @@ public:
     void reset();
     Page currentPage() const;
 
+protected:
+    void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
 signals:
     // Signed in, paired with a sync server or chosen to go on without an account: show the welcome screen
     void finished();
@@ -73,6 +112,8 @@ private slots:
     void useWithoutAccount();
     void createAccount();
     void updateSecretKeyField();
+    void updateServerRow();
+    void updateSignInButton();
     void handleAccountError(const QString& message);
     void handleMfaRequired();
     void handleSignedIn();
@@ -81,11 +122,15 @@ private:
     void showPage(Page page);
     void setBusy(const QString& message);
     void showError(const QString& message);
+    void applyTheme();
 
     const QScopedPointer<Ui::AccountStartWidget> m_ui;
     QPointer<AccountController> m_controller;
     // A sign-in started here is in progress, so the account's errors are for this screen
     bool m_signingIn = false;
+    // Asked for with the "First time on this device?" link, even if this device has the Secret Key
+    bool m_secretKeyRequested = false;
+    QAction* m_revealPasswordAction = nullptr;
 };
 
 #endif // KEEPASSXC_ACCOUNTSTARTWIDGET_H
