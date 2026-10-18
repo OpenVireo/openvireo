@@ -626,34 +626,40 @@ void AccountController::moveToAccount(DatabaseWidget* dbWidget, const QString& n
     QPointer<DatabaseWidget> source(dbWidget);
     QPointer<AccountController> guard(this);
     const auto sourcePath = dbWidget->database()->filePath();
-    m_sharing->moveToAccount(
-        dbWidget->database(),
-        name,
-        [guard, source, sourcePath](const QString& vaultId, const QSharedPointer<Database>& db, const QString& error) {
-            if (!guard) {
-                return;
-            }
-            emit guard->busyChanged({});
-            if (!error.isEmpty()) {
-                emit guard->moveFinished(false, error);
-                return;
-            }
-            const auto path = guard->vaultFilePath(vaultId);
-            QDir().mkpath(QFileInfo(path).absolutePath());
-            QString saveError;
-            if (!db->saveAs(path, Database::Atomic, {}, &saveError)) {
-                emit guard->moveFinished(false, saveError);
-                return;
-            }
-            // The vault takes the database's place; the original file stays as it was
-            if (source && guard->m_tabs) {
-                guard->m_tabs->closeDatabaseTab(source);
-            }
-            guard->addVaultTab(vaultId, db, 1, false);
-            emit guard->moveFinished(true, {});
-            emit guard->message(tr("\"%1\" is now a vault of your account. The original file %2 wasn't changed; "
-                                   "you can delete it.")
-                                    .arg(db->rootGroup()->name(), QDir::toNativeSeparators(sourcePath)),
-                                MessageWidget::Positive);
-        });
+    // Writing the copy can touch the database's state; only the user's own unsaved changes should prompt
+    const bool wasModified = dbWidget->database()->isModified();
+    m_sharing->moveToAccount(dbWidget->database(),
+                             name,
+                             [guard, source, sourcePath, wasModified](
+                                 const QString& vaultId, const QSharedPointer<Database>& db, const QString& error) {
+                                 if (!guard) {
+                                     return;
+                                 }
+                                 emit guard->busyChanged({});
+                                 if (!error.isEmpty()) {
+                                     emit guard->moveFinished(false, error);
+                                     return;
+                                 }
+                                 const auto path = guard->vaultFilePath(vaultId);
+                                 QDir().mkpath(QFileInfo(path).absolutePath());
+                                 QString saveError;
+                                 if (!db->saveAs(path, Database::Atomic, {}, &saveError)) {
+                                     emit guard->moveFinished(false, saveError);
+                                     return;
+                                 }
+                                 // The vault takes the database's place; the original file stays as it was
+                                 if (source && guard->m_tabs) {
+                                     if (!wasModified) {
+                                         source->database()->markAsClean();
+                                     }
+                                     guard->m_tabs->closeDatabaseTab(source);
+                                 }
+                                 guard->addVaultTab(vaultId, db, 1, false);
+                                 emit guard->moveFinished(true, {});
+                                 emit guard->message(
+                                     tr("\"%1\" is now a vault of your account. The original file %2 wasn't changed; "
+                                        "you can delete it.")
+                                         .arg(db->rootGroup()->name(), QDir::toNativeSeparators(sourcePath)),
+                                     MessageWidget::Positive);
+                             });
 }

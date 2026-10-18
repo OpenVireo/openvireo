@@ -749,6 +749,7 @@ namespace FakeAccount
                 ifNoneMatch = QString::fromLatin1(header.second);
             }
         }
+        server.syncPrincipals << server.accessTokens.value(token).principal;
         Response response;
         const auto parts = path.split('/');
         const auto blobRequest = [&](Server::Blob* blob, bool exists, bool vault) {

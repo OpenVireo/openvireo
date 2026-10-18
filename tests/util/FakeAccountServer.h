@@ -157,6 +157,8 @@ namespace FakeAccount
         int counter = 0;
         // Every request, "VERB path" without the API prefix, auth and sync server alike
         QStringList requests;
+        // The principal behind each sync server request ("" for device tokens and none)
+        QStringList syncPrincipals;
         // The sync server answers PUT vaults/<id> with 412 this many times, as if another device saved first
         int conflictsToInject = 0;
 
