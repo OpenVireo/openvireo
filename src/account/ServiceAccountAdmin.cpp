@@ -115,7 +115,8 @@ QList<QPair<QString, QString>> ServiceAccountAdmin::orgVaults(const QString& org
         return vaults;
     }
     for (const auto& vault : m_account->keyring().vaults()) {
-        if (vault.orgId == orgId) {
+        // Only vaults this account manages can be granted (SPEC §12)
+        if (vault.orgId == orgId && vault.role == "manage") {
             vaults << qMakePair(vault.id, vault.name.isEmpty() ? vault.id : vault.name);
         }
     }
