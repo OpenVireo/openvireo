@@ -17,9 +17,12 @@
 
 #include "TestGuiAutoSync.h"
 
+#include "../util/FakeAccountServer.h"
 #include "../util/TemporaryFile.h"
 #include "account/AccountCrypto.h"
+#include "account/AccountManager.h"
 #include "account/VaultKeyring.h"
+#include "account/VaultSharing.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Entry.h"
@@ -28,8 +31,10 @@
 #include "crypto/Crypto.h"
 #include "crypto/kdf/AesKdf.h"
 #include "gui/Application.h"
+#include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/MessageBox.h"
+#include "gui/account/AccountController.h"
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncHistoryDialog.h"
@@ -628,4 +633,134 @@ void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
     uploaded = VaultKeyring::readVault(server->stored, VaultKeyring::compositeKeyFor(vaultKey));
     QVERIFY(uploaded);
     QCOMPARE(titles(uploaded.data()), QStringList({"First", "Second", "Third"}));
+}
+
+namespace
+{
+    // An account signed up on the fake account server, unlocked
+    AccountManager* signUp(const QSharedPointer<FakeAccount::Server>& server, const QString& email)
+    {
+        auto* manager = FakeAccount::createManager(server);
+        manager->setServer(FakeAccount::serverConfig());
+        manager->registerAccount(email, "correct horse battery staple");
+        QSignalSpy vaults(manager, &AccountManager::vaultsChanged);
+        if (!QTest::qWaitFor([manager] { return manager->state() == AccountManager::State::Unlocked; }, 10000)
+            || !vaults.wait(5000)) {
+            delete manager;
+            return nullptr;
+        }
+        return manager;
+    }
+
+    QStringList vaultTitles(const QSharedPointer<FakeAccount::Server>& server,
+                            const QString& vaultId,
+                            const AccountCrypto::SecureBytes& key)
+    {
+        auto db = VaultKeyring::readVault(server->blobs.value(vaultId).data, VaultKeyring::compositeKeyFor(key));
+        return db ? titles(db.data()) : QStringList{"<could not open>"};
+    }
+} // namespace
+
+void TestGuiAutoSync::testAccountVaultFollowsAKeyRotation()
+{
+    using State = DatabaseWidget::SyncStatus::State;
+    auto server = QSharedPointer<FakeAccount::Server>::create();
+    FakeAccount::installSyncFactory(server);
+    const auto restoreFactory = qScopeGuard([] { FakeAccount::restoreSyncFactory(); });
+
+    DatabaseTabWidget tabs;
+    auto* account = signUp(server, "alice@example.com");
+    QVERIFY(account);
+    AccountController controller(&tabs, account);
+    controller.createVault("Family");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
+    QTRY_VERIFY(!account->keyring().isEmpty());
+    const auto vaultId = account->keyring().vaults().first().id;
+    auto* widget = controller.vaultWidget(vaultId);
+    QVERIFY(widget);
+    addEntry(widget->database().data(), "Before");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    const auto oldKey = account->keyring().vaultKey(vaultId);
+    QCOMPARE(vaultTitles(server, vaultId, oldKey), QStringList{"Before"});
+
+    // The key rotates (a member left) while the vault is open on this device
+    bool rotated = false;
+    controller.sharing()->rotate(vaultId, {}, [&](bool ok, const QString& error) {
+        QVERIFY2(ok, qPrintable(error));
+        rotated = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(rotated, 10000);
+    QTRY_COMPARE(account->keyring().vault(vaultId).currentKeyVersion, 2);
+    const auto newKey = account->keyring().vaultKey(vaultId);
+    QVERIFY(newKey != oldKey);
+
+    // The open vault takes the new key, so its next sync can open the re-keyed blob and merge
+    QTRY_VERIFY(widget->database()->key()->rawKey() == VaultKeyring::compositeKeyFor(newKey)->rawKey());
+    addEntry(widget->database().data(), "After");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(vaultTitles(server, vaultId, newKey), QStringList({"After", "Before"}), 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    QCOMPARE(vaultTitles(server, vaultId, oldKey), QStringList{"<could not open>"});
+    // The local copy is under the new key too
+    Database local;
+    QVERIFY(local.open(controller.vaultFilePath(vaultId), VaultKeyring::compositeKeyFor(newKey)));
+    controller.lockAccount();
+}
+
+void TestGuiAutoSync::testSharedVaultSyncsWithThisDevicesAccount()
+{
+    using State = DatabaseWidget::SyncStatus::State;
+    auto server = QSharedPointer<FakeAccount::Server>::create();
+    FakeAccount::installSyncFactory(server);
+    const auto restoreFactory = qScopeGuard([] { FakeAccount::restoreSyncFactory(); });
+
+    // Alice creates a vault and shares it with Bob
+    QScopedPointer<AccountManager> alice(signUp(server, "alice@example.com"));
+    QVERIFY(alice);
+    VaultSharing sharing(alice.data());
+    QString vaultId;
+    sharing.createVault("Shared",
+                        [&](const QString& id, const QSharedPointer<Database>&, const QString&) { vaultId = id; });
+    QTRY_VERIFY_WITH_TIMEOUT(!vaultId.isEmpty(), 10000);
+    auto* bob = signUp(server, "bob@example.com");
+    QVERIFY(bob);
+    bool shared = false;
+    sharing.lookupRecipient("bob@example.com", [&](const VaultSharing::Recipient& recipient, const QString&) {
+        sharing.grant(vaultId, recipient, "write", [&](bool ok, const QString& error) {
+            QVERIFY2(ok, qPrintable(error));
+            shared = true;
+        });
+    });
+    QTRY_VERIFY(shared);
+
+    // Bob opens it on his device; its settings still name Alice's account
+    DatabaseTabWidget tabs;
+    AccountController controller(&tabs, bob);
+    QSignalSpy reloaded(bob, &AccountManager::vaultsChanged);
+    // The access event that would announce the grant: a fresh token for the new vlt claim, and the vault list
+    bob->refreshAccessToken();
+    bob->reloadVaults();
+    QVERIFY(reloaded.wait());
+    controller.openAllVaults();
+    QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
+    auto* widget = controller.vaultWidget(vaultId);
+    QVERIFY(widget);
+    RemoteSettings settings(widget->database());
+    QCOMPARE(settings.getAllRemoteParams().size(), 1);
+    QCOMPARE(settings.getAllRemoteParams().first()->accountId, alice->accountId());
+
+    // Bob's change goes out with Bob's token
+    server->requests.clear();
+    server->syncPrincipals.clear();
+    addEntry(widget->database().data(), "From Bob");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(
+        vaultTitles(server, vaultId, alice->keyring().vaultKey(vaultId)), QStringList{"From Bob"}, 10000);
+    QVERIFY(server->requests.contains("sync PUT vaults/" + vaultId));
+    // Not Alice's, although her account is signed in on this device too and the settings name it
+    QVERIFY(server->syncPrincipals.contains(bob->principal()));
+    QVERIFY(!server->syncPrincipals.contains(alice->principal()));
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    controller.lockAccount();
 }
