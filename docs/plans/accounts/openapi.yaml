@@ -407,7 +407,7 @@ paths:
             schema:
               type: object
               properties:
-                grants: { type: array, items: { $ref: '#/components/schemas/VaultGrant' }, description: 'one per org vault, each at that vault''s current key version' }
+                grants: { type: array, items: { $ref: '#/components/schemas/VaultGrant' }, description: 'the org vaults the member gets (SPEC.md §12, Confirming members), each at its current key version' }
                 sa_master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } } }
   /orgs/{org}/invitations:
