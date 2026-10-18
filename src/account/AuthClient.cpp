@@ -283,6 +283,19 @@ void AuthClient::orgMembers(const QString& orgId, Callback callback)
     get("orgs/" + encoded(orgId) + "/members", std::move(callback));
 }
 
+void AuthClient::confirmMember(const QString& orgId,
+                               const QString& userId,
+                               const QJsonArray& grants,
+                               const QJsonArray& saMasterKeys,
+                               Callback callback)
+{
+    QJsonObject body{{"grants", grants}};
+    if (!saMasterKeys.isEmpty()) {
+        body["sa_master_keys"] = saMasterKeys;
+    }
+    post("orgs/" + encoded(orgId) + "/members/" + encoded(userId) + "/confirm", body, std::move(callback), true);
+}
+
 void AuthClient::listServiceAccounts(const QString& orgId, Callback callback)
 {
     get("orgs/" + encoded(orgId) + "/service-accounts", std::move(callback));

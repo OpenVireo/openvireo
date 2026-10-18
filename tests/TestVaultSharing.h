@@ -39,6 +39,7 @@ private slots:
     void testIssuesAndRevokesSecrets();
     void testGrantsAServiceAccountAVault();
     void testPagesTheAuditLog();
+    void testConfirmsOrgMembers();
 };
 
 #endif // KEEPASSXC_TESTVAULTSHARING_H

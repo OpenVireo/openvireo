@@ -126,6 +126,10 @@ void TestGuiVault::initTestCase()
     config()->set(Config::Security_QuickUnlock, false);
     config()->set(Config::GUI_ShowExpiredEntriesOnDatabaseUnlock, false);
 
+    // Today's local experience, without the account start screen
+
+    config()->set(Config::Account_StartMode, "local");
+
     m_mainWindow.reset(new MainWindow());
     // Screenshots need capture allowed, and offscreen windows can't block it anyway
     m_mainWindow->setAllowScreenCapture(true);

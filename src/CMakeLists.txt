@@ -166,6 +166,13 @@ set(gui_SOURCES
         gui/entry/EntryModel.cpp
         gui/entry/EntryView.cpp
         gui/entry/EntryListItemDelegate.cpp
+        gui/account/AccountController.cpp
+        gui/account/AccountStartWidget.cpp
+        gui/account/EmergencyKit.cpp
+        gui/account/ServiceAccountsDialog.cpp
+        gui/account/ShareVaultDialog.cpp
+        gui/account/SignUpWizard.cpp
+        gui/vault/AccountVaultsPane.cpp
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultControls.cpp
         gui/vault/VaultEditShell.cpp

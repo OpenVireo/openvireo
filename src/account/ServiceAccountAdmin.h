@@ -21,6 +21,7 @@
 #include "AccountCrypto.h"
 
 #include <QDateTime>
+#include <QHash>
 #include <QJsonObject>
 #include <QObject>
 #include <QPointer>
@@ -50,6 +51,26 @@ public:
         QString role;
 
         bool canAdminister() const
+        {
+            return role == "owner" || role == "admin";
+        }
+    };
+
+    struct Member
+    {
+        QString userId;
+        QString email;
+        QString role;
+        // invited, accepted or confirmed
+        QString status;
+        AccountCrypto::PublicKeys publicKeys;
+        bool verified = false;
+
+        QString principal() const
+        {
+            return "user:" + userId;
+        }
+        bool isAdmin() const
         {
             return role == "owner" || role == "admin";
         }
@@ -92,6 +113,7 @@ public:
 
     using Done = std::function<void(bool ok, const QString& error)>;
     using OrgsCallback = std::function<void(const QList<Org>& orgs, const QString& error)>;
+    using MembersCallback = std::function<void(const QList<Member>& members, const QString& error)>;
     using ListCallback = std::function<void(const QList<ServiceAccount>& accounts, const QString& error)>;
     using SecretsCallback = std::function<void(const QList<Secret>& secrets, const QString& error)>;
     // `token` is the kpx_sa_… token, to show once
@@ -103,6 +125,14 @@ public:
     explicit ServiceAccountAdmin(AccountManager* account, QObject* parent = nullptr);
 
     void loadOrgs(OrgsCallback done);
+    void listMembers(const QString& orgId, MembersCallback done);
+    // Confirm an accepted member. Owners and admins get every org vault with manage and the master key of
+    // every service account; a regular member gets the vaults in `vaults` (vault id -> read or write),
+    // which the admin picks. Keys are sealed only to a member whose public keys are self-signed.
+    void confirmMember(const QString& orgId, const Member& member, const QHash<QString, QString>& vaults, Done done);
+    // The org's vaults this account holds the keys of
+    QList<QPair<QString, QString>> orgVaults(const QString& orgId) const;
+
     void list(const QString& orgId, ListCallback done);
     // A new SA with its first secret; `expiresAt` invalid means it doesn't expire
     void create(const QString& orgId, const QString& name, const QDateTime& expiresAt, TokenCallback done);

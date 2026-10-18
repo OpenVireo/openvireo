@@ -18,7 +18,9 @@
 #include "DatabaseSettingsWidgetRemote.h"
 #include "ui_DatabaseSettingsWidgetRemote.h"
 
+#include "core/Database.h"
 #include "core/Global.h"
+#include "core/Group.h"
 #include "core/Metadata.h"
 
 #include "RemoteHandler.h"
@@ -26,6 +28,7 @@
 #include "SyncServerClient.h"
 #include "SyncTokenStore.h"
 #include "gui/MessageBox.h"
+#include "gui/account/AccountController.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -397,6 +400,21 @@ void DatabaseSettingsWidgetRemote::updateTypeVisibility()
     bool isServer = m_ui->typeComboBox->currentIndex() == 1;
     m_ui->commandTabWidget->setVisible(!isServer);
     m_ui->serverSettingsWidget->setVisible(isServer);
+
+    // Using KeePassXC with a sync server of your own: new settings start with it and this device's token
+    QString url, token;
+    if (isServer && m_ui->serverUrlEdit->text().isEmpty() && m_ui->serverTokenEdit->text().isEmpty()
+        && AccountController::selfHostedServer(&url, &token)) {
+        m_ui->serverUrlEdit->setText(url);
+        m_ui->serverTokenEdit->setText(token);
+        if (m_ui->nameLineEdit->text().isEmpty()) {
+            m_ui->nameLineEdit->setText(QUrl(url).host());
+        }
+        if (m_ui->serverDatabaseIdEdit->text().isEmpty() && m_db) {
+            m_ui->serverDatabaseIdEdit->setText(m_db->rootGroup()->uuid().toString(QUuid::WithoutBraces));
+        }
+        m_ui->autoSyncCheckBox->setChecked(true);
+    }
 }
 
 bool DatabaseSettingsWidgetRemote::claimPairingCode()

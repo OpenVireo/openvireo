@@ -32,6 +32,7 @@
 #include "gui/DatabaseWidgetStateSync.h"
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
+#include "gui/account/AccountController.h"
 #include "gui/export/ExportDialog.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultImportModal.h"
@@ -928,7 +929,8 @@ void DatabaseTabWidget::relockPendingDatabase()
 
 void DatabaseTabWidget::updateLastDatabases(const QSharedPointer<Database>& database)
 {
-    if (database->isTemporaryDatabase() || database->filePath().isEmpty()) {
+    if (database->isTemporaryDatabase() || database->filePath().isEmpty()
+        || AccountController::isAccountVaultPath(database->filePath())) {
         return;
     }
     auto filename = database->filePath();

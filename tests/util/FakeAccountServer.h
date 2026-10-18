@@ -172,7 +172,10 @@ namespace FakeAccount
         // The user registered (or added) with this email
         QString userId(const QString& email) const;
         QString addOrg(const QString& name, const QString& ownerEmail);
-        void addOrgMember(const QString& orgId, const QString& email, const QString& role);
+        void addOrgMember(const QString& orgId,
+                          const QString& email,
+                          const QString& role,
+                          const QString& status = QStringLiteral("confirmed"));
         // A pairing code the self-hosted sync server will trade for a device token
         QString addPairingCode();
         // The vault key `principal` was sealed for the vault's current version
