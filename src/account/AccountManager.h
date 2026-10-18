@@ -93,6 +93,26 @@ public:
         QJsonObject toJson() const;
     };
 
+    // An org the account belongs to, from GET /me
+    struct Org
+    {
+        QString id;
+        QString name;
+        // owner, admin or member
+        QString role;
+        // invited, accepted or confirmed
+        QString status;
+
+        bool isConfirmed() const
+        {
+            return status.isEmpty() || status == "confirmed";
+        }
+        bool canAdminister() const
+        {
+            return isConfirmed() && (role == "owner" || role == "admin");
+        }
+    };
+
     // Refresh this long before the access token expires
     static constexpr int RefreshMarginSec = 60;
     // A token that expires sooner than this isn't handed out without refreshing first
@@ -125,6 +145,9 @@ public:
     const AccountCrypto::Keyset& keyset() const;
     const VaultKeyring& keyring() const;
     AuthClient* client() const;
+    // The orgs this account belongs to, as of the last reloadVaults(); empty while locked
+    QList<Org> orgs() const;
+    Org org(const QString& orgId) const;
 
     // Hands out a fresh access token, refreshing it first when it is about to expire. Thread safe.
     void accessToken(std::function<void(const QString& token)> done);
@@ -175,6 +198,7 @@ signals:
     void signedOut(const QString& reason);
     void accessTokenChanged();
     void vaultsChanged();
+    void orgsChanged();
     // A vault's blob changed on the sync server
     void vaultChanged(const SyncEventStream::Event& event);
     void error(const QString& message);
@@ -188,6 +212,8 @@ private:
     void deriveKeyset(const QJsonObject& kdfJson,
                       const QJsonObject& wrappedKeyset,
                       std::function<void(bool ok, const QString& error)> done);
+    void finishUnlock();
+    void reloadOrgs();
     void setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn);
     void exchangeServiceAccount();
     void finishRefresh(bool ok);
@@ -226,6 +252,7 @@ private:
     std::unique_ptr<Pending> m_pending;
     AccountCrypto::Keyset m_keyset;
     VaultKeyring m_keyring;
+    QList<Org> m_orgs;
     QPointer<SyncEventStream> m_events;
 };
 

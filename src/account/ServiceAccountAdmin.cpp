@@ -22,7 +22,9 @@
 #include "VaultSharing.h"
 
 #include <QJsonArray>
+#include <QRegularExpression>
 #include <QSharedPointer>
+#include <QUrl>
 #include <QUuid>
 
 using namespace AccountCrypto;
@@ -37,6 +39,25 @@ namespace
     QJsonValue timestampJson(const QDateTime& time)
     {
         return time.isValid() ? QJsonValue(time.toUTC().toString(Qt::ISODate)) : QJsonValue(QJsonValue::Null);
+    }
+
+    QString responseError(const AuthClient::Response& response)
+    {
+        return response.isSuccess() ? QString() : AuthClient::errorMessage(response);
+    }
+
+    // Runs `step` on each item, one after the other, then `finish`
+    template <typename T>
+    void inTurn(const QList<T>& items,
+                int index,
+                const std::function<void(const T&, std::function<void()>)>& step,
+                const std::function<void()>& finish)
+    {
+        if (index >= items.size()) {
+            finish();
+            return;
+        }
+        step(items.at(index), [items, index, step, finish] { inTurn(items, index + 1, step, finish); });
     }
 } // namespace
 
@@ -60,6 +81,31 @@ ServiceAccountAdmin::ServiceAccountAdmin(AccountManager* account, QObject* paren
 {
 }
 
+void ServiceAccountAdmin::createOrg(const QString& name, OrgCallback done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked || m_account->isServiceAccount()) {
+        done({}, tr("Unlock your account first."));
+        return;
+    }
+    if (name.trimmed().isEmpty()) {
+        done({}, tr("Give the organization a name."));
+        return;
+    }
+    QPointer<ServiceAccountAdmin> guard(this);
+    m_account->client()->createOrg(name.trimmed(), [guard, done](const AuthClient::Response& response) {
+        if (!response.isSuccess()) {
+            done({}, AuthClient::errorMessage(response));
+            return;
+        }
+        const auto json = response.json();
+        Org org{json.value("id").toString(), json.value("name").toString(), json.value("role").toString("owner"), {}};
+        if (guard && guard->m_account) {
+            guard->m_account->reloadVaults();
+        }
+        done(org, {});
+    });
+}
+
 void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
 {
     if (!m_account) {
@@ -78,7 +124,10 @@ void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
             if (json.contains("status") && json.value("status").toString() != "confirmed") {
                 continue;
             }
-            orgs << Org{json.value("id").toString(), json.value("name").toString(), json.value("role").toString()};
+            orgs << Org{json.value("id").toString(),
+                        json.value("name").toString(),
+                        json.value("role").toString(),
+                        json.value("status").toString()};
         }
         done(orgs, {});
     });
@@ -182,16 +231,30 @@ void ServiceAccountAdmin::confirmMember(const QString& orgId,
         return;
     }
     // An admin can issue secrets for every service account, so they get each master key too
-    list(orgId, [guard, member, send, done](const QList<ServiceAccount>& accounts, const QString& error) {
-        if (!guard) {
-            return;
-        }
+    sealMasterKeys(orgId, member, [send, done](const QJsonArray& masterKeys, const QString& error) {
         if (!error.isEmpty()) {
             done(false, error);
             return;
         }
+        send(masterKeys);
+    });
+}
+
+void ServiceAccountAdmin::sealMasterKeys(const QString& orgId,
+                                         const Member& member,
+                                         std::function<void(const QJsonArray&, const QString&)> done)
+{
+    QPointer<ServiceAccountAdmin> guard(this);
+    list(orgId, [guard, member, done](const QList<ServiceAccount>& accounts, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!error.isEmpty()) {
+            done({}, error);
+            return;
+        }
         if (accounts.isEmpty()) {
-            send({});
+            done({}, {});
             return;
         }
         struct Gather
@@ -202,8 +265,9 @@ void ServiceAccountAdmin::confirmMember(const QString& orgId,
         auto gather = QSharedPointer<Gather>::create();
         gather->left = accounts.size();
         for (const auto& account : accounts) {
+            // Only owners and admins get their sealed copy; one this account doesn't hold is skipped
             guard->m_account->client()->getServiceAccount(
-                account.id, [guard, gather, member, send, saId = account.id](const AuthClient::Response& response) {
+                account.id, [guard, gather, member, done, saId = account.id](const AuthClient::Response& response) {
                     if (!guard || !guard->m_account) {
                         return;
                     }
@@ -219,10 +283,283 @@ void ServiceAccountAdmin::confirmMember(const QString& orgId,
                             {"sealed_key", toBase64Url(seal(member.publicKeys.encPk, master, saMasterAad(saId)))}};
                     }
                     if (--gather->left == 0) {
-                        send(gather->masterKeys);
+                        done(gather->masterKeys, {});
                     }
                 });
         }
+    });
+}
+
+QStringList ServiceAccountAdmin::assignableRoles(const QString& role)
+{
+    if (role == "owner") {
+        return {"owner", "admin", "member"};
+    }
+    if (role == "admin") {
+        return {"admin", "member"};
+    }
+    return {};
+}
+
+bool ServiceAccountAdmin::isManagerRole(const QString& role)
+{
+    return role == "owner" || role == "admin";
+}
+
+void ServiceAccountAdmin::setMemberRole(const QString& orgId, const Member& member, const QString& role, Done done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked) {
+        done(false, tr("Unlock your account first."));
+        return;
+    }
+    if (!QStringList{"owner", "admin", "member"}.contains(role)) {
+        done(false, tr("Unknown role: %1").arg(role));
+        return;
+    }
+    // A member who isn't confirmed yet gets their keys when they are confirmed
+    const bool promote = isManagerRole(role) && member.status == "confirmed" && !member.publicKeys.isNull();
+    if (promote && !member.verified) {
+        done(false,
+             tr("The public keys of %1 don't carry a valid signature. Nothing was sealed to them.").arg(member.email));
+        return;
+    }
+    QPointer<ServiceAccountAdmin> guard(this);
+    auto send = [guard, orgId, member, role, promote, done](const QJsonArray& masterKeys) {
+        if (!guard || !guard->m_account) {
+            return;
+        }
+        guard->m_account->client()->setMemberRole(
+            orgId,
+            member.userId,
+            role,
+            masterKeys,
+            [guard, orgId, member, promote, done](const AuthClient::Response& response) {
+                if (!guard || !guard->m_account) {
+                    return;
+                }
+                if (!response.isSuccess()) {
+                    done(false,
+                         response.status == 409 ? tr("An organization needs at least one owner.")
+                                                : AuthClient::errorMessage(response));
+                    return;
+                }
+                if (!promote) {
+                    guard->m_account->reloadVaults();
+                    done(true, {});
+                    return;
+                }
+                guard->grantManagedVaults(orgId, member, done);
+            });
+    };
+    if (!promote) {
+        send({});
+        return;
+    }
+    sealMasterKeys(orgId, member, [send, done](const QJsonArray& masterKeys, const QString& error) {
+        if (!error.isEmpty()) {
+            done(false, error);
+            return;
+        }
+        send(masterKeys);
+    });
+}
+
+void ServiceAccountAdmin::grantManagedVaults(const QString& orgId, const Member& member, Done done)
+{
+    VaultSharing::Recipient recipient;
+    recipient.principal = member.principal();
+    recipient.email = member.email;
+    recipient.publicKeys = member.publicKeys;
+    recipient.verified = member.verified;
+    QStringList vaultIds;
+    for (const auto& vault : orgVaults(orgId)) {
+        vaultIds << vault.first;
+    }
+    auto* sharing = new VaultSharing(m_account, this);
+    auto errors = QSharedPointer<QStringList>::create();
+    QPointer<ServiceAccountAdmin> guard(this);
+    inTurn<QString>(
+        vaultIds,
+        0,
+        [sharing, recipient, errors](const QString& vaultId, std::function<void()> next) {
+            sharing->grant(vaultId, recipient, "manage", [errors, next](bool ok, const QString& error) {
+                if (!ok) {
+                    *errors << error;
+                }
+                next();
+            });
+        },
+        [guard, sharing, errors, done] {
+            sharing->deleteLater();
+            if (guard && guard->m_account) {
+                guard->m_account->reloadVaults();
+            }
+            done(errors->isEmpty(),
+                 errors->isEmpty() ? QString()
+                                   : tr("The role changed, but not every vault could be shared: %1")
+                                         .arg(errors->join(QStringLiteral("; "))));
+        });
+}
+
+void ServiceAccountAdmin::removeMember(const QString& orgId, const QString& userId, RemoveCallback done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked) {
+        done({}, {}, tr("Unlock your account first."));
+        return;
+    }
+    QPointer<ServiceAccountAdmin> guard(this);
+    m_account->client()->removeMember(orgId, userId, [guard, orgId, done](const AuthClient::Response& response) {
+        if (!guard || !guard->m_account) {
+            return;
+        }
+        if (!response.isSuccess()) {
+            done({},
+                 {},
+                 response.status == 409 ? tr("An organization needs at least one owner.")
+                                        : AuthClient::errorMessage(response));
+            return;
+        }
+        // The server flagged the vaults the member could open; rotate the ones this account manages
+        guard->m_account->client()->listVaults([guard, orgId, done](const AuthClient::Response& response) {
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!response.isSuccess()) {
+                done({}, {}, AuthClient::errorMessage(response));
+                return;
+            }
+            QList<VaultKeyring::Vault> flagged;
+            for (const auto& value : response.json().value("vaults").toArray()) {
+                const auto vault = VaultKeyring::Vault::fromJson(value.toObject());
+                if (vault.orgId == orgId && vault.rotationRequired && vault.role == "manage") {
+                    flagged << vault;
+                }
+            }
+            auto* sharing = new VaultSharing(guard->m_account, guard);
+            auto rotated = QSharedPointer<QStringList>::create();
+            auto failed = QSharedPointer<QStringList>::create();
+            inTurn<VaultKeyring::Vault>(
+                flagged,
+                0,
+                [guard, sharing, rotated, failed](const VaultKeyring::Vault& vault, std::function<void()> next) {
+                    const auto name = guard && guard->m_account && guard->m_account->keyring().contains(vault.id)
+                                          ? guard->m_account->keyring().vault(vault.id).name
+                                          : vault.id;
+                    sharing->rotate(vault.id, {}, [rotated, failed, next, id = vault.id, name](bool ok, const QString& error) {
+                        if (ok) {
+                            *rotated << id;
+                        } else {
+                            *failed << QStringLiteral("%1: %2").arg(name, error);
+                        }
+                        next();
+                    });
+                },
+                [guard, sharing, rotated, failed, done] {
+                    sharing->deleteLater();
+                    if (guard && guard->m_account) {
+                        guard->m_account->reloadVaults();
+                    }
+                    done(*rotated, *failed, {});
+                });
+        });
+    });
+}
+
+void ServiceAccountAdmin::listInvitations(const QString& orgId, InvitationsCallback done)
+{
+    m_account->client()->listInvitations(orgId, [done](const AuthClient::Response& response) {
+        if (!response.isSuccess()) {
+            done({}, AuthClient::errorMessage(response));
+            return;
+        }
+        QList<Invitation> invitations;
+        for (const auto& value : response.json().value("invitations").toArray()) {
+            const auto json = value.toObject();
+            Invitation invitation;
+            invitation.id = json.value("id").toString();
+            invitation.email = json.value("email").toString();
+            invitation.role = json.value("role").toString();
+            invitation.expiresAt = timestamp(json.value("expires_at"));
+            invitation.invitedBy = json.value("invited_by").toString();
+            invitations << invitation;
+        }
+        done(invitations, {});
+    });
+}
+
+void ServiceAccountAdmin::invite(const QString& orgId, const QString& email, const QString& role, Done done)
+{
+    if (!email.contains('@')) {
+        done(false, tr("Enter the email address to send the invitation to."));
+        return;
+    }
+    if (!QStringList{"owner", "admin", "member"}.contains(role)) {
+        done(false, tr("Unknown role: %1").arg(role));
+        return;
+    }
+    m_account->client()->invite(orgId, email.trimmed(), role, [done](const AuthClient::Response& response) {
+        if (response.status == 409) {
+            done(false, tr("That account is already a member of the organization."));
+            return;
+        }
+        done(response.isSuccess(), responseError(response));
+    });
+}
+
+void ServiceAccountAdmin::cancelInvitation(const QString& orgId, const QString& invitationId, Done done)
+{
+    m_account->client()->cancelInvitation(orgId, invitationId, [done](const AuthClient::Response& response) {
+        done(response.isSuccess(), responseError(response));
+    });
+}
+
+QString ServiceAccountAdmin::invitationToken(const QString& linkOrToken)
+{
+    auto text = linkOrToken.trimmed();
+    // The link carries the token in its fragment: KPX_INVITATION_URL#token=kpx_inv_… (SPEC §12)
+    const auto marker = text.indexOf(QStringLiteral("token="));
+    if (marker >= 0) {
+        text = text.mid(marker + 6);
+        text = text.left(text.indexOf('&') < 0 ? text.size() : text.indexOf('&'));
+        text = QUrl::fromPercentEncoding(text.toUtf8()).trimmed();
+    }
+    static const QRegularExpression pattern(QStringLiteral("^kpx_inv_[A-Za-z0-9_-]+={0,2}$"));
+    return pattern.match(text).hasMatch() ? text : QString();
+}
+
+void ServiceAccountAdmin::acceptInvitation(const QString& linkOrToken, Done done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked || m_account->isServiceAccount()) {
+        done(false, tr("Unlock your account first."));
+        return;
+    }
+    const auto token = invitationToken(linkOrToken);
+    if (token.isEmpty()) {
+        done(false, tr("This isn't an invitation link or code. Paste the link from the invitation email."));
+        return;
+    }
+    QPointer<ServiceAccountAdmin> guard(this);
+    m_account->client()->acceptInvitation(token, [guard, done](const AuthClient::Response& response) {
+        if (response.status == 410) {
+            done(false, tr("The invitation was already used or has expired. Ask for a new one."));
+            return;
+        }
+        if (response.status == 403) {
+            done(false, tr("The invitation is for another email address. Sign in with that account to accept it."));
+            return;
+        }
+        if (response.status == 409) {
+            done(false, tr("You are already a member of this organization."));
+            return;
+        }
+        if (!response.isSuccess()) {
+            done(false, AuthClient::errorMessage(response));
+            return;
+        }
+        if (guard && guard->m_account) {
+            guard->m_account->reloadVaults();
+        }
+        done(true, {});
     });
 }
 

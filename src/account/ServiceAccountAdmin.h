@@ -19,6 +19,7 @@
 #define KEEPASSXC_SERVICEACCOUNTADMIN_H
 
 #include "AccountCrypto.h"
+#include "AccountManager.h"
 
 #include <QDateTime>
 #include <QHash>
@@ -28,11 +29,15 @@
 
 #include <functional>
 
-class AccountManager;
-
 /**
- * Org administration for owners and admins: service accounts, their secrets and vault grants, and the
- * org's audit log (docs/plans/accounts/openapi.yaml, SPEC §9).
+ * Org administration (docs/plans/accounts/openapi.yaml, SPEC §9 and §12): creating an org, its members
+ * (invitations, confirming, roles, removing), its service accounts with their secrets and vault grants,
+ * and the org's audit log. Everything but creating an org and accepting an invitation needs an owner
+ * or admin.
+ *
+ * Owners and admins hold every org vault with manage and the master key of every service account, so
+ * confirming or promoting one seals those keys to them here; removing a member rotates the keys of the
+ * vaults they could open.
  *
  * Everything secret is made here, on the client: the SA keyset, its master key, which is sealed to every
  * owner and admin of the org, and each secret with its `kek`. The token `kpx_sa_…` that carries a secret
@@ -44,17 +49,7 @@ class ServiceAccountAdmin : public QObject
     Q_OBJECT
 
 public:
-    struct Org
-    {
-        QString id;
-        QString name;
-        QString role;
-
-        bool canAdminister() const
-        {
-            return role == "owner" || role == "admin";
-        }
-    };
+    using Org = AccountManager::Org;
 
     struct Member
     {
@@ -74,6 +69,15 @@ public:
         {
             return role == "owner" || role == "admin";
         }
+    };
+
+    struct Invitation
+    {
+        QString id;
+        QString email;
+        QString role;
+        QDateTime expiresAt;
+        QString invitedBy;
     };
 
     struct ServiceAccount
@@ -112,7 +116,12 @@ public:
     };
 
     using Done = std::function<void(bool ok, const QString& error)>;
+    using OrgCallback = std::function<void(const Org& org, const QString& error)>;
     using OrgsCallback = std::function<void(const QList<Org>& orgs, const QString& error)>;
+    using InvitationsCallback = std::function<void(const QList<Invitation>& invitations, const QString& error)>;
+    // The vaults that got a new key, and "vault name: error" for each one that couldn't be rotated
+    using RemoveCallback =
+        std::function<void(const QStringList& rotated, const QStringList& failed, const QString& error)>;
     using MembersCallback = std::function<void(const QList<Member>& members, const QString& error)>;
     using ListCallback = std::function<void(const QList<ServiceAccount>& accounts, const QString& error)>;
     using SecretsCallback = std::function<void(const QList<Secret>& secrets, const QString& error)>;
@@ -124,8 +133,31 @@ public:
 
     explicit ServiceAccountAdmin(AccountManager* account, QObject* parent = nullptr);
 
+    // A new org with this account as its owner
+    void createOrg(const QString& name, OrgCallback done);
+    // The orgs this account is a confirmed member of
     void loadOrgs(OrgsCallback done);
     void listMembers(const QString& orgId, MembersCallback done);
+    // The roles a member with `role` can give: only owners make owners
+    static QStringList assignableRoles(const QString& role);
+    static bool isManagerRole(const QString& role);
+    // A new org role. Promoting a confirmed member to owner or admin seals the master key of every service
+    // account this account holds to them and grants them manage on every org vault it manages; demoting
+    // to member makes the server drop their master keys (SPEC §12).
+    void setMemberRole(const QString& orgId, const Member& member, const QString& role, Done done);
+    // Remove a member (or leave, for oneself), then rotate every org vault the server flagged
+    // (rotation_required) that this account manages, so the old keys open nothing new
+    void removeMember(const QString& orgId, const QString& userId, RemoveCallback done);
+
+    // Invitations by email (SPEC §12): pending ones can be listed and cancelled
+    void listInvitations(const QString& orgId, InvitationsCallback done);
+    void invite(const QString& orgId, const QString& email, const QString& role, Done done);
+    void cancelInvitation(const QString& orgId, const QString& invitationId, Done done);
+    // Accept an invitation from its link (…#token=kpx_inv_…) or the bare token. The member then waits for
+    // an owner or admin to confirm them before they get any keys.
+    void acceptInvitation(const QString& linkOrToken, Done done);
+    // The kpx_inv_ token in a pasted link or token, empty when there is none
+    static QString invitationToken(const QString& linkOrToken);
     // Confirm an accepted member. Owners and admins get every org vault with manage and the master key of
     // every service account; a regular member gets the vaults in `vaults` (vault id -> read or write),
     // which the admin picks. Keys are sealed only to a member whose public keys are self-signed.
@@ -155,6 +187,13 @@ public:
     static constexpr int AuditPageSize = 50;
 
 private:
+    // Every SA master key of the org this account holds, sealed to `member` (SaMasterGrant)
+    void sealMasterKeys(const QString& orgId,
+                        const Member& member,
+                        std::function<void(const QJsonArray& masterKeys, const QString& error)> done);
+    // Manage on every org vault this account manages, for a new owner or admin
+    void grantManagedVaults(const QString& orgId, const Member& member, Done done);
+
     // {id, name, secret_hash, prefix, wrapped_master, expires_at} and the token for it
     QJsonObject newSecret(const QString& saId,
                           const AccountCrypto::SecureBytes& master,

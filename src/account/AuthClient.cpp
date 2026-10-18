@@ -278,9 +278,60 @@ void AuthClient::activateKey(const QString& vaultId, int keyVersion, Callback ca
          true);
 }
 
+void AuthClient::createOrg(const QString& name, Callback callback)
+{
+    post("orgs", {{"name", name}}, std::move(callback), true);
+}
+
 void AuthClient::orgMembers(const QString& orgId, Callback callback)
 {
     get("orgs/" + encoded(orgId) + "/members", std::move(callback));
+}
+
+void AuthClient::setMemberRole(const QString& orgId,
+                               const QString& userId,
+                               const QString& role,
+                               const QJsonArray& saMasterKeys,
+                               Callback callback)
+{
+    QJsonObject body{{"role", role}};
+    if (!saMasterKeys.isEmpty()) {
+        body["sa_master_keys"] = saMasterKeys;
+    }
+    sendJson("PATCH", "orgs/" + encoded(orgId) + "/members/" + encoded(userId), body, std::move(callback));
+}
+
+void AuthClient::removeMember(const QString& orgId, const QString& userId, Callback callback)
+{
+    request("DELETE",
+            endpoint("orgs/" + encoded(orgId) + "/members/" + encoded(userId)),
+            {},
+            true,
+            std::move(callback));
+}
+
+void AuthClient::listInvitations(const QString& orgId, Callback callback)
+{
+    get("orgs/" + encoded(orgId) + "/invitations", std::move(callback));
+}
+
+void AuthClient::invite(const QString& orgId, const QString& email, const QString& role, Callback callback)
+{
+    post("orgs/" + encoded(orgId) + "/invitations", {{"email", email}, {"role", role}}, std::move(callback), true);
+}
+
+void AuthClient::cancelInvitation(const QString& orgId, const QString& invitationId, Callback callback)
+{
+    request("DELETE",
+            endpoint("orgs/" + encoded(orgId) + "/invitations/" + encoded(invitationId)),
+            {},
+            true,
+            std::move(callback));
+}
+
+void AuthClient::acceptInvitation(const QString& token, Callback callback)
+{
+    post("invitations/accept", {{"token", token}}, std::move(callback), true);
 }
 
 void AuthClient::confirmMember(const QString& orgId,
