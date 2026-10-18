@@ -584,6 +584,39 @@ void TestVaultSharing::testIssuesAndRevokesSecrets()
     QVERIFY(ok);
     QCOMPARE(f.server->secrets.size(), 1);
 
+    // Change the remaining secret's expiry, then remove it again; the token isn't touched
+    const auto remaining = f.server->secrets.constBegin().key();
+    const auto secretExpires = QDateTime::currentDateTimeUtc().addDays(7);
+    finished = false;
+    sas.setSecretExpiry(account.id, remaining, secretExpires, [&](bool result, const QString&) {
+        ok = result;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY(ok);
+    QCOMPARE(f.server->secrets.value(remaining).expiresAt.toString(), secretExpires.toString(Qt::ISODate));
+    finished = false;
+    sas.setSecretExpiry(account.id, remaining, {}, [&](bool result, const QString&) {
+        ok = result;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY(ok);
+    QVERIFY(f.server->secrets.value(remaining).expiresAt.isNull());
+    QVERIFY(f.server->requests.contains("PATCH service-accounts/" + account.id + "/secrets/" + remaining));
+
+    // An unknown secret is an error, not a silent success
+    finished = false;
+    QString patchError;
+    sas.setSecretExpiry(account.id, "00000000-0000-4000-8000-000000000000", {}, [&](bool result, const QString& e) {
+        ok = result;
+        patchError = e;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY(!ok);
+    QVERIFY(!patchError.isEmpty());
+
     // An expiry for the whole service account
     finished = false;
     const auto expires = QDateTime::currentDateTimeUtc().addDays(1);

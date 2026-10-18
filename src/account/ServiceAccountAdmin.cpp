@@ -441,6 +441,17 @@ void ServiceAccountAdmin::issueSecret(const QString& saId,
         });
 }
 
+void ServiceAccountAdmin::setSecretExpiry(const QString& saId,
+                                          const QString& secretId,
+                                          const QDateTime& expiresAt,
+                                          Done done)
+{
+    m_account->client()->updateServiceAccountSecret(
+        saId, secretId, {{"expires_at", timestampJson(expiresAt)}}, [done](const AuthClient::Response& response) {
+            done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
+        });
+}
+
 void ServiceAccountAdmin::revokeSecret(const QString& saId, const QString& secretId, Done done)
 {
     m_account->client()->revokeServiceAccountSecret(saId, secretId, [done](const AuthClient::Response& response) {

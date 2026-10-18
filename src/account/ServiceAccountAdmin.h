@@ -143,6 +143,8 @@ public:
     void listSecrets(const QString& saId, SecretsCallback done);
     // Another secret for the SA: needs this admin's sealed copy of its master key
     void issueSecret(const QString& saId, const QString& name, const QDateTime& expiresAt, TokenCallback done);
+    // When one secret stops working (invalid: never); its token stays the same
+    void setSecretExpiry(const QString& saId, const QString& secretId, const QDateTime& expiresAt, Done done);
     void revokeSecret(const QString& saId, const QString& secretId, Done done);
 
     // Seal the vault's current key to the SA and grant it `role` (read or write)
