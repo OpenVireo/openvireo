@@ -41,6 +41,7 @@ private slots:
     void testRestoreSessionAfterRestart();
     void testAccountVaultUsesTokenProvider();
     void testParsesAccountEvents();
+    void testServerConfigWebUrl();
 };
 
 #endif // KEEPASSXC_TESTACCOUNTMANAGER_H

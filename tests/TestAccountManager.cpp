@@ -1128,3 +1128,21 @@ void TestAccountManager::testParsesAccountEvents()
     // The partial event waits for the rest
     QVERIFY(buffer.startsWith("event: vault"));
 }
+
+void TestAccountManager::testServerConfigWebUrl()
+{
+    auto json = QJsonObject{{"issuer", "http://localhost:8000"},
+                            {"api", "http://localhost:8000/api/v1"},
+                            {"sync", "http://localhost:8787/api/v1"},
+                            {"web", "http://localhost:3000"}};
+    auto config = AccountManager::ServerConfig::fromJson(json);
+    QCOMPARE(config.web, QString("http://localhost:3000"));
+    QCOMPARE(config.accountSettingsUrl(), QUrl("http://localhost:3000/?view=account"));
+    // Kept with the stored session
+    QCOMPARE(AccountManager::ServerConfig::fromJson(config.toJson()).web, config.web);
+
+    json.remove("web");
+    QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
+    json["web"] = "javascript:alert(1)";
+    QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
+}
