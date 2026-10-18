@@ -1146,3 +1146,39 @@ void TestAccountManager::testServerConfigWebUrl()
     json["web"] = "javascript:alert(1)";
     QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
 }
+
+void TestAccountManager::testFollowsAnEmailChangedElsewhere()
+{
+    Fixture fixture;
+    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    QString accountId;
+    {
+        auto* manager = fixture.manager(nullptr);
+        manager->signIn(Email, Password);
+        QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+        accountId = manager->accountId();
+        delete manager;
+    }
+    const auto secretKey = AccountManager::storedSecretKey(ServerId, Email);
+    QVERIFY(!secretKey.isEmpty());
+
+    // The email changed in the web app; /me now reports the new one
+    const QString newEmail("alice.new@example.com");
+    fixture.server->users[Email.toLower()].email = newEmail;
+
+    auto* manager = fixture.manager(this);
+    QSignalSpy changed(manager, &AccountManager::emailChanged);
+    QVERIFY(manager->restoreSession(accountId));
+    manager->unlock(Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QCOMPARE(changed.count(), 1);
+    QCOMPARE(manager->email(), newEmail);
+    QCOMPARE(AccountManager::storedSecretKey(ServerId, newEmail), secretKey);
+    QVERIFY(AccountManager::storedSecretKey(ServerId, Email).isEmpty());
+
+    // The stored session has the new email too
+    auto* restored = fixture.manager(this);
+    QVERIFY(restored->restoreSession(accountId));
+    QCOMPARE(restored->email(), newEmail);
+}
+

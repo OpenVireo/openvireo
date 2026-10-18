@@ -221,6 +221,8 @@ signals:
     void accessTokenChanged();
     void vaultsChanged();
     void orgsChanged();
+    // The account's email changed, e.g. in the web app (SPEC §16)
+    void emailChanged();
     // A vault's blob changed on the sync server
     void vaultChanged(const SyncEventStream::Event& event);
     void error(const QString& message);
@@ -235,6 +237,7 @@ private:
                       const QJsonObject& wrappedKeyset,
                       std::function<void(bool ok, const QString& error)> done);
     void finishUnlock();
+    void followEmail(const QString& email);
     void reloadOrgs();
     QUuid quickUnlockId() const;
     void rememberAuk(const SecureBytes& auk);
