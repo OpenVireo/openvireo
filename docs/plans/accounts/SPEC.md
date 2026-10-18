@@ -17,6 +17,9 @@ spec is wrong, report it; don't change one implementation on its own.
 - **AEAD** is XChaCha20-Poly1305 (24-byte nonce, 16-byte tag), the libsodium
   `crypto_aead_xchacha20poly1305_ietf` construction. Nonces are random for every encryption.
 - **Constant time:** compare MACs, hashes and tokens with constant-time functions.
+- **Transport:** v1 clients accept `http://` as well as `https://` issuer, API and sync URLs (decided
+  2026-10-17, for local and self-hosted setups); hosted deployments use https. Requiring https is
+  left for a later version.
 - **Zeroing:** clients clear private keys, the AUK and vault keys from memory when they lock
   (Qt: `Botan::secure_vector`/`SecureVector`; TS: `.fill(0)` once done, best effort).
 
@@ -227,6 +230,9 @@ The sync server's `GET /api/v1/events` is the only event stream. With a JWT:
 - The sync server ends a JWT stream when its token's `exp` passes (exactly `exp`, without the
   skew allowance), and the client reconnects with a fresh token. Browsers must read the stream with
   `fetch`, because `EventSource` can't send an `Authorization` header.
+- Clients send only CORS-allowed request headers on the stream (`Authorization`, plus the
+  safelisted `Accept`), never `Cache-Control`: a browser would need a preflight the sync server
+  refuses. Browsers ask `fetch` for `cache: "no-store"` instead.
 - Legacy device-token streams keep sending `event: database` unchanged.
 - History: `GET {sync}/vaults/{id}/history` returns `{"versions":[BlobMeta…]}` and
   `GET {sync}/vaults/{id}/history/{revision}` returns that version's bytes (role `read`), as for
@@ -246,6 +252,22 @@ An org invitation token is `kpx_inv_` + base64url(32 random bytes); the server s
 SHA-256. It reaches the invitee only by email, as a link to `KPX_INVITATION_URL#token=<token>` (in
 the fragment, so it never reaches a server log), and is accepted with `POST /api/v1/invitations/accept`.
 
+### Confirming members
+
+Confirming an accepted member (`POST /orgs/{org}/members/{user}/confirm`, owner/admin) sends
+`grants` as `VaultGrant`s (each names its `vault_id`) sealed to the member at each vault's current
+key version, after the client checks the member's key signature (§5):
+
+- an **owner or admin** gets every org vault the confirming client manages, with role `manage`,
+  plus `sa_master_keys` for every org service account whose master key that client holds;
+- a **member** gets only the vaults the admin picks, with the role picked for each, and no SA master
+  keys. An empty list is valid: the member then sees no vault until one is shared.
+
+Promoting a confirmed member to owner/admin (`PATCH …/members/{user}`) carries the same
+`sa_master_keys` and is followed by `manage` grants on the same vaults; demoting to member drops
+their SA master keys on the server. Removing a member flags the org vaults they could open
+(`rotation_required`), and a client with `manage` rotates each one (§7).
+
 ## 13. Modes
 
 | `SYNC_AUTH_MODE` | Accepted tokens | Routes |
@@ -261,3 +283,52 @@ exist (unlike legacy databases, which can be created without a header). The sync
 vault blobs under `<data>/vaults/<uuid>.kdbx` on disk and the `_vaults/` prefix in S3; the
 exact layout is up to the server. Legacy namespaces (`databases/{id}`
 under a user) and vault blobs (`vaults/{id}`) never share storage keys.
+
+## 14. Secret references
+
+`kpx://<vault>/[<group>/…]<entry>/<field>` names one field; without `/<field>` it names a whole entry
+(an *item*, for `kpx item` and `kpx connect`).
+
+- Segments are split on `/` and then percent-decoded (UTF-8), so a `/` inside a name is `%2F`. An
+  empty segment is an error (`invalid_reference`).
+- `<vault>` is a vault id, or else a vault name that must match exactly one vault the principal can
+  open (two vaults with that name → error; use the id).
+- Group segments are matched by exact name, one level at a time from the vault's root group.
+- `<entry>` is an entry UUID (32 hex digits, with or without dashes, or KDBX base64), or else a title
+  that must match exactly one entry under that group, recursively, outside the Recycle Bin.
+- `<field>` is a field name: an exact match first, then the aliases `title`, `username`/`user`,
+  `password`, `url`, `notes` (any case) for the standard fields, then a case-insensitive match.
+- In templates (`kpx inject`) a bare reference runs up to whitespace, a quote, a backtick or `}`;
+  `{{ kpx://… }}` (any spacing inside the braces) delimits one followed by other text.
+
+## 15. Service-account tools
+
+**`kpx run --env-file`** reads a `.env` file: `KEY=value` lines, an optional `export ` prefix, `#`
+comments, `"double quotes"` (escapes `\n`, `\t`, `\"`, `\\`; may span lines) and `'single quotes'`
+(literal). A value that is a reference, or contains `{{ … }}` references, is resolved. Variables
+already in the environment are resolved the same way. The child never receives
+`KPX_SERVICE_ACCOUNT_TOKEN`, `KPX_PASSWORD` or `KPX_SECRET_KEY`.
+
+**Masking:** every resolved value, and every line of 4 or more characters of a multi-line value, is
+replaced by `<concealed by kpx>` in the child's stdout and stderr, including when a value is split
+across writes.
+
+**`kpx connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
+sync API and lives in `kpnx-sdk/packages/connect`.
+
+- Its bearer tokens are `kpx_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
+  token) is configured, as `{name, sha256, vaults, access}`: `vaults` lists vault ids or names, or
+  `"*"`, and `access` is `read` or `write`. They are unrelated to the SA token.
+- Routes: `GET /health` and `GET /ready` (no auth); `GET /v1/vaults`, `GET /v1/vaults/{vault}`;
+  `GET /v1/vaults/{vault}/items` (no values); `GET /v1/vaults/{vault}/items/{group/…/entry}` (with
+  `?field=<name>` → `{"value"}`, or the raw value for `Accept: text/plain`); and
+  `PUT /v1/vaults/{vault}/items/{group/…/entry}` with `{"fields":{…},"protected":{name:true}}`, which
+  creates (201) or updates (200) the entry, keeping history (`?create=false` → update only). A PUT
+  needs a `write` token and a `write` grant, and goes through the conditional PUT with merge and
+  retry (§11, 412).
+- `{vault}` and `{entry}` resolve as in §14. A vault outside a token's scope answers 404, as an unknown
+  one does. Errors use the `{"error","code"}` format with the auth API's codes, plus
+  `upstream_unauthorized`/`upstream_error` (502) when the auth or sync server refuses the SA.
+  Responses carry `Cache-Control: no-store`.
+- Service accounts download the whole vault, as every client does; connect reuses a downloaded copy
+  for a configured time and then checks it with a conditional HEAD.
