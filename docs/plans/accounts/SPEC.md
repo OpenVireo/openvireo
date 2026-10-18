@@ -221,8 +221,10 @@ kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b6
 {"issuer":"https://accounts.keepassxc.org","api":"https://accounts.keepassxc.org/api/v1",
  "sync":"https://sync.keepassxc.org/api/v1","jwks_uri":"https://accounts.keepassxc.org/.well-known/jwks.json",
  "opaque":{"lib":"libopaque","version":"1.0.1-6e9ac92","context":"kpx-opaque-v1","ids":"accounts.keepassxc.org"},
- "kdf_min":{"m":19456,"t":2}}
+ "kdf_min":{"m":19456,"t":2},"web":"https://app.keepassxc.org"}
 ```
+
+`web` is the web app's URL (§16). It is optional; clients that don't find it hide "Manage account".
 
 ## 11. Events
 
@@ -339,3 +341,25 @@ sync API and lives in `kpnx-sdk/packages/connect`.
   Responses carry `Cache-Control: no-store`.
 - Service accounts download the whole vault, as every client does; connect reuses a downloaded copy
   for a configured time and then checks it with a conditional HEAD.
+
+## 16. Web account and settings
+
+The auth website (billing, locale, admin) has no password form and never sees a password or the
+Secret Key. Everything that needs the AUK lives in a client: the web app's **Account** page
+(`{web}/?view=account`) changes the master password (`/me/password/*`, keyset re-wrapped, same
+public keys), turns TOTP on and off, lists and revokes devices, and downloads the Emergency Kit again
+from the Secret Key stored on the device. Qt's "Manage account…" opens that page in the browser.
+The email can't be changed in v1 (it is OPAQUE's `idU`).
+
+- **Sign-in and sign-up** on the auth website redirect to `{web}/?view=signin` or `?view=signup`,
+  with `&return=<path>` when a page on the auth website asked for it. The web app signs in as usual
+  (first sign-in on a device needs the Secret Key) and then hands the session over as below.
+- **Handover:** `POST /api/v1/me/web-session` (user token) returns `{"code","expires_in":60}`, where
+  `code` is `kpx_ws_` + base64url(32 random bytes); the server keeps `SHA-256(utf8(code))` for 60
+  seconds, bound to the user. The client then navigates the browser to
+  `{issuer}/session/claim?code=<code>&next=<path>`. The auth website consumes the code once, sets
+  its cookie session and redirects to `next` if it is a path on the auth website (`/settings`
+  otherwise). An unknown, used or expired code goes to sign-in.
+- Accounts made before this (a password hash and no OPAQUE record) can't sign in anywhere and are
+  deleted; admins are account users whose role is set with `flask users role <email> admin`.
+
