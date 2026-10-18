@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>460</width>
-    <height>560</height>
+    <width>760</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="accessibleName">
@@ -15,341 +15,62 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
-    <number>12</number>
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
    <item>
-    <spacer name="topSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>0</width>
-       <height>20</height>
-      </size>
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-    </spacer>
-   </item>
-   <item>
-    <widget class="QLabel" name="titleLabel">
-     <property name="text">
-      <string>Welcome to KeePassXC</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="MessageWidget" name="messageWidget" native="true"/>
-   </item>
-   <item>
-    <widget class="QStackedWidget" name="pages">
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="QWidget" name="signInPage">
-      <layout class="QVBoxLayout" name="signInLayout">
+     <widget class="QWidget" name="scrollContents">
+      <layout class="QVBoxLayout" name="scrollLayout">
        <property name="spacing">
-        <number>8</number>
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>16</number>
+       </property>
+       <property name="topMargin">
+        <number>32</number>
+       </property>
+       <property name="rightMargin">
+        <number>16</number>
+       </property>
+       <property name="bottomMargin">
+        <number>32</number>
        </property>
        <item>
-        <widget class="QLabel" name="signInIntro">
-         <property name="text">
-          <string>Sign in to your KeePassXC account to open your vaults on this device.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QFormLayout" name="signInForm">
-         <item row="0" column="0">
-          <widget class="QLabel" name="emailLabel">
-           <property name="text">
-            <string>Email:</string>
-           </property>
-           <property name="buddy">
-            <cstring>emailEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="VaultLineEdit" name="emailEdit">
-           <property name="accessibleName">
-            <string>Email</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="passwordLabel">
-           <property name="text">
-            <string>Master password:</string>
-           </property>
-           <property name="buddy">
-            <cstring>passwordEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="VaultLineEdit" name="passwordEdit">
-           <property name="echoMode">
-            <enum>QLineEdit::Password</enum>
-           </property>
-           <property name="accessibleName">
-            <string>Master password</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="secretKeyLabel">
-           <property name="text">
-            <string>Secret Key:</string>
-           </property>
-           <property name="buddy">
-            <cstring>secretKeyEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="VaultLineEdit" name="secretKeyEdit">
-           <property name="accessibleName">
-            <string>Secret Key</string>
-           </property>
-           <property name="placeholderText">
-            <string>K1-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QLabel" name="secretKeyHint">
-           <property name="text">
-            <string>This device hasn't signed in to this account before. Your Secret Key is in your Emergency Kit.</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="serverLabel">
-           <property name="text">
-            <string>Server:</string>
-           </property>
-           <property name="buddy">
-            <cstring>serverEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="VaultLineEdit" name="serverEdit">
-           <property name="accessibleName">
-            <string>Account server</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="signInButtons">
-         <item>
-          <widget class="VaultButton" name="createAccountButton">
-           <property name="text">
-            <string>Create account…</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="signInButtonsSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="VaultButton" name="signInButton">
-           <property name="text">
-            <string>Sign in</string>
-           </property>
-           <property name="default">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="Line" name="separator">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="VaultButton" name="selfHostedButton">
-         <property name="text">
-          <string>Use my own sync server…</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="VaultButton" name="localButton">
-         <property name="text">
-          <string>Use without an account</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="localHint">
-         <property name="text">
-          <string>Your databases stay on this device, protected by their own master passwords. You can sign in later.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="mfaPage">
-      <layout class="QVBoxLayout" name="mfaLayout">
-       <item>
-        <widget class="QLabel" name="mfaIntro">
-         <property name="text">
-          <string>Enter the 6-digit code from your authenticator app.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="VaultLineEdit" name="mfaCodeEdit">
-         <property name="accessibleName">
-          <string>Authentication code</string>
-         </property>
-         <property name="maxLength">
-          <number>6</number>
-         </property>
-         <property name="placeholderText">
-          <string>123456</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="mfaButtons">
-         <item>
-          <widget class="VaultButton" name="mfaCancelButton">
-           <property name="text">
-            <string>Back</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="mfaButtonsSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="VaultButton" name="mfaVerifyButton">
-           <property name="text">
-            <string>Verify</string>
-           </property>
-           <property name="default">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <spacer name="mfaSpacer">
+        <spacer name="topSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
          </property>
         </spacer>
        </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="selfHostedPage">
-      <layout class="QVBoxLayout" name="selfHostedLayout">
        <item>
-        <widget class="QLabel" name="selfHostedIntro">
-         <property name="text">
-          <string>Sync your databases with your own KeePassXC sync server. Enter its URL and a pairing code from another device or from the server's admin. Your databases keep their master passwords.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QFormLayout" name="selfHostedForm">
-         <item row="0" column="0">
-          <widget class="QLabel" name="selfHostedUrlLabel">
-           <property name="text">
-            <string>Server URL:</string>
-           </property>
-           <property name="buddy">
-            <cstring>selfHostedUrlEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="VaultLineEdit" name="selfHostedUrlEdit">
-           <property name="accessibleName">
-            <string>Sync server URL</string>
-           </property>
-           <property name="placeholderText">
-            <string>https://sync.example.com</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="pairingCodeLabel">
-           <property name="text">
-            <string>Pairing code:</string>
-           </property>
-           <property name="buddy">
-            <cstring>pairingCodeEdit</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="VaultLineEdit" name="pairingCodeEdit">
-           <property name="accessibleName">
-            <string>Pairing code</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="selfHostedButtons">
+        <layout class="QHBoxLayout" name="centerRow">
          <item>
-          <widget class="VaultButton" name="selfHostedBackButton">
-           <property name="text">
-            <string>Back</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="selfHostedButtonsSpacer">
+          <spacer name="leftSpacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -362,41 +83,794 @@
           </spacer>
          </item>
          <item>
-          <widget class="VaultButton" name="pairButton">
-           <property name="text">
-            <string>Connect</string>
+          <widget class="QWidget" name="column">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="default">
-            <bool>true</bool>
+           <property name="maximumSize">
+            <size>
+             <width>488</width>
+             <height>16777215</height>
+            </size>
            </property>
+           <layout class="QVBoxLayout" name="columnLayout">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="logoLabel">
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="logoSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="titleLabel">
+              <property name="text">
+               <string>KeePassXC</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="subtitleLabel">
+              <property name="text">
+               <string>Your passwords, encrypted on this device</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="subtitleSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="MessageWidget" name="messageWidget" native="true"/>
+            </item>
+            <item>
+             <widget class="QFrame" name="card">
+              <layout class="QVBoxLayout" name="cardLayout">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="leftMargin">
+                <number>32</number>
+               </property>
+               <property name="topMargin">
+                <number>32</number>
+               </property>
+               <property name="rightMargin">
+                <number>32</number>
+               </property>
+               <property name="bottomMargin">
+                <number>28</number>
+               </property>
+               <item>
+                <widget class="QStackedWidget" name="pages">
+                 <property name="currentIndex">
+                  <number>0</number>
+                 </property>
+                 <widget class="QWidget" name="signInPage">
+                  <layout class="QVBoxLayout" name="signInLayout">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="signInHeading">
+                     <property name="text">
+                      <string>Sign in</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="signInIntro">
+                     <property name="text">
+                      <string>Your vaults sync between KeePassXC on your computers and KeePass Web.</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="signInIntroSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="emailLabel">
+                     <property name="text">
+                      <string>Email</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>emailEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="emailEdit">
+                     <property name="accessibleName">
+                      <string>Email</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="emailSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>16</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="passwordLabel">
+                     <property name="text">
+                      <string>Master password</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>passwordEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="passwordEdit">
+                     <property name="echoMode">
+                      <enum>QLineEdit::Password</enum>
+                     </property>
+                     <property name="accessibleName">
+                      <string>Master password</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="secretKeyLabel">
+                     <property name="text">
+                      <string>Secret Key</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>secretKeyEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="secretKeyEdit">
+                     <property name="accessibleName">
+                      <string>Secret Key</string>
+                     </property>
+                     <property name="placeholderText">
+                      <string>K1-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="secretKeyHint">
+                     <property name="text">
+                      <string>This device hasn't signed in to this account before. Your Secret Key is in your Emergency Kit.</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="passwordSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>12</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="secretKeyLink">
+                     <property name="alignment">
+                      <set>Qt::AlignCenter</set>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                     <property name="accessibleName">
+                      <string>Enter your Secret Key</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="secretKeyLinkSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>14</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="serverRow">
+                     <property name="spacing">
+                      <number>6</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="serverIcon"/>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="serverLabel">
+                       <property name="text">
+                        <string>Server</string>
+                       </property>
+                       <property name="buddy">
+                        <cstring>serverEdit</cstring>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="AccountStartElidedLabel" name="serverValueLabel"/>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="serverChangeLink">
+                       <property name="accessibleName">
+                        <string>Change server</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <spacer name="serverRowSpacer">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>0</width>
+                         <height>0</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="serverEdit">
+                     <property name="accessibleName">
+                      <string>Account server</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="serverSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="signInButton">
+                     <property name="text">
+                      <string>Sign in</string>
+                     </property>
+                     <property name="default">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="signInButtonSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>12</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="createAccountButton">
+                     <property name="text">
+                      <string>Create account</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                 <widget class="QWidget" name="mfaPage">
+                  <layout class="QVBoxLayout" name="mfaLayout">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="mfaHeading">
+                     <property name="text">
+                      <string>Two-step verification</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="mfaIntro">
+                     <property name="text">
+                      <string>Enter the 6-digit code from your authenticator app.</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="mfaIntroSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="mfaCodeLabel">
+                     <property name="text">
+                      <string>Authentication code</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>mfaCodeEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="mfaCodeEdit">
+                     <property name="accessibleName">
+                      <string>Authentication code</string>
+                     </property>
+                     <property name="maxLength">
+                      <number>6</number>
+                     </property>
+                     <property name="placeholderText">
+                      <string>123456</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="mfaCodeSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="mfaVerifyButton">
+                     <property name="text">
+                      <string>Verify</string>
+                     </property>
+                     <property name="default">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="mfaVerifySpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>12</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="mfaCancelButton">
+                     <property name="text">
+                      <string>Back</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                 <widget class="QWidget" name="selfHostedPage">
+                  <layout class="QVBoxLayout" name="selfHostedLayout">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="selfHostedHeading">
+                     <property name="text">
+                      <string>Use my own sync server</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="selfHostedIntro">
+                     <property name="text">
+                      <string>Sync your databases with your own KeePassXC sync server. Enter its URL and a pairing code from another device or from the server's admin. Your databases keep their master passwords.</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="selfHostedIntroSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="selfHostedUrlLabel">
+                     <property name="text">
+                      <string>Server URL</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>selfHostedUrlEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="selfHostedUrlEdit">
+                     <property name="accessibleName">
+                      <string>Sync server URL</string>
+                     </property>
+                     <property name="placeholderText">
+                      <string>https://sync.example.com</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="selfHostedUrlSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>16</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="pairingCodeLabel">
+                     <property name="text">
+                      <string>Pairing code</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>pairingCodeEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="VaultLineEdit" name="pairingCodeEdit">
+                     <property name="accessibleName">
+                      <string>Pairing code</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="pairingCodeSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="pairButton">
+                     <property name="text">
+                      <string>Connect</string>
+                     </property>
+                     <property name="default">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="pairButtonSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>12</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="VaultButton" name="selfHostedBackButton">
+                     <property name="text">
+                      <string>Back</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="optionsWidget">
+              <layout class="QVBoxLayout" name="optionsLayout">
+               <property name="spacing">
+                <number>8</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>16</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="AccountStartOptionButton" name="selfHostedButton">
+                 <property name="text">
+                  <string>Use my own sync server</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="AccountStartOptionButton" name="localButton">
+                 <property name="text">
+                  <string>Use without an account</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="privacyRow">
+                 <property name="spacing">
+                  <number>8</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>16</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="privacyIcon">
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignTop</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="localHint">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Only encrypted blobs and sealed keys leave this device. Without an account, nothing leaves it at all.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="busyLabel">
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
+         </item>
+         <item>
+          <spacer name="rightSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
        <item>
-        <spacer name="selfHostedSpacer">
+        <spacer name="bottomSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
          </property>
         </spacer>
        </item>
       </layout>
      </widget>
     </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="busyLabel">
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <spacer name="bottomSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>
@@ -416,6 +890,16 @@
    <class>VaultLineEdit</class>
    <extends>QLineEdit</extends>
    <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>AccountStartElidedLabel</class>
+   <extends>QLabel</extends>
+   <header>gui/account/AccountStartWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>AccountStartOptionButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/account/AccountStartWidget.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

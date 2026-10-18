@@ -717,7 +717,9 @@ void MainWindow::setupAccounts()
     m_startScreen->setObjectName("accountStartScreen");
     m_startScreen->setController(m_accountController);
     m_startScreen->setVisible(false);
-    m_ui->horizontalLayout->insertWidget(m_ui->horizontalLayout->indexOf(m_ui->welcomeWidget), m_startScreen);
+    // It fills the page and centers its own column, rather than taking only its preferred width between the
+    // welcome screen's spacers
+    m_ui->verticalLayout_5->insertWidget(0, m_startScreen, 1);
     connect(m_startScreen, &AccountStartWidget::finished, this, &MainWindow::finishStartScreen);
     connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
 
