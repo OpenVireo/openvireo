@@ -76,6 +76,9 @@ public:
     static bool hasCredentials(const RemoteParams& params);
     // Account vaults of `accountId` use this provider from now on; nullptr when the account signs out
     static void setAccountTokenProvider(const QString& accountId, AccessTokenProvider provider);
+    // The account on this device that holds a vault, whose provider wins over the account id in the vault's
+    // settings: those are synced with the vault, so a vault someone shared names their account. Empty forgets it.
+    static void setVaultAccount(const QString& vaultId, const QString& accountId);
 
     // HEAD with If-None-Match: 304 when the server still has that version
     void check(const QString& etag, Callback callback);

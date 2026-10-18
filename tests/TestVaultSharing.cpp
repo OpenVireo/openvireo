@@ -37,6 +37,8 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <tuple>
+
 QTEST_GUILESS_MAIN(TestVaultSharing)
 
 using namespace AccountCrypto;
@@ -75,9 +77,9 @@ namespace
                 }
                 finished = true;
             });
-            QTest::qWaitFor([&] { return finished; }, 10000);
+            std::ignore = QTest::qWaitFor([&] { return finished; }, 10000);
             // The keyring catches up once the vaults are reloaded
-            QTest::qWaitFor([&] { return alice->keyring().contains(vaultId); }, 5000);
+            std::ignore = QTest::qWaitFor([&] { return alice->keyring().contains(vaultId); }, 5000);
             return vaultId;
         }
     };
@@ -95,7 +97,7 @@ namespace
             }
             finished = true;
         });
-        QTest::qWaitFor([&] { return finished; }, 10000);
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 10000);
         return finished && result;
     }
 
@@ -107,7 +109,7 @@ namespace
             found = recipient;
             finished = true;
         });
-        QTest::qWaitFor([&] { return finished; }, 5000);
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 5000);
         return found;
     }
 
@@ -689,4 +691,102 @@ void TestVaultSharing::testPagesTheAuditLog()
     QTRY_VERIFY(finished);
     QCOMPARE(events.size(), 5);
     QVERIFY(next.isEmpty());
+}
+
+void TestVaultSharing::testConfirmsOrgMembers()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto orgId = f.server->addOrg("Acme", AliceEmail);
+    const auto vaultA = f.createVault("Deploy");
+    const auto vaultB = f.createVault("Finance");
+    for (const auto& id : {vaultA, vaultB}) {
+        f.server->vaults[id].orgId = orgId;
+    }
+    QSignalSpy reloaded(f.alice.data(), &AccountManager::vaultsChanged);
+    f.alice->reloadVaults();
+    QVERIFY(reloaded.wait());
+
+    ServiceAccountAdmin sas(f.alice.data());
+    QCOMPARE(sas.orgVaults(orgId).size(), 2);
+    bool finished = false;
+    ServiceAccountAdmin::ServiceAccount sa;
+    sas.create(
+        orgId, "CI", {}, [&](const ServiceAccountAdmin::ServiceAccount& account, const QString&, const QString&) {
+            sa = account;
+            finished = true;
+        });
+    QTRY_VERIFY(finished);
+
+    QString bob, carol;
+    const auto bobKeys = f.server->addUser("bob@example.com", &bob);
+    const auto carolKeys = f.server->addUser("carol@example.com", &carol);
+    f.server->addOrgMember(orgId, "bob@example.com", "member", "accepted");
+    f.server->addOrgMember(orgId, "carol@example.com", "admin", "accepted");
+
+    QList<ServiceAccountAdmin::Member> members;
+    finished = false;
+    sas.listMembers(orgId, [&](const QList<ServiceAccountAdmin::Member>& list, const QString&) {
+        members = list;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QCOMPARE(members.size(), 3);
+    const auto memberFor = [&](const QString& email) {
+        for (const auto& member : members) {
+            if (member.email == email) {
+                return member;
+            }
+        }
+        return ServiceAccountAdmin::Member();
+    };
+    QVERIFY(memberFor("bob@example.com").verified);
+
+    // A regular member gets the vaults the admin picked, with the picked role
+    bool ok = false;
+    QString error;
+    finished = false;
+    sas.confirmMember(orgId, memberFor("bob@example.com"), {{vaultA, "read"}}, [&](bool result, const QString& e) {
+        ok = result;
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY2(ok, qPrintable(error));
+    QCOMPARE(f.server->roleOf(vaultA, bob), QString("read"));
+    QVERIFY(f.server->roleOf(vaultB, bob).isEmpty());
+    QVERIFY(f.server->vaultKeyFor(vaultA, bob, bobKeys.encSk) == f.alice->keyring().vaultKey(vaultA));
+    QVERIFY(!f.server->serviceAccounts.value(sa.id).masterKeys.contains(bob));
+
+    // An admin gets every org vault with manage, and the service accounts' master keys
+    finished = false;
+    sas.confirmMember(orgId, memberFor("carol@example.com"), {{vaultA, "read"}}, [&](bool result, const QString& e) {
+        ok = result;
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY2(ok, qPrintable(error));
+    QCOMPARE(f.server->roleOf(vaultA, carol), QString("manage"));
+    QCOMPARE(f.server->roleOf(vaultB, carol), QString("manage"));
+    QVERIFY(f.server->vaultKeyFor(vaultB, carol, carolKeys.encSk) == f.alice->keyring().vaultKey(vaultB));
+    SecureBytes master;
+    QVERIFY(unseal(carolKeys.encSk,
+                   fromBase64Url(f.server->serviceAccounts.value(sa.id).masterKeys.value(carol)),
+                   saMasterAad(sa.id),
+                   &master));
+
+    // Keys without a valid signature get nothing
+    auto forged = memberFor("bob@example.com");
+    forged.publicKeys.encPk = generateKeyset().publicKeys.encPk;
+    forged.verified = verifyPublicKeys(forged.publicKeys);
+    finished = false;
+    sas.confirmMember(orgId, forged, {{vaultB, "write"}}, [&](bool result, const QString&) {
+        ok = result;
+        finished = true;
+    });
+    QTRY_VERIFY(finished);
+    QVERIFY(!ok);
+    QVERIFY(f.server->roleOf(vaultB, bob).isEmpty());
 }

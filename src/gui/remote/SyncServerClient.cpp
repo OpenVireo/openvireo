@@ -37,6 +37,18 @@ namespace
     // Account id -> the account's token provider; read from worker threads too (RemoteHandler)
     QMutex g_accountProvidersMutex;
     QHash<QString, AccessTokenProvider> g_accountProviders;
+    // Vault id -> the account on this device that holds it (same mutex)
+    QHash<QString, QString> g_vaultAccounts;
+
+    // The provider for an account vault; call with the mutex held
+    AccessTokenProvider accountProviderLocked(const QString& accountId, const QString& vaultId)
+    {
+        const auto holder = g_vaultAccounts.value(vaultId);
+        if (!holder.isEmpty() && g_accountProviders.contains(holder)) {
+            return g_accountProviders.value(holder);
+        }
+        return g_accountProviders.value(accountId);
+    }
 } // namespace
 
 SyncServerClient::SyncServerClient(const RemoteParams& params, QObject* parent)
@@ -72,12 +84,13 @@ AccessTokenProvider SyncServerClient::tokenProviderFor(const RemoteParams& param
     }
     if (params.type == RemoteParams::Type::AccountVault) {
         const auto accountId = params.accountId;
+        const auto vaultId = params.vaultId;
         // Looked up at each request, so signing in later or again takes effect for existing clients
-        return [accountId](std::function<void(const QString&)> done) {
+        return [accountId, vaultId](std::function<void(const QString&)> done) {
             AccessTokenProvider provider;
             {
                 QMutexLocker locker(&g_accountProvidersMutex);
-                provider = g_accountProviders.value(accountId);
+                provider = accountProviderLocked(accountId, vaultId);
             }
             if (provider) {
                 provider(std::move(done));
@@ -97,7 +110,7 @@ bool SyncServerClient::hasCredentials(const RemoteParams& params)
     }
     if (params.type == RemoteParams::Type::AccountVault) {
         QMutexLocker locker(&g_accountProvidersMutex);
-        return g_accountProviders.contains(params.accountId);
+        return static_cast<bool>(accountProviderLocked(params.accountId, params.vaultId));
     }
     return !params.serverToken.trimmed().isEmpty();
 }
@@ -109,6 +122,16 @@ void SyncServerClient::setAccountTokenProvider(const QString& accountId, AccessT
         g_accountProviders.insert(accountId, std::move(provider));
     } else {
         g_accountProviders.remove(accountId);
+    }
+}
+
+void SyncServerClient::setVaultAccount(const QString& vaultId, const QString& accountId)
+{
+    QMutexLocker locker(&g_accountProvidersMutex);
+    if (accountId.isEmpty()) {
+        g_vaultAccounts.remove(vaultId);
+    } else {
+        g_vaultAccounts.insert(vaultId, accountId);
     }
 }
 

@@ -186,9 +186,9 @@ namespace FakeAccount
         return org.id;
     }
 
-    void Server::addOrgMember(const QString& orgId, const QString& email, const QString& role)
+    void Server::addOrgMember(const QString& orgId, const QString& email, const QString& role, const QString& status)
     {
-        orgs[orgId].members << OrgMember{userId(email), role};
+        orgs[orgId].members << OrgMember{userId(email), role, status};
     }
 
     QString Server::addPairingCode()
@@ -556,7 +556,7 @@ namespace FakeAccount
             }
         } else if (parts.value(0) == "orgs" && !isOrgAdmin(parts.value(1))) {
             error(403, "forbidden");
-        } else if (parts.value(0) == "orgs" && parts.value(2) == "members") {
+        } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 3) {
             QJsonArray members;
             for (const auto& member : server.orgs.value(parts.value(1)).members) {
                 auto keys = server.directory.value("user:" + member.userId);
@@ -569,6 +569,32 @@ namespace FakeAccount
                                        {"public", keys}};
             }
             reply(200, {{"members", members}});
+        } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.value(4) == "confirm") {
+            auto& org = server.orgs[parts.value(1)];
+            const auto principal = "user:" + parts.value(3);
+            for (auto& member : org.members) {
+                if (member.userId == parts.value(3)) {
+                    member.status = "confirmed";
+                }
+            }
+            for (const auto& value : json.value("grants").toArray()) {
+                const auto grant = value.toObject();
+                const auto vaultId = grant.value("vault_id").toString();
+                if (!server.vaults.contains(vaultId) || server.vaults.value(vaultId).orgId != org.id
+                    || grant.value("key_version").toInt() != server.vaults.value(vaultId).current) {
+                    error(409, "conflict");
+                    deliverLater(response, std::move(callback));
+                    return;
+                }
+                addGrants(server.vaults[vaultId], QJsonArray{grant});
+            }
+            for (const auto& value : json.value("sa_master_keys").toArray()) {
+                const auto grant = value.toObject();
+                server.serviceAccounts[grant.value("sa_id").toString()].masterKeys.insert(
+                    grant.value("principal").toString(), grant.value("sealed_key").toString());
+            }
+            server.log(caller, "org.member.confirm", principal);
+            reply(200, {{"user_id", parts.value(3)}, {"status", "confirmed"}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "service-accounts" && verb == "GET") {
             QJsonArray list;
             for (const auto& sa : server.serviceAccounts) {
