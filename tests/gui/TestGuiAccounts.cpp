@@ -661,6 +661,20 @@ void TestGuiAccounts::testServiceAccountsDialog()
     QTRY_COMPARE(secrets->topLevelItemCount(), 1);
     QCOMPARE(m_server->secrets.size(), 1);
 
+    // Change the remaining secret's expiry from the dialog
+    QCOMPARE(secrets->topLevelItem(0)->text(0), QString("staging"));
+    secrets->topLevelItem(0)->setSelected(true);
+    QTRY_VERIFY(child<QPushButton>(dialog, "secretExpiryButton")->isEnabled());
+    const auto later = QDateTime::currentDateTimeUtc().addDays(60);
+    dialog->setSelectedSecretExpiry(later);
+    QTRY_COMPARE(m_server->secrets.constBegin()->expiresAt.toString(), later.toString(Qt::ISODate));
+    QTRY_VERIFY(!dialog->isBusy());
+    secrets->topLevelItem(0)->setSelected(true);
+    dialog->setSelectedSecretExpiry({});
+    QTRY_VERIFY(m_server->secrets.constBegin()->expiresAt.isNull());
+    QTRY_COMPARE(secrets->topLevelItem(0)->text(3), QString("never"));
+    QTRY_VERIFY(!dialog->isBusy());
+
     // Expire the whole service account
     child<QCheckBox>(dialog, "neverExpiresCheckBox")->setChecked(false);
     dialog->applyExpiry();
@@ -669,7 +683,7 @@ void TestGuiAccounts::testServiceAccountsDialog()
     // The audit log shows what happened, newest first
     auto* audit = child<QTreeWidget>(dialog, "auditTree");
     QTRY_VERIFY(audit->topLevelItemCount() >= 4);
-    QCOMPARE(audit->topLevelItem(0)->text(2), QString("service_account.secret.revoke"));
+    QCOMPARE(audit->topLevelItem(0)->text(2), QString("sa.secret.update"));
 
     // Confirm an accepted member with the vault picked for them
     QString bob;

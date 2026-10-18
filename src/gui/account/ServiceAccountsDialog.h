@@ -58,6 +58,8 @@ public slots:
     void createServiceAccount(const QString& name, const QDateTime& expiresAt = {});
     void issueSecret(const QString& name, const QDateTime& expiresAt = {});
     void revokeSelectedSecret();
+    // When the selected secret stops working (invalid: never); its token stays the same
+    void setSelectedSecretExpiry(const QDateTime& expiresAt);
     void grantSelectedVault();
     void applyExpiry();
     void toggleDisabled();
@@ -70,6 +72,7 @@ public slots:
 private slots:
     void askForNewServiceAccount();
     void askForNewSecret();
+    void askForSecretExpiry();
     void askToConfirmMember();
     void showDetails();
 

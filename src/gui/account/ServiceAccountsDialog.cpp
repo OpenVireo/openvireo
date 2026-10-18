@@ -24,6 +24,8 @@
 #include "gui/MessageBox.h"
 #include "gui/vault/VaultControls.h"
 
+#include <QCheckBox>
+#include <QDateTimeEdit>
 #include <QDialogButtonBox>
 #include <QFontDatabase>
 #include <QHeaderView>
@@ -81,10 +83,12 @@ ServiceAccountsDialog::ServiceAccountsDialog(AccountManager* account, QWidget* p
     connect(m_ui->neverExpiresCheckBox, &QCheckBox::toggled, m_ui->expiryEdit, &QWidget::setDisabled);
     connect(m_ui->issueButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askForNewSecret);
     connect(m_ui->revokeButton, &QPushButton::clicked, this, &ServiceAccountsDialog::revokeSelectedSecret);
+    connect(m_ui->secretExpiryButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askForSecretExpiry);
     connect(m_ui->grantButton, &QPushButton::clicked, this, &ServiceAccountsDialog::grantSelectedVault);
     connect(m_ui->loadMoreButton, &QPushButton::clicked, this, [this] { loadAudit(true); });
     connect(m_ui->secretsTree, &QTreeWidget::itemSelectionChanged, this, [this] {
         m_ui->revokeButton->setEnabled(!m_busy && !m_ui->secretsTree->selectedItems().isEmpty());
+        m_ui->secretExpiryButton->setEnabled(!m_busy && !m_ui->secretsTree->selectedItems().isEmpty());
     });
     connect(m_ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -227,6 +231,7 @@ void ServiceAccountsDialog::showDetails()
     m_ui->applyExpiryButton->setEnabled(enabled);
     m_ui->issueButton->setEnabled(enabled);
     m_ui->revokeButton->setEnabled(enabled && !m_ui->secretsTree->selectedItems().isEmpty());
+    m_ui->secretExpiryButton->setEnabled(enabled && !m_ui->secretsTree->selectedItems().isEmpty());
     m_ui->grantButton->setEnabled(enabled && m_ui->vaultCombo->count() > 0);
     m_ui->newButton->setEnabled(!m_busy && !currentOrg().isEmpty());
     if (!has) {
@@ -372,6 +377,75 @@ void ServiceAccountsDialog::revokeSelectedSecret()
     setBusy(tr("Revoking…"));
     QPointer<ServiceAccountsDialog> guard(this);
     m_admin->revokeSecret(account.id, secretId, [guard](bool ok, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!ok) {
+            guard->showError(error);
+            return;
+        }
+        guard->setBusy({});
+        guard->m_ui->secretsTree->setProperty("account", QString());
+        guard->showDetails();
+        guard->loadAudit();
+    });
+}
+
+void ServiceAccountsDialog::askForSecretExpiry()
+{
+    const auto items = m_ui->secretsTree->selectedItems();
+    if (selected().id.isEmpty() || items.isEmpty()) {
+        return;
+    }
+    const auto secretId = items.first()->data(0, IdRole).toString();
+    QDateTime current;
+    for (const auto& secret : m_secrets) {
+        if (secret.id == secretId) {
+            current = secret.expiresAt;
+        }
+    }
+
+    QDialog picker(this);
+    picker.setWindowTitle(tr("Change expiry"));
+    auto* label = new QLabel(tr("The secret keeps its token; only the time it stops working changes. "
+                                "A time that has passed stops it at once."),
+                             &picker);
+    label->setWordWrap(true);
+    auto* never = new VaultCheckBox(&picker);
+    never->setObjectName("secretNeverExpiresCheckBox");
+    never->setText(tr("Never expires"));
+    never->setChecked(!current.isValid());
+    auto* edit = new QDateTimeEdit(&picker);
+    edit->setObjectName("secretExpiryEdit");
+    edit->setCalendarPopup(true);
+    edit->setDateTime(current.isValid() ? current.toLocalTime() : QDateTime::currentDateTime().addDays(90));
+    edit->setDisabled(!current.isValid());
+    connect(never, &QCheckBox::toggled, edit, &QWidget::setDisabled);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &picker);
+    connect(buttons, &QDialogButtonBox::accepted, &picker, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &picker, &QDialog::reject);
+    auto* layout = new QVBoxLayout(&picker);
+    layout->addWidget(label);
+    layout->addWidget(never);
+    layout->addWidget(edit);
+    layout->addWidget(buttons);
+    if (picker.exec() != QDialog::Accepted) {
+        return;
+    }
+    setSelectedSecretExpiry(never->isChecked() ? QDateTime() : edit->dateTime().toUTC());
+}
+
+void ServiceAccountsDialog::setSelectedSecretExpiry(const QDateTime& expiresAt)
+{
+    const auto account = selected();
+    const auto items = m_ui->secretsTree->selectedItems();
+    if (account.id.isEmpty() || items.isEmpty()) {
+        return;
+    }
+    const auto secretId = items.first()->data(0, IdRole).toString();
+    setBusy(tr("Saving…"));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->setSecretExpiry(account.id, secretId, expiresAt, [guard](bool ok, const QString& error) {
         if (!guard) {
             return;
         }

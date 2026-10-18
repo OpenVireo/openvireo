@@ -331,6 +331,14 @@ void AuthClient::issueServiceAccountSecret(const QString& saId, const QJsonObjec
     post("service-accounts/" + encoded(saId) + "/secrets", secret, std::move(callback), true);
 }
 
+void AuthClient::updateServiceAccountSecret(const QString& saId,
+                                            const QString& secretId,
+                                            const QJsonObject& changes,
+                                            Callback callback)
+{
+    sendJson("PATCH", "service-accounts/" + encoded(saId) + "/secrets/" + encoded(secretId), changes, std::move(callback));
+}
+
 void AuthClient::revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback)
 {
     request("DELETE",
