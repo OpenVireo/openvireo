@@ -52,6 +52,7 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
     , m_unlockBox(new QWidget(this))
     , m_passwordEdit(new VaultLineEdit(m_unlockBox))
     , m_unlockButton(new VaultButton(tr("Unlock account"), m_unlockBox))
+    , m_quickUnlockButton(new VaultButton(tr("Quick Unlock"), m_unlockBox))
     , m_errorLabel(new QLabel(this))
     , m_vaultList(new QListWidget(this))
     , m_newVaultButton(new VaultButton(tr("New vault…"), this))
@@ -84,6 +85,10 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
     unlockLayout->setContentsMargins(0, 0, 0, 0);
     unlockLayout->addWidget(m_passwordEdit);
     unlockLayout->addWidget(m_unlockButton);
+    m_quickUnlockButton->setObjectName("accountVaultsQuickUnlock");
+    m_quickUnlockButton->setToolTip(tr("Unlock with Touch ID, Windows Hello or your system password"));
+    m_quickUnlockButton->setVisible(false);
+    unlockLayout->addWidget(m_quickUnlockButton);
 
     m_vaultList->setObjectName("accountVaultsList");
     m_vaultList->setAccessibleName(tr("Account vaults"));
@@ -113,6 +118,7 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
     layout->addLayout(accountButtons);
 
     connect(m_unlockButton, &QPushButton::clicked, this, &AccountVaultsPane::unlock);
+    connect(m_quickUnlockButton, &QPushButton::clicked, this, &AccountVaultsPane::quickUnlock);
     connect(m_passwordEdit, &QLineEdit::returnPressed, this, &AccountVaultsPane::unlock);
     connect(m_vaultList, &QListWidget::itemActivated, this, &AccountVaultsPane::openItem);
     connect(m_vaultList, &QListWidget::itemClicked, this, &AccountVaultsPane::openItem);
@@ -182,6 +188,9 @@ void AccountVaultsPane::refresh()
         m_passwordEdit->clear();
         m_errorLabel->setVisible(false);
     }
+
+    // Quick Unlock only once the password unlocked the account in this session, as for databases
+    m_quickUnlockButton->setVisible(!unlocked && account->canQuickUnlock());
 
     const auto selected = selectedVault();
     m_vaultList->clear();
@@ -279,6 +288,15 @@ void AccountVaultsPane::unlock()
     m_errorLabel->setVisible(false);
     m_controller->unlockAccount(m_passwordEdit->text());
     m_passwordEdit->clear();
+}
+
+void AccountVaultsPane::quickUnlock()
+{
+    if (!m_controller) {
+        return;
+    }
+    m_errorLabel->setVisible(false);
+    m_controller->quickUnlockAccount();
 }
 
 void AccountVaultsPane::openItem(QListWidgetItem* item)

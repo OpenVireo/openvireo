@@ -52,6 +52,7 @@ private slots:
     void testCreatesAnOrgAndOrgVaults();
     void testAcceptsAnInvitation();
     void testInvitesPromotesAndRemovesMembers();
+    void testQuickUnlocksTheAccount();
 
 private:
     void createWindow(const QString& mode);
