@@ -29,6 +29,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QTimer>
+#include <QUrl>
 #include <QUuid>
 
 #include <memory>
@@ -87,6 +88,8 @@ public:
         QString issuer;
         QString api;
         QString sync;
+        // The web app, where account settings live (SPEC §16); empty when the server doesn't say
+        QString web;
         // OPAQUE idS; the issuer host when the server doesn't say
         QString opaqueServerId;
         quint32 kdfMinMemoryKiB = AccountCrypto::KdfParams::MinMemoryKiB;
@@ -97,6 +100,8 @@ public:
             return !api.isEmpty();
         }
         QString serverId() const;
+        // The web app's Account page (password, two-step verification, devices); invalid without `web`
+        QUrl accountSettingsUrl() const;
         static ServerConfig fromJson(const QJsonObject& json);
         QJsonObject toJson() const;
     };

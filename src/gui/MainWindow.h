@@ -227,6 +227,7 @@ private:
     QPointer<QAction> m_actionAccountSignIn;
     QPointer<QAction> m_actionAccountLock;
     QPointer<QAction> m_actionAccountSignOut;
+    QPointer<QAction> m_actionAccountManage;
     QPointer<QAction> m_actionAccountNewVault;
     QPointer<QAction> m_actionAccountShare;
     QPointer<QAction> m_actionAccountMove;
