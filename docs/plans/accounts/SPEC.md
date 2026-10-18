@@ -347,9 +347,30 @@ sync API and lives in `kpnx-sdk/packages/connect`.
 The auth website (billing, locale, admin) has no password form and never sees a password or the
 Secret Key. Everything that needs the AUK lives in a client: the web app's **Account** page
 (`{web}/?view=account`) changes the master password (`/me/password/*`, keyset re-wrapped, same
-public keys), turns TOTP on and off, lists and revokes devices, and downloads the Emergency Kit again
-from the Secret Key stored on the device. Qt's "Manage account…" opens that page in the browser.
-The email can't be changed in v1 (it is OPAQUE's `idU`).
+public keys), changes the email (below), turns TOTP on and off (the enrolment secret is shown as a QR
+code of its `otpauth_uri` and as text), lists and revokes devices, and downloads the Emergency Kit
+again from the Secret Key stored on the device. Qt's "Manage account…" opens that page in the browser.
+
+**Changing the email.** The email is OPAQUE's `idU`, so the OPAQUE record is registered again under
+the new one. The AUK doesn't depend on the email, so the KDF, the keyset, the Secret Key and every
+sealed key stay as they are.
+
+1. `POST /me/email {email}` (user token issued in the last 5 minutes): 409 if another account has the
+   email. The server mails an 8-digit code to the new address and keeps `{email, SHA-256(code)}` for
+   30 minutes under the user (a new request replaces it). 3 requests per hour per user.
+2. The client checks the master password by unwrapping the keyset with it (a wrong password must
+   never become the new OPAQUE record), then `POST /me/email/start {email, code, request}`, where
+   `request` is `CreateRegistrationRequest(password)` and `email` must match the pending one. A wrong
+   code is 400 `invalid_code`; the 5th wrong code drops the pending change (410 `session_expired`).
+   The answer is `{session_id, response}`, as for `/me/password/start`.
+3. `FinalizeRequest` with `idU` = the new email → `POST /me/email/finish {session_id, record}` (204).
+   The server stores the record and the email at once (409 if the email was taken meanwhile) and
+   mails a notice to the old address. Sessions stay signed in.
+
+Clients keep the Secret Key and device id on the device under the email (SDK `secret_key:<idU>`,
+Qt `kpx-account-secret-key:<idS>:<email>`). When `GET /me` returns an email that differs from the
+stored session's, the client moves those entries to the new email and updates its session, so other
+devices that are signed in follow the change without asking for the Secret Key again.
 
 - **Sign-in and sign-up** on the auth website redirect to `{web}/?view=signin` or `?view=signup`,
   with `&return=<path>` when a page on the auth website asked for it. The web app signs in as usual

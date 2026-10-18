@@ -12,7 +12,7 @@ info:
 
     Conventions:
     - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
-      `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`,
+      `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`, `invalid_code`,
       `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`. (The sync server
       today sends only `error`; it adds `code` on the new routes.)
     - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
@@ -291,6 +291,41 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [code, expires_in], properties: { code: { type: string, description: 'kpx_ws_ + base64url(32 bytes)' }, expires_in: { type: integer } } }
+  /me/email:
+    post:
+      tags: [auth]
+      summary: Change the email, step 1 (SPEC.md §16). Mails an 8-digit code to the new address. Needs a token issued in the last 5 minutes.
+      requestBody: { content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } } }
+      responses:
+        '202': { description: code sent, content: { application/json: { schema: { type: object, properties: { expires_in: { type: integer } } } } } }
+        '409': { $ref: '#/components/responses/Error', description: another account has this email }
+  /me/email/start:
+    post:
+      tags: [auth]
+      summary: Change the email, step 2. Checks the code and starts the OPAQUE registration under the new email.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [email, code, request], properties: { email: { type: string }, code: { type: string }, request: { $ref: '#/components/schemas/B64' } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [session_id, response], properties: { session_id: { type: string }, response: { $ref: '#/components/schemas/B64' } } }
+        '400': { $ref: '#/components/responses/Error', description: invalid_code }
+        '410': { $ref: '#/components/responses/Error', description: no pending change, or too many wrong codes }
+  /me/email/finish:
+    post:
+      tags: [auth]
+      summary: Change the email, step 3. Replaces the OPAQUE record and the email atomically; the keyset is unchanged.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [session_id, record], properties: { session_id: { type: string }, record: { $ref: '#/components/schemas/B64' } } }
+      responses:
+        '204': { description: changed }
+        '409': { $ref: '#/components/responses/Error', description: the email was taken meanwhile }
   /me/totp:
     post:
       tags: [auth]
