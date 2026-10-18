@@ -146,6 +146,7 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
         connect(account, &AccountManager::stateChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::vaultsChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::orgsChanged, this, &AccountVaultsPane::refresh);
+        connect(account, &AccountManager::emailChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::error, this, [this](const QString& message) {
             if (m_controller && m_controller->account()->state() == AccountManager::State::Locked) {
                 m_errorLabel->setText(message);
