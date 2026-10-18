@@ -637,6 +637,7 @@ void AccountManager::unlock(const QString& password)
             return;
         }
         const auto json = response.json();
+        followEmail(json.value("email").toString());
         deriveKeyset(
             json.value("kdf").toObject(), json.value("keyset").toObject(), [this](bool ok, const QString& message) {
                 m_pending.reset();
@@ -680,6 +681,7 @@ void AccountManager::quickUnlock()
             return;
         }
         m_pending.reset();
+        followEmail(response.json().value("email").toString());
         Keyset keyset;
         if (!unwrapKeyset(auk, response.json().value("keyset").toObject(), &keyset)) {
             // The keyset was wrapped again, e.g. the master password changed on another device
@@ -762,6 +764,26 @@ void AccountManager::endSession(const QString& reason)
         emit vaultsChanged();
         emit signedOut(reason);
     }
+}
+
+void AccountManager::followEmail(const QString& email)
+{
+    // The Secret Key and device id are kept under the email: move them when it changed elsewhere, so
+    // signing in again here doesn't ask for the Secret Key (SPEC §16)
+    if (email.isEmpty() || m_serviceAccount || OpaqueClient::userId(email) == OpaqueClient::userId(m_email)) {
+        return;
+    }
+    const auto server = defaultServerId();
+    for (const auto& key : {&AccountManager::secretKeyKey, &AccountManager::deviceKey}) {
+        const auto value = SyncTokenStore::load(key(server, m_email));
+        if (!value.isEmpty()) {
+            SyncTokenStore::save(key(server, email), value);
+            SyncTokenStore::remove(key(server, m_email));
+        }
+    }
+    m_email = email;
+    saveSession();
+    emit emailChanged();
 }
 
 void AccountManager::saveSession() const
@@ -995,6 +1017,7 @@ void AccountManager::reloadOrgs()
         if (m_state != State::Unlocked || !response.isSuccess()) {
             return;
         }
+        followEmail(response.json().value("email").toString());
         QList<Org> orgs;
         for (const auto& value : response.json().value("orgs").toArray()) {
             const auto json = value.toObject();

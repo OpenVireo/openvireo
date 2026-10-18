@@ -42,6 +42,7 @@ private slots:
     void testAccountVaultUsesTokenProvider();
     void testParsesAccountEvents();
     void testServerConfigWebUrl();
+    void testFollowsAnEmailChangedElsewhere();
 };
 
 #endif // KEEPASSXC_TESTACCOUNTMANAGER_H
