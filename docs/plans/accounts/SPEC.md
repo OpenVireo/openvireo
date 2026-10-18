@@ -107,7 +107,10 @@ The AAD binds a sealed key to its vault, so the server can't move one between va
 
 `vault_access` rows carry a `key_version`. A vault has one `current_key_version`, plus at most one
 pending version during a rotation. A new vault starts at key version **1**: every grant in
-`POST /api/v1/vaults` uses it, and the caller must be one of the grantees. Rotating is required when a member is removed and optional at
+`POST /api/v1/vaults` uses it, and the caller must be one of the grantees. An **org vault** must also
+have a `manage` grant for every confirmed owner and admin of the org at creation, or the server
+answers 400 naming who is missing; regular members are added afterwards as the admin chooses
+(§12). Invited or not-yet-confirmed owners and admins get it when they are confirmed. Rotating is required when a member is removed and optional at
 any other time:
 
 1. The client (needs `manage`) creates a new vault key and seals it to every remaining member.
@@ -197,6 +200,10 @@ removes a member without a new key version.
 kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b64url 32>,"kek":<b64url 32>})
 ```
 
+- A secret's `expires_at` lives on the server only (the token doesn't carry it), so an owner or
+  admin can change it later with `PATCH /service-accounts/{sa}/secrets/{id}` (a past time expires
+  it at once, `null` removes the expiry) without issuing a new token. An SA's own `expires_at`
+  applies on top of each secret's.
 - The server stores `SHA-256(secret)` hex, `prefix` = the first 8 characters of the base64url
   secret (for display), and the per-secret `wrapped_master = wrap(kek, sa_master_key, "kpx-sa-master-v1|<sa>")`.
 - The SA keyset is stored once, wrapped by the SA **master key**. The master key is sealed to every
