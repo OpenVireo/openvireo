@@ -636,7 +636,7 @@ namespace FakeAccount
                                    secret.value("prefix").toString(),
                                    secret.value("wrapped_master").toString(),
                                    secret.value("expires_at")});
-            server.log(caller, "service_account.create", "sa:" + id);
+            server.log(caller, "sa.create", "sa:" + id);
             reply(201, sa.json);
         } else if (parts.value(0) == "orgs" && parts.value(2) == "audit") {
             const auto before = QUrlQuery(url).queryItemValue("before");
@@ -674,7 +674,7 @@ namespace FakeAccount
             for (const auto& key : json.keys()) {
                 sa.json[key] = json.value(key);
             }
-            server.log(caller, "service_account.update", "sa:" + parts.value(1));
+            server.log(caller, "sa.update", "sa:" + parts.value(1));
             reply(200, sa.json);
         } else if (parts.value(0) == "service-accounts" && parts.size() == 2 && verb == "DELETE") {
             server.serviceAccounts.remove(parts.value(1));
@@ -710,11 +710,29 @@ namespace FakeAccount
                                    json.value("prefix").toString(),
                                    json.value("wrapped_master").toString(),
                                    json.value("expires_at")});
-            server.log(caller, "service_account.secret.issue", "sa:" + parts.value(1));
+            server.log(caller, "sa.secret.issue", "sa:" + parts.value(1));
             reply(201);
+        } else if (parts.value(0) == "service-accounts" && parts.value(2) == "secrets" && verb == "PATCH") {
+            // SPEC.md §9: only the server's expiry changes, the token stays the same
+            if (!server.secrets.contains(parts.value(3)) || server.secrets.value(parts.value(3)).saId != parts.value(1)) {
+                error(404, "not_found");
+            } else if (!json.contains("expires_at")) {
+                error(400, "invalid_request");
+            } else {
+                auto& secret = server.secrets[parts.value(3)];
+                secret.expiresAt = json.value("expires_at");
+                server.log(caller, "sa.secret.update", "sa:" + parts.value(1));
+                reply(200,
+                      {{"id", secret.id},
+                       {"prefix", secret.prefix},
+                       {"name", secret.name},
+                       {"created_at", now()},
+                       {"last_used_at", QJsonValue(QJsonValue::Null)},
+                       {"expires_at", secret.expiresAt}});
+            }
         } else if (parts.value(0) == "service-accounts" && parts.value(2) == "secrets" && verb == "DELETE") {
             server.secrets.remove(parts.value(3));
-            server.log(caller, "service_account.secret.revoke", "sa:" + parts.value(1));
+            server.log(caller, "sa.secret.revoke", "sa:" + parts.value(1));
             reply(204);
         } else {
             error(404, "not_found");

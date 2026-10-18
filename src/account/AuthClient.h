@@ -151,6 +151,11 @@ public:
     void listServiceAccountSecrets(const QString& saId, Callback callback);
     // `secret` is a NewSaSecret: {id, name, secret_hash, prefix, wrapped_master, expires_at}
     void issueServiceAccountSecret(const QString& saId, const QJsonObject& secret, Callback callback);
+    // {expires_at}: an ISO time, or null for never; the secret's token stays the same
+    void updateServiceAccountSecret(const QString& saId,
+                                    const QString& secretId,
+                                    const QJsonObject& changes,
+                                    Callback callback);
     void revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback);
 
     // The org's audit log, newest first; `before` is the `next` cursor of the previous page
