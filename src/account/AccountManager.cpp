@@ -72,12 +72,26 @@ QString AccountManager::ServerConfig::serverId() const
     return opaqueServerId.isEmpty() ? hostOf(issuer.isEmpty() ? api : issuer) : opaqueServerId;
 }
 
+QUrl AccountManager::ServerConfig::accountSettingsUrl() const
+{
+    QUrl url(web);
+    if (web.isEmpty() || !url.isValid() || (url.scheme() != "https" && url.scheme() != "http")) {
+        return {};
+    }
+    if (url.path().isEmpty()) {
+        url.setPath("/");
+    }
+    url.setQuery("view=account");
+    return url;
+}
+
 AccountManager::ServerConfig AccountManager::ServerConfig::fromJson(const QJsonObject& json)
 {
     ServerConfig config;
     config.issuer = json.value("issuer").toString();
     config.api = json.value("api").toString();
     config.sync = json.value("sync").toString();
+    config.web = json.value("web").toString();
     const auto opaque = json.value("opaque").toObject();
     config.opaqueServerId = opaque.value("ids").toString();
     const auto kdfMin = json.value("kdf_min").toObject();
@@ -93,6 +107,7 @@ QJsonObject AccountManager::ServerConfig::toJson() const
         {"issuer", issuer},
         {"api", api},
         {"sync", sync},
+        {"web", web},
         {"opaque", QJsonObject{{"ids", opaqueServerId}}},
         {"kdf_min",
          QJsonObject{{"m", static_cast<qint64>(kdfMinMemoryKiB)}, {"t", static_cast<qint64>(kdfMinIterations)}}}};

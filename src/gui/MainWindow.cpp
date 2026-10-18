@@ -752,6 +752,13 @@ void MainWindow::setupAccounts()
     m_actionAccountAcceptInvitation =
         m_accountMenu->addAction(tr("Accept &Invitation…"), this, &MainWindow::acceptAccountInvitation);
     m_accountMenu->addSeparator();
+    // Password, two-step verification and devices live in the web app (SPEC §16)
+    m_actionAccountManage = m_accountMenu->addAction(tr("&Manage Account…"), this, [this] {
+        const auto url = m_accountController->account()->server().accountSettingsUrl();
+        if (url.isValid()) {
+            QDesktopServices::openUrl(url);
+        }
+    });
     m_actionAccountSignOut =
         m_accountMenu->addAction(tr("Sign &Out"), m_accountController, &AccountController::signOut);
     m_ui->menubar->insertMenu(m_ui->menuHelp->menuAction(), m_accountMenu);
@@ -970,6 +977,8 @@ void MainWindow::updateAccountActions()
     m_actionAccountSignIn->setEnabled(!isStartScreenShown());
     m_actionAccountLock->setEnabled(unlocked);
     m_actionAccountSignOut->setEnabled(signedIn);
+    m_actionAccountManage->setEnabled(signedIn && !account->isServiceAccount()
+                                      && account->server().accountSettingsUrl().isValid());
     m_actionAccountNewVault->setEnabled(unlocked);
     m_actionAccountShare->setEnabled(unlocked);
     m_actionAccountServiceAccounts->setEnabled(unlocked);
