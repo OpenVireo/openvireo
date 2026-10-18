@@ -29,9 +29,10 @@ class QListWidgetItem;
 class QPushButton;
 
 /**
- * Sidebar with the signed-in KeePassXC account and its vaults. While the account is locked it asks for
- * the master password once ("Unlock account"), which opens every vault; selecting a vault shows it.
- * It is hidden in the self-hosted and no-account modes.
+ * Sidebar with the signed-in KeePassXC account and its vaults: personal vaults first, then each org's
+ * under the org's name. While the account is locked it asks for the master password once ("Unlock
+ * account"), which opens every vault. Selecting a vault shows it. It is hidden in the self-hosted and
+ * no-account modes.
  */
 class AccountVaultsPane : public QWidget
 {
@@ -39,6 +40,8 @@ class AccountVaultsPane : public QWidget
 
 public:
     static constexpr int VaultIdRole = Qt::UserRole;
+    // The org of a vault or of a heading, empty for personal vaults
+    static constexpr int OrgIdRole = Qt::UserRole + 1;
 
     explicit AccountVaultsPane(AccountController* controller, QWidget* parent = nullptr);
 

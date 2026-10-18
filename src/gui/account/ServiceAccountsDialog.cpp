@@ -66,15 +66,21 @@ ServiceAccountsDialog::ServiceAccountsDialog(AccountManager* account, QWidget* p
     connect(m_ui->orgCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] {
         loadServiceAccounts();
         loadMembers();
+        loadInvitations();
         loadAudit();
     });
+    connect(m_ui->newOrgButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askForNewOrg);
     connect(m_ui->confirmMemberButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askToConfirmMember);
-    connect(m_ui->membersTree, &QTreeWidget::itemSelectionChanged, this, [this] {
-        const auto items = m_ui->membersTree->selectedItems();
-        m_ui->confirmMemberButton->setEnabled(!m_busy && !items.isEmpty()
-                                              && items.first()->data(0, Qt::UserRole + 1).toString() == "accepted");
-    });
-    m_ui->confirmMemberButton->setEnabled(false);
+    connect(m_ui->changeRoleButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askForMemberRole);
+    connect(m_ui->removeMemberButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askToRemoveMember);
+    connect(m_ui->inviteButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askToInvite);
+    connect(
+        m_ui->cancelInvitationButton, &QPushButton::clicked, this, &ServiceAccountsDialog::cancelSelectedInvitation);
+    connect(m_ui->membersTree, &QTreeWidget::itemSelectionChanged, this, &ServiceAccountsDialog::updateMemberButtons);
+    connect(
+        m_ui->invitationsTree, &QTreeWidget::itemSelectionChanged, this, &ServiceAccountsDialog::updateMemberButtons);
+    m_ui->invitationsTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    updateMemberButtons();
     connect(m_ui->accountList, &QListWidget::currentRowChanged, this, &ServiceAccountsDialog::showDetails);
     connect(m_ui->newButton, &QPushButton::clicked, this, &ServiceAccountsDialog::askForNewServiceAccount);
     connect(m_ui->disableButton, &QPushButton::clicked, this, &ServiceAccountsDialog::toggleDisabled);
@@ -111,6 +117,46 @@ QString ServiceAccountsDialog::currentOrg() const
     return m_ui->orgCombo->currentData().toString();
 }
 
+QString ServiceAccountsDialog::currentRole() const
+{
+    for (const auto& org : m_orgs) {
+        if (org.id == currentOrg()) {
+            return org.role;
+        }
+    }
+    return {};
+}
+
+QString ServiceAccountsDialog::roleName(const QString& role)
+{
+    if (role == "owner") {
+        return tr("Owner");
+    }
+    if (role == "admin") {
+        return tr("Admin");
+    }
+    if (role == "member") {
+        return tr("Member");
+    }
+    return role;
+}
+
+ServiceAccountAdmin::Member ServiceAccountsDialog::member(const QString& userId) const
+{
+    for (const auto& candidate : m_members) {
+        if (candidate.userId == userId) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+QString ServiceAccountsDialog::selectedMember() const
+{
+    const auto items = m_ui->membersTree->selectedItems();
+    return items.isEmpty() ? QString() : items.first()->data(0, IdRole).toString();
+}
+
 QString ServiceAccountsDialog::currentServiceAccount() const
 {
     return selected().id;
@@ -138,7 +184,9 @@ void ServiceAccountsDialog::setBusy(const QString& message)
     m_ui->statusLabel->setText(message);
     const bool hasOrg = !currentOrg().isEmpty();
     m_ui->newButton->setEnabled(!m_busy && hasOrg);
+    m_ui->newOrgButton->setEnabled(!m_busy);
     showDetails();
+    updateMemberButtons();
 }
 
 void ServiceAccountsDialog::showError(const QString& error)
@@ -159,8 +207,11 @@ void ServiceAccountsDialog::reload()
             guard->showError(error);
             return;
         }
+        guard->m_orgs = orgs;
         auto* combo = guard->m_ui->orgCombo;
         const QSignalBlocker blocker(combo);
+        const auto keep = guard->m_selectOrg.isEmpty() ? guard->currentOrg() : guard->m_selectOrg;
+        guard->m_selectOrg.clear();
         combo->clear();
         for (const auto& org : orgs) {
             if (org.canAdminister()) {
@@ -170,14 +221,17 @@ void ServiceAccountsDialog::reload()
         guard->setBusy({});
         if (combo->count() == 0) {
             guard->m_ui->messageWidget->showMessage(
-                tr("Service accounts belong to an organization. You need to be an owner or admin of one."),
+                tr("Service accounts and members belong to an organization. Create one, or ask an owner or admin "
+                   "of yours to make you an admin."),
                 MessageWidget::Information,
                 MessageWidget::DisableAutoHide);
             return;
         }
-        combo->setCurrentIndex(0);
+        guard->m_ui->messageWidget->hideMessage();
+        combo->setCurrentIndex(qMax(0, combo->findData(keep)));
         guard->loadServiceAccounts();
         guard->loadMembers();
+        guard->loadInvitations();
         guard->loadAudit();
     });
 }
@@ -624,7 +678,7 @@ void ServiceAccountsDialog::loadMembers()
             item->setData(0, IdRole, member.userId);
             item->setData(0, Qt::UserRole + 1, member.status);
             item->setText(0, member.email);
-            item->setText(1, member.role);
+            item->setText(1, roleName(member.role));
             item->setText(2, member.status);
             item->setText(3,
                           member.publicKeys.isNull() ? tr("unknown")
@@ -632,7 +686,287 @@ void ServiceAccountsDialog::loadMembers()
                                                      : tr("invalid signature"));
             item->setFont(3, QFontDatabase::systemFont(QFontDatabase::FixedFont));
         }
-        guard->m_ui->confirmMemberButton->setEnabled(false);
+        guard->updateMemberButtons();
+    });
+}
+
+void ServiceAccountsDialog::updateMemberButtons()
+{
+    const auto selected = member(selectedMember());
+    const bool has = !selected.userId.isEmpty() && !m_busy;
+    const auto myRole = currentRole();
+    // Only owners change or remove owners (the server checks it too)
+    const bool canChange = has && (selected.role != "owner" || myRole == "owner");
+    const bool self = m_account && selected.principal() == m_account->principal();
+    m_ui->confirmMemberButton->setEnabled(has && selected.status == "accepted");
+    m_ui->changeRoleButton->setEnabled(canChange && !self);
+    m_ui->removeMemberButton->setEnabled(canChange || (has && self));
+    m_ui->removeMemberButton->setText(has && self ? tr("Leave…") : tr("Remove…"));
+    m_ui->inviteButton->setEnabled(!m_busy && !currentOrg().isEmpty());
+    m_ui->cancelInvitationButton->setEnabled(!m_busy && !m_ui->invitationsTree->selectedItems().isEmpty());
+}
+
+void ServiceAccountsDialog::askForMemberRole()
+{
+    const auto selected = member(selectedMember());
+    const auto roles = ServiceAccountAdmin::assignableRoles(currentRole());
+    if (selected.userId.isEmpty() || roles.isEmpty()) {
+        return;
+    }
+    QDialog picker(this);
+    picker.setWindowTitle(tr("Change the role of %1").arg(selected.email));
+    auto* label = new QLabel(tr("Owners and admins get every vault of the organization with manage access and can "
+                                "issue secrets for its service accounts; members only get the vaults shared with "
+                                "them. A member who is made an admin keeps the vaults they already have."),
+                             &picker);
+    label->setWordWrap(true);
+    auto* combo = new VaultComboBox(&picker);
+    combo->setObjectName("memberRoleCombo");
+    for (const auto& role : roles) {
+        combo->addItem(roleName(role), role);
+    }
+    combo->setCurrentIndex(qMax(0, combo->findData(selected.role)));
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &picker);
+    connect(buttons, &QDialogButtonBox::accepted, &picker, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &picker, &QDialog::reject);
+    auto* layout = new QVBoxLayout(&picker);
+    layout->addWidget(label);
+    layout->addWidget(combo);
+    layout->addWidget(buttons);
+    if (picker.exec() != QDialog::Accepted || combo->currentData().toString() == selected.role) {
+        return;
+    }
+    setMemberRole(selected.userId, combo->currentData().toString());
+}
+
+void ServiceAccountsDialog::setMemberRole(const QString& userId, const QString& role)
+{
+    const auto selected = member(userId);
+    if (selected.userId.isEmpty()) {
+        return;
+    }
+    setBusy(tr("Changing the role of %1…").arg(selected.email));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->setMemberRole(currentOrg(), selected, role, [guard, selected, role](bool ok, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!ok) {
+            guard->showError(error);
+            guard->loadMembers();
+            return;
+        }
+        guard->setBusy({});
+        guard->m_ui->messageWidget->showMessage(
+            tr("%1 is now %2.").arg(selected.email, roleName(role).toLower()), MessageWidget::Positive);
+        guard->loadMembers();
+        guard->loadAudit();
+    });
+}
+
+void ServiceAccountsDialog::askToRemoveMember()
+{
+    const auto selected = member(selectedMember());
+    if (selected.userId.isEmpty()) {
+        return;
+    }
+    const bool self = m_account && selected.principal() == m_account->principal();
+    auto answer = MessageBox::question(
+        this,
+        self ? tr("Leave the organization?") : tr("Remove %1?").arg(selected.email),
+        self ? tr("You lose access to the organization's vaults.")
+             : tr("%1 loses access to every vault of the organization. The vaults they could open get a new key, so "
+                  "the keys they had open nothing that is saved from now on.")
+                   .arg(selected.email),
+        MessageBox::Remove | MessageBox::Cancel,
+        MessageBox::Cancel);
+    if (answer == MessageBox::Remove) {
+        removeMember(selected.userId);
+    }
+}
+
+void ServiceAccountsDialog::removeMember(const QString& userId)
+{
+    const auto selected = member(userId);
+    if (selected.userId.isEmpty()) {
+        return;
+    }
+    setBusy(tr("Removing %1 and rotating the keys of their vaults…").arg(selected.email));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->removeMember(
+        currentOrg(),
+        userId,
+        [guard, selected](const QStringList& rotated, const QStringList& failed, const QString& error) {
+            if (!guard) {
+                return;
+            }
+            if (!error.isEmpty()) {
+                guard->showError(error);
+                return;
+            }
+            guard->setBusy({});
+            if (!failed.isEmpty()) {
+                guard->m_ui->messageWidget->showMessage(
+                    tr("%1 was removed, but these vaults still need a new key (Share, then Rotate key): %2")
+                        .arg(selected.email, failed.join(QStringLiteral("; "))),
+                    MessageWidget::Warning,
+                    MessageWidget::DisableAutoHide);
+            } else {
+                guard->m_ui->messageWidget->showMessage(
+                    tr("%1 was removed. %n vault(s) got a new key.", nullptr, rotated.size()).arg(selected.email),
+                    MessageWidget::Positive);
+            }
+            if (guard->m_account && selected.principal() == guard->m_account->principal()) {
+                guard->reload();
+                return;
+            }
+            guard->loadMembers();
+            guard->loadAudit();
+        });
+}
+
+void ServiceAccountsDialog::askForNewOrg()
+{
+    bool ok = false;
+    const auto name = QInputDialog::getText(
+        this, tr("New organization"), tr("Name of the organization:"), QLineEdit::Normal, {}, &ok);
+    if (ok && !name.trimmed().isEmpty()) {
+        createOrg(name.trimmed());
+    }
+}
+
+void ServiceAccountsDialog::createOrg(const QString& name)
+{
+    setBusy(tr("Creating %1…").arg(name));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->createOrg(name, [guard](const ServiceAccountAdmin::Org& org, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!error.isEmpty()) {
+            guard->showError(error);
+            return;
+        }
+        guard->m_selectOrg = org.id;
+        guard->reload();
+        guard->m_ui->messageWidget->showMessage(tr("%1 is created, with you as its owner.").arg(org.name),
+                                                MessageWidget::Positive);
+    });
+}
+
+void ServiceAccountsDialog::loadInvitations()
+{
+    const auto orgId = currentOrg();
+    if (orgId.isEmpty()) {
+        return;
+    }
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->listInvitations(
+        orgId, [guard, orgId](const QList<ServiceAccountAdmin::Invitation>& invitations, const QString& error) {
+            if (!guard || guard->currentOrg() != orgId) {
+                return;
+            }
+            if (!error.isEmpty()) {
+                guard->m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+                return;
+            }
+            guard->m_invitations = invitations;
+            auto* tree = guard->m_ui->invitationsTree;
+            tree->clear();
+            for (const auto& invitation : invitations) {
+                auto* item = new QTreeWidgetItem(tree);
+                item->setData(0, IdRole, invitation.id);
+                item->setText(0, invitation.email);
+                item->setText(1, roleName(invitation.role));
+                item->setText(2, formatTime(invitation.expiresAt, tr("never")));
+            }
+            guard->updateMemberButtons();
+        });
+}
+
+void ServiceAccountsDialog::askToInvite()
+{
+    const auto roles = ServiceAccountAdmin::assignableRoles(currentRole());
+    if (currentOrg().isEmpty() || roles.isEmpty()) {
+        return;
+    }
+    QDialog picker(this);
+    picker.setObjectName("inviteMemberDialog");
+    picker.setWindowTitle(tr("Invite to %1").arg(m_ui->orgCombo->currentText()));
+    auto* label = new QLabel(tr("The invitation is sent by email and is valid for 7 days. Once they accept it, "
+                                "confirm them here to give them their keys."),
+                             &picker);
+    label->setWordWrap(true);
+    auto* email = new VaultLineEdit(&picker);
+    email->setObjectName("inviteEmailEdit");
+    email->setPlaceholderText(tr("Email address"));
+    auto* combo = new VaultComboBox(&picker);
+    combo->setObjectName("inviteRoleCombo");
+    for (const auto& role : roles) {
+        combo->addItem(roleName(role), role);
+    }
+    combo->setCurrentIndex(combo->findData("member"));
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, &picker);
+    buttons->addButton(tr("Invite"), QDialogButtonBox::AcceptRole);
+    connect(buttons, &QDialogButtonBox::accepted, &picker, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &picker, &QDialog::reject);
+    auto* layout = new QVBoxLayout(&picker);
+    layout->addWidget(label);
+    layout->addWidget(email);
+    layout->addWidget(combo);
+    layout->addWidget(buttons);
+    if (picker.exec() != QDialog::Accepted || email->text().trimmed().isEmpty()) {
+        return;
+    }
+    invite(email->text().trimmed(), combo->currentData().toString());
+}
+
+void ServiceAccountsDialog::invite(const QString& email, const QString& role)
+{
+    const auto orgId = currentOrg();
+    if (orgId.isEmpty()) {
+        return;
+    }
+    setBusy(tr("Inviting %1…").arg(email));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->invite(orgId, email, role, [guard, email](bool ok, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!ok) {
+            guard->showError(error);
+            return;
+        }
+        guard->setBusy({});
+        guard->m_ui->messageWidget->showMessage(tr("An invitation is on its way to %1.").arg(email),
+                                                MessageWidget::Positive);
+        guard->loadInvitations();
+        guard->loadMembers();
+        guard->loadAudit();
+    });
+}
+
+void ServiceAccountsDialog::cancelSelectedInvitation()
+{
+    const auto items = m_ui->invitationsTree->selectedItems();
+    if (items.isEmpty()) {
+        return;
+    }
+    const auto invitationId = items.first()->data(0, IdRole).toString();
+    setBusy(tr("Cancelling the invitation…"));
+    QPointer<ServiceAccountsDialog> guard(this);
+    m_admin->cancelInvitation(currentOrg(), invitationId, [guard](bool ok, const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!ok) {
+            guard->showError(error);
+            return;
+        }
+        guard->setBusy({});
+        guard->loadInvitations();
+        guard->loadMembers();
+        guard->loadAudit();
     });
 }
 

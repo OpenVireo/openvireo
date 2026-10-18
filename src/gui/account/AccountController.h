@@ -113,8 +113,10 @@ public slots:
     // Open (or show) a vault in a tab, downloading it the first time
     void openVault(const QString& vaultId, bool inBackground = false);
     void openAllVaults();
-    // Create an empty vault and open it
-    void createVault(const QString& name);
+    // Create an empty vault and open it: a personal one, or one of the org `orgId`
+    void createVault(const QString& name, const QString& orgId = {});
+    // Join an org from the invitation link or code; an owner or admin confirms the membership afterwards
+    void acceptInvitation(const QString& linkOrToken);
     // Re-key a copy of the database to a fresh vault key, upload it as a new vault and open that in its place
     void moveToAccount(DatabaseWidget* dbWidget, const QString& name);
 

@@ -49,6 +49,9 @@ private slots:
     void testMovesADatabaseToTheAccount();
     void testServiceAccountsDialog();
     void testSignOutReturnsToTheStartScreen();
+    void testCreatesAnOrgAndOrgVaults();
+    void testAcceptsAnInvitation();
+    void testInvitesPromotesAndRemovesMembers();
 
 private:
     void createWindow(const QString& mode);
