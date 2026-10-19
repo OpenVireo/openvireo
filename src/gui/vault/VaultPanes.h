@@ -28,10 +28,13 @@
 
 #include <components/foundation/FluentElement.h>
 
+class AccountController;
 class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
+class QAction;
 class QLabel;
+class QMenu;
 class QTimer;
 
 namespace fluent::basicinput
@@ -175,7 +178,8 @@ private:
 
 /**
  * Database picker at the start of the header: shows the current database and
- * switches between the open databases in place of the tab bar.
+ * switches between the open databases in place of the tab bar. While signed in
+ * to an account it also lists the account's vaults, to open or switch to.
  */
 class VaultDatabasePicker : public QAbstractButton, public fluent::FluentElement
 {
@@ -183,6 +187,10 @@ class VaultDatabasePicker : public QAbstractButton, public fluent::FluentElement
 
 public:
     explicit VaultDatabasePicker(DatabaseTabWidget* tabs, QWidget* parent = nullptr);
+
+    void setAccountController(AccountController* controller);
+    // Vault commands listed under the account's vaults (New Vault, Share Vault, ...)
+    void setAccountActions(const QList<QAction*>& actions);
 
     QSize sizeHint() const override;
     void onThemeUpdated() override;
@@ -198,8 +206,12 @@ private slots:
     void showDatabaseMenu();
 
 private:
+    void addAccountVaults(QMenu* menu);
+
     QPointer<DatabaseTabWidget> m_tabs;
     QPointer<DatabaseWidget> m_dbWidget;
+    QPointer<AccountController> m_accountController;
+    QList<QPointer<QAction>> m_accountActions;
     QString m_detail;
     bool m_locked = false;
     bool m_hovered = false;
@@ -207,8 +219,44 @@ private:
 };
 
 /**
+ * Account button at the end of the header: shows who is signed in, and opens the
+ * account commands (unlock, lock, orgs, manage, sign out). Hidden unless signed in
+ * to an account.
+ */
+class VaultAccountButton : public QAbstractButton, public fluent::FluentElement
+{
+    Q_OBJECT
+
+public:
+    explicit VaultAccountButton(QWidget* parent = nullptr);
+
+    void setAccountController(AccountController* controller);
+    // The account commands in menu order; nullptr adds a separator
+    void setActions(const QList<QAction*>& actions);
+
+    QSize sizeHint() const override;
+    void onThemeUpdated() override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+
+private slots:
+    void refresh();
+    void showAccountMenu();
+
+private:
+    QPointer<AccountController> m_controller;
+    QList<QPointer<QAction>> m_actions;
+    bool m_locked = false;
+    bool m_hovered = false;
+    bool m_menuOpen = false;
+};
+
+/**
  * Header above the database view in the Vault Index layout: the database
- * picker, search and sync status.
+ * picker, search, sync status and the account button.
  */
 class VaultHeaderBar : public QWidget
 {
@@ -219,6 +267,8 @@ public:
 
     VaultDatabasePicker* databasePicker() const;
     VaultSyncChip* syncChip() const;
+    VaultAccountButton* accountButton() const;
+    void setAccountController(AccountController* controller);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -226,6 +276,7 @@ protected:
 private:
     VaultDatabasePicker* m_databasePicker;
     VaultSyncChip* m_syncChip;
+    VaultAccountButton* m_accountButton;
 };
 
 #endif // KEEPASSXC_VAULTPANES_H
