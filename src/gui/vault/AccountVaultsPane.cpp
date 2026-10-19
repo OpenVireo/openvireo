@@ -158,6 +158,66 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
     refresh();
 }
 
+QList<AccountVaultsPane::Section> AccountVaultsPane::sections(AccountManager* account)
+{
+    auto vaults = account->keyring().vaults();
+    std::sort(vaults.begin(), vaults.end(), [](const VaultKeyring::Vault& a, const VaultKeyring::Vault& b) {
+        return a.name.localeAwareCompare(b.name) < 0;
+    });
+    QMap<QString, QList<VaultKeyring::Vault>> byOrg;
+    for (const auto& vault : vaults) {
+        byOrg[vault.orgId] << vault;
+    }
+    QList<AccountManager::Org> orgs;
+    for (const auto& org : account->orgs()) {
+        if (byOrg.contains(org.id) || !org.isConfirmed()) {
+            orgs << org;
+        }
+    }
+    for (const auto& orgId : byOrg.keys()) {
+        if (!orgId.isEmpty() && account->org(orgId).id.isEmpty()) {
+            // Not in /me (yet): still listed, under a generic heading
+            orgs << AccountManager::Org{orgId, {}, {}, {}};
+        }
+    }
+    std::sort(orgs.begin(), orgs.end(), [](const AccountManager::Org& a, const AccountManager::Org& b) {
+        return a.name.localeAwareCompare(b.name) < 0;
+    });
+
+    QList<Section> result;
+    if (byOrg.contains({})) {
+        // Without any org the list stays as plain as it always was
+        result << Section{{}, orgs.isEmpty() ? QString() : tr("Personal"), {}, byOrg.value({})};
+    }
+    for (const auto& org : orgs) {
+        const auto name = org.name.isEmpty() ? tr("Organization") : org.name;
+        if (!org.isConfirmed()) {
+            result << Section{
+                org.id,
+                tr("%1 (waiting for confirmation)").arg(name),
+                tr("An owner or admin of %1 has to confirm you before you can open its vaults.").arg(name),
+                {}};
+            continue;
+        }
+        result << Section{org.id, name, {}, byOrg.value(org.id)};
+    }
+    return result;
+}
+
+QString AccountVaultsPane::vaultName(const VaultKeyring::Vault& vault)
+{
+    return vault.name.isEmpty() ? vault.id : vault.name;
+}
+
+QString AccountVaultsPane::vaultToolTip(const VaultKeyring::Vault& vault)
+{
+    auto tip = roleText(vault.role);
+    if (vault.rotationRequired) {
+        tip += "\n" + tr("A member was removed: rotate the key from the Share dialog.");
+    }
+    return tip;
+}
+
 QListWidget* AccountVaultsPane::vaultList() const
 {
     return m_vaultList;
@@ -196,74 +256,26 @@ void AccountVaultsPane::refresh()
     const auto selected = selectedVault();
     m_vaultList->clear();
     if (unlocked) {
-        auto vaults = account->keyring().vaults();
-        std::sort(vaults.begin(), vaults.end(), [](const VaultKeyring::Vault& a, const VaultKeyring::Vault& b) {
-            return a.name.localeAwareCompare(b.name) < 0;
-        });
-        // Personal vaults first, then one group per org in the order of the org names
-        QMap<QString, QList<VaultKeyring::Vault>> byOrg;
-        for (const auto& vault : vaults) {
-            byOrg[vault.orgId] << vault;
-        }
-        QList<AccountManager::Org> orgs;
-        for (const auto& org : account->orgs()) {
-            if (byOrg.contains(org.id) || !org.isConfirmed()) {
-                orgs << org;
+        for (const auto& section : sections(account)) {
+            if (!section.title.isEmpty()) {
+                auto* heading = new QListWidgetItem(section.title);
+                heading->setFlags(Qt::NoItemFlags);
+                heading->setData(OrgIdRole, section.orgId);
+                heading->setToolTip(section.toolTip);
+                auto font = heading->font();
+                font.setBold(true);
+                heading->setFont(font);
+                m_vaultList->addItem(heading);
             }
-        }
-        for (const auto& orgId : byOrg.keys()) {
-            if (!orgId.isEmpty() && account->org(orgId).id.isEmpty()) {
-                // Not in /me (yet): still listed, under a generic heading
-                orgs << AccountManager::Org{orgId, {}, {}, {}};
-            }
-        }
-        std::sort(orgs.begin(), orgs.end(), [](const AccountManager::Org& a, const AccountManager::Org& b) {
-            return a.name.localeAwareCompare(b.name) < 0;
-        });
-
-        const auto addHeading = [this](const QString& text, const QString& orgId, const QString& tip) {
-            auto* heading = new QListWidgetItem(text);
-            heading->setFlags(Qt::NoItemFlags);
-            heading->setData(OrgIdRole, orgId);
-            heading->setToolTip(tip);
-            auto font = heading->font();
-            font.setBold(true);
-            heading->setFont(font);
-            m_vaultList->addItem(heading);
-        };
-        const auto addVault = [this, &selected](const VaultKeyring::Vault& vault) {
-            auto* item = new QListWidgetItem(icons()->icon("database"), vault.name.isEmpty() ? vault.id : vault.name);
-            item->setData(VaultIdRole, vault.id);
-            item->setData(OrgIdRole, vault.orgId);
-            auto tip = roleText(vault.role);
-            if (vault.rotationRequired) {
-                tip += "\n" + tr("A member was removed: rotate the key from the Share dialog.");
-            }
-            item->setToolTip(tip);
-            m_vaultList->addItem(item);
-            if (vault.id == selected) {
-                m_vaultList->setCurrentItem(item);
-            }
-        };
-
-        // Without any org the list stays as plain as it always was
-        if (!orgs.isEmpty() && byOrg.contains({})) {
-            addHeading(tr("Personal"), {}, {});
-        }
-        for (const auto& vault : byOrg.value({})) {
-            addVault(vault);
-        }
-        for (const auto& org : orgs) {
-            const auto name = org.name.isEmpty() ? tr("Organization") : org.name;
-            if (!org.isConfirmed()) {
-                addHeading(tr("%1 (waiting for confirmation)").arg(name),
-                           org.id,
-                           tr("An owner or admin of %1 has to confirm you before you can open its vaults.").arg(name));
-                continue;
-            }
-            addHeading(name, org.id, {});
-            for (const auto& vault : byOrg.value(org.id)) {
-                addVault(vault);
+            for (const auto& vault : section.vaults) {
+                auto* item = new QListWidgetItem(icons()->icon("database"), vaultName(vault));
+                item->setData(VaultIdRole, vault.id);
+                item->setData(OrgIdRole, vault.orgId);
+                item->setToolTip(vaultToolTip(vault));
+                m_vaultList->addItem(item);
+                if (vault.id == selected) {
+                    m_vaultList->setCurrentItem(item);
+                }
             }
         }
     }
