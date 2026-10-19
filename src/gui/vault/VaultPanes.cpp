@@ -17,6 +17,7 @@
 
 #include "VaultPanes.h"
 
+#include "account/AccountManager.h"
 #include "core/Database.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
@@ -24,8 +25,10 @@
 #include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/Icons.h"
+#include "gui/account/AccountController.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
@@ -608,6 +611,19 @@ VaultDatabasePicker::VaultDatabasePicker(DatabaseTabWidget* tabs, QWidget* paren
     setDatabaseWidget(tabs->currentDatabaseWidget());
 }
 
+void VaultDatabasePicker::setAccountController(AccountController* controller)
+{
+    m_accountController = controller;
+}
+
+void VaultDatabasePicker::setAccountActions(const QList<QAction*>& actions)
+{
+    m_accountActions.clear();
+    for (auto* action : actions) {
+        m_accountActions << action;
+    }
+}
+
 void VaultDatabasePicker::setDatabaseWidget(DatabaseWidget* dbWidget)
 {
     if (m_dbWidget) {
@@ -643,7 +659,8 @@ void VaultDatabasePicker::setDatabaseWidget(DatabaseWidget* dbWidget)
 void VaultDatabasePicker::refresh()
 {
     if (!m_dbWidget || !m_dbWidget->database()) {
-        setText({});
+        // Shown while signed in to a locked account, to reach its vaults and the open commands
+        setText(tr("No database open"));
         m_detail.clear();
         m_locked = false;
         setToolTip({});
@@ -680,10 +697,18 @@ void VaultDatabasePicker::showDatabaseMenu()
     }
 
     VaultMenu menu(tr("Databases"), this);
+    menu.setSeparatorsCollapsible(true);
+    menu.setToolTipsVisible(true);
     // Before adding actions: QMenu sizes its item rects, and so the area it repaints on hover, as they are added
     menu.setMinimumWidth(width());
+    // The account's vaults get their own section below, so open vaults aren't listed twice
+    const bool listsVaults = m_accountController && m_accountController->mode() == AccountController::Mode::Account
+                             && m_accountController->account()->state() == AccountManager::State::Unlocked;
     for (int i = 0; i < m_tabs->count(); ++i) {
         auto* dbWidget = m_tabs->databaseWidgetFromIndex(i);
+        if (listsVaults && m_accountController->isAccountVault(dbWidget)) {
+            continue;
+        }
         auto* action = menu.addAction(Tools::escapeAccelerators(m_tabs->tabName(i)));
         action->setCheckable(true);
         action->setChecked(i == m_tabs->currentIndex());
@@ -697,6 +722,8 @@ void VaultDatabasePicker::showDatabaseMenu()
             }
         });
     }
+
+    addAccountVaults(&menu);
 
     menu.addSeparator();
     for (const auto* name : {"actionDatabaseNew", "actionDatabaseOpen"}) {
@@ -720,6 +747,57 @@ void VaultDatabasePicker::showDatabaseMenu()
     menu.exec(mapToGlobal(QPoint(0, height() + 2)));
     m_menuOpen = false;
     update();
+}
+
+void VaultDatabasePicker::addAccountVaults(QMenu* menu)
+{
+    if (!m_accountController || m_accountController->mode() != AccountController::Mode::Account) {
+        return;
+    }
+    auto* account = m_accountController->account();
+    const auto state = account->state();
+    if (state == AccountManager::State::SignedOut) {
+        return;
+    }
+
+    const auto addHeading = [menu](const QString& text, const QString& toolTip = {}) {
+        auto* heading = menu->addAction(text);
+        heading->setEnabled(false);
+        heading->setToolTip(toolTip);
+        auto font = heading->font();
+        font.setBold(true);
+        heading->setFont(font);
+    };
+
+    menu->addSeparator();
+    if (state != AccountManager::State::Unlocked) {
+        addHeading(tr("Account vaults"));
+        auto* locked = menu->addAction(icons()->icon("database-lock"), tr("Unlock your account to open its vaults"));
+        locked->setEnabled(false);
+        return;
+    }
+
+    const auto current = m_accountController->vaultIdOf(m_dbWidget);
+    for (const auto& section : AccountVaultsPane::sections(account)) {
+        addHeading(section.title.isEmpty() ? tr("Account vaults") : section.title, section.toolTip);
+        for (const auto& vault : section.vaults) {
+            auto* action = menu->addAction(Tools::escapeAccelerators(AccountVaultsPane::vaultName(vault)));
+            action->setCheckable(true);
+            action->setChecked(vault.id == current);
+            action->setToolTip(AccountVaultsPane::vaultToolTip(vault));
+            const auto vaultId = vault.id;
+            connect(action, &QAction::triggered, this, [this, vaultId] {
+                if (m_accountController) {
+                    m_accountController->openVault(vaultId);
+                }
+            });
+        }
+    }
+    for (const auto& action : m_accountActions) {
+        if (action && action->isVisible()) {
+            menu->addAction(action);
+        }
+    }
 }
 
 QSize VaultDatabasePicker::sizeHint() const
@@ -807,10 +885,157 @@ void VaultDatabasePicker::paintEvent(QPaintEvent* event)
                      detailMetrics.elidedText(m_detail, Qt::ElideMiddle, width));
 }
 
+VaultAccountButton::VaultAccountButton(QWidget* parent)
+    : QAbstractButton(parent)
+{
+    setObjectName("vaultAccountButton");
+    setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::TabFocus);
+    setAttribute(Qt::WA_Hover);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    setAccessibleName(tr("Account"));
+    setVisible(false);
+    connect(this, &QAbstractButton::clicked, this, &VaultAccountButton::showAccountMenu);
+}
+
+void VaultAccountButton::setAccountController(AccountController* controller)
+{
+    if (m_controller) {
+        m_controller->disconnect(this);
+        m_controller->account()->disconnect(this);
+    }
+    m_controller = controller;
+    if (m_controller) {
+        auto* account = m_controller->account();
+        connect(account, &AccountManager::stateChanged, this, &VaultAccountButton::refresh);
+        connect(account, &AccountManager::emailChanged, this, &VaultAccountButton::refresh);
+        connect(m_controller, &AccountController::modeChanged, this, &VaultAccountButton::refresh);
+    }
+    refresh();
+}
+
+void VaultAccountButton::setActions(const QList<QAction*>& actions)
+{
+    m_actions.clear();
+    for (auto* action : actions) {
+        m_actions << action;
+    }
+}
+
+void VaultAccountButton::refresh()
+{
+    if (!m_controller) {
+        setVisible(false);
+        return;
+    }
+    auto* account = m_controller->account();
+    const auto state = account->state();
+    setVisible(m_controller->mode() == AccountController::Mode::Account && state != AccountManager::State::SignedOut);
+    m_locked = state != AccountManager::State::Unlocked;
+    setToolTip(QStringLiteral("%1\n%2").arg(account->email(), m_locked ? tr("Account locked") : tr("Account unlocked")));
+    update();
+}
+
+void VaultAccountButton::showAccountMenu()
+{
+    if (!m_controller) {
+        return;
+    }
+
+    VaultMenu menu(tr("Account"), this);
+    menu.setSeparatorsCollapsible(true);
+    auto* email = menu.addAction(m_controller->account()->email());
+    email->setEnabled(false);
+    auto font = email->font();
+    font.setBold(true);
+    email->setFont(font);
+    menu.addAction(m_locked ? tr("Locked") : tr("Unlocked"))->setEnabled(false);
+    menu.addSeparator();
+    // Only what can be done now: unlock while locked, lock and the org commands while unlocked
+    for (const auto& action : m_actions) {
+        if (!action) {
+            menu.addSeparator();
+        } else if (action->isVisible() && action->isEnabled()) {
+            menu.addAction(action);
+        }
+    }
+
+    m_menuOpen = true;
+    update();
+    const auto width = menu.sizeHint().width();
+    menu.exec(mapToGlobal(QPoint(this->width() - width, height() + 2)));
+    m_menuOpen = false;
+    update();
+}
+
+QSize VaultAccountButton::sizeHint() const
+{
+    return {32, 32};
+}
+
+void VaultAccountButton::onThemeUpdated()
+{
+    update();
+}
+
+void VaultAccountButton::enterEvent(QEnterEvent* event)
+{
+    m_hovered = true;
+    update();
+    QAbstractButton::enterEvent(event);
+}
+
+void VaultAccountButton::leaveEvent(QEvent* event)
+{
+    m_hovered = false;
+    update();
+    QAbstractButton::leaveEvent(event);
+}
+
+void VaultAccountButton::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    QPainterPath path;
+    path.addEllipse(r);
+    if (m_menuOpen || isDown()) {
+        painter.fillPath(path, p.subtlePressed);
+    } else if (m_hovered) {
+        painter.fillPath(path, p.subtleHover);
+    }
+    if (hasFocus()) {
+        painter.setPen(QPen(p.text, 2));
+        painter.drawPath(path);
+    }
+
+    QFont glyphFont(Typography::FontFamily::FluentIcons);
+    glyphFont.setPixelSize(16);
+    painter.setFont(glyphFont);
+    painter.setPen(p.text);
+    painter.drawText(r, Qt::AlignCenter, Typography::Icons::Contact);
+
+    // A lock badge while the account is locked
+    if (m_locked) {
+        const QRectF badge(r.right() - 13, r.bottom() - 13, 12, 12);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(p.canvas);
+        painter.drawEllipse(badge);
+        glyphFont.setPixelSize(9);
+        painter.setFont(glyphFont);
+        painter.setPen(p.caution);
+        painter.drawText(badge, Qt::AlignCenter, Typography::Icons::Lock);
+    }
+}
+
 VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, QWidget* parent)
     : QWidget(parent)
     , m_databasePicker(new VaultDatabasePicker(tabs, this))
     , m_syncChip(new VaultSyncChip(this))
+    , m_accountButton(new VaultAccountButton(this))
 {
     setObjectName("vaultHeaderBar");
 
@@ -829,11 +1054,22 @@ VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, Q
     center->addWidget(searchWidget, 100);
     center->addStretch(1);
     layout->addLayout(center, 0, 1);
-    layout->addWidget(m_syncChip, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+    auto* end = new QHBoxLayout();
+    end->setSpacing(8);
+    end->addStretch(1);
+    end->addWidget(m_syncChip, 0, Qt::AlignVCenter);
+    end->addWidget(m_accountButton, 0, Qt::AlignVCenter);
+    layout->addLayout(end, 0, 2);
 
     layout->setColumnStretch(0, 1);
     layout->setColumnStretch(1, 3);
     layout->setColumnStretch(2, 1);
+}
+
+void VaultHeaderBar::setAccountController(AccountController* controller)
+{
+    m_databasePicker->setAccountController(controller);
+    m_accountButton->setAccountController(controller);
 }
 
 VaultDatabasePicker* VaultHeaderBar::databasePicker() const
@@ -844,6 +1080,11 @@ VaultDatabasePicker* VaultHeaderBar::databasePicker() const
 VaultSyncChip* VaultHeaderBar::syncChip() const
 {
     return m_syncChip;
+}
+
+VaultAccountButton* VaultHeaderBar::accountButton() const
+{
+    return m_accountButton;
 }
 
 void VaultHeaderBar::paintEvent(QPaintEvent* event)

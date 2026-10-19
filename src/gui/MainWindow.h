@@ -115,6 +115,7 @@ public slots:
     void showShareVaultDialog(const QString& vaultId = {});
     void showServiceAccounts();
     void createAccountVault();
+    void unlockAccount();
     // Paste the link or code from an org invitation email
     void acceptAccountInvitation();
     void moveDatabaseToAccount();
@@ -225,6 +226,8 @@ private:
     AccountVaultsPane* m_accountPane = nullptr;
     QPointer<QMenu> m_accountMenu;
     QPointer<QAction> m_actionAccountSignIn;
+    QPointer<QAction> m_actionAccountUnlock;
+    QPointer<QAction> m_actionAccountQuickUnlock;
     QPointer<QAction> m_actionAccountLock;
     QPointer<QAction> m_actionAccountSignOut;
     QPointer<QAction> m_actionAccountManage;

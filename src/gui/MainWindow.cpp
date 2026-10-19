@@ -723,25 +723,31 @@ void MainWindow::setupAccounts()
     connect(m_startScreen, &AccountStartWidget::finished, this, &MainWindow::finishStartScreen);
     connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
 
-    // The account's vaults beside the databases
-    m_accountPane = new AccountVaultsPane(m_accountController, m_ui->centralwidget);
-    auto* row = new QWidget(m_ui->centralwidget);
-    auto* rowLayout = new QHBoxLayout(row);
-    rowLayout->setContentsMargins(0, 0, 0, 0);
-    rowLayout->setSpacing(0);
-    const auto index = m_ui->verticalLayout->indexOf(m_ui->stackedWidget);
-    m_ui->verticalLayout->removeWidget(m_ui->stackedWidget);
-    rowLayout->addWidget(m_accountPane);
-    rowLayout->addWidget(m_ui->stackedWidget, 1);
-    m_ui->verticalLayout->insertWidget(index, row, 1);
-    connect(m_accountPane, &AccountVaultsPane::shareRequested, this, &MainWindow::showShareVaultDialog);
-    connect(m_accountPane, &AccountVaultsPane::newVaultRequested, this, &MainWindow::createAccountVault);
-    connect(m_accountPane, &AccountVaultsPane::serviceAccountsRequested, this, &MainWindow::showServiceAccounts);
+    // The account's vaults beside the databases; the Vault Index layout lists them in the header's database picker
+    if (!m_vaultLayout) {
+        m_accountPane = new AccountVaultsPane(m_accountController, m_ui->centralwidget);
+        auto* row = new QWidget(m_ui->centralwidget);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->setSpacing(0);
+        const auto index = m_ui->verticalLayout->indexOf(m_ui->stackedWidget);
+        m_ui->verticalLayout->removeWidget(m_ui->stackedWidget);
+        rowLayout->addWidget(m_accountPane);
+        rowLayout->addWidget(m_ui->stackedWidget, 1);
+        m_ui->verticalLayout->insertWidget(index, row, 1);
+        connect(m_accountPane, &AccountVaultsPane::shareRequested, this, &MainWindow::showShareVaultDialog);
+        connect(m_accountPane, &AccountVaultsPane::newVaultRequested, this, &MainWindow::createAccountVault);
+        connect(m_accountPane, &AccountVaultsPane::serviceAccountsRequested, this, &MainWindow::showServiceAccounts);
+    }
 
     m_accountMenu = new VaultMenu(tr("&Account"), this);
     m_accountMenu->setObjectName("menuAccount");
     m_actionAccountSignIn =
         m_accountMenu->addAction(tr("Sign In or Create Account…"), this, &MainWindow::showStartScreen);
+    m_actionAccountUnlock = m_accountMenu->addAction(tr("&Unlock Account…"), this, &MainWindow::unlockAccount);
+    m_actionAccountQuickUnlock = m_accountMenu->addAction(
+        tr("&Quick Unlock Account"), m_accountController, &AccountController::quickUnlockAccount);
+    m_actionAccountQuickUnlock->setToolTip(tr("Unlock with Touch ID, Windows Hello or your system password"));
     m_actionAccountLock =
         m_accountMenu->addAction(tr("&Lock Account"), m_accountController, &AccountController::lockAccount);
     m_accountMenu->addSeparator();
@@ -765,7 +771,31 @@ void MainWindow::setupAccounts()
         m_accountMenu->addAction(tr("Sign &Out"), m_accountController, &AccountController::signOut);
     m_ui->menubar->insertMenu(m_ui->menuHelp->menuAction(), m_accountMenu);
 
+    if (m_vaultHeader) {
+        // Vault commands go with the databases, the rest with the account
+        m_vaultHeader->setAccountController(m_accountController);
+        m_vaultHeader->databasePicker()->setAccountActions(
+            {m_actionAccountNewVault, m_actionAccountShare, m_actionAccountMove});
+        m_vaultHeader->accountButton()->setActions({m_actionAccountUnlock,
+                                                    m_actionAccountQuickUnlock,
+                                                    m_actionAccountLock,
+                                                    nullptr,
+                                                    m_actionAccountServiceAccounts,
+                                                    m_actionAccountAcceptInvitation,
+                                                    nullptr,
+                                                    m_actionAccountManage,
+                                                    m_actionAccountSignOut});
+    }
+
     auto* account = m_accountController->account();
+    if (!m_accountPane) {
+        // Without the sidebar's unlock form, failed unlocks show above the window
+        connect(account, &AccountManager::error, this, [this](const QString& message) {
+            if (m_accountController->account()->state() == AccountManager::State::Locked) {
+                displayGlobalMessage(message, MessageWidget::Error);
+            }
+        });
+    }
     connect(account, &AccountManager::stateChanged, this, &MainWindow::updateAccountActions);
     connect(account, &AccountManager::vaultsChanged, this, &MainWindow::updateAccountActions);
     connect(m_accountController, &AccountController::modeChanged, this, &MainWindow::updateAccountActions);
@@ -976,7 +1006,11 @@ void MainWindow::updateAccountActions()
     const bool signedIn = accountMode && state != AccountManager::State::SignedOut;
     const bool unlocked = signedIn && state == AccountManager::State::Unlocked && !account->isServiceAccount();
     auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
+    const bool locked = signedIn && state == AccountManager::State::Locked;
     m_actionAccountSignIn->setEnabled(!isStartScreenShown());
+    m_actionAccountUnlock->setEnabled(locked);
+    // Quick Unlock only once the password unlocked the account in this session, as for databases
+    m_actionAccountQuickUnlock->setEnabled(locked && account->canQuickUnlock());
     m_actionAccountLock->setEnabled(unlocked);
     m_actionAccountSignOut->setEnabled(signedIn);
     m_actionAccountManage->setEnabled(signedIn && !account->isServiceAccount()
@@ -987,6 +1021,22 @@ void MainWindow::updateAccountActions()
     m_actionAccountAcceptInvitation->setEnabled(unlocked);
     m_actionAccountMove->setEnabled(unlocked && dbWidget && !dbWidget->isLocked()
                                     && !m_accountController->isAccountVault(dbWidget));
+    updateMenuActionState();
+}
+
+void MainWindow::unlockAccount()
+{
+    auto* account = m_accountController->account();
+    bool ok = false;
+    const auto password = QInputDialog::getText(this,
+                                                tr("Unlock account"),
+                                                tr("Master password for %1:").arg(account->email()),
+                                                QLineEdit::Password,
+                                                {},
+                                                &ok);
+    if (ok && !password.isEmpty()) {
+        m_accountController->unlockAccount(password);
+    }
 }
 
 MainWindow::~MainWindow()
@@ -1345,8 +1395,13 @@ void MainWindow::updateMenuActionState()
         m_searchWidgetAction->setEnabled(inDatabase);
     }
     if (m_vaultHeader) {
-        // The database picker stays available while a database is locked or being edited
-        m_vaultHeader->setVisible(shownDbWidget != nullptr);
+        // The database picker stays available while a database is locked or being edited, and with no database
+        // open while signed in to an account, to unlock it and reach its vaults
+        const bool accountShown = m_accountController
+                                  && m_accountController->mode() == AccountController::Mode::Account
+                                  && m_accountController->account()->state() != AccountManager::State::SignedOut
+                                  && currentIndex == WelcomeScreen && !isStartScreenShown();
+        m_vaultHeader->setVisible(shownDbWidget != nullptr || accountShown);
     }
 }
 
