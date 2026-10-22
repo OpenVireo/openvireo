@@ -33,7 +33,7 @@ class TagItemDelegate : public QStyledItemDelegate
 {
 public:
     explicit TagItemDelegate(QObject* parent)
-        : QStyledItemDelegate(parent){};
+        : QStyledItemDelegate(parent) {};
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
