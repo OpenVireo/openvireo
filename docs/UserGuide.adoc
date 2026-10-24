@@ -25,6 +25,10 @@ include::topics/UserInterface.adoc[tags=*]
 
 include::topics/DatabaseOperations.adoc[tags=*]
 
+include::topics/SyncServer.adoc[tags=*]
+
+include::topics/Accounts.adoc[tags=*]
+
 include::topics/PasswordGenerator.adoc[tags=*]
 
 include::topics/ImportExport.adoc[tags=*]

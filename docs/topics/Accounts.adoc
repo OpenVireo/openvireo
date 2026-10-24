@@ -1,0 +1,80 @@
+= KeePassXC – Accounts
+include::.sharedheader[]
+:imagesdir: ../images
+
+// tag::content[]
+== KeePassXC Accounts
+A KeePassXC account keeps your vaults in sync between KeePassXC on your computers and KeePass Web in your browser, and lets you share vaults with other people and with your organization. Everything is encrypted on your devices, with your master password and a Secret Key that only you have. The account server and the sync server only ever store encrypted vaults and keys sealed to their members, so they can't read your passwords. An account is optional: KeePassXC works without one exactly as it always has.
+
+=== Ways to Use KeePassXC
+The first time you start KeePassXC, the start screen offers three ways to use it:
+
+.Start screen
+image::account_start_screen.png[]
+
+Your choice is remembered, so later launches skip the start screen; _Account_ -> _Sign In or Create Account…_ brings it back.
+
+[grid=rows, frame=none, width=90%]
+|===
+|Choice | What it does
+
+|Sign in / Create account | Your vaults live in your KeePassXC account and open with your account's master password. They sync automatically and can be shared.
+|Use my own sync server | Your databases sync with a KeePassXC Sync Server you run yourself. Enter the server's URL and a pairing code from another of your devices or from the server's admin; new databases are then set up to sync with that server. Each database keeps its own master password. See <<KeePassXC Sync Server>>.
+|Use without an account | Database files on your computer, with their own master passwords. Nothing leaves your computer unless you set up a sync yourself.
+|===
+
+=== Creating an Account
+1. On the start screen, click _Create account_.
+2. Enter your email address and choose a master password. Nobody can reset your master password, not even the server's operators, so choose one you will remember. Click _Change server_ only if you use a KeePassXC account server other than the default one.
+3. KeePassXC creates your Secret Key on this computer and shows it once. Click _Save Emergency Kit…_ to save or print the Emergency Kit, a PDF with your email, the server, your Secret Key, and a space to write down your master password, and keep it somewhere safe.
+4. Confirm that you saved the Emergency Kit to finish.
+
+IMPORTANT: You need your master password *and* your Secret Key to sign in on a new device. If you lose both your devices and your Emergency Kit, your vaults can't be recovered.
+
+=== Signing In
+On the start screen, enter your email and master password and click _Sign in_. The first time on a device, also click _First time on this device? Enter your Secret Key_ and enter the Secret Key from your Emergency Kit; afterwards the device keeps it. If you turned on two-step verification, enter the 6-digit code from your authenticator app.
+
+Once you are signed in, your account's vaults all open at once, with no password of their own. They are listed in the database picker under _Personal_ and under the name of each organization you belong to, and the account button at the far right of the header shows who is signed in.
+
+// tag::advanced[]
+==== Locking and Quick Unlock
+Locking a vault, or _Account_ -> _Lock Account_, locks the account and closes all of its vaults. _Account_ -> _Unlock Account…_ asks for your master password and opens them again.
+
+When Quick Unlock is available (Touch ID on macOS, Windows Hello on Windows, or your system password through Polkit on Linux) and turned on under _Tools_ -> _Settings_ -> _Security_, _Account_ -> _Quick Unlock Account_ unlocks the account without typing the master password. The keys it needs stay in memory only: they are dropped when you sign out or quit KeePassXC.
+
+=== Vaults
+_Account_ -> _New Vault…_ creates a vault. It can belong to you or to an organization you manage; a vault of an organization opens for all of its owners and admins, and you can share it with other members afterwards.
+
+Vaults sync automatically, the same way as with a sync server (see <<Automatic Sync>> and <<Conflicts>>): after each save, when changes arrive from your other devices, and when you come back online.
+
+==== Moving a Database to Your Account
+To bring an existing database into your account, open and unlock it, then select _Account_ -> _Move Database to Account…_ and enter a name for the vault. A copy of the database becomes a personal vault, encrypted with a new vault key instead of its master password, and syncs with your account from then on. The database file itself isn't changed.
+
+==== Sharing a Vault
+Select a vault, then _Account_ -> _Share Vault…_:
+
+1. Enter the email address of the person to share with and click _Look up_.
+2. Check their fingerprint with them, for example over the phone: they see the same fingerprint in their own app. Only share when it matches.
+3. Choose their access and click _Share_:
+ * *Read only* – they can open the vault and copy from it.
+ * *Can edit* – they can also change its entries.
+ * *Can manage* – they can also share it with others and remove members.
+
+To change someone's access select them and click _Change_. Removing a member gives the vault a new key, sealed only to the remaining members, so that what the removed member kept can't open the vault's future versions.
+
+=== Organizations
+_Account_ -> _Organizations, Service Accounts and Audit Log…_ opens the organization settings. Click _New organization…_ to create one; you become its owner. For each organization you can manage:
+
+* *Members* – Invite people by email with the role _Owner_, _Admin_, or _Member_. The invitation is valid for 7 days; they accept it with _Account_ -> _Accept Invitation…_ by pasting the link or code from the email. An owner or admin then checks their fingerprint and clicks _Confirm…_ to choose the vaults they can open. Owners and admins get every vault of the organization. You can also change a member's role, remove them (their vaults get new keys), or select yourself and click _Leave…_ to leave the organization.
+* *Service accounts* – Accounts for a CI job, a server, or a Kubernetes cluster rather than a person. Give a service account access to vaults (_Read only_ or _Can edit_), then click _Issue secret…_ to create a token for it. The token is shown only once: copy it to where it will be used, for example as a CI secret. Each secret can expire on a date, which you can change later with _Change expiry…_, and can be revoked at any time.
+* *Audit log* – Who did what and when in the organization, such as sign-ins, shares, and member and service-account changes.
+
+Service account tokens are used by the `kpx` command line tool, which reads secrets from vaults with references such as `kpx read kpx://Production/Database/password` or runs a command with secrets in its environment (`kpx run --env-file .env -- <command>`), by `kpx connect`, a REST server for other programs and Kubernetes, and by the GitHub Action.
+
+// end::advanced[]
+=== Managing Your Account
+_Account_ -> _Manage Account…_ opens your account page in KeePass Web in your browser; sign in there if it asks. There you can change your email or master password, turn two-step verification on or off, see your devices and sign them out, and download your Emergency Kit again. Changes made there reach KeePassXC on your other devices automatically.
+
+_Account_ -> _Sign Out_ signs this device out of your account and closes its vaults. Databases on your computer stay usable.
+
+// end::content[]

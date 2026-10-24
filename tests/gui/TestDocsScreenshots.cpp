@@ -31,6 +31,7 @@
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
+#include "gui/account/AccountStartWidget.h"
 #include "gui/PasswordGeneratorWidget.h"
 #include "gui/PasswordWidget.h"
 #include "gui/entry/EditEntryWidget.h"
@@ -567,12 +568,29 @@ void TestDocsScreenshots::mainWindow()
     }
 }
 
+// The start screen that asks how to use KeePassXC, with the account sign-in form, shown in place of
+// the welcome screen as MainWindow::showStartScreen() does
+void TestDocsScreenshots::showStartScreen(bool show)
+{
+    auto* start = m_mainWindow->startScreen();
+    auto* welcome = m_mainWindow->findChild<QWidget*>("welcomeWidget");
+    QVERIFY(start && welcome);
+    if (show) {
+        start->reset();
+    }
+    welcome->setVisible(!show);
+    start->setVisible(show);
+}
+
 void TestDocsScreenshots::welcomeAndUnlock()
 {
     auto* stack = m_mainWindow->findChild<QStackedWidget*>("stackedWidget");
     const auto index = stack->currentIndex();
     stack->setCurrentIndex(MainWindow::WelcomeScreen);
     save("welcome_screen");
+    showStartScreen(true);
+    save("account_start_screen");
+    showStartScreen(false);
     stack->setCurrentIndex(index);
 
     QVERIFY(m_dbWidget->lock());
@@ -893,6 +911,9 @@ void TestDocsScreenshots::websiteMainWindow()
     const auto index = stack->currentIndex();
     stack->setCurrentIndex(MainWindow::WelcomeScreen);
     saveSite("welcome_screen");
+    showStartScreen(true);
+    saveSite("account_start_screen");
+    showStartScreen(false);
     stack->setCurrentIndex(index);
 }
 
