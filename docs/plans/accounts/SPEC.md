@@ -281,11 +281,11 @@ their SA master keys on the server. Removing a member flags the org vaults they 
 
 | `SYNC_AUTH_MODE` | Accepted tokens | Routes |
 |---|---|---|
-| `legacy` (default) | device tokens | `databases/*`, `devices/pairing*`, `events` (legacy) |
+| `standalone` (default; `legacy` is accepted as its old name) | device tokens | `databases/*`, `devices/pairing*`, `events` (legacy) |
 | `jwt` | JWTs | `vaults/*`, `events`, `internal/notify` |
 | `both` | either; a token with two `.` separators is a JWT | all of the above |
 
-`vaults/*` and `internal/notify` return 404 in `legacy` mode. In `both` mode, a JWT on a legacy route or a
+`vaults/*` and `internal/notify` return 404 in `standalone` mode. In `both` mode, a JWT on a legacy route or a
 device token on a vault route gets 403 `forbidden`. Creating a vault blob needs `If-None-Match: *`
 and updating it needs `If-Match`; a vault PUT with neither gets 428, even when the blob doesn't
 exist (unlike legacy databases, which can be created without a header). The sync server stores
