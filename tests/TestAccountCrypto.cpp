@@ -81,7 +81,7 @@ void TestAccountCrypto::initTestCase()
     QFile file(ContractDir + "test-vectors.json");
     QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(file.fileName()));
     m_vectors = QJsonDocument::fromJson(file.readAll()).object();
-    QCOMPARE(m_vectors.value("spec").toString(), QString("kpx v1"));
+    QCOMPARE(m_vectors.value("spec").toString(), QString("ov v1"));
 }
 
 void TestAccountCrypto::testBase64Url()
@@ -366,7 +366,7 @@ void TestAccountCrypto::testServiceAccount()
     QCOMPARE(parsed.saId, saId);
     QVERIFY(parsed.secret == token.secret);
     QVERIFY(parsed.kek == token.kek);
-    QVERIFY(!parseServiceAccountToken("kpx_sa_bm90IGpzb24", &parsed));
+    QVERIFY(!parseServiceAccountToken("ov_sa_bm90IGpzb24", &parsed));
     QVERIFY(!parseServiceAccountToken(vector.value("token").toString().mid(7), &parsed));
 
     // The unwrap chain: kek -> master key -> keyset
@@ -425,7 +425,7 @@ void TestAccountCrypto::testJwtClaims()
         QCOMPARE(claims.alg, QString("EdDSA"));
         QCOMPARE(claims.kid, QString("test-2026-10"));
         QCOMPARE(claims.iss, expected.value("iss").toString());
-        QCOMPARE(claims.aud, QStringList({"kpx-api", "kpx-sync"}));
+        QCOMPARE(claims.aud, QStringList({"ov-api", "ov-sync"}));
         QCOMPARE(claims.sub, expected.value("sub").toString());
         QCOMPARE(claims.dev, expected.value("dev").toString());
         QCOMPARE(claims.org, expected.value("org").toString());
@@ -466,9 +466,9 @@ void TestAccountCrypto::testJwtClaims()
         } else if (caseName == "not yet valid") {
             QVERIFY(claims.nbf - 60 > jwt.value("now").toInteger());
         } else if (caseName == "wrong audience") {
-            QVERIFY(!claims.aud.contains("kpx-sync"));
+            QVERIFY(!claims.aud.contains("ov-sync"));
         } else if (caseName == "wrong issuer") {
-            QVERIFY(claims.iss != "https://accounts.keepassxc.example");
+            QVERIFY(claims.iss != "https://accounts.openvireo.example");
         } else if (caseName.startsWith("unknown kid")) {
             QCOMPARE(claims.kid, QString("unknown-kid"));
         }

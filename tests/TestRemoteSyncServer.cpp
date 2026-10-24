@@ -51,15 +51,15 @@ namespace
     /*
      * The sync server tests run against a live server from keepassxc-sync-server, e.g.:
      *   ./build/keepassxc-sync-server users add test && ./build/keepassxc-sync-server
-     *   KPXC_SYNC_SERVER_URL=http://127.0.0.1:8787 KPXC_SYNC_SERVER_TOKEN=<token> ./testremotesyncserver
+     *   OPENVIREO_SYNC_SERVER_URL=http://127.0.0.1:8787 OPENVIREO_SYNC_SERVER_TOKEN=<token> ./testremotesyncserver
      */
     RemoteParams serverParams()
     {
         RemoteParams params;
         params.name = "server";
         params.type = RemoteParams::Type::SyncServer;
-        params.serverUrl = qEnvironmentVariable("KPXC_SYNC_SERVER_URL");
-        params.serverToken = qEnvironmentVariable("KPXC_SYNC_SERVER_TOKEN");
+        params.serverUrl = qEnvironmentVariable("OPENVIREO_SYNC_SERVER_URL");
+        params.serverToken = qEnvironmentVariable("OPENVIREO_SYNC_SERVER_TOKEN");
         params.serverDatabaseId = "test-" + QUuid::createUuid().toString(QUuid::Id128);
         return params;
     }
@@ -75,9 +75,9 @@ namespace
 } // namespace
 
 #define SKIP_WITHOUT_SERVER()                                                                                          \
-    if (qEnvironmentVariableIsEmpty("KPXC_SYNC_SERVER_URL")                                                            \
-        || qEnvironmentVariableIsEmpty("KPXC_SYNC_SERVER_TOKEN")) {                                                    \
-        QSKIP("Set KPXC_SYNC_SERVER_URL and KPXC_SYNC_SERVER_TOKEN to run sync server tests");                         \
+    if (qEnvironmentVariableIsEmpty("OPENVIREO_SYNC_SERVER_URL")                                                            \
+        || qEnvironmentVariableIsEmpty("OPENVIREO_SYNC_SERVER_TOKEN")) {                                                    \
+        QSKIP("Set OPENVIREO_SYNC_SERVER_URL and OPENVIREO_SYNC_SERVER_TOKEN to run sync server tests");                         \
     }
 
 void TestRemoteSyncServer::initTestCase()

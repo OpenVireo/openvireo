@@ -37,7 +37,7 @@ namespace Ui
  * remove) and pending invitations, service accounts (create, disable, expire, delete), their secrets
  * (issue, revoke) and vault grants (read or write), and the org's audit log.
  *
- * A new service account's keys and every secret are made on this device. The token `kpx_sa_…` is shown
+ * A new service account's keys and every secret are made on this device. The token `ov_sa_…` is shown
  * once, in a window of its own, and isn't kept anywhere.
  */
 class ServiceAccountsDialog : public QDialog

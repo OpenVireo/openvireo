@@ -546,7 +546,7 @@ void TestVaultSharing::testCreatesAServiceAccount()
                });
     QTRY_VERIFY(finished);
     QVERIFY2(error.isEmpty(), qPrintable(error));
-    QVERIFY(token.startsWith("kpx_sa_"));
+    QVERIFY(token.startsWith("ov_sa_"));
     QCOMPARE(account.name, QString("CI deploy"));
 
     ServiceAccountToken parsed;
@@ -1000,9 +1000,9 @@ void TestVaultSharing::testInvitesAndAcceptsMembers()
     QCOMPARE(f.server->sentInvitations.size(), 1);
     const auto link = f.server->sentInvitations.first().second;
     QCOMPARE(f.server->sentInvitations.first().first, QString("bob@example.com"));
-    QVERIFY(link.startsWith(InvitationUrl + "#token=kpx_inv_"));
+    QVERIFY(link.startsWith(InvitationUrl + "#token=ov_inv_"));
     // The server keeps only the token's hash
-    QVERIFY(!f.server->invitations.constBegin()->tokenHash.contains("kpx_inv_"));
+    QVERIFY(!f.server->invitations.constBegin()->tokenHash.contains("ov_inv_"));
     QCOMPARE(memberFor(&admin, orgId, "bob@example.com").status, QString("invited"));
 
     QList<ServiceAccountAdmin::Invitation> pending;
@@ -1073,7 +1073,7 @@ void TestVaultSharing::testInvitesAndAcceptsMembers()
 
 void TestVaultSharing::testParsesInvitationLinks()
 {
-    const auto token = QStringLiteral("kpx_inv_") + toBase64Url(randomSecure(32));
+    const auto token = QStringLiteral("ov_inv_") + toBase64Url(randomSecure(32));
     QCOMPARE(ServiceAccountAdmin::invitationToken(token), token);
     QCOMPARE(ServiceAccountAdmin::invitationToken("  " + token + "\n"), token);
     QCOMPARE(ServiceAccountAdmin::invitationToken(InvitationUrl + "#token=" + token), token);
@@ -1082,8 +1082,8 @@ void TestVaultSharing::testParsesInvitationLinks()
                                                   + QString::fromLatin1(QUrl::toPercentEncoding(token))),
              token);
     QVERIFY(ServiceAccountAdmin::invitationToken("https://x.example/i").isEmpty());
-    QVERIFY(ServiceAccountAdmin::invitationToken("kpx_rt_abc").isEmpty());
-    QVERIFY(ServiceAccountAdmin::invitationToken("kpx_inv_ab cd").isEmpty());
+    QVERIFY(ServiceAccountAdmin::invitationToken("ov_rt_abc").isEmpty());
+    QVERIFY(ServiceAccountAdmin::invitationToken("ov_inv_ab cd").isEmpty());
     QVERIFY(ServiceAccountAdmin::invitationToken({}).isEmpty());
 }
 

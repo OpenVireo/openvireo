@@ -74,15 +74,15 @@ namespace
 {
     /*
      * These tests run against a live server from keepassxc-sync-server, like testremotesyncserver:
-     *   KPXC_SYNC_SERVER_URL=http://127.0.0.1:8787 KPXC_SYNC_SERVER_TOKEN=<token> ./testguiautosync
+     *   OPENVIREO_SYNC_SERVER_URL=http://127.0.0.1:8787 OPENVIREO_SYNC_SERVER_TOKEN=<token> ./testguiautosync
      */
     RemoteParams serverParams()
     {
         RemoteParams params;
         params.name = "server";
         params.type = RemoteParams::Type::SyncServer;
-        params.serverUrl = qEnvironmentVariable("KPXC_SYNC_SERVER_URL");
-        params.serverToken = qEnvironmentVariable("KPXC_SYNC_SERVER_TOKEN");
+        params.serverUrl = qEnvironmentVariable("OPENVIREO_SYNC_SERVER_URL");
+        params.serverToken = qEnvironmentVariable("OPENVIREO_SYNC_SERVER_TOKEN");
         params.serverDatabaseId = "gui-test-" + QUuid::createUuid().toString(QUuid::Id128);
         params.autoSync = true;
         return params;
@@ -182,9 +182,9 @@ namespace
 } // namespace
 
 #define SKIP_WITHOUT_SERVER()                                                                                          \
-    if (qEnvironmentVariableIsEmpty("KPXC_SYNC_SERVER_URL")                                                            \
-        || qEnvironmentVariableIsEmpty("KPXC_SYNC_SERVER_TOKEN")) {                                                    \
-        QSKIP("Set KPXC_SYNC_SERVER_URL and KPXC_SYNC_SERVER_TOKEN to run automatic sync tests");                      \
+    if (qEnvironmentVariableIsEmpty("OPENVIREO_SYNC_SERVER_URL")                                                            \
+        || qEnvironmentVariableIsEmpty("OPENVIREO_SYNC_SERVER_TOKEN")) {                                                    \
+        QSKIP("Set OPENVIREO_SYNC_SERVER_URL and OPENVIREO_SYNC_SERVER_TOKEN to run automatic sync tests");                      \
     }
 
 void TestGuiAutoSync::initTestCase()

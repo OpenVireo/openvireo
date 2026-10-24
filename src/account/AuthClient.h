@@ -78,7 +78,7 @@ public:
 
     static constexpr int TimeoutMsec = 30000;
 
-    // `apiUrl` is the auth server's API, e.g. https://accounts.keepassxc.org/api/v1
+    // `apiUrl` is the auth server's API, e.g. https://accounts.openvireo.com/api/v1
     explicit AuthClient(const QString& apiUrl = {}, QObject* parent = nullptr);
     ~AuthClient() override;
 
@@ -86,7 +86,7 @@ public:
     QString apiUrl() const;
     void setTokenProvider(AccessTokenProvider provider);
 
-    // GET <issuer>/.well-known/kpx-configuration: {issuer, api, sync, jwks_uri, opaque, kdf_min}
+    // GET <issuer>/.well-known/openvireo-configuration: {issuer, api, sync, jwks_uri, opaque, kdf_min}
     void discover(const QString& issuerUrl, Callback callback);
 
     void registerStart(const QString& email, const QByteArray& request, Callback callback);

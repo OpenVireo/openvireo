@@ -248,7 +248,7 @@ namespace
     private:
         static StringMap attributes(const QString& key)
         {
-            return {{QStringLiteral("xdg:schema"), QStringLiteral("org.keepassxc.SyncToken")},
+            return {{QStringLiteral("xdg:schema"), QStringLiteral("com.openvireo.SyncToken")},
                     {QStringLiteral("service"), QStringLiteral("KeePassXC Sync")},
                     {QStringLiteral("account"), key}};
         }

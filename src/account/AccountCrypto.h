@@ -27,7 +27,7 @@
 #include <botan/secmem.h>
 
 /**
- * The crypto of KeePassXC accounts (kpx v1), as specified in docs/plans/accounts/SPEC.md and pinned by
+ * The crypto of OpenVireo accounts (ov v1), as specified in docs/plans/accounts/SPEC.md and pinned by
  * docs/plans/accounts/test-vectors.json. Every secret (Secret Key, AUK, private keys, vault keys) is kept
  * in a SecureBytes, which wipes itself when it is freed.
  *
@@ -152,13 +152,13 @@ namespace AccountCrypto
     QByteArray ed25519PublicKey(const SecureBytes& seed);
     QByteArray sign(const SecureBytes& signSeed, const QByteArray& message);
     bool verify(const QByteArray& signPk, const QByteArray& message, const QByteArray& signature);
-    // sig = Ed25519.sign(sign_seed, "kpx-pubkeys-v1" || enc_pk || sign_pk)
+    // sig = Ed25519.sign(sign_seed, "ov-pubkeys-v1" || enc_pk || sign_pk)
     QByteArray signPublicKeys(const SecureBytes& signSeed, const QByteArray& encPk, const QByteArray& signPk);
     bool verifyPublicKeys(const PublicKeys& publicKeys);
-    // The first 20 bytes of SHA-256("kpx-fp-v1" || enc_pk || sign_pk), hex in groups of 4
+    // The first 20 bytes of SHA-256("ov-fp-v1" || enc_pk || sign_pk), hex in groups of 4
     QString fingerprint(const PublicKeys& publicKeys);
 
-    // wrap(key, enc_sk || sign_seed, "kpx-keyset-v1"); {enc_pk, sign_pk, sig, wrapped}
+    // wrap(key, enc_sk || sign_seed, "ov-keyset-v1"); {enc_pk, sign_pk, sig, wrapped}
     QByteArray wrapKeyset(const SecureBytes& key, const Keyset& keyset, const QByteArray& nonce = {});
     QJsonObject wrappedKeysetJson(const SecureBytes& key, const Keyset& keyset);
     // Unwraps and checks that the private keys belong to the given public keys and that those are self-signed
@@ -169,7 +169,7 @@ namespace AccountCrypto
                       Error* error = nullptr);
     bool unwrapKeyset(const SecureBytes& key, const QJsonObject& wrappedKeyset, Keyset* keyset, Error* error = nullptr);
 
-    // §6 seal = 0x01 || epk(32) || nonce(24) || XChaCha20-Poly1305(HKDF(X25519(esk, pk), epk || pk, "kpx-seal-v1"),
+    // §6 seal = 0x01 || epk(32) || nonce(24) || XChaCha20-Poly1305(HKDF(X25519(esk, pk), epk || pk, "ov-seal-v1"),
     // ...)
     QByteArray seal(const QByteArray& recipientEncPk,
                     const SecureBytes& plaintext,

@@ -23,7 +23,7 @@
 #include "OpaqueCore.h"
 #endif
 
-const QByteArray OpaqueClient::Context = QByteArrayLiteral("kpx-opaque-v1");
+const QByteArray OpaqueClient::Context = QByteArrayLiteral("ov-opaque-v1");
 
 namespace
 {

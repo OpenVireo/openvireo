@@ -50,8 +50,8 @@ using namespace AccountCrypto;
 
 namespace
 {
-    const QString Issuer = QStringLiteral("https://accounts.keepassxc.example");
-    const QString ServerId = QStringLiteral("accounts.keepassxc.example");
+    const QString Issuer = QStringLiteral("https://accounts.openvireo.example");
+    const QString ServerId = QStringLiteral("accounts.openvireo.example");
     const QString Email = QStringLiteral("Alice@Example.com");
     const QString Password = QStringLiteral("correct horse battery staple");
     const QString ContractDir = QStringLiteral(KEEPASSX_SOURCE_DIR "/docs/plans/accounts/");
@@ -61,7 +61,7 @@ namespace
         AccountManager::ServerConfig config;
         config.issuer = Issuer;
         config.api = Issuer + "/api/v1";
-        config.sync = "https://sync.keepassxc.example/api/v1";
+        config.sync = "https://sync.openvireo.example/api/v1";
         config.opaqueServerId = ServerId;
         return config;
     }
@@ -263,7 +263,7 @@ namespace
         QJsonObject newSession(const User& user)
         {
             const auto family = next("family-");
-            const auto refresh = next("kpx_rt_");
+            const auto refresh = next("ov_rt_");
             families.insert(family, {user.id, refresh, {}, false});
             refreshFamily.insert(refresh, family);
             const auto access = next("at-");
@@ -385,7 +385,7 @@ namespace
                     error(401, "token_reused");
                 } else {
                     family.rotated.insert(token);
-                    family.current = server.next("kpx_rt_");
+                    family.current = server.next("ov_rt_");
                     server.refreshFamily.insert(family.current, familyId);
                     const auto access = server.next("at-");
                     server.accessTokens.insert(access, "user:" + family.userId);
@@ -675,12 +675,12 @@ void TestAccountManager::testRefreshRotatesTokens()
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
 
     const auto session = [&] {
-        return QJsonDocument::fromJson(SyncTokenStore::load("kpx-account-session:" + manager->accountId()).toUtf8())
+        return QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + manager->accountId()).toUtf8())
             .object();
     };
     const auto firstAccess = manager->accessTokenNow();
     const auto firstRefresh = session().value("refresh_token").toString();
-    QVERIFY(firstRefresh.startsWith("kpx_rt_"));
+    QVERIFY(firstRefresh.startsWith("ov_rt_"));
 
     QSignalSpy changed(manager, &AccountManager::accessTokenChanged);
     manager->refreshAccessToken();
@@ -748,14 +748,14 @@ void TestAccountManager::testReusedRefreshTokenSignsOut()
     const auto accountId = manager->accountId();
 
     // Someone copies the keychain entry, then this device refreshes
-    const auto stolen = SyncTokenStore::load("kpx-account-session:" + accountId);
+    const auto stolen = SyncTokenStore::load("ov-account-session:" + accountId);
     QSignalSpy changed(manager, &AccountManager::accessTokenChanged);
     manager->refreshAccessToken();
     QTRY_COMPARE(changed.count(), 1);
 
     // The copy's refresh token was rotated already: using it revokes the session...
     auto* thief = fixture.manager(this);
-    SyncTokenStore::save("kpx-account-session:" + accountId, stolen);
+    SyncTokenStore::save("ov-account-session:" + accountId, stolen);
     QVERIFY(thief->restoreSession(accountId));
     QSignalSpy thiefOut(thief, &AccountManager::signedOut);
     QString thiefToken = "unset";
@@ -772,7 +772,7 @@ void TestAccountManager::testReusedRefreshTokenSignsOut()
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(manager->keyset().isNull());
     QVERIFY(manager->keyring().isEmpty());
-    QVERIFY(SyncTokenStore::load("kpx-account-session:" + accountId).isEmpty());
+    QVERIFY(SyncTokenStore::load("ov-account-session:" + accountId).isEmpty());
     // The Secret Key stays: the device is still trusted for the next sign-in
     QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
 }
@@ -1061,8 +1061,8 @@ void TestAccountManager::testAccountVaultUsesTokenProvider()
     QTRY_VERIFY(done);
     client.listDatabases([](const SyncServerClient::Response&) {});
     QTRY_COMPARE(client.urls.size(), 2);
-    QCOMPARE(client.urls.first(), "GET https://sync.keepassxc.example/api/v1/vaults/" + vaultId);
-    QCOMPARE(client.urls.last(), QString("GET https://sync.keepassxc.example/api/v1/vaults"));
+    QCOMPARE(client.urls.first(), "GET https://sync.openvireo.example/api/v1/vaults/" + vaultId);
+    QCOMPARE(client.urls.last(), QString("GET https://sync.openvireo.example/api/v1/vaults"));
     QCOMPARE(client.authorizations.first(), "Bearer " + manager->accessTokenNow());
 
     // A refreshed token is used by the same client from then on

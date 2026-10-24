@@ -44,7 +44,7 @@ namespace FakeAccount
     extern const QString SyncUrl;
     extern const QString SelfHostedUrl;
     extern const QString Totp;
-    // KPX_INVITATION_URL: invitation emails link to it with the token in the fragment (SPEC §12)
+    // OPENVIREO_INVITATION_URL: invitation emails link to it with the token in the fragment (SPEC §12)
     extern const QString InvitationUrl;
 
     AccountManager::ServerConfig serverConfig();
@@ -121,7 +121,7 @@ namespace FakeAccount
             QString orgId;
             QString email;
             QString role;
-            // SHA-256 of the kpx_inv_ token; the token itself is only in the email
+            // SHA-256 of the ov_inv_ token; the token itself is only in the email
             QString tokenHash;
             QString invitedBy;
             QDateTime expiresAt;
