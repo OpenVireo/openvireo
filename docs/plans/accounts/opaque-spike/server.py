@@ -5,8 +5,8 @@ import ctypes.util, os
 _f = ctypes.util.find_library; ctypes.util.find_library = lambda n: {'opaque': os.environ['LIBOPAQUE'], 'sodium': '/opt/homebrew/lib/libsodium.dylib'}.get(n) or _f(n)
 import opaque
 
-ids = opaque.Ids("alice@example.com", "kpx.example")
-ctx = b"kpx-opaque-v1"
+ids = opaque.Ids("alice@example.com", "openvireo.example")
+ctx = b"ov-opaque-v1"
 state = {}
 for line in sys.stdin:
     m = json.loads(line); op = m["op"]; h = bytes.fromhex
