@@ -2,8 +2,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About KeePassXC</source>
-        <translation>A KeePassXC névjegye</translation>
+        <source>About OpenVireo</source>
+        <translation>A OpenVireo névjegye</translation>
     </message>
     <message>
         <source>About</source>
@@ -14,8 +14,8 @@
         <translation>Hibajelentés: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
-        <source>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
-        <translation>A KeePassXC a GNU General Public License (GPL) 2-es vagy (válaszhatóan) 3-as verziója szerint kerül terjesztésre.</translation>
+        <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
+        <translation>A OpenVireo a GNU General Public License (GPL) 2-es vagy (válaszhatóan) 3-as verziója szerint kerül terjesztésre.</translation>
     </message>
     <message>
         <source>Project Maintainers:</source>
@@ -49,8 +49,8 @@
 <context>
     <name>AccessControlDialog</name>
     <message>
-        <source>KeePassXC -  Access Request</source>
-        <translation>KeePassXC-hozzáférési kérés</translation>
+        <source>OpenVireo -  Access Request</source>
+        <translation>OpenVireo-hozzáférési kérés</translation>
     </message>
     <message>
         <source>Non-existing/inaccessible executable path. Please double-check the client is legit.</source>
@@ -81,8 +81,8 @@
         <translation>Részletek</translation>
     </message>
     <message>
-        <source>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</source>
-        <translation>A döntését megjegyezzük addig, amíg az igénylő kliens ÉS a KeePassXC is fut.</translation>
+        <source>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</source>
+        <translation>A döntését megjegyezzük addig, amíg az igénylő kliens ÉS a OpenVireo is fut.</translation>
     </message>
     <message>
         <source>Remember</source>
@@ -249,16 +249,16 @@
         <translation>Valóban visszaállítja az összes beállítást az alapértelmezésre?</translation>
     </message>
     <message>
-        <source>Import KeePassXC Settings</source>
-        <translation>KeePassXC-beállítások importálása</translation>
+        <source>Import OpenVireo Settings</source>
+        <translation>OpenVireo-beállítások importálása</translation>
     </message>
     <message>
         <source>Failed to import settings from %1, not a valid settings file.</source>
         <translation>A beállítások importálása sikertelen, mivel a beállításfájl nem érvényes: %1.</translation>
     </message>
     <message>
-        <source>Export KeePassXC Settings</source>
-        <translation>KeePassXC-beállítások exportálása</translation>
+        <source>Export OpenVireo Settings</source>
+        <translation>OpenVireo-beállítások exportálása</translation>
     </message>
     <message>
         <source>Small</source>
@@ -285,8 +285,8 @@
         <translation>Egyik sem</translation>
     </message>
     <message>
-        <source>Restart KeePassXC to apply the Auto-Type desktop portals preference.</source>
-        <translation>Indítsa újra a KeePassXC-t, hogy alkalmazza a automatikus beírás asztali portáljának beállításait.</translation>
+        <source>Restart OpenVireo to apply the Auto-Type desktop portals preference.</source>
+        <translation>Indítsa újra a OpenVireo-t, hogy alkalmazza a automatikus beírás asztali portáljának beállításait.</translation>
     </message>
 </context>
 <context>
@@ -300,12 +300,12 @@
         <translation>Indítás</translation>
     </message>
     <message>
-        <source>Start only a single instance of KeePassXC</source>
-        <translation>A KeePassXC többszörös indításának tiltása</translation>
+        <source>Start only a single instance of OpenVireo</source>
+        <translation>A OpenVireo többszörös indításának tiltása</translation>
     </message>
     <message>
-        <source>Automatically launch KeePassXC at system startup</source>
-        <translation>KeePassXC automatikus indítása a rendszer indulásakor</translation>
+        <source>Automatically launch OpenVireo at system startup</source>
+        <translation>OpenVireo automatikus indítása a rendszer indulásakor</translation>
     </message>
     <message>
         <source>Minimize window at application startup</source>
@@ -778,12 +778,12 @@
         <translation>Engedély szükséges</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>A KeePassXC számára szükséges az elérhetőségi jogosultság biztosítása a bejegyzésszintű automatikus beírás végrehajtásához. Ha ez a jogosultság már meg van adva, újra kell indtani a KeePassXC-t.</translation>
+        <source>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>A OpenVireo számára szükséges az elérhetőségi jogosultság biztosítása a bejegyzésszintű automatikus beírás végrehajtásához. Ha ez a jogosultság már meg van adva, újra kell indtani a OpenVireo-t.</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>A KeePassXC számára szükséges az elérhetőségi és a képernyőolvasási jogosultság biztosítása a globális szintű automatikus beírás végrehajtásához. A képernyőolvasás az ablakok címének megtalálásához szükséges a bejegyzések között. Ha ezek a jogosultságok már meg van adva, újra kell indtani a KeePassXC-t.</translation>
+        <source>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>A OpenVireo számára szükséges az elérhetőségi és a képernyőolvasási jogosultság biztosítása a globális szintű automatikus beírás végrehajtásához. A képernyőolvasás az ablakok címének megtalálásához szükséges a bejegyzések között. Ha ezek a jogosultságok már meg van adva, újra kell indtani a OpenVireo-t.</translation>
     </message>
     <message>
         <source>Invalid entry provided</source>
@@ -889,8 +889,8 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - KeePassXC</source>
-        <translation>Automatikus beírás – KeePassXC</translation>
+        <source>Auto-Type - OpenVireo</source>
+        <translation>Automatikus beírás – OpenVireo</translation>
     </message>
     <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
@@ -993,8 +993,8 @@ Ctrl+Shift+4 – Webcím másolása&lt;br/&gt;
 <context>
     <name>BrowserAccessControlDialog</name>
     <message>
-        <source>KeePassXC - Browser Access Request</source>
-        <translation>KeePassXC-böngésző hozzáférési kérés</translation>
+        <source>OpenVireo - Browser Access Request</source>
+        <translation>OpenVireo-böngésző hozzáférési kérés</translation>
     </message>
     <message>
         <source>%1 is requesting access to the following entries:</source>
@@ -1046,8 +1046,8 @@ Please select the correct database for saving credentials.</source>
 Válassza ki a helyes adatbázist a hitelesítő adatok mentéséhez.</translation>
     </message>
     <message>
-        <source>KeePassXC - Select Database</source>
-        <translation>KeePassXC – Adatbázis kiválasztása</translation>
+        <source>OpenVireo - Select Database</source>
+        <translation>OpenVireo – Adatbázis kiválasztása</translation>
     </message>
 </context>
 <context>
@@ -1085,8 +1085,8 @@ Válassza ki a helyes adatbázist a hitelesítő adatok mentéséhez.</translati
         <translation>Felhasználónév: %1</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC – Jelkulcs hitelesítési adatai</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo – Jelkulcs hitelesítési adatai</translation>
     </message>
     <message>
         <source>Add to existing entry</source>
@@ -1158,44 +1158,44 @@ Valóban törli a bejegyzést?</translation>
         <translation>%1 (jelkulcs)</translation>
     </message>
     <message>
-        <source>KeePassXC - Create a new group</source>
-        <translation>KeePassXC – Új csoport létrehozása</translation>
+        <source>OpenVireo - Create a new group</source>
+        <translation>OpenVireo – Új csoport létrehozása</translation>
     </message>
     <message>
         <source>Disable</source>
         <translation>Letiltás</translation>
     </message>
     <message>
-        <source>KeePassXC - Overwrite existing key?</source>
-        <translation>KeePassXC – Felülírja a meglévő kulcsot?</translation>
+        <source>OpenVireo - Overwrite existing key?</source>
+        <translation>OpenVireo – Felülírja a meglévő kulcsot?</translation>
     </message>
     <message>
-        <source>KeePassXC - Update Entry</source>
-        <translation>KeePassXC – Bejegyzés frissítése</translation>
+        <source>OpenVireo - Update Entry</source>
+        <translation>OpenVireo – Bejegyzés frissítése</translation>
     </message>
     <message>
-        <source>KeePassXC - Delete entry</source>
-        <translation>KeePassXC – Bejegyzés törlése</translation>
+        <source>OpenVireo - Delete entry</source>
+        <translation>OpenVireo – Bejegyzés törlése</translation>
     </message>
     <message>
-        <source>KeePassXC - New key association request</source>
-        <translation>KeePassXC – Új kulcshozzárendelési kérés</translation>
+        <source>OpenVireo - New key association request</source>
+        <translation>OpenVireo – Új kulcshozzárendelési kérés</translation>
     </message>
     <message>
         <source>Passkey</source>
         <translation>Jelkulcso</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC – Jelkulcs hitelesítési adatai</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo – Jelkulcs hitelesítési adatai</translation>
     </message>
     <message>
         <source>Register a new passkey to this entry:</source>
         <translation>Új jelkulcs regisztrálása ehhez a bejegyzéshez:</translation>
     </message>
     <message>
-        <source>KeePassXC - Update passkey</source>
-        <translation>KeePassXC – Jelkulcs frissítése</translation>
+        <source>OpenVireo - Update passkey</source>
+        <translation>OpenVireo – Jelkulcs frissítése</translation>
     </message>
     <message>
         <source>Entry already has a passkey.
@@ -1215,8 +1215,8 @@ Felülírja az itt található jelkulcsot: %1 – %2?</translation>
         <translation>Párbeszédablak</translation>
     </message>
     <message>
-        <source>This is required for accessing your databases with KeePassXC-Browser</source>
-        <translation>Ez szükséges az adatbázis KeePassXC-böngészőből történő eléréséhez</translation>
+        <source>This is required for accessing your databases with OpenVireo Browser</source>
+        <translation>Ez szükséges az adatbázis OpenVireo-böngészőből történő eléréséhez</translation>
     </message>
     <message>
         <source>Enable browser integration</source>
@@ -1336,8 +1336,8 @@ Felülírja az itt található jelkulcsot: %1 – %2?</translation>
         <translation>Ne kérdezzen a KeePassHTTP beállításokból való költözésről</translation>
     </message>
     <message>
-        <source>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</source>
-        <translation>Indításkor automatikusan frissíti a KeePassXC vagy a keepassxc-proxy bináris útvonalát a natív üzenetküldő parancsfájlok felé.</translation>
+        <source>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</source>
+        <translation>Indításkor automatikusan frissíti a OpenVireo vagy a openvireo-proxy bináris útvonalát a natív üzenetküldő parancsfájlok felé.</translation>
     </message>
     <message>
         <source>Update native messaging manifest files at startup</source>
@@ -1414,8 +1414,8 @@ Felülírja az itt található jelkulcsot: %1 – %2?</translation>
         <translation>Jelölje ki a natív üzenetküldési kiszolgálót tartalmazó mappát</translation>
     </message>
     <message>
-        <source>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</source>
-        <translation>Engedélyezés a keepassxc-proxy számára, hogy felsorolja az összes bejegyzést a címével, webcímével és UUID-jával a kapcsolódó adatbázisokban.</translation>
+        <source>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</source>
+        <translation>Engedélyezés a openvireo-proxy számára, hogy felsorolja az összes bejegyzést a címével, webcímével és UUID-jával a kapcsolódó adatbázisokban.</translation>
     </message>
     <message>
         <source>Allow limited access to all entries in connected databases (ignores site access restrictions)</source>
@@ -1446,8 +1446,8 @@ Felülírja az itt található jelkulcsot: %1 – %2?</translation>
         <translation>Localhost használatának engedélyezése a jelkulcsokkal</translation>
     </message>
     <message>
-        <source>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
-        <translation>A böngészőintegráció működéséhez a KeePassXC-böngészőre van szükség. &lt;br /&gt;Letölthető ezen böngészőkre: %1, %2 és %3.</translation>
+        <source>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
+        <translation>A böngészőintegráció működéséhez a OpenVireo-böngészőre van szükség. &lt;br /&gt;Letölthető ezen böngészőkre: %1, %2 és %3.</translation>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
@@ -1684,15 +1684,15 @@ Az adatbázis biztonsági másolata:  %2</translation>
 <context>
     <name>DatabaseOpenDialog</name>
     <message>
-        <source>Unlock Database - KeePassXC</source>
-        <translation>Adatbázis feloldása – KeePassXC</translation>
+        <source>Unlock Database - OpenVireo</source>
+        <translation>Adatbázis feloldása – OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>DatabaseOpenWidget</name>
     <message>
-        <source>Unlock KeePassXC Database</source>
-        <translation>KeePassXC adatbázis feloldása</translation>
+        <source>Unlock OpenVireo Database</source>
+        <translation>OpenVireo adatbázis feloldása</translation>
     </message>
     <message>
         <source>Enter Password:</source>
@@ -1740,19 +1740,19 @@ Az adatbázis biztonsági másolata:  %2</translation>
     </message>
     <message>
         <source>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</source>
-        <translation>A megnyitandó adatbázis valószínűleg a KeePassXC
+We recommend you update your OpenVireo installation.</source>
+        <translation>A megnyitandó adatbázis valószínűleg a OpenVireo
 újabb változatával készült.
 
 Megpróbálhatja megnyitni, de lehet hogy hiányos
 lesz, és a változások mentése adatvesztést okozhat.
 
-A KeePassXC telepítése frissítését javasoljuk.</translation>
+A OpenVireo telepítése frissítését javasoljuk.</translation>
     </message>
     <message>
         <source>Open database anyway</source>
@@ -1789,8 +1789,8 @@ Ezen hiba megjelenése megelőzhető az Adatbázis-beállítások → Biztonság
         <translation>Régi kulcsfájl formátum</translation>
     </message>
     <message>
-        <source>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
-        <translation>Egy régi kulcsfájl formátumot használ, amit a KeePassXC lehet&lt;br&gt;hogy nem fog támogatni a jövőben.&lt;br&gt;&lt;br&gt;Fontolja meg, hogy új kulcsfájl készít a következő menüben:&lt;br&gt;&lt;strong&gt;Adatbázis &amp;gt; Adatbázis-biztonság &amp;gt; Kulcsfájl módosítása.&lt;/strong&gt;&lt;br&gt;</translation>
+        <source>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
+        <translation>Egy régi kulcsfájl formátumot használ, amit a OpenVireo lehet&lt;br&gt;hogy nem fog támogatni a jövőben.&lt;br&gt;&lt;br&gt;Fontolja meg, hogy új kulcsfájl készít a következő menüben:&lt;br&gt;&lt;strong&gt;Adatbázis &amp;gt; Adatbázis-biztonság &amp;gt; Kulcsfájl módosítása.&lt;/strong&gt;&lt;br&gt;</translation>
     </message>
     <message>
         <source>Don&apos;t show this warning again</source>
@@ -1843,8 +1843,8 @@ If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;
 Ha nincs kulcsfájlja, vagy nem tudja mi az, akkor nem kell kiválasztania.</translation>
     </message>
     <message>
-        <source>KeePassXC database file selected</source>
-        <translation>KeePassXC adatbázisfájl kiválasztva</translation>
+        <source>OpenVireo database file selected</source>
+        <translation>OpenVireo adatbázisfájl kiválasztva</translation>
     </message>
     <message>
         <source>The file you selected looks like a database file.
@@ -1934,8 +1934,8 @@ Biztos, hogy folytatja ezzel a fájllal?</translation>
 <context>
     <name>DatabaseSettingsWidgetBrowser</name>
     <message>
-        <source>KeePassXC-Browser settings</source>
-        <translation>KeePassXC-böngésző beállítások</translation>
+        <source>OpenVireo Browser settings</source>
+        <translation>OpenVireo-böngésző beállítások</translation>
     </message>
     <message>
         <source>Disconnect all browsers</source>
@@ -1998,12 +1998,12 @@ This may prevent connection to the browser plugin.</source>
 Ez megakadályozhatja a böngésző bővítményhez történő kapcsolódást.</translation>
     </message>
     <message>
-        <source>No shared encryption keys found in KeePassXC settings.</source>
-        <translation>Nem található megosztott titkosítási kulcs a KeePassXC beállításaiban.</translation>
+        <source>No shared encryption keys found in OpenVireo settings.</source>
+        <translation>Nem található megosztott titkosítási kulcs a OpenVireo beállításaiban.</translation>
     </message>
     <message numerus="yes">
-        <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
-        <translation><numerusform>Sikeresen eltávolításra került %n titkosítási kulcs a KeePassXC beállításokból.</numerusform><numerusform>Sikeresen eltávolításra került %n titkosítási kulcs a KeePassXC beállításokból.</numerusform></translation>
+        <source>Successfully removed %n encryption key(s) from OpenVireo settings.</source>
+        <translation><numerusform>Sikeresen eltávolításra került %n titkosítási kulcs a OpenVireo beállításokból.</numerusform><numerusform>Sikeresen eltávolításra került %n titkosítási kulcs a OpenVireo beállításokból.</numerusform></translation>
     </message>
     <message>
         <source>Do you really want forget all site-specific settings on every entry?
@@ -2038,8 +2038,8 @@ This is only necessary if your database is a copy of another and the browser ext
 Erre csak akkor lehet szükség, ha az adatbázis egy másik másolata és a böngészőkiegészítő nem tud kapcsolódni.</translation>
     </message>
     <message>
-        <source>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</source>
-        <translation>Az örökölt KeePassHTTP attribútumok konvertálása KeePassXC-böngésző kompatibilis egyéni adatokká</translation>
+        <source>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</source>
+        <translation>Az örökölt KeePassHTTP attribútumok konvertálása OpenVireo-böngésző kompatibilis egyéni adatokká</translation>
     </message>
     <message>
         <source>No keys found</source>
@@ -2865,9 +2865,9 @@ Menti a változásokat?</translation>
         <translation>Letiltható a biztonságos mentés?</translation>
     </message>
     <message>
-        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <source>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</source>
-        <translation>A KeePassXC többször is hiába próbálta meg elmenteni az adatbázist. Ez jellemzően azért szokott előfordulni, mert egy szinkronizáló szolgáltatás zárolja a mentendő fájl.
+        <translation>A OpenVireo többször is hiába próbálta meg elmenteni az adatbázist. Ez jellemzően azért szokott előfordulni, mert egy szinkronizáló szolgáltatás zárolja a mentendő fájl.
 Letiltható a biztonságos mentés és úgy megkísérelhető a mentés?</translation>
     </message>
     <message>
@@ -3778,9 +3778,9 @@ Szeretné kijavítani?</translation>
         <translation>Szinkronizálás</translation>
     </message>
     <message>
-        <source>Your KeePassXC version does not support sharing this container type.
+        <source>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</source>
-        <translation>A KeePassXC jelen verziója nem támogatja ennek a tárolótípusnak a megosztását. 
+        <translation>A OpenVireo jelen verziója nem támogatja ennek a tárolótípusnak a megosztását. 
 Támogatott kiterjesztések: %1.</translation>
     </message>
     <message>
@@ -4742,8 +4742,8 @@ This will leave your passwords and sensitive information vulnerable!
 <context>
     <name>GlobalShortcutsPortal</name>
     <message>
-        <source>KeePassXC - Global Shortcuts</source>
-        <translation>KeePassXC – Globális gyorsbillentyűk</translation>
+        <source>OpenVireo - Global Shortcuts</source>
+        <translation>OpenVireo – Globális gyorsbillentyűk</translation>
     </message>
     <message>
         <source>The XDG Desktop Portal for global shortcuts is not available on this system.</source>
@@ -5723,8 +5723,8 @@ Ha ez újból előfordul, lehet hogy az adatbázisfájl sérült.</translation>
         <translation>Régi kulcsfájl formátum</translation>
     </message>
     <message>
-        <source>You selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
-        <translation>Egy régi kulcsfájl formátumot használ, amit a KeePassXC lehet&lt;br&gt;hogy nem fog támogatni a jövőben.&lt;br&gt;&lt;br&gt;Fontolja meg, hogy új kulcsfájlt állítson elő.</translation>
+        <source>You selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
+        <translation>Egy régi kulcsfájl formátumot használ, amit a OpenVireo lehet&lt;br&gt;hogy nem fog támogatni a jövőben.&lt;br&gt;&lt;br&gt;Fontolja meg, hogy új kulcsfájlt állítson elő.</translation>
     </message>
     <message>
         <source>Error loading the key file '%1'
@@ -6173,7 +6173,7 @@ Valóban folytatható a művelet ezzel a fájllal?</translation>
         <translation>Keressen a program induláskor frissítéseket?</translation>
     </message>
     <message>
-        <source>Would you like KeePassXC to check for updates on startup?</source>
+        <source>Would you like OpenVireo to check for updates on startup?</source>
         <translation>Valóban keressen a program induláskor frissítéseket?</translation>
     </message>
     <message>
@@ -6185,8 +6185,8 @@ Valóban folytatható a művelet ezzel a fájllal?</translation>
         <translation>Ablak átváltása</translation>
     </message>
     <message>
-        <source>Quit KeePassXC</source>
-        <translation>Kilépés a KeePassXC-ből</translation>
+        <source>Quit OpenVireo</source>
+        <translation>Kilépés a OpenVireo-ből</translation>
     </message>
     <message numerus="yes">
         <source>%1 Entry(s)</source>
@@ -6493,10 +6493,10 @@ Valóban folytatható a művelet ezzel a fájllal?</translation>
         <translation>Távoli szinkronizálás beállításai</translation>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of KeePassXC.
+        <source>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</source>
-        <translation>FIGYELEM: A KeePassXC egy fejlesztői összeállítását használja. Tartson biztonsági mentést az adatbázisairól arra az esetre, ha ismeretlen hibákba fut. Ez a verzió nem éles használatra készült.</translation>
+        <translation>FIGYELEM: A OpenVireo egy fejlesztői összeállítását használja. Tartson biztonsági mentést az adatbázisairól arra az esetre, ha ismeretlen hibákba fut. Ez a verzió nem éles használatra készült.</translation>
     </message>
     <message>
         <source>Clear SSH Agent</source>
@@ -6698,8 +6698,8 @@ This version is not meant for production use.</source>
 <context>
     <name>NewDatabaseWizard</name>
     <message>
-        <source>Create a new KeePassXC database…</source>
-        <translation>Új KeePassXC adatbázis létrehozása…</translation>
+        <source>Create a new OpenVireo database…</source>
+        <translation>Új OpenVireo adatbázis létrehozása…</translation>
     </message>
     <message>
         <source>Root</source>
@@ -6973,8 +6973,8 @@ This version is not meant for production use.</source>
 <context>
     <name>PasskeyExportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Export</source>
-        <translation>KeePassXC – Jelkulcs exportálása</translation>
+        <source>OpenVireo - Passkey Export</source>
+        <translation>OpenVireo – Jelkulcs exportálása</translation>
     </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
@@ -7031,8 +7031,8 @@ Felülírja?
 <context>
     <name>PasskeyImportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Import</source>
-        <translation>KeePassXC – Jelkulcs importálása</translation>
+        <source>OpenVireo - Passkey Import</source>
+        <translation>OpenVireo – Jelkulcs importálása</translation>
     </message>
     <message>
         <source>Username: %1</source>
@@ -7165,8 +7165,8 @@ A következő adatok hiányoznak:
         <translation>Jelszó beállítva, kattintson a módosításhoz vagy eltávolításhoz</translation>
     </message>
     <message>
-        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;A jelszó az adatbázis biztonságban tartásának elsődleges módja.&lt;/p&gt;&lt;p&gt;A jó jelszavak hosszúak és egyediek. A KeePassXC elő tud állítani egyet Önnek.&lt;/p&gt;</translation>
+        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;A jelszó az adatbázis biztonságban tartásának elsődleges módja.&lt;/p&gt;&lt;p&gt;A jó jelszavak hosszúak és egyediek. A OpenVireo elő tud állítani egyet Önnek.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Passwords do not match.</source>
@@ -7521,8 +7521,8 @@ Valóban felülírja?</translation>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>KeePassXC - Pick Characters</source>
-        <translation>KeePassXC – Karakterek kiválasztása</translation>
+        <source>OpenVireo - Pick Characters</source>
+        <translation>OpenVireo – Karakterek kiválasztása</translation>
     </message>
     <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
@@ -7618,8 +7618,8 @@ Valóban felülírja?</translation>
         <translation>Az üzenet titkosítása sikertelen.</translation>
     </message>
     <message>
-        <source>KeePassXC association failed, try again</source>
-        <translation>A KeePassXC társítása sikertelen, próbálja újra</translation>
+        <source>OpenVireo association failed, try again</source>
+        <translation>A OpenVireo társítása sikertelen, próbálja újra</translation>
     </message>
     <message>
         <source>Encryption key is not recognized</source>
@@ -8707,11 +8707,11 @@ Elérhető parancsok:
         <translation>A(z) %1 kulcsfájl betöltése sikertelen: %2</translation>
     </message>
     <message>
-        <source>WARNING: You are using an old key file format which KeePassXC may
+        <source>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</source>
-        <translation>FIGYELEM: Egy régi kulcsfájl formátumot használ, amit a KeePassXC lehet
+        <translation>FIGYELEM: Egy régi kulcsfájl formátumot használ, amit a OpenVireo lehet
 hogy nem fog támogatni a jövőben.
 
 Fontolja meg, hogy új kulcsfájlt állítson elő.</translation>
@@ -9089,8 +9089,8 @@ Kernel: %3 %4</translation>
         <translation>Váratlan kulcsfájladatok. A kulcsfájl megsérülhetett.</translation>
     </message>
     <message>
-        <source>KeePassXC - cross-platform password manager</source>
-        <translation>KeePassXC – keresztplatformos jelszókezelő</translation>
+        <source>OpenVireo - cross-platform password manager</source>
+        <translation>OpenVireo – keresztplatformos jelszókezelő</translation>
     </message>
     <message>
         <source>filenames of the password databases to open (*.kdbx)</source>
@@ -9121,20 +9121,20 @@ Kernel: %3 %4</translation>
         <translation>Adatbázis-zárolás sikertelen.</translation>
     </message>
     <message>
-        <source>Another instance of KeePassXC is already running.</source>
-        <translation>A KeePassXC egy másik példánya is fut.</translation>
+        <source>Another instance of OpenVireo is already running.</source>
+        <translation>A OpenVireo egy másik példánya is fut.</translation>
     </message>
     <message>
-        <source>KeePassXC is not running. No open database to lock</source>
-        <translation>A KeePassXC nem fut. Nincs megnyitott adatbázis, amit zárolni lehetne</translation>
+        <source>OpenVireo is not running. No open database to lock</source>
+        <translation>A OpenVireo nem fut. Nincs megnyitott adatbázis, amit zárolni lehetne</translation>
     </message>
     <message>
         <source>Fatal error while testing the cryptographic functions.</source>
         <translation>Végzetes hiba a kriptográfiai funkciók tesztelése közben.</translation>
     </message>
     <message>
-        <source>KeePassXC - Error</source>
-        <translation>KeePassXC – Hiba</translation>
+        <source>OpenVireo - Error</source>
+        <translation>OpenVireo – Hiba</translation>
     </message>
     <message>
         <source>Database password: </source>
@@ -9257,8 +9257,8 @@ Ez a kapcsoló elavult, használja helyette a --set-key-file kapcsolót.</transl
         <translation>Nem érhető el gyors feloldási szolgáltató</translation>
     </message>
     <message>
-        <source>Failed to init KeePassXC crypto.</source>
-        <translation>KeePassXC crypto indítása sikertelen.</translation>
+        <source>Failed to init OpenVireo crypto.</source>
+        <translation>OpenVireo crypto indítása sikertelen.</translation>
     </message>
     <message>
         <source>Failed to encrypt key data.</source>
@@ -9778,8 +9778,8 @@ Ez a kapcsoló elavult, használja helyette a --set-key-file kapcsolót.</transl
         <translation>A jelentésekből kizárt bejegyzések megjelenítése.</translation>
     </message>
     <message>
-        <source>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
-        <translation>Ez a KeePassXC build nem tartalmaz hálózati funkciókat. A jelszavak  „Have I Been Pwned” szolgáltatással való ellenőrzéshez hálózati funkciókra van szükség.</translation>
+        <source>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
+        <translation>Ez a OpenVireo build nem tartalmaz hálózati funkciókat. A jelszavak  „Have I Been Pwned” szolgáltatással való ellenőrzéshez hálózati funkciókra van szükség.</translation>
     </message>
     <message>
         <source>Congratulations, no exposed passwords!</source>
@@ -10247,8 +10247,8 @@ Ez a kapcsoló elavult, használja helyette a --set-key-file kapcsolót.</transl
         <translation>Beállítások</translation>
     </message>
     <message>
-        <source>Enable KeepassXC Freedesktop.org Secret Service integration</source>
-        <translation>KeepassXC Freedesktop.org titkosító szolgáltatás integrációjának engedélyezése</translation>
+        <source>Enable OpenVireo Freedesktop.org Secret Service integration</source>
+        <translation>OpenVireo Freedesktop.org titkosító szolgáltatás integrációjának engedélyezése</translation>
     </message>
     <message>
         <source>General</source>
@@ -10615,19 +10615,19 @@ Példa: JBSWY3DPEHPK3PXP</translation>
         <translation>Hiba történt a frissítési információk letöltése közben. Próbálkozzon később.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Új verzió érhető el.&lt;/strong&gt;&lt;br/&gt;A KeePassXC %1  &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;innen tölthető le&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Új verzió érhető el.&lt;/strong&gt;&lt;br/&gt;A OpenVireo %1  &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;innen tölthető le&lt;/a&gt;.</translation>
     </message>
     <message>
-        <source>You have the latest version of KeePassXC</source>
-        <translation>A legfrissebb KeePassXC verzió fut.</translation>
+        <source>You have the latest version of OpenVireo</source>
+        <translation>A legfrissebb OpenVireo verzió fut.</translation>
     </message>
 </context>
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Start storing your passwords securely in a KeePassXC database</source>
-        <translation>Máris elkezdhető a jelszavak titkosított tárolása a KeePassXC adatbázisban</translation>
+        <source>Start storing your passwords securely in an OpenVireo database</source>
+        <translation>Máris elkezdhető a jelszavak titkosított tárolása a OpenVireo adatbázisban</translation>
     </message>
     <message>
         <source>Recent databases</source>
@@ -10638,8 +10638,8 @@ Példa: JBSWY3DPEHPK3PXP</translation>
         <translation>Legutóbbi adatbázis megnyitása</translation>
     </message>
     <message>
-        <source>Welcome to KeePassXC %1</source>
-        <translation>Üdvözöljük a KeePassXC %1 verzióban!</translation>
+        <source>Welcome to OpenVireo %1</source>
+        <translation>Üdvözöljük a OpenVireo %1 verzióban!</translation>
     </message>
     <message>
         <source>Create Database</source>

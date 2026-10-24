@@ -168,7 +168,7 @@ void SignUpWizard::handleRegistered(const QString& secretKey)
 void SignUpWizard::saveKit()
 {
     const auto defaultPath = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation))
-                                 .filePath("KeePassXC Emergency Kit.pdf");
+                                 .filePath("OpenVireo Emergency Kit.pdf");
     const auto path =
         fileDialog()->getSaveFileName(this, tr("Save Emergency Kit"), defaultPath, tr("PDF files (*.pdf)"));
     if (path.isEmpty()) {

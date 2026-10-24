@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 {
     QStandardPaths::setTestModeEnabled(true);
     Application app(argc, argv);
-    app.setApplicationName("KeePassXC");
+    app.setApplicationName("OpenVireo");
     app.setQuitOnLastWindowClosed(false);
     app.applyTheme();
     TestGuiAccounts tc;

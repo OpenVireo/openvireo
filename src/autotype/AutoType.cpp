@@ -313,9 +313,9 @@ void AutoType::executeAutoTypeActions(const Entry* entry,
         if (!macUtils()->enableAccessibility()) {
             MessageBox::information(nullptr,
                                     tr("Permission Required"),
-                                    tr("KeePassXC requires the Accessibility permission in order to perform entry "
+                                    tr("OpenVireo requires the Accessibility permission in order to perform entry "
                                        "level Auto-Type. If you already granted permission, you may have to restart "
-                                       "KeePassXC."));
+                                       "OpenVireo."));
             return;
         }
 
@@ -437,9 +437,9 @@ void AutoType::startGlobalAutoType(const QString& search)
             MessageBox::information(
                 nullptr,
                 tr("Permission Required"),
-                tr("KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global "
+                tr("OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global "
                    "Auto-Type. Screen Recording is necessary to use the window title to find entries. If you "
-                   "already granted permission, you may have to restart KeePassXC."));
+                   "already granted permission, you may have to restart OpenVireo."));
             return;
         }
     }

@@ -331,5 +331,5 @@ QString RemoteHandler::deviceName()
     while (name.toUtf8().size() > 64) {
         name.chop(1);
     }
-    return name.isEmpty() ? QStringLiteral("KeePassXC") : name;
+    return name.isEmpty() ? QStringLiteral("OpenVireo") : name;
 }

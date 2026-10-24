@@ -100,7 +100,7 @@
 #include "mainwindowadaptor.h"
 #endif
 
-const QString MainWindow::BaseWindowTitle = "KeePassXC";
+const QString MainWindow::BaseWindowTitle = "OpenVireo";
 
 MainWindow* g_MainWindow = nullptr;
 MainWindow* getMainWindow()
@@ -670,7 +670,7 @@ MainWindow::MainWindow()
     });
 
     if (config()->get(Config::Messages_HidePreReleaseWarning) != KEEPASSXC_VERSION) {
-        m_ui->globalMessageWidget->showMessage(tr("WARNING: You are using a development snapshot build of KeePassXC.\n"
+        m_ui->globalMessageWidget->showMessage(tr("WARNING: You are using a development snapshot build of OpenVireo.\n"
                                                   "Maintain a backup of your databases in the event of unknown bugs.\n"
                                                   "This version is not meant for production use."),
                                                MessageWidget::Warning,
@@ -974,7 +974,7 @@ void MainWindow::moveDatabaseToAccount()
         return;
     }
     if (m_accountController->account()->state() != AccountManager::State::Unlocked) {
-        displayGlobalMessage(tr("Sign in to your KeePassXC account and unlock it first."), MessageWidget::Information);
+        displayGlobalMessage(tr("Sign in to your OpenVireo account and unlock it first."), MessageWidget::Information);
         return;
     }
     auto name = dbWidget->database()->metadata()->name();
@@ -1499,7 +1499,7 @@ void MainWindow::performUpdateCheck()
         auto result =
             MessageBox::question(this,
                                  tr("Check for updates on startup?"),
-                                 tr("Would you like KeePassXC to check for updates on startup?") + "\n\n"
+                                 tr("Would you like OpenVireo to check for updates on startup?") + "\n\n"
                                      + tr("You can always check for updates manually from the application menu."),
                                  MessageBox::Yes | MessageBox::No,
                                  MessageBox::Yes);
@@ -2023,7 +2023,7 @@ void MainWindow::updateTrayIcon()
             menu->addAction(m_ui->actionLockAllDatabases);
 
 #ifdef Q_OS_MACOS
-            auto actionQuit = new QAction(tr("Quit KeePassXC"), menu);
+            auto actionQuit = new QAction(tr("Quit OpenVireo"), menu);
             connect(actionQuit, SIGNAL(triggered()), SLOT(appExit()));
             menu->addAction(actionQuit);
 #else

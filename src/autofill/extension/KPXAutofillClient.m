@@ -113,7 +113,7 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
     address.sun_family = AF_UNIX;
     const char* cPath = path.fileSystemRepresentation;
     if (!path || strlen(cPath) >= sizeof(address.sun_path)) {
-        *error = KPXError(KPXAutofillErrorNotRunning, @"The KeePassXC socket path is not usable.");
+        *error = KPXError(KPXAutofillErrorNotRunning, @"The OpenVireo socket path is not usable.");
         return nil;
     }
     strlcpy(address.sun_path, cPath, sizeof(address.sun_path));
@@ -128,7 +128,7 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
 
     if (connect(fd, (struct sockaddr*)&address, sizeof(address)) != 0) {
         close(fd);
-        *error = KPXError(KPXAutofillErrorNotRunning, @"KeePassXC is not running.");
+        *error = KPXError(KPXAutofillErrorNotRunning, @"OpenVireo is not running.");
         return nil;
     }
 
@@ -139,7 +139,7 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
                 && KPXWriteAll(fd, body.bytes, body.length, deadline);
     if (!sent) {
         close(fd);
-        *error = KPXError(KPXAutofillErrorNotRunning, @"KeePassXC closed the connection.");
+        *error = KPXError(KPXAutofillErrorNotRunning, @"OpenVireo closed the connection.");
         return nil;
     }
 
@@ -147,14 +147,14 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
     if (!KPXReadAll(fd, (uint8_t*)&responseLength, sizeof(responseLength), deadline)) {
         close(fd);
         *error = [deadline timeIntervalSinceNow] <= 0
-                     ? KPXError(KPXAutofillErrorTimedOut, @"KeePassXC did not answer in time.")
-                     : KPXError(KPXAutofillErrorNotRunning, @"KeePassXC closed the connection.");
+                     ? KPXError(KPXAutofillErrorTimedOut, @"OpenVireo did not answer in time.")
+                     : KPXError(KPXAutofillErrorNotRunning, @"OpenVireo closed the connection.");
         return nil;
     }
     responseLength = CFSwapInt32BigToHost(responseLength);
     if (responseLength == 0 || responseLength > KPXMaxFrameSize) {
         close(fd);
-        *error = KPXError(KPXAutofillErrorProtocol, @"KeePassXC sent a malformed answer.");
+        *error = KPXError(KPXAutofillErrorProtocol, @"OpenVireo sent a malformed answer.");
         return nil;
     }
 
@@ -162,7 +162,7 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
     const BOOL received = KPXReadAll(fd, responseBody.mutableBytes, responseLength, deadline);
     close(fd);
     if (!received) {
-        *error = KPXError(KPXAutofillErrorTimedOut, @"KeePassXC did not answer in time.");
+        *error = KPXError(KPXAutofillErrorTimedOut, @"OpenVireo did not answer in time.");
         return nil;
     }
 
@@ -170,7 +170,7 @@ static NSDictionary* KPXSendSync(NSDictionary* request, NSTimeInterval timeout, 
     // The answer may hold a password; wipe our copy of the raw bytes
     memset(responseBody.mutableBytes, 0, responseBody.length);
     if (![response isKindOfClass:[NSDictionary class]]) {
-        *error = KPXError(KPXAutofillErrorProtocol, @"KeePassXC sent a malformed answer.");
+        *error = KPXError(KPXAutofillErrorProtocol, @"OpenVireo sent a malformed answer.");
         return nil;
     }
     return response;

@@ -104,7 +104,7 @@ void HibpDownloader::validate()
         // to minimize the amount of information we expose about ourselves,
         // we don't add the KeePassXC version number or platform.
         auto request = QNetworkRequest(url);
-        request.setRawHeader("User-Agent", "KeePassXC");
+        request.setRawHeader("User-Agent", "OpenVireo");
 
         // Finally, submit the request to HIBP.
         auto reply = getNetMgr()->get(request);

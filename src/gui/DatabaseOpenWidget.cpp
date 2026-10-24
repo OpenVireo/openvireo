@@ -259,7 +259,7 @@ void DatabaseOpenWidget::updateVaultHeader()
     // The database's public name, or else its file name, heads the card
     const auto name = m_db && !m_db->publicName().isEmpty() ? m_db->publicName()
                                                             : QFileInfo(m_filename).completeBaseName();
-    m_ui->labelHeadline->setText(name.isEmpty() ? tr("Unlock KeePassXC Database") : name);
+    m_ui->labelHeadline->setText(name.isEmpty() ? tr("Unlock OpenVireo Database") : name);
 
     // The tile shows the database's public icon, or a lock glyph without one
     auto* tile = m_ui->dbIconLabel;
@@ -402,7 +402,7 @@ void DatabaseOpenWidget::load(const QString& filename)
     m_ui->fileNameLabel->setRawText(m_filename);
 
     // Set the public name if defined
-    auto label = tr("Unlock KeePassXC Database");
+    auto label = tr("Unlock OpenVireo Database");
     if (!m_db->publicName().isEmpty()) {
         label.append(QString(": %1").arg(m_db->publicName()));
     }
@@ -510,10 +510,10 @@ void DatabaseOpenWidget::openDatabase()
             auto result = MessageBox::warning(this,
                                               tr("Database Version Mismatch"),
                                               tr("The database you are trying to open was most likely\n"
-                                                 "created by a newer version of KeePassXC.\n\n"
+                                                 "created by a newer version of OpenVireo.\n\n"
                                                  "You can try to open it anyway, but it may be incomplete\n"
                                                  "and saving any changes may incur data loss.\n\n"
-                                                 "We recommend you update your KeePassXC installation."),
+                                                 "We recommend you update your OpenVireo installation."),
                                               MessageBox::Ok | MessageBox::Cancel,
                                               MessageBox::Ok);
             if (result != MessageBox::Ok) {
@@ -610,7 +610,7 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
 
             MessageBox::warning(this,
                                 tr("Old key file format"),
-                                tr("You are using an old key file format which KeePassXC may<br>"
+                                tr("You are using an old key file format which OpenVireo may<br>"
                                    "stop supporting in the future.<br><br>"
                                    "Please consider generating a new key file by going to:<br>"
                                    "<strong>Database &gt; Database Security &gt; Change Key File.</strong><br>"),
@@ -676,7 +676,7 @@ bool DatabaseOpenWidget::browseKeyFile()
     }
     if (filename.endsWith(".kdbx")
         && MessageBox::warning(this,
-                               tr("KeePassXC database file selected"),
+                               tr("OpenVireo database file selected"),
                                tr("The file you selected looks like a database file.\nA database file is NOT a key "
                                   "file!\n\nAre you sure you want to continue with this file?."),
                                MessageBox::Button::Yes | MessageBox::Button::Cancel,

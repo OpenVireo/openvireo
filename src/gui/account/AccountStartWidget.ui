@@ -138,7 +138,7 @@
             <item>
              <widget class="QLabel" name="titleLabel">
               <property name="text">
-               <string>KeePassXC</string>
+               <string>OpenVireo</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
@@ -227,7 +227,7 @@
                    <item>
                     <widget class="QLabel" name="signInIntro">
                      <property name="text">
-                      <string>Your vaults sync between KeePassXC on your computers and KeePass Web.</string>
+                      <string>Your vaults sync between OpenVireo on your computers and OpenVireo Web.</string>
                      </property>
                      <property name="wordWrap">
                       <bool>true</bool>
@@ -630,7 +630,7 @@
                    <item>
                     <widget class="QLabel" name="selfHostedIntro">
                      <property name="text">
-                      <string>Sync your databases with your own KeePassXC sync server. Enter its URL and a pairing code from another device or from the server's admin. Your databases keep their master passwords.</string>
+                      <string>Sync your databases with your own OpenVireo sync server. Enter its URL and a pairing code from another device or from the server's admin. Your databases keep their master passwords.</string>
                      </property>
                      <property name="wordWrap">
                       <bool>true</bool>

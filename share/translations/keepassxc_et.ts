@@ -2,8 +2,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About KeePassXC</source>
-        <translation>KeePassXC teave</translation>
+        <source>About OpenVireo</source>
+        <translation>OpenVireo teave</translation>
     </message>
     <message>
         <source>About</source>
@@ -14,8 +14,8 @@
         <translation>Vigadest teatamise koht: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
-        <source>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
-        <translation>KeePassXC-d levitatakse vastavalt GNU Üldise Avaliku Litsentsi (GPL) versioonis 2 või (sinu valikul) versioonis 3 toodud tingimustele.</translation>
+        <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
+        <translation>OpenVireo-d levitatakse vastavalt GNU Üldise Avaliku Litsentsi (GPL) versioonis 2 või (sinu valikul) versioonis 3 toodud tingimustele.</translation>
     </message>
     <message>
         <source>Project Maintainers:</source>
@@ -49,8 +49,8 @@
 <context>
     <name>AccessControlDialog</name>
     <message>
-        <source>KeePassXC -  Access Request</source>
-        <translation>Juurdepääsutaotlus – KeePassXC</translation>
+        <source>OpenVireo -  Access Request</source>
+        <translation>Juurdepääsutaotlus – OpenVireo</translation>
     </message>
     <message>
         <source>Non-existing/inaccessible executable path. Please double-check the client is legit.</source>
@@ -81,8 +81,8 @@
         <translation>Üksikasjad</translation>
     </message>
     <message>
-        <source>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</source>
-        <translation>Otsust mäletatakse seni, kuni nii taotluse esitanud klient kui ka KeePassXC töötavad.</translation>
+        <source>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</source>
+        <translation>Otsust mäletatakse seni, kuni nii taotluse esitanud klient kui ka OpenVireo töötavad.</translation>
     </message>
     <message>
         <source>Remember</source>
@@ -234,7 +234,7 @@
     </message>
     <message>
         <source>You must restart the application to set the new language. Would you like to restart now?</source>
-        <translation>Keele vahetamiseks tuleb KeePassXC uuesti käivitada. Kas teha seda kohe?</translation>
+        <translation>Keele vahetamiseks tuleb OpenVireo uuesti käivitada. Kas teha seda kohe?</translation>
     </message>
     <message>
         <source>Select backup storage directory</source>
@@ -249,16 +249,16 @@
         <translation>Kas oled kindel, et tahad kõik seaded lähtestada?</translation>
     </message>
     <message>
-        <source>Import KeePassXC Settings</source>
-        <translation>KeePassXC seadete importimine</translation>
+        <source>Import OpenVireo Settings</source>
+        <translation>OpenVireo seadete importimine</translation>
     </message>
     <message>
         <source>Failed to import settings from %1, not a valid settings file.</source>
         <translation>Failist „%1” seadete importimine ei õnnestunud, tegemist pole korrektse seadete failiga.</translation>
     </message>
     <message>
-        <source>Export KeePassXC Settings</source>
-        <translation>KeePassXC seadete eksportimine</translation>
+        <source>Export OpenVireo Settings</source>
+        <translation>OpenVireo seadete eksportimine</translation>
     </message>
     <message>
         <source>Small</source>
@@ -285,8 +285,8 @@
         <translation>Puudub</translation>
     </message>
     <message>
-        <source>Restart KeePassXC to apply the Auto-Type desktop portals preference.</source>
-        <translation>Käivita KeePassXC uuesti töölauaportaali eelistuste rakendamiseks automaatsisestuse kontekstis.</translation>
+        <source>Restart OpenVireo to apply the Auto-Type desktop portals preference.</source>
+        <translation>Käivita OpenVireo uuesti töölauaportaali eelistuste rakendamiseks automaatsisestuse kontekstis.</translation>
     </message>
 </context>
 <context>
@@ -300,12 +300,12 @@
         <translation>Käivitumine</translation>
     </message>
     <message>
-        <source>Start only a single instance of KeePassXC</source>
-        <translation>Avada saab ainult ühe KeePassXC protsessi</translation>
+        <source>Start only a single instance of OpenVireo</source>
+        <translation>Avada saab ainult ühe OpenVireo protsessi</translation>
     </message>
     <message>
-        <source>Automatically launch KeePassXC at system startup</source>
-        <translation>KeePassXC käivitatakse sisselogimisel automaatselt</translation>
+        <source>Automatically launch OpenVireo at system startup</source>
+        <translation>OpenVireo käivitatakse sisselogimisel automaatselt</translation>
     </message>
     <message>
         <source>Minimize window at application startup</source>
@@ -778,12 +778,12 @@
         <translation>Loataotlus</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>Käsitsi valitud kirje automaatsisestuse sooritamiseks on KeePassXC-l vaja hõlbustusvahendina käitumise luba. Kui oled juba loa andnud, tuleb KeePassXC võibolla uuesti käivitada.</translation>
+        <source>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>Käsitsi valitud kirje automaatsisestuse sooritamiseks on OpenVireo-l vaja hõlbustusvahendina käitumise luba. Kui oled juba loa andnud, tuleb OpenVireo võibolla uuesti käivitada.</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>Globaalse automaatsisestuse sooritamiseks on KeePassXC-l vaja hõlbustusvahendina käitumise ja ekraani salvestamise luba. Kui oled juba load andnud, tuleb KeePassXC võibolla uuesti käivitada.</translation>
+        <source>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>Globaalse automaatsisestuse sooritamiseks on OpenVireo-l vaja hõlbustusvahendina käitumise ja ekraani salvestamise luba. Kui oled juba load andnud, tuleb OpenVireo võibolla uuesti käivitada.</translation>
     </message>
     <message>
         <source>Invalid entry provided</source>
@@ -889,8 +889,8 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - KeePassXC</source>
-        <translation>Automaatsisestus – KeePassXC</translation>
+        <source>Auto-Type - OpenVireo</source>
+        <translation>Automaatsisestus – OpenVireo</translation>
     </message>
     <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
@@ -993,8 +993,8 @@ Ctrl+Shift+4 - Kopeeri võrguaadress&lt;br/&gt;
 <context>
     <name>BrowserAccessControlDialog</name>
     <message>
-        <source>KeePassXC - Browser Access Request</source>
-        <translation>Brauseri juurdepääsutaotlus – KeePassXC</translation>
+        <source>OpenVireo - Browser Access Request</source>
+        <translation>Brauseri juurdepääsutaotlus – OpenVireo</translation>
     </message>
     <message>
         <source>%1 is requesting access to the following entries:</source>
@@ -1046,8 +1046,8 @@ Please select the correct database for saving credentials.</source>
 Vali, millisesse neist tunnused salvestada tuleks.</translation>
     </message>
     <message>
-        <source>KeePassXC - Select Database</source>
-        <translation>Andmebaasi valimine – KeePassXC</translation>
+        <source>OpenVireo - Select Database</source>
+        <translation>Andmebaasi valimine – OpenVireo</translation>
     </message>
 </context>
 <context>
@@ -1085,8 +1085,8 @@ Vali, millisesse neist tunnused salvestada tuleks.</translation>
         <translation>Kasutajanimi: %1</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>Pääsuvõtme tunnused – KeePassXC</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>Pääsuvõtme tunnused – OpenVireo</translation>
     </message>
     <message>
         <source>Add to existing entry</source>
@@ -1160,44 +1160,44 @@ Kas lubad selle kirje kustutada?
         <translation>%1 (pääsuvõti)</translation>
     </message>
     <message>
-        <source>KeePassXC - Create a new group</source>
-        <translation>Uue grupi loomine – KeePassXC</translation>
+        <source>OpenVireo - Create a new group</source>
+        <translation>Uue grupi loomine – OpenVireo</translation>
     </message>
     <message>
         <source>Disable</source>
         <translation>keelatud</translation>
     </message>
     <message>
-        <source>KeePassXC - Overwrite existing key?</source>
-        <translation>Kirje ülekirjutamise kinnitus – KeePassXC</translation>
+        <source>OpenVireo - Overwrite existing key?</source>
+        <translation>Kirje ülekirjutamise kinnitus – OpenVireo</translation>
     </message>
     <message>
-        <source>KeePassXC - Update Entry</source>
-        <translation>Kirje uuendamine – KeePassXC</translation>
+        <source>OpenVireo - Update Entry</source>
+        <translation>Kirje uuendamine – OpenVireo</translation>
     </message>
     <message>
-        <source>KeePassXC - Delete entry</source>
-        <translation>Kirje kustutamine – KeePassXC</translation>
+        <source>OpenVireo - Delete entry</source>
+        <translation>Kirje kustutamine – OpenVireo</translation>
     </message>
     <message>
-        <source>KeePassXC - New key association request</source>
-        <translation>Uus ühendumistaotlus – KeePassXC</translation>
+        <source>OpenVireo - New key association request</source>
+        <translation>Uus ühendumistaotlus – OpenVireo</translation>
     </message>
     <message>
         <source>Passkey</source>
         <translation>Pääsuvõti</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>Pääsuvõtme tunnused – KeePassXC</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>Pääsuvõtme tunnused – OpenVireo</translation>
     </message>
     <message>
         <source>Register a new passkey to this entry:</source>
         <translation>Registreeri uus pääsuvõti sellesse kirjesse:</translation>
     </message>
     <message>
-        <source>KeePassXC - Update passkey</source>
-        <translation>Pääsuvõtme uuendamine – KeePassXC</translation>
+        <source>OpenVireo - Update passkey</source>
+        <translation>Pääsuvõtme uuendamine – OpenVireo</translation>
     </message>
     <message>
         <source>Entry already has a passkey.
@@ -1217,8 +1217,8 @@ Kas soovid selle uue pääsuvõtmega (%2) üle kirjutada?</translation>
         <translation>Dialoog</translation>
     </message>
     <message>
-        <source>This is required for accessing your databases with KeePassXC-Browser</source>
-        <translation>See on vajalik andmebaasidele KeePassXC-Browseri abil juurdepääsemiseks.</translation>
+        <source>This is required for accessing your databases with OpenVireo Browser</source>
+        <translation>See on vajalik andmebaasidele OpenVireo-Browseri abil juurdepääsemiseks.</translation>
     </message>
     <message>
         <source>Enable browser integration</source>
@@ -1338,8 +1338,8 @@ Kas soovid selle uue pääsuvõtmega (%2) üle kirjutada?</translation>
         <translation>Ei pakuta KeePassHTTP seadistuse ülekolimist</translation>
     </message>
     <message>
-        <source>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</source>
-        <translation>Märkimisel uuendatakse käivitusel programmiomase teatevahetuse skriptides automaatselt KeePassXC või keepassxc-proxy binaarfaili asukohta.</translation>
+        <source>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</source>
+        <translation>Märkimisel uuendatakse käivitusel programmiomase teatevahetuse skriptides automaatselt OpenVireo või openvireo-proxy binaarfaili asukohta.</translation>
     </message>
     <message>
         <source>Update native messaging manifest files at startup</source>
@@ -1416,8 +1416,8 @@ Kas soovid selle uue pääsuvõtmega (%2) üle kirjutada?</translation>
         <translation>Programmiomase teatevahetuse hosti kausta valimine</translation>
     </message>
     <message>
-        <source>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</source>
-        <translation>Märkimisel lubatakse keepassxc-proxy’l loetleda kirjeid koos pealkirja, URL-i ja ühendatud andmebaasides oleva UUID-ga.</translation>
+        <source>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</source>
+        <translation>Märkimisel lubatakse openvireo-proxy’l loetleda kirjeid koos pealkirja, URL-i ja ühendatud andmebaasides oleva UUID-ga.</translation>
     </message>
     <message>
         <source>Allow limited access to all entries in connected databases (ignores site access restrictions)</source>
@@ -1448,8 +1448,8 @@ Kas soovid selle uue pääsuvõtmega (%2) üle kirjutada?</translation>
         <translation>Lubatakse localhosti kasutamine pääsuvõtmetega</translation>
     </message>
     <message>
-        <source>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
-        <translation>Lõimingu toimimiseks peab brauserile olema paigaldatud laiendus KeePassXC-Browser. &lt;br /&gt;See on saadaval %1i, %2’i ja %3’i jaoks.</translation>
+        <source>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
+        <translation>Lõimingu toimimiseks peab brauserile olema paigaldatud laiendus OpenVireo Browser. &lt;br /&gt;See on saadaval %1i, %2’i ja %3’i jaoks.</translation>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
@@ -1686,15 +1686,15 @@ Varuandmebaasi asukoht: %2</translation>
 <context>
     <name>DatabaseOpenDialog</name>
     <message>
-        <source>Unlock Database - KeePassXC</source>
-        <translation>Andmebaasi luku avamine – KeePassXC</translation>
+        <source>Unlock Database - OpenVireo</source>
+        <translation>Andmebaasi luku avamine – OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>DatabaseOpenWidget</name>
     <message>
-        <source>Unlock KeePassXC Database</source>
-        <translation>KeePassXC andmebaasi luku avamine</translation>
+        <source>Unlock OpenVireo Database</source>
+        <translation>OpenVireo andmebaasi luku avamine</translation>
     </message>
     <message>
         <source>Enter Password:</source>
@@ -1742,19 +1742,19 @@ Varuandmebaasi asukoht: %2</translation>
     </message>
     <message>
         <source>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</source>
+We recommend you update your OpenVireo installation.</source>
         <translation>Andmebaas, mida avada proovisid, paistab olevat loodud
-KeePassXC uuema versiooniga.
+OpenVireo uuema versiooniga.
 
 Võid üritada seda avada, kuid arvesta, et sisu võib olla puudulik
 ning muudatuste salvestamine võib kaasa tuua andmekadu.
 
-Hea oleks enne selle faili avamist KeePassXC-d uuendada.</translation>
+Hea oleks enne selle faili avamist OpenVireo-d uuendada.</translation>
     </message>
     <message>
         <source>Open database anyway</source>
@@ -1791,8 +1791,8 @@ Selle veateate ilmumise vältimiseks peaksid avama andmebaasi seadetes turvalisu
         <translation>Vanas vormingus võtmefail</translation>
     </message>
     <message>
-        <source>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
-        <translation>Kasutad vana võtmefailivormingut, mille tugi võidakse&lt;br&gt;KeePassXC-st tulevikus eemaldada.&lt;br&gt;&lt;br&gt;Palun genereeri uus võtmefail – selleks vali menüüst:&lt;br&gt;&lt;strong&gt;Andmebaas &amp;gt; Andmebaasi turvalisus &amp;gt; Muuda võtmefaili.&lt;/strong&gt;&lt;br&gt;</translation>
+        <source>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
+        <translation>Kasutad vana võtmefailivormingut, mille tugi võidakse&lt;br&gt;OpenVireo-st tulevikus eemaldada.&lt;br&gt;&lt;br&gt;Palun genereeri uus võtmefail – selleks vali menüüst:&lt;br&gt;&lt;strong&gt;Andmebaas &amp;gt; Andmebaasi turvalisus &amp;gt; Muuda võtmefaili.&lt;/strong&gt;&lt;br&gt;</translation>
     </message>
     <message>
         <source>Don&apos;t show this warning again</source>
@@ -1845,8 +1845,8 @@ If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;
 Kui andmebaasi avamiseks pole võtmefaili vaja, ära vali seda.</translation>
     </message>
     <message>
-        <source>KeePassXC database file selected</source>
-        <translation>Valitud on KeePassXC andmebaasifail</translation>
+        <source>OpenVireo database file selected</source>
+        <translation>Valitud on OpenVireo andmebaasifail</translation>
     </message>
     <message>
         <source>The file you selected looks like a database file.
@@ -1936,8 +1936,8 @@ Kas oled kindel, et soovid selle failiga jätkata?</translation>
 <context>
     <name>DatabaseSettingsWidgetBrowser</name>
     <message>
-        <source>KeePassXC-Browser settings</source>
-        <translation>KeePassXC-Browseri seaded</translation>
+        <source>OpenVireo Browser settings</source>
+        <translation>OpenVireo-Browseri seaded</translation>
     </message>
     <message>
         <source>Disconnect all browsers</source>
@@ -2000,12 +2000,12 @@ This may prevent connection to the browser plugin.</source>
 See võib tõkestada ühendumise brauseripluginaga.</translation>
     </message>
     <message>
-        <source>No shared encryption keys found in KeePassXC settings.</source>
-        <translation>KeePassXC seadetest ei leitud ühtki jagatud krüptimisvõtit.</translation>
+        <source>No shared encryption keys found in OpenVireo settings.</source>
+        <translation>OpenVireo seadetest ei leitud ühtki jagatud krüptimisvõtit.</translation>
     </message>
     <message numerus="yes">
-        <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
-        <translation><numerusform>%n krüptimisvõti edukalt KeePassXC seadetest eemaldatud.</numerusform><numerusform>%n krüptimisvõtit edukalt KeePassXC seadetest eemaldatud.</numerusform></translation>
+        <source>Successfully removed %n encryption key(s) from OpenVireo settings.</source>
+        <translation><numerusform>%n krüptimisvõti edukalt OpenVireo seadetest eemaldatud.</numerusform><numerusform>%n krüptimisvõtit edukalt OpenVireo seadetest eemaldatud.</numerusform></translation>
     </message>
     <message>
         <source>Do you really want forget all site-specific settings on every entry?
@@ -2040,8 +2040,8 @@ This is only necessary if your database is a copy of another and the browser ext
 See on vajalik vaid juhul, kui sinu andmebaas on teise andmebaasi koopia ning brauserilaiendus ei saa sellega ühendust.</translation>
     </message>
     <message>
-        <source>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</source>
-        <translation>Teisenda KeePassHTTP pärandatribuudid KeePassXC-Browseriga ühilduvateks kohandatud andmeteks</translation>
+        <source>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</source>
+        <translation>Teisenda KeePassHTTP pärandatribuudid OpenVireo-Browseriga ühilduvateks kohandatud andmeteks</translation>
     </message>
     <message>
         <source>No keys found</source>
@@ -2867,9 +2867,9 @@ Kas salvestada muudatused?</translation>
         <translation>Turvalise salvestamise keelamine</translation>
     </message>
     <message>
-        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <source>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</source>
-        <translation>KeePassXC-l on ebaõnnestunud mitu katset andmebaasi salvestada. Tõenäoliselt põhjustab seda mõni failisünkimisteenus, mis salvestatavat faili lukus hoiab.
+        <translation>OpenVireo-l on ebaõnnestunud mitu katset andmebaasi salvestada. Tõenäoliselt põhjustab seda mõni failisünkimisteenus, mis salvestatavat faili lukus hoiab.
 Kas keelata turvaline salvestamine ja proovida seejärel uuesti?</translation>
     </message>
     <message>
@@ -3782,9 +3782,9 @@ isegi kui see ei vasta kvaliteedinõuetele. Märgi see ruut, kui parooli keeruku
         <translation>sünkimine</translation>
     </message>
     <message>
-        <source>Your KeePassXC version does not support sharing this container type.
+        <source>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</source>
-        <translation>See KeePassXC versioon ei toeta valitud ümbrikutüübi jagamist.
+        <translation>See OpenVireo versioon ei toeta valitud ümbrikutüübi jagamist.
 Toetatud faililaiendid: %1</translation>
     </message>
     <message>
@@ -3996,7 +3996,7 @@ Toetatud faililaiendid: %1</translation>
     </message>
     <message>
         <source>You can enable the DuckDuckGo website icon service under Application Settings -&gt; Security</source>
-        <translation>KeePassXC seadete turvalisuse jaotises võid sisse lülitada DuckDuckGo veebisaidiikoonide teenuse.</translation>
+        <translation>OpenVireo seadete turvalisuse jaotises võid sisse lülitada DuckDuckGo veebisaidiikoonide teenuse.</translation>
     </message>
 </context>
 <context>
@@ -4747,8 +4747,8 @@ See jätab su paroolid jm tundliku teabe kaitseta!
 <context>
     <name>GlobalShortcutsPortal</name>
     <message>
-        <source>KeePassXC - Global Shortcuts</source>
-        <translation>KeePassXC - Üldised kiirklahvid</translation>
+        <source>OpenVireo - Global Shortcuts</source>
+        <translation>OpenVireo - Üldised kiirklahvid</translation>
     </message>
     <message>
         <source>The XDG Desktop Portal for global shortcuts is not available on this system.</source>
@@ -4795,7 +4795,7 @@ See jätab su paroolid jm tundliku teabe kaitseta!
     <message>
         <source>Having trouble downloading icons?
 You can enable the DuckDuckGo website icon service in the security section of the application settings.</source>
-        <translation>Kui ikoonide allalaadimisega on probleeme, võid KeePassXC seadete turvalisuse jaotises sisse lülitada DuckDuckGo veebisaidiikoonide teenuse.</translation>
+        <translation>Kui ikoonide allalaadimisega on probleeme, võid OpenVireo seadete turvalisuse jaotises sisse lülitada DuckDuckGo veebisaidiikoonide teenuse.</translation>
     </message>
     <message>
         <source>Close</source>
@@ -5727,8 +5727,8 @@ Kui probleem püsib, võib andmebaasifail olla rikutud.</translation>
         <translation>Vanas vormingus võtmefail</translation>
     </message>
     <message>
-        <source>You selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
-        <translation>Valisid võtmefaili, mis on vanas vormingus, mille tugi võidakse&lt;br&gt;KeePassXC-st tulevikus eemaldada.&lt;br&gt;&lt;br&gt;Palun genereeri selle asemele uus võtmefail.</translation>
+        <source>You selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
+        <translation>Valisid võtmefaili, mis on vanas vormingus, mille tugi võidakse&lt;br&gt;OpenVireo-st tulevikus eemaldada.&lt;br&gt;&lt;br&gt;Palun genereeri selle asemele uus võtmefail.</translation>
     </message>
     <message>
         <source>Error loading the key file '%1'
@@ -6177,8 +6177,8 @@ Kas oled kindel, et soovid selle failiga jätkata?</translation>
         <translation>Käivitamisel uuenduste otsimine</translation>
     </message>
     <message>
-        <source>Would you like KeePassXC to check for updates on startup?</source>
-        <translation>Kas soovid, et KeePassXC käivitumisel uuenduste olemasolu kontrolliks?</translation>
+        <source>Would you like OpenVireo to check for updates on startup?</source>
+        <translation>Kas soovid, et OpenVireo käivitumisel uuenduste olemasolu kontrolliks?</translation>
     </message>
     <message>
         <source>You can always check for updates manually from the application menu.</source>
@@ -6189,8 +6189,8 @@ Kas oled kindel, et soovid selle failiga jätkata?</translation>
         <translation>Kuva või peida põhiaken</translation>
     </message>
     <message>
-        <source>Quit KeePassXC</source>
-        <translation>Välju KeePassXC-st</translation>
+        <source>Quit OpenVireo</source>
+        <translation>Välju OpenVireo-st</translation>
     </message>
     <message numerus="yes">
         <source>%1 Entry(s)</source>
@@ -6206,7 +6206,7 @@ Kas oled kindel, et soovid selle failiga jätkata?</translation>
     </message>
     <message>
         <source>You must restart the application to apply this setting. Would you like to restart now?</source>
-        <translation>Selle muudatuse rakendamiseks tuleb KeePassXC uuesti käivitada. Kas teha seda kohe?</translation>
+        <translation>Selle muudatuse rakendamiseks tuleb OpenVireo uuesti käivitada. Kas teha seda kohe?</translation>
     </message>
     <message>
         <source>Allow Screen Capture</source>
@@ -6497,10 +6497,10 @@ Kas oled kindel, et soovid selle failiga jätkata?</translation>
         <translation>Seadista sünkimine...</translation>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of KeePassXC.
+        <source>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</source>
-        <translation>HOIATUS: kasutad KeePassXC-i arendusversiooni!
+        <translation>HOIATUS: kasutad OpenVireo-i arendusversiooni!
 Võimalikest teadmata vigadest johtuva andmekao vältimiseks palun kontrolli, et sul on alati varukoopia olemas.
 See versioon ei ole mõeldud tarbekasutuseks.</translation>
     </message>
@@ -6704,8 +6704,8 @@ See versioon ei ole mõeldud tarbekasutuseks.</translation>
 <context>
     <name>NewDatabaseWizard</name>
     <message>
-        <source>Create a new KeePassXC database…</source>
-        <translation>Uue KeePassXC andmebaasi loomine</translation>
+        <source>Create a new OpenVireo database…</source>
+        <translation>Uue OpenVireo andmebaasi loomine</translation>
     </message>
     <message>
         <source>Root</source>
@@ -6979,8 +6979,8 @@ See versioon ei ole mõeldud tarbekasutuseks.</translation>
 <context>
     <name>PasskeyExportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Export</source>
-        <translation>Pääsuvõtme eksportimine – KeePassXC</translation>
+        <source>OpenVireo - Passkey Export</source>
+        <translation>Pääsuvõtme eksportimine – OpenVireo</translation>
     </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
@@ -7036,8 +7036,8 @@ Kas soovid selle üle kirjutada?</translation>
 <context>
     <name>PasskeyImportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Import</source>
-        <translation>Pääsuvõtme importimine – KeePassXC</translation>
+        <source>OpenVireo - Passkey Import</source>
+        <translation>Pääsuvõtme importimine – OpenVireo</translation>
     </message>
     <message>
         <source>Username: %1</source>
@@ -7170,8 +7170,8 @@ Järgmised andmed on puudu:
         <translation>Parool on määratud, muutmiseks või eemaldamiseks klõpsa vastavat nuppu.</translation>
     </message>
     <message>
-        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;Parool on esmane meetod andmebaasi turvamiseks.&lt;/p&gt;&lt;p&gt;Hea parool on pikk ja ainukordne. Soovi korral võib lasta KeePassXC-l parooli genereerida.&lt;/p&gt;</translation>
+        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Parool on esmane meetod andmebaasi turvamiseks.&lt;/p&gt;&lt;p&gt;Hea parool on pikk ja ainukordne. Soovi korral võib lasta OpenVireo-l parooli genereerida.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Passwords do not match.</source>
@@ -7526,8 +7526,8 @@ Kas soovid selle üle kirjutada?</translation>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>KeePassXC - Pick Characters</source>
-        <translation>Märkide valimine – KeePassXC</translation>
+        <source>OpenVireo - Pick Characters</source>
+        <translation>Märkide valimine – OpenVireo</translation>
     </message>
     <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
@@ -7623,8 +7623,8 @@ Kas soovid selle üle kirjutada?</translation>
         <translation>Sõnumi krüptimine ebaõnnestus.</translation>
     </message>
     <message>
-        <source>KeePassXC association failed, try again</source>
-        <translation>KeePassXC-ga ühendumine ebaõnnestus, proovi uuesti.</translation>
+        <source>OpenVireo association failed, try again</source>
+        <translation>OpenVireo-ga ühendumine ebaõnnestus, proovi uuesti.</translation>
     </message>
     <message>
         <source>Encryption key is not recognized</source>
@@ -8712,12 +8712,12 @@ Võimalikud käsud:
         <translation>Võtmefaili %1 laadimine ebaõnnestus: %2</translation>
     </message>
     <message>
-        <source>WARNING: You are using an old key file format which KeePassXC may
+        <source>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</source>
         <translation>HOIATUS: kasutad võtmefaili, mis on vanas vormingus, mille tugi võidakse
-KeePassXC-st tulevikus eemaldada.
+OpenVireo-st tulevikus eemaldada.
 
 Palun genereeri selle asemele uus võtmefail.</translation>
     </message>
@@ -9094,8 +9094,8 @@ Kernel: %3 %4</translation>
         <translation>Ootamatud andmed võtmefailis. Võtmefail võib olla rikutud.</translation>
     </message>
     <message>
-        <source>KeePassXC - cross-platform password manager</source>
-        <translation>KeePassXC – mitmeplatvormne paroolihaldur</translation>
+        <source>OpenVireo - cross-platform password manager</source>
+        <translation>OpenVireo – mitmeplatvormne paroolihaldur</translation>
     </message>
     <message>
         <source>filenames of the password databases to open (*.kdbx)</source>
@@ -9126,20 +9126,20 @@ Kernel: %3 %4</translation>
         <translation>Andmebaasi lukustamine ebaõnnestus.</translation>
     </message>
     <message>
-        <source>Another instance of KeePassXC is already running.</source>
-        <translation>Teine KeePassXC protsess juba töötab.</translation>
+        <source>Another instance of OpenVireo is already running.</source>
+        <translation>Teine OpenVireo protsess juba töötab.</translation>
     </message>
     <message>
-        <source>KeePassXC is not running. No open database to lock</source>
-        <translation>KeePassXC ei tööta, seega pole ühtki avatud andmebaasi, mida lukustada.</translation>
+        <source>OpenVireo is not running. No open database to lock</source>
+        <translation>OpenVireo ei tööta, seega pole ühtki avatud andmebaasi, mida lukustada.</translation>
     </message>
     <message>
         <source>Fatal error while testing the cryptographic functions.</source>
         <translation>Parandamatu tõrge krüptograafiafunktsioonide testimisel.</translation>
     </message>
     <message>
-        <source>KeePassXC - Error</source>
-        <translation>Viga – KeePassXC</translation>
+        <source>OpenVireo - Error</source>
+        <translation>Viga – OpenVireo</translation>
     </message>
     <message>
         <source>Database password: </source>
@@ -9262,8 +9262,8 @@ See argument on iganenud, kasuta parem &quot;--set-key-file&quot;.</translation>
         <translation>Ühtegi kiiresti luku avamise teenust pole saadaval.</translation>
     </message>
     <message>
-        <source>Failed to init KeePassXC crypto.</source>
-        <translation>KeePassXC krüptograafia initsialiseerimine ebaõnnestus.</translation>
+        <source>Failed to init OpenVireo crypto.</source>
+        <translation>OpenVireo krüptograafia initsialiseerimine ebaõnnestus.</translation>
     </message>
     <message>
         <source>Failed to encrypt key data.</source>
@@ -9783,8 +9783,8 @@ See argument on iganenud, kasuta parem &quot;--set-key-file&quot;.</translation>
         <translation>Näidatakse ka muidu aruannetest välja jäetavaid kirjeid</translation>
     </message>
     <message>
-        <source>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
-        <translation>KeePassXC on kompiilitud ilma võrgufunktsioonideta, aga paroolide võrdlemiseks Have I Been Pwned’i andmebaasidega on vaja võrgujuurdepääsu.</translation>
+        <source>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
+        <translation>OpenVireo on kompiilitud ilma võrgufunktsioonideta, aga paroolide võrdlemiseks Have I Been Pwned’i andmebaasidega on vaja võrgujuurdepääsu.</translation>
     </message>
     <message>
         <source>Congratulations, no exposed passwords!</source>
@@ -10252,8 +10252,8 @@ See argument on iganenud, kasuta parem &quot;--set-key-file&quot;.</translation>
         <translation>Seaded</translation>
     </message>
     <message>
-        <source>Enable KeepassXC Freedesktop.org Secret Service integration</source>
-        <translation>KeePassXC Freedesktop.org-i saladuste teenuse lõimingu lubamine</translation>
+        <source>Enable OpenVireo Freedesktop.org Secret Service integration</source>
+        <translation>OpenVireo Freedesktop.org-i saladuste teenuse lõimingu lubamine</translation>
     </message>
     <message>
         <source>General</source>
@@ -10619,19 +10619,19 @@ Näide: JBSWY3DPEHPK3PXP</translation>
         <translation>Uuenduse teabe hankimisel ilmnes viga. Proovi natukese aja pärast uuesti.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Uus versioon on saadaval.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 saab &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;alla laadida siit&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Uus versioon on saadaval.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 saab &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;alla laadida siit&lt;/a&gt;.</translation>
     </message>
     <message>
-        <source>You have the latest version of KeePassXC</source>
-        <translation>Sul juba on KeePassXC uusim versioon</translation>
+        <source>You have the latest version of OpenVireo</source>
+        <translation>Sul juba on OpenVireo uusim versioon</translation>
     </message>
 </context>
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Start storing your passwords securely in a KeePassXC database</source>
-        <translation>Hakka oma paroole turvaliselt KeePassXC andmebaasis hoidma</translation>
+        <source>Start storing your passwords securely in an OpenVireo database</source>
+        <translation>Hakka oma paroole turvaliselt OpenVireo andmebaasis hoidma</translation>
     </message>
     <message>
         <source>Recent databases</source>
@@ -10642,8 +10642,8 @@ Näide: JBSWY3DPEHPK3PXP</translation>
         <translation>Ava hiljutine andmebaas</translation>
     </message>
     <message>
-        <source>Welcome to KeePassXC %1</source>
-        <translation>Tere tulemast KeePassXC %1 kasutama!</translation>
+        <source>Welcome to OpenVireo %1</source>
+        <translation>Tere tulemast OpenVireo %1 kasutama!</translation>
     </message>
     <message>
         <source>Create Database</source>
