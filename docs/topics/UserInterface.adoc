@@ -1,13 +1,13 @@
-= KeePassXC – Database Operations
+= OpenVireo – Database Operations
 include::.sharedheader[]
 :imagesdir: ../images
 
 // tag::content[]
 == Interface Overview
 === Application Layout
-The KeePassXC interface is designed for simplicity and easy access to your information. The main database view is split into four main partitions detailed below.
+The OpenVireo interface is designed for simplicity and easy access to your information. The main database view is split into four main partitions detailed below.
 
-You can open multiple databases at the same time. The database picker in the top-left corner shows the current database; click it to switch to another open database, to open your account's vaults (see <<KeePassXC Accounts>>), to create or open a database, to open the Database Settings, or to lock or close databases.
+You can open multiple databases at the same time. The database picker in the top-left corner shows the current database; click it to switch to another open database, to open your account's vaults (see <<OpenVireo Accounts>>), to create or open a database, to open the Database Settings, or to lock or close databases.
 
 .Main database interface
 image::main_interface.png[]
@@ -16,11 +16,11 @@ image::main_interface.png[]
 
 *(B) Search* – Search the database as you type. The buttons next to the search box set the search options (case sensitive, limit the search to the selected group, press Enter to search), save the search, and show the search tips (also kbd:[Ctrl + J]). See <<Search>>.
 
-*\(C) Entries* – Entries contain all the information for a website or application you are storing in KeePassXC. This list shows all the entries in the selected group with their username and URL, and marks expired entries and weak passwords.
+*\(C) Entries* – Entries contain all the information for a website or application you are storing in OpenVireo. This list shows all the entries in the selected group with their username and URL, and marks expired entries and weak passwords.
 
 *(D) Entry details* – Shows the selected entry. You can copy the username, password, one-time code, and URL, reveal the password, and open the URL without opening the entry for editing. Tags, expiry, attachments, and notes are shown below. Editing an entry opens it in place of this card.
 
-When a database syncs with a sync server or belongs to a KeePassXC account, a sync status chip at the far right of the header shows whether it is synced, syncing, offline, or needs your attention; click it to sync again or to act on the problem. In account mode an account button next to it shows who is signed in and opens the account menu.
+When a database syncs with a sync server or belongs to an OpenVireo account, a sync status chip at the far right of the header shows whether it is synced, syncing, offline, or needs your attention; click it to sync again or to act on the problem. In account mode an account button next to it shows who is signed in and opens the account menu.
 
 [TIP]
 ====
@@ -28,32 +28,32 @@ Starting with version 2.7.0, double-click copying of entry usernames and passwor
 
 To enable it:
 
-. Open *KeePassXC*, and navigate to *Tools* → *Settings*.
+. Open *OpenVireo*, and navigate to *Tools* → *Settings*.
 . In the left sidebar, select *General*.
 . Under *Entry Management*, check the box for _"Copy data on double clicking field in entry view"_.
 ====
 
 === Command Bar
-The command bar above the entries shows the selected group and its number of entries, and provides a quick way to perform common tasks: _New Entry_, _Perform Auto-Type_, _Edit Entry_, _Delete Entry_, and _Lock Database_. The _More commands_ button (…) holds Clone Entry, Download Favicon, New Group, Edit Group, and Save Database. Commands that don't apply to the selected entry are disabled. While you edit an entry, the command bar shows _Cancel_ and _Save_. Every common action in KeePassXC can be controlled with a keyboard shortcut as well, and all of them are in the menus.
+The command bar above the entries shows the selected group and its number of entries, and provides a quick way to perform common tasks: _New Entry_, _Perform Auto-Type_, _Edit Entry_, _Delete Entry_, and _Lock Database_. The _More commands_ button (…) holds Clone Entry, Download Favicon, New Group, Edit Group, and Save Database. Commands that don't apply to the selected entry are disabled. While you edit an entry, the command bar shows _Cancel_ and _Save_. Every common action in OpenVireo can be controlled with a keyboard shortcut as well, and all of them are in the menus.
 
 .Command bar
 image::toolbar.png[]
 
 === Screenshot Security
-By default, KeePassXC prevents recordings and screenshots of the application window on Windows and macOS. This prevents inadvertent spillage of information during meetings and disallows other applications to capture the window contents. If you would like to enable screen capture temporarily, navigate to _View_ menu and select _Allow Screen Capture_. Alternatively, you can start the application with the `--allow-screencapture` command line flag.
+By default, OpenVireo prevents recordings and screenshots of the application window on Windows and macOS. This prevents inadvertent spillage of information during meetings and disallows other applications to capture the window contents. If you would like to enable screen capture temporarily, navigate to _View_ menu and select _Allow Screen Capture_. Alternatively, you can start the application with the `--allow-screencapture` command line flag.
 
 
 === View Options
-You can customize the appearance of KeePassXC to your liking. The following options are available in the _View_ menu:
+You can customize the appearance of OpenVireo to your liking. The following options are available in the _View_ menu:
 
 ==== Themes
-KeePassXC ships with light and dark themes specifically designed to meet accessibility standards. By default (_Automatic_) the theme follows your system's light or dark appearance, but you can always choose _Light_, _Dark_, or _Classic_ (the platform's native look) with the _Theme_ setting *(A)* under _Tools_ -> _Settings_ -> _General_ -> _User Interface_, or from the _View_ -> _Theme_ menu.
+OpenVireo ships with light and dark themes specifically designed to meet accessibility standards. By default (_Automatic_) the theme follows your system's light or dark appearance, but you can always choose _Light_, _Dark_, or _Classic_ (the platform's native look) with the _Theme_ setting *(A)* under _Tools_ -> _Settings_ -> _General_ -> _User Interface_, or from the _View_ -> _Theme_ menu.
 
 .Setting the theme
 image::theme_selection.png[]
 
 === Application Settings
-Users can configure KeePassXC to their personal tastes with a wide variety of general and security settings that apply to the whole application. These settings are accessible from _Tools_ -> _Settings_ or _Settings_ at the bottom of the sidebar, and open in a window over the database. Settings include: startup options, file management, entry management, user interface, language, security controls, and integration settings (Auto-Type, Browser, etc).
+Users can configure OpenVireo to their personal tastes with a wide variety of general and security settings that apply to the whole application. These settings are accessible from _Tools_ -> _Settings_ or _Settings_ at the bottom of the sidebar, and open in a window over the database. Settings include: startup options, file management, entry management, user interface, language, security controls, and integration settings (Auto-Type, Browser, etc).
 
 === Keyboard Shortcuts
 include::KeyboardShortcuts.adoc[tag=content, leveloffset=+1]
@@ -63,8 +63,8 @@ include::KeyboardShortcuts.adoc[tag=content, leveloffset=+1]
 You can use the following command line options to tailor the application to your preferences:
 
 ----
-Usage: keepassxc.exe [options] [filename(s)]
-KeePassXC – cross-platform password manager
+Usage: openvireo.exe [options] [filename(s)]
+OpenVireo – cross-platform password manager
 
 Options:
   -?, -h, --help               Displays help on commandline options.
@@ -101,13 +101,13 @@ Additionally, the following environment variables may be useful when running the
 === Installer Options
 The following options can be set when running the Windows Installer MSI in an unattended installation:
 
-* *LAUNCHAPPONEXIT* – Launch KeePassXC after install (default ON)
-* *AUTOSTARTPROGRAM* – KeePassXC will auto-start on login (default ON)
+* *LAUNCHAPPONEXIT* – Launch OpenVireo after install (default ON)
+* *AUTOSTARTPROGRAM* – OpenVireo will auto-start on login (default ON)
 * *INSTALLDESKTOPSHORTCUT* – A desktop icon will be installed (default OFF)
 
-Example: `msiexec.exe /q /i KeePassXC-Y.Y.Y-WinZZ.msi AUTOSTARTPROGRAM=0`
+Example: `msiexec.exe /q /i OpenVireo-Y.Y.Y-WinZZ.msi AUTOSTARTPROGRAM=0`
 
 == Command Line Tool
-KeePassXC comes with the command line tool *keepassxc-cli* to access, view, and manipulate your database directly from a terminal window. The tool is documented through a separate man page, which can be shown using `man keepassxc-cli`, or through the on-demand help using `keepassxc-cli [command] -h`. An online version of the man page is https://github.com/keepassxreboot/keepassxc/blob/latest/docs/man/keepassxc-cli.1.adoc[available on GitHub].
+OpenVireo comes with the command line tool *openvireo-cli* to access, view, and manipulate your database directly from a terminal window. The tool is documented through a separate man page, which can be shown using `man openvireo-cli`, or through the on-demand help using `openvireo-cli [command] -h`. An online version of the man page is https://github.com/openvireo/openvireo/blob/develop/docs/man/openvireo-cli.1.adoc[available on GitHub].
 // end::advanced[]
 // end::content[]

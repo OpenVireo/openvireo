@@ -1,4 +1,4 @@
-= KeePassXC – SSH Agent integration
+= OpenVireo – SSH Agent integration
 include::.sharedheader[]
 :imagesdir: ../images
 
@@ -6,7 +6,7 @@ include::.sharedheader[]
 == SSH Agent Integration
 SSH (Secure Shell) is a widely used remote secure shell protocol and is considered an industry standard for secure remote access to UNIX-like systems including Linux, BSDs, macOS and more recently even Windows received native support. SSH supports multiple types of authentication and the most widely used ones are either interactive keyboard input with a password or a public-key cryptography pair of keys.
 
-KeePassXC SSH Agent integration is built to manage SSH keys in a secure manner by either storing them completely within your KeePassXC database or by having only the decryption key of a key file that is stored elsewhere. SSH Agent integration _does not_ provide an agent itself but works as a client for any agent implementation that is OpenSSH compatible.
+OpenVireo SSH Agent integration is built to manage SSH keys in a secure manner by either storing them completely within your OpenVireo database or by having only the decryption key of a key file that is stored elsewhere. SSH Agent integration _does not_ provide an agent itself but works as a client for any agent implementation that is OpenSSH compatible.
 
 === OpenSSH Agent on Linux
 If you are using a modern desktop Linux distribution it is very likely the OpenSSH agent is already configured and running when you have logged in to a graphical desktop session.
@@ -26,7 +26,7 @@ One of the easiest ways to achieve this is to enable _GNOME Keyring_ which shoul
 
 There are many guides on the internet how to hack your login shell to start an agent but it is very prone to errors and is not a supported configuration. If you prefer the login shell startup hack you need to set it up with a static socket path and use the _SSH_AUTH_SOCK override_ option in SSH Agent settings to match that.
 
-WARNING: _GNU Privacy Guard (gpg)_ with its SSH agent implementation is *not* compatible with KeePassXC as it does not support _removing_ keys that have been added to it making it impossible to use any external tool to manage key lifetime.
+WARNING: _GNU Privacy Guard (gpg)_ with its SSH agent implementation is *not* compatible with OpenVireo as it does not support _removing_ keys that have been added to it making it impossible to use any external tool to manage key lifetime.
 
 WARNING: _GNOME Keyring_ prior to release 3.27.92 had its own custom implementation of an agent which does not support modern key types and was known to be buggy.
 It does not support any constraints you may want to configure for an added key.
@@ -37,13 +37,13 @@ Apple has made OpenSSH an integrated part of macOS with automatic agent startup 
 
 === OpenSSH Agent and Pageant on Windows
 The SSH Agent integration on Windows supports both _PuTTY Pageant_ and _OpenSSH for Windows 10_.
-Since Pageant is currently still the most widely used implementation and is easily installable on any version of Windows, it is the default on KeePassXC.
+Since Pageant is currently still the most widely used implementation and is easily installable on any version of Windows, it is the default on OpenVireo.
 However, Microsoft includes a native OpenSSH client implementation with Windows 10 since autumn 2018 that can be used instead. If you would like to self-manage your OpenSSH version you can use the builds offered via their official https://github.com/powershell/Win32-OpenSSH[GitHub repository].
 
 ==== Pageant
 Download Pageant from the official PuTTY home page at https://www.chiark.greenend.org.uk/~sgtatham/putty/
 
-To use Pageant with KeePassXC, simply start it and it will minimize into the system tray and is ready to use. PuTTY and compatible tools will use Pageant automatically.
+To use Pageant with OpenVireo, simply start it and it will minimize into the system tray and is ready to use. PuTTY and compatible tools will use Pageant automatically.
 
 ==== OpenSSH
 Make sure your Windows version has at least update 1809 installed. For more details consult the https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_overview[official documentation].
@@ -59,7 +59,7 @@ Alternatively, you can use a _Windows PowerShell_ running as _Administrator_ to 
     PS C:\Users\user> Get-Service ssh-agent | Set-Service -StartupType Automatic
     PS C:\Users\user> Start-Service ssh-agent
 
-KeePassXC and other compatible tools can now use the Windows OpenSSH agent. To use it with KeePassXC, update the settings explained in <<Setup SSH Agent Integration>>.
+OpenVireo and other compatible tools can now use the Windows OpenSSH agent. To use it with OpenVireo, update the settings explained in <<Setup SSH Agent Integration>>.
 
 === Setup SSH Agent Integration
 By default the SSH Agent integration plugin is disabled.
@@ -76,20 +76,20 @@ When the integration is enabled coming back to the settings page also shows if c
 
 On Windows, you have the option to select _Pageant_ and/or _OpenSSH for Windows_. On macOS and Linux, the system ssh-agent will be used automatically and the settings page shows the current value of _SSH_AUTH_SOCK_ environment variable which is used to connect to the running agent and an option to manually override the automatically detected path.
 
-If the value of _SSH_AUTH_SOCK_ is empty it means the agent is not properly configured and KeePassXC will be unable to connect to it unless you provide a static override path to the socket.
+If the value of _SSH_AUTH_SOCK_ is empty it means the agent is not properly configured and OpenVireo will be unable to connect to it unless you provide a static override path to the socket.
 
 === Generating an SSH Key
-KeePassXC only supports keys in the _OpenSSH_ format. On Windows, _PuTTYgen_ saves keys in its own format by default and you will need to convert them to OpenSSH format before being used. In this guide we are going to generate a standard RSA key in the default size.
+OpenVireo only supports keys in the _OpenSSH_ format. On Windows, _PuTTYgen_ saves keys in its own format by default and you will need to convert them to OpenSSH format before being used. In this guide we are going to generate a standard RSA key in the default size.
 
 ==== Generating a key on Linux or macOS
 Open a terminal window and type the following command to generate a key:
 
-    $ ssh-keygen -o -f keepassxc -C johndoe@example
+    $ ssh-keygen -o -f openvireo -C johndoe@example
     Generating public/private rsa key pair.
     Enter passphrase (empty for no passphrase):
     Enter same passphrase again:
-    Your identification has been saved in keepassxc
-    Your public key has been saved in keepassxc.pub
+    Your identification has been saved in openvireo
+    Your public key has been saved in openvireo.pub
     The key fingerprint is:
     SHA256:pN+o5AqUmijYBDUrFV/caMus9oIR61+MiWLa8fcsVYI johndoe@example
     The key's randomart image is:
@@ -107,11 +107,11 @@ Open a terminal window and type the following command to generate a key:
 
 Now we can see two files were generated:
 
-    $ ls -l keepassxc*
-    -rw------- 1 user group 2.6K Apr  5 07:36 keepassxc
-    -rw-r--r-- 1 user group  569 Apr  5 07:36 keepassxc.pub
+    $ ls -l openvireo*
+    -rw------- 1 user group 2.6K Apr  5 07:36 openvireo
+    -rw-r--r-- 1 user group  569 Apr  5 07:36 openvireo.pub
 
-With KeePassXC you only need the first file listed.
+With OpenVireo you only need the first file listed.
 
 ==== Generating a key on Windows
 On Windows you can generate key pairs with _PuTTYgen_ and with _ssh-keygen_, depending on whether you installed PuTTY and your Windows version.
@@ -125,12 +125,12 @@ image::sshagent_puttygen.png[,70%]
 ===== Using ssh-keygen
 Open _Command Prompt_ or _Windows PowerShell_ and type the following command to generate a key:
 
-    PS C:\Users\user> ssh-keygen.exe -o -f keepassxc -C johndoe@example
+    PS C:\Users\user> ssh-keygen.exe -o -f openvireo -C johndoe@example
     Generating public/private rsa key pair.
     Enter passphrase (empty for no passphrase):
     Enter same passphrase again:
-    Your identification has been saved in keepassxc
-    Your public key has been saved in keepassxc.pub
+    Your identification has been saved in openvireo
+    Your public key has been saved in openvireo.pub
     The key fingerprint is:
     SHA256:pN+o5AqUmijYBDUrFV/caMus9oIR61+MiWLa8fcsVYI johndoe@example
     The key's randomart image is:
@@ -148,16 +148,16 @@ Open _Command Prompt_ or _Windows PowerShell_ and type the following command to 
 
 Now we can see two files were generated:
 
-    PS C:\Users\user> dir keepassxc*
+    PS C:\Users\user> dir openvireo*
 
     Directory C:\Users\user
 
     Mode                 LastWriteTime         Length Name
     ----                 -------------         ------ ----
-    -a----         9/19/2021  12:08 PM           2655 keepassxc
-    -a----         9/19/2021  12:08 PM            570 keepassxc.pub
+    -a----         9/19/2021  12:08 PM           2655 openvireo
+    -a----         9/19/2021  12:08 PM            570 openvireo.pub
 
-With KeePassXC you only need the first file listed.
+With OpenVireo you only need the first file listed.
 
 === Adding SSH Key to an Entry
 The last step is to setup an entry to contain the SSH Agent settings and key file you generated.
@@ -168,7 +168,7 @@ The last step is to setup an entry to contain the SSH Agent settings and key fil
 4. Go to the SSH Agent category *(1)* and select the attachment from the list *(2)*.
 5. Alternatively, you can load an external file dynamically using the file selection.
 6. Choose the options for this key.
-7. Press *OK* to accept the entry. Depending on the options you chose, KeePassXC will load the key and present it for use.
+7. Press *OK* to accept the entry. Depending on the options you chose, OpenVireo will load the key and present it for use.
 
 .SSH Agent Entry Settings Page
 image::sshagent_entry_settings.png[]

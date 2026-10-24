@@ -1,8 +1,8 @@
-# Contributing to KeePassXC
+# Contributing to OpenVireo
 
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
-The following is a set of guidelines for contributing to KeePassXC on GitHub.
+The following is a set of guidelines for contributing to OpenVireo on GitHub. OpenVireo is a fork of KeePassXC; changes that are not specific to OpenVireo are best contributed upstream to [KeePassXC](https://github.com/keepassxreboot/keepassxc).
 These are just guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 #### Table of contents
@@ -54,7 +54,7 @@ If we reject your contribution, it means only that we do not consider it suitabl
 ## How can I contribute?
 ### Feature requests
 
-We're always looking for suggestions to improve our application. If you have a suggestion to improve an existing feature, or would like to suggest a completely new feature for KeePassXC, please use the [issue tracker on GitHub][issues-section].
+We're always looking for suggestions to improve our application. If you have a suggestion to improve an existing feature, or would like to suggest a completely new feature for OpenVireo, please use the [issue tracker on GitHub][issues-section].
 
 ### Bug reports
 
@@ -64,11 +64,11 @@ Before submitting a bug report, check if the problem has already been reported. 
 
 ### Discuss with the team
 
-As with feature requests, you can talk to the KeePassXC team about bugs, new features, other issues and pull requests on the dedicated issue tracker, on the [Matrix development channel](https://matrix.to/#/!RhJPJPGwQIFVQeXqZa:matrix.org?via=matrix.org), or in the IRC channel on Libera.Chat (`#keepassxc-dev` on `irc.libera.chat`, or use a [webchat link](https://web.libera.chat/#keepassxc-dev)).
+As with feature requests, you can talk to the OpenVireo maintainers about bugs, new features, other issues and pull requests on the dedicated issue tracker.
 
 ### Your first code contribution
 
-Unsure where to begin contributing to KeePassXC? You can start by looking through these `beginner` and `help-wanted` issues:
+Unsure where to begin contributing to OpenVireo? You can start by looking through these `beginner` and `help-wanted` issues:
 
 * [Beginner issues][beginner] – issues which should only require a few lines of code, and a test or two.
 * ['Help wanted' issues][help-wanted] – issues which should be a bit more involved than `beginner` issues.
@@ -87,8 +87,7 @@ All pull requests must comply with the above requirements and with the [stylegui
 
 ### Translations
 
-Translations are managed on [Transifex](https://explore.transifex.com/keepassxc/keepassxc/) which offers a web interface.
-Please join an existing language team or request a new one if there is none.
+Most strings come from KeePassXC, whose translations are managed on [Transifex](https://explore.transifex.com/keepassxc/keepassxc/). Strings that exist only in OpenVireo are translated in pull requests to this repository.
 
 If you open a Pull Request with new strings that require translations, you will need to run the following:
 ```
@@ -233,6 +232,6 @@ Example: `<widget class="QCheckBox" name="rememberCheckBox">`
 
 
 
-[beginner]:https://github.com/keepassxreboot/keepassxc/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22+sort%3Acomments-desc+
-[help-wanted]:https://github.com/keepassxreboot/keepassx/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22+sort%3Acomments-desc
-[issues-section]:https://github.com/keepassxreboot/keepassxc/issues
+[beginner]:https://github.com/openvireo/openvireo/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22+sort%3Acomments-desc+
+[help-wanted]:https://github.com/openvireo/openvireo/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22+sort%3Acomments-desc
+[issues-section]:https://github.com/openvireo/openvireo/issues

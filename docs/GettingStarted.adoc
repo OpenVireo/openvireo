@@ -1,8 +1,8 @@
-= KeePassXC: Getting Started Guide
+= OpenVireo: Getting Started Guide
 KeePassXC Team <team@keepassxc.org>
 :data-uri:
 :linkcss!:
-:homepage: https://keepassxc.org
+:homepage: https://openvireo.com
 :icons: font
 :imagesdir: images
 :stylesheet: styles/dark.css

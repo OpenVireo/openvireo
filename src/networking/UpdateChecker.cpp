@@ -55,7 +55,7 @@ void UpdateChecker::checkForUpdates(bool manuallyRequested)
     if (m_isManuallyRequested || Clock::currentSecondsSinceEpoch() >= nextCheck) {
         m_bytesReceived.clear();
 
-        QString apiUrlStr = QString("https://api.github.com/repos/keepassxreboot/keepassxc/releases");
+        QString apiUrlStr = QString("https://api.github.com/repos/openvireo/openvireo/releases");
 
         if (!config()->get(Config::GUI_CheckForUpdatesIncludeBetas).toBool()) {
             apiUrlStr += "/latest";

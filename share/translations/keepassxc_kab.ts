@@ -10,7 +10,7 @@
         <translation>Ɣef</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -30,7 +30,7 @@
         <translation>Imttekkiyen</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -10530,8 +10530,8 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>Teḍra-d tuccḍa di tririt n telɣut n uleqqem, ttxil-k·m ɛreḍ ticki.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Lqem amaynut yewjed.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 yezmer &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;ad d-yettwasider dagi&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Lqem amaynut yewjed.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 yezmer &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;ad d-yettwasider dagi&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

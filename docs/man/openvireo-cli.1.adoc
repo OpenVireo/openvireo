@@ -14,21 +14,21 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-= keepassxc-cli(1)
+= openvireo-cli(1)
 KeePassXC Team <team@keepassxc.org>
 :docdate: 2022-08-20
 :doctype: manpage
-:mansource: KeePassXC {revnumber}
+:mansource: OpenVireo {revnumber}
 :manmanual: General Commands Manual
 
 == NAME
-keepassxc-cli - command line interface for the KeePassXC password manager
+openvireo-cli - command line interface for the OpenVireo password manager
 
 == SYNOPSIS
-*keepassxc-cli* _command_ [_options_]
+*openvireo-cli* _command_ [_options_]
 
 == DESCRIPTION
-*keepassxc-cli* is the command line interface for the *KeePassXC* password manager.
+*openvireo-cli* is the command line interface for the *OpenVireo* password manager.
 It provides the ability to query and modify the entries of a KeePass database, directly from the command line.
 
 == COMMANDS
@@ -286,7 +286,7 @@ The same password generation options as documented for the generate command can 
   Sets the Path of the wordlist for the diceware generator.
   The wordlist must have > 1000 words, otherwise the program will fail.
   If the wordlist has < 4000 words a warning will be printed to STDERR.
-  Any *diceware*-compatible wordlist can be used. Note however that *KeePassXC* will NOT verify the PGP signature of signed wordlists.
+  Any *diceware*-compatible wordlist can be used. Note however that *OpenVireo* will NOT verify the PGP signature of signed wordlists.
 
 === Export options
 *-f*, *--format*::
@@ -349,4 +349,4 @@ include::includes/section-reporting-bugs.adoc[]
 include::includes/section-copyright.adoc[]
 
 == SEE ALSO
-*keepassxc*(1)
+*openvireo*(1)

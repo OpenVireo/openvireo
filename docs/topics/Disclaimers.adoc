@@ -1,9 +1,9 @@
 == License and Disclaimers
 
-KeePassXC is licensed with the
-https://github.com/keepassxreboot/keepassxc/blob/master/LICENSE.GPL-3[GNU General Public License Version 3].
+OpenVireo is licensed with the
+https://github.com/openvireo/openvireo/blob/develop/LICENSE.GPL-3[GNU General Public License Version 3].
 All copyrights and additional licenses are recorded in
-https://github.com/keepassxreboot/keepassxc/blob/master/COPYING[COPYING].
+https://github.com/openvireo/openvireo/blob/develop/COPYING[COPYING].
 
 === Disclaimer of Warranty
 
