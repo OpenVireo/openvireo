@@ -284,7 +284,7 @@ if(UNIX AND NOT APPLE)
             gui/osutils/nixutils/X11Funcs.cpp)
     endif()
     qt6_add_dbus_adaptor(gui_SOURCES
-            gui/com.bonganimbigi.KeePassXC.MainWindow.xml
+            gui/com.openvireo.OpenVireo.MainWindow.xml
             gui/MainWindow.h
             MainWindow)
 
@@ -469,8 +469,8 @@ if(WIN32)
     include(GenerateProductVersion)
     generate_product_version(
             WIN32_ResourceFiles
-            NAME "KeePassXC"
-            COMPANY_NAME "KeePassXC Team"
+            NAME "OpenVireo"
+            COMPANY_NAME "OpenVireo"
             VERSION_MAJOR ${KEEPASSXC_VERSION_MAJOR}
             VERSION_MINOR ${KEEPASSXC_VERSION_MINOR}
             VERSION_PATCH ${KEEPASSXC_VERSION_PATCH}
@@ -579,7 +579,7 @@ if(WIN32)
     set(CPACK_PACKAGE_FILE_NAME "${PROGNAME}-${KEEPASSXC_VERSION}-${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY ${PROGNAME})
     set(CPACK_PACKAGE_VERSION ${KEEPASSXC_VERSION_CLEAN})
-    set(CPACK_PACKAGE_VENDOR "${PROGNAME} Team")
+    set(CPACK_PACKAGE_VENDOR "${PROGNAME}")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_BINARY_DIR}/INSTALLER_LICENSE.txt")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/share/windows/keepassxc.ico")
@@ -589,15 +589,15 @@ if(WIN32)
     set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${CMAKE_SOURCE_DIR}/share/windows/installer-wizard.png")
     set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\${PROGNAME}.lnk' '$INSTDIR\\\\${PROGNAME}.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$SMPROGRAMS\\\\$START_MENU\\\\${PROGNAME}.lnk'")
-    set(CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS "ExecWait 'Taskkill /IM KeePassXC.exe'")
-    set(CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS}\nExecWait 'Taskkill /IM keepassxc-proxy.exe /F'")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "ExecWait 'Taskkill /IM KeePassXC.exe'")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\nExecWait 'Taskkill /IM keepassxc-proxy.exe /F'")
-    set(CPACK_NSIS_URL_INFO_ABOUT "https://keepassxc.org")
+    set(CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS "ExecWait 'Taskkill /IM OpenVireo.exe'")
+    set(CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS}\nExecWait 'Taskkill /IM openvireo-proxy.exe /F'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "ExecWait 'Taskkill /IM OpenVireo.exe'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\nExecWait 'Taskkill /IM openvireo-proxy.exe /F'")
+    set(CPACK_NSIS_URL_INFO_ABOUT "https://openvireo.com")
     set(CPACK_NSIS_DISPLAY_NAME ${PROGNAME})
     set(CPACK_NSIS_PACKAGE_NAME "${PROGNAME} v${KEEPASSXC_VERSION}")
     set(CPACK_NSIS_MUI_FINISHPAGE_RUN "../${PROGNAME}.exe")
-    set(CPACK_WIX_UPGRADE_GUID 88785A72-3EAE-4F29-89E3-BC6B19BA9A5B)
+    set(CPACK_WIX_UPGRADE_GUID DFCF214E-B4CF-486A-ABC3-6B79AB0A0760)
     set(CPACK_WIX_PRODUCT_ICON "${CMAKE_SOURCE_DIR}/share/windows/keepassxc.ico")
     set(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/share/windows/installer-banner.png")
     set(CPACK_WIX_UI_DIALOG "${CMAKE_SOURCE_DIR}/share/windows/installer-wizard.png")
@@ -608,7 +608,7 @@ if(WIN32)
             "${CMAKE_SOURCE_DIR}/share/windows/KPXC_InstallDir.wxs"
             "${CMAKE_SOURCE_DIR}/share/windows/KPXC_InstallDirDlg.wxs"
             "${CMAKE_SOURCE_DIR}/share/windows/KPXC_ExitDlg.wxs")
-    set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT  "https://keepassxc.org")
+    set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT  "https://openvireo.com")
     set(CPACK_WIX_EXTENSIONS "WixUtilExtension.dll")
     string(TOLOWER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" _windows_package_arch)
     if(NOT _windows_package_arch)

@@ -25,6 +25,7 @@ if(KPXC_FEATURE_BROWSER)
 
     add_executable(keepassxc-proxy ${proxy_SOURCES})
     target_link_libraries(keepassxc-proxy proxy_alloc Qt6::Core Qt6::Network)
+    set_target_properties(keepassxc-proxy PROPERTIES OUTPUT_NAME openvireo-proxy)
     install(TARGETS keepassxc-proxy
             BUNDLE DESTINATION . COMPONENT Runtime
             RUNTIME DESTINATION ${PROXY_INSTALL_DIR} COMPONENT Runtime)
@@ -33,12 +34,12 @@ if(KPXC_FEATURE_BROWSER)
         set(PROXY_APP_DIR "${CMAKE_BINARY_DIR}/src/${PROXY_INSTALL_DIR}")
         add_custom_command(TARGET keepassxc-proxy
                 POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/keepassxc-proxy ${PROXY_APP_DIR}/keepassxc-proxy
+                COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:keepassxc-proxy> ${PROXY_APP_DIR}/openvireo-proxy
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/src
-                COMMENT "Copying keepassxc-proxy into app bundle")
+                COMMENT "Copying openvireo-proxy into app bundle")
 
         set_property(GLOBAL APPEND PROPERTY
-            _MACDEPLOYQT_EXTRA_BINARIES "${PROXY_INSTALL_DIR}/keepassxc-proxy")
+            _MACDEPLOYQT_EXTRA_BINARIES "${PROXY_INSTALL_DIR}/openvireo-proxy")
     endif()
 
     if(WIN32)

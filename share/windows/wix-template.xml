@@ -51,53 +51,53 @@
             <RegistryValue Id="Autostart.rst" Root="HKCU" Action="write"
                     Key="Software\Microsoft\Windows\CurrentVersion\Run"
                     Name="$(var.CPACK_PACKAGE_NAME)"
-                    Value="&quot;[#CM_FP_KeePassXC.exe]&quot;"
+                    Value="&quot;[#CM_FP_OpenVireo.exe]&quot;"
                     Type="string" />
             <Condition>AUTOSTARTPROGRAM</Condition>
         </Component>
 
-        <!-- Add KeePassXC to PATH -->
+        <!-- Add OpenVireo to PATH -->
         <Component Id="AddKeePassXCToPath" Guid="*" Directory="INSTALL_ROOT">
             <Condition>ADDTOPATH</Condition>
             <Environment Id="KeePassXCSystemPathEntryENV" Action="set" Part="last" Name="PATH" Value="[INSTALL_ROOT]" System="yes"/>
-            <RegistryValue Root="HKCU" Key="Software\KeePassXC" Name="AddedToPATH" Type="integer" Value="1" KeyPath="yes" />
+            <RegistryValue Root="HKCU" Key="Software\OpenVireo" Name="AddedToPATH" Type="integer" Value="1" KeyPath="yes" />
         </Component>
 
         <DirectoryRef Id="TARGETDIR">
             <!-- Startmenu shortcuts -->
             <Directory Id="ProgramMenuFolder">
-                <Directory Id="ApplicationProgramsFolder" Name="KeePassXC">
+                <Directory Id="ApplicationProgramsFolder" Name="OpenVireo">
                     <Component Id="ApplicationShortcuts" Guid="*">
                         <Shortcut Id="ApplicationStartMenuShortcut"
-                            Name="KeePassXC"
-                            Target="[#CM_FP_KeePassXC.exe]"
+                            Name="OpenVireo"
+                            Target="[#CM_FP_OpenVireo.exe]"
                             WorkingDirectory="INSTALL_ROOT"/>
                         <Shortcut Id="GettingStartedShortcut"
-                            Name="KeePassXC - Getting Started"
+                            Name="OpenVireo - Getting Started"
                             Target="[#CM_FP_share.docs.KeePassXC_GettingStarted.html]"
                             WorkingDirectory="INSTALL_ROOT" />
                         <Shortcut Id="UserGuideShortcut"
-                            Name="KeePassXC - User Guide"
+                            Name="OpenVireo - User Guide"
                             Target="[#CM_FP_share.docs.KeePassXC_UserGuide.html]"
                             WorkingDirectory="INSTALL_ROOT" />
                         <RemoveFile Id="RemoveShortcuts" Name="*.*" On="uninstall" />
                         <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
-                        <RegistryValue Root="HKCU" Key="Software\KeePassXC" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes"/>
+                        <RegistryValue Root="HKCU" Key="Software\OpenVireo" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes"/>
                     </Component>
                 </Directory>
             </Directory>
 
             <!-- Desktop shortcut (optional) -->
             <Directory Id="DesktopFolder" Name="Desktop">
-                <Component Id="DesktopShortcut" Guid="F8AFBA1C-296C-41AA-B968-60323A206665">
+                <Component Id="DesktopShortcut" Guid="58E4AA4C-BFA8-4634-859A-CC54B85FF16A">
                     <Condition>INSTALLDESKTOPSHORTCUT</Condition>
                     <Shortcut Id="ApplicationDesktopShortcut"
                         Directory="DesktopFolder"
-                        Name="KeePassXC"
-                        Target="[#CM_FP_KeePassXC.exe]"
+                        Name="OpenVireo"
+                        Target="[#CM_FP_OpenVireo.exe]"
                         WorkingDirectory="INSTALL_ROOT" />
-                    <RemoveFile Id="RemoveDesktopIcon" Name="KeePassXC.lnk" On="uninstall" />
-                    <RegistryValue Root="HKCU" Key="Software\KeePassXC" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes"/>
+                    <RemoveFile Id="RemoveDesktopIcon" Name="OpenVireo.lnk" On="uninstall" />
+                    <RegistryValue Root="HKCU" Key="Software\OpenVireo" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes"/>
                 </Component>
             </Directory>
 
@@ -114,7 +114,7 @@
         <Property Id="INSTALLDESKTOPSHORTCUT" Secure="yes" />
         <Property Id="ADDTOPATH" Value="1" Secure="yes" />
         <Property Id="ADDTOPATH_REGISTRY">
-            <RegistrySearch Id="AddToPathSearch" Root="HKCU" Key="Software\KeePassXC" Name="AddedToPATH" Type="raw" />
+            <RegistrySearch Id="AddToPathSearch" Root="HKCU" Key="Software\OpenVireo" Name="AddedToPATH" Type="raw" />
         </Property>
 
         <!-- Set properties based on existing conditions, prevents changing state on upgrade -->
@@ -132,15 +132,15 @@
         </FeatureRef>
 
         <!-- Action to launch application after installer exits -->
-        <Property Id="WixShellExecTarget" Value="[#CM_FP_KeePassXC.exe]" />
+        <Property Id="WixShellExecTarget" Value="[#CM_FP_OpenVireo.exe]" />
         <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
 
-        <!-- Action to kill running KeePassXC process -->
-        <Property Id="WixQuietExecCmdLine" Value='"[SystemFolder]taskkill.exe" /IM KeePassXC.exe' />
+        <!-- Action to kill running OpenVireo process -->
+        <Property Id="WixQuietExecCmdLine" Value='"[SystemFolder]taskkill.exe" /IM OpenVireo.exe' />
         <CustomAction Id="KillKeePassXC" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="immediate" Return="ignore" />
 
-        <!-- Action to kill running keepassxc-proxy processes -->
-        <Property Id="WixSilentExecCmdLine" Value='"[SystemFolder]taskkill.exe" /IM keepassxc-proxy.exe /F' />
+        <!-- Action to kill running openvireo-proxy processes -->
+        <Property Id="WixSilentExecCmdLine" Value='"[SystemFolder]taskkill.exe" /IM openvireo-proxy.exe /F' />
         <CustomAction Id="KillKeePassXCProxy" BinaryKey="WixCA" DllEntry="WixSilentExec" Execute="immediate" Return="ignore" />
 
         <InstallExecuteSequence>

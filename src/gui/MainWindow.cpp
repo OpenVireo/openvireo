@@ -123,7 +123,7 @@ MainWindow::MainWindow()
     new MainWindowAdaptor(this);
     QDBusConnection dbus = QDBusConnection::sessionBus();
     dbus.registerObject("/keepassxc", this);
-    dbus.registerService("com.bonganimbigi.KeePassXC.MainWindow");
+    dbus.registerService("com.openvireo.OpenVireo.MainWindow");
 #endif
 
     setAcceptDrops(true);

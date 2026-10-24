@@ -387,7 +387,7 @@ void TestBrowser::testSearchEntriesByPath()
 void TestBrowser::compareEntriesByPath(QSharedPointer<Database> db, QList<Entry*> entries, QString path)
 {
     for (Entry* entry : entries) {
-        QString testUrl = "keepassxc://by-path/" + path + entry->title();
+        QString testUrl = "openvireo://by-path/" + path + entry->title();
         /* Look for an entry with that path. First using handleEntry, then through the search */
         QCOMPARE(m_browserService->shouldIncludeEntry(entry, testUrl, ""), true);
         auto result = m_browserService->searchEntries(db, testUrl, "");
@@ -417,7 +417,7 @@ void TestBrowser::testSearchEntriesByUUID()
     auto entries = createEntries(urls, root);
 
     for (Entry* entry : entries) {
-        QString testUrl = "keepassxc://by-uuid/" + entry->uuidToHex();
+        QString testUrl = "openvireo://by-uuid/" + entry->uuidToHex();
         /* Look for an entry with that UUID. First using shouldIncludeEntry, then through the search */
         QCOMPARE(m_browserService->shouldIncludeEntry(entry, testUrl, ""), true);
         auto result = m_browserService->searchEntries(db, testUrl, "");
@@ -434,7 +434,7 @@ void TestBrowser::testSearchEntriesByUUID()
                          "00000000000000000000000"};
 
     for (QString uuid : uuids) {
-        QString testUrl = "keepassxc://by-uuid/" + uuid;
+        QString testUrl = "openvireo://by-uuid/" + uuid;
 
         for (Entry* entry : entries) {
             QCOMPARE(m_browserService->shouldIncludeEntry(entry, testUrl, ""), false);

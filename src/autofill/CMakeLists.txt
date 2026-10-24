@@ -14,7 +14,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if(KPXC_FEATURE_AUTOFILL)
-    set(AUTOFILL_EXTENSION_NAME KeePassXCAutofill)
+    set(AUTOFILL_EXTENSION_NAME OpenVireoAutofill)
     set(AUTOFILL_EXTENSION_IDENTIFIER "${MACOS_BUNDLE_IDENTIFIER}.autofill")
     set(AUTOFILL_APP_GROUP "${MACOS_TEAM_IDENTIFIER}.${MACOS_BUNDLE_IDENTIFIER}")
     # The identity store and the provider extension point arrived in macOS 11
@@ -49,7 +49,7 @@ if(KPXC_FEATURE_AUTOFILL)
             # Weak so that the app still launches on macOS 10.15
             "-weak_framework AuthenticationServices")
 
-    # The extension, built as KeePassXCAutofill.appex
+    # The extension, built as OpenVireoAutofill.appex
     set(AUTOFILL_EXTENSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/extension)
     configure_file(${CMAKE_SOURCE_DIR}/share/macosx/autofill/Info.plist.in ${AUTOFILL_EXTENSION_DIR}/Info.plist @ONLY)
     configure_file(${CMAKE_SOURCE_DIR}/share/macosx/autofill/KeePassXCAutofill.entitlements.in
