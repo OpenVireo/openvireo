@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # This script is a workaround to the limitation of one command per Flatpak
-# manifest. It solves this by redirecting stdio to keepassxc-proxy, as
+# manifest. It solves this by redirecting stdio to openvireo-proxy, as
 # necessary, based upon matching command line arguments.
 
 # For format of parsed arguments, see "Connection-based messaging" at:
@@ -26,15 +26,15 @@
 # Chromium, Google Chrome, Vivaldi & Brave
 readonly arg1='chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk'
 # Firefox & Tor Browser
-readonly arg2='keepassxc-browser@bonganimbigi.com'
+readonly arg2='browser@openvireo.com'
 
 # Check arguments to see if this was a proxy launch from the browser
 # Use =~ to account for minor variations in the chrome extension
 if [[ "$1" =~ "$arg1" || "$2" == "$arg2" ]]; then
-    exec keepassxc-proxy "$@"
+    exec openvireo-proxy "$@"
 elif [[ "$1" == "cli" ]]; then
-    exec keepassxc-cli "${@:2}"
+    exec openvireo-cli "${@:2}"
 else
-    # If no arguments are matched or browser integration is off, execute keepassxc
-    exec keepassxc "$@"
+    # If no arguments are matched or browser integration is off, execute openvireo
+    exec openvireo "$@"
 fi

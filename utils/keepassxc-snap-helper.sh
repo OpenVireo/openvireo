@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# KeePassXC Browser Extension Native Messaging Installer Tool
+# OpenVireo Browser Extension Native Messaging Installer Tool
 # Copyright (C) 2017 KeePassXC team <https://keepassxc.org/>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,24 +21,24 @@ set -e
 JSON_OUT=""
 BASE_DIR="."
 INSTALL_DIR=""
-INSTALL_FILE="com.bonganimbigi.keepassxc_browser.json"
+INSTALL_FILE="com.openvireo.browser.json"
 
-# Early out if the keepassxc.proxy executable cannot be found
-if ! command -v keepassxc.proxy; then
-    echo "Could not find keepassxc.proxy! Ensure the keepassxc snap is installed properly."
+# Early out if the openvireo.proxy executable cannot be found
+if ! command -v openvireo.proxy; then
+    echo "Could not find openvireo.proxy! Ensure the openvireo snap is installed properly."
     exit 0
 fi
 
-PROXY_PATH=$(command -v keepassxc.proxy)
+PROXY_PATH=$(command -v openvireo.proxy)
 
 JSON_FIREFOX=$(cat << EOF
 {
-    "name": "com.bonganimbigi.keepassxc_browser",
-    "description": "KeePassXC integration with native messaging support",
+    "name": "com.openvireo.browser",
+    "description": "OpenVireo integration with native messaging support",
     "path": "${PROXY_PATH}",
     "type": "stdio",
     "allowed_extensions": [
-        "keepassxc-browser@bonganimbigi.com"
+        "browser@openvireo.com"
     ]
 }
 EOF
@@ -46,8 +46,8 @@ EOF
 
 JSON_CHROME=$(cat << EOF
 {
-    "name": "com.bonganimbigi.keepassxc_browser",
-    "description": "KeePassXC integration with native messaging support",
+    "name": "com.openvireo.browser",
+    "description": "OpenVireo integration with native messaging support",
     "path": "${PROXY_PATH}",
     "type": "stdio",
     "allowed_origins": [
@@ -103,7 +103,7 @@ setupLibreWolf() {
 
 BROWSER=$(whiptail \
             --title "Browser Selection" \
-            --menu "Choose a browser to integrate with KeePassXC:" \
+            --menu "Choose a browser to integrate with OpenVireo:" \
             15 60 5 \
             "1" "Firefox" \
             "2" "Chrome" \
@@ -139,7 +139,7 @@ if [[ $exitstatus == 0 ]]; then
 
     whiptail \
         --title "Installation Complete" \
-        --msgbox "You will need to restart your browser in order to connect to KeePassXC" \
+        --msgbox "You will need to restart your browser in order to connect to OpenVireo" \
         8 50
 else
     whiptail --title "Installation Canceled" --msgbox "No changes were made to your system" 8 50

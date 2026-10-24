@@ -1368,7 +1368,7 @@ bool BrowserService::removeFirstDomain(QString& hostname)
     return false;
 }
 
-/* Test if a search URL matches a custom entry. If the URL has the schema "keepassxc", some special checks will be made.
+/* Test if a search URL matches a custom entry. If the URL has the schema "openvireo", some special checks will be made.
  * Otherwise, this simply delegates to handleURL(). */
 bool BrowserService::shouldIncludeEntry(Entry* entry,
                                         const QString& url,
@@ -1376,9 +1376,9 @@ bool BrowserService::shouldIncludeEntry(Entry* entry,
                                         const bool omitWwwSubdomain)
 {
     // Use this special scheme to find entries by UUID
-    if (url.startsWith("keepassxc://by-uuid/")) {
+    if (url.startsWith("openvireo://by-uuid/")) {
         return url.endsWith("by-uuid/" + entry->uuidToHex());
-    } else if (url.startsWith("keepassxc://by-path/")) {
+    } else if (url.startsWith("openvireo://by-path/")) {
         return url.endsWith("by-path/" + entry->path());
     }
 

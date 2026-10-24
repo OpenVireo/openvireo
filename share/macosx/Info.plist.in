@@ -44,7 +44,7 @@
         <key>CFBundleTypeIconFile</key>
         <string>keepassxc.icns</string>
         <key>CFBundleTypeName</key>
-        <string>KeePassXC Password Database</string>
+        <string>OpenVireo Password Database</string>
         <key>CFBundleTypeOSTypes</key>
         <array>
           <string>kdbx</string>

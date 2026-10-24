@@ -52,7 +52,7 @@ namespace BrowserShared
 
     QString localServerPath()
     {
-        const auto serverName = QStringLiteral("/com.bonganimbigi.KeePassXC.BrowserServer");
+        const auto serverName = QStringLiteral("/com.openvireo.OpenVireo.BrowserServer");
 #if defined(KEEPASSXC_DIST_SNAP)
         return QProcessEnvironment::systemEnvironment().value("SNAP_USER_COMMON") + serverName;
 #elif defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
@@ -61,7 +61,7 @@ namespace BrowserShared
 
         // Put the socket in a dedicated directory.
         // This directory will be easily mountable by sandbox containers.
-        QString subPath = path + "/app/com.bonganimbigi.KeePassXC";
+        QString subPath = path + "/app/com.openvireo.OpenVireo";
         QDir().mkpath(subPath);
 
         QString socketPath = subPath + serverName;

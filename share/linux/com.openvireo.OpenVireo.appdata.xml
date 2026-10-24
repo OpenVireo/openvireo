@@ -2,29 +2,29 @@
 <!--Copyright 2025 KeePassXC Team <team@keepassxc.org> -->
 <component type="desktop-application">
   <!--Created with jdAppStreamEdit 9.2-->
-  <id>com.bonganimbigi.KeePassXC.desktop</id>
-  <name>KeePassXC</name>
+  <id>com.openvireo.OpenVireo.desktop</id>
+  <name>OpenVireo</name>
   <summary>Secure and Full-featured Password Manager</summary>
   <summary xml:lang="de">Sicherer und voll ausgestatteter Passwort-Manager</summary>
-  <developer id="com.bonganimbigi">
-    <name>KeePassXC Team</name>
+  <developer id="com.openvireo">
+    <name>OpenVireo</name>
   </developer>
   <metadata_license>CC-BY-3.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <update_contact>team@keepassxc.org</update_contact>
+  <update_contact>security@openvireo.com</update_contact>
   <description>
-    <p>KeePassXC is a modern, secure, and open-source password manager for your most sensitive information.
+    <p>OpenVireo is a modern, secure, and open-source password manager for your most sensitive information.
       Designed for people with extremely high demands of secure personal data management. You can store
       many different types of information, such as usernames, passwords, URLs, attachments, and notes in
       an offline, encrypted file. Major features include: Auto-Type into any window, browser integration,
       password generator, advanced search, comprehensive reports, FDO Secret Service integration, SSH agent
-      key management, and many more!</p>
-    <p xml:lang="de">KeePassXC ist ein moderner, sicherer Open-Source-Passwortmanager für Ihre sensibelsten Daten,
+      key management, and many more! OpenVireo is a fork of KeePassXC.</p>
+    <p xml:lang="de">OpenVireo ist ein moderner, sicherer Open-Source-Passwortmanager für Ihre sensibelsten Daten,
       entwickelt für Anwender mit höchsten Ansprüchen an die sichere Verwaltung persönlicher Daten.
       Sie können verschiedenste Informationen wie Benutzernamen, Passwörter, URLs, Anhänge und Notizen offline in
       einer verschlüsselten Datei speichern. Zu den wichtigsten Funktionen gehören: Automatisches
       Einfügen in beliebige Fenster, Browserintegration, Passwortgenerator, umfangreiche Suche, umfassende Berichte,
-      Integration mit dem FDO-Secret-Service, SSH-Agent-Schlüsselverwaltung und vieles mehr!</p>
+      Integration mit dem FDO-Secret-Service, SSH-Agent-Schlüsselverwaltung und vieles mehr! OpenVireo ist ein Fork von KeePassXC.</p>
   </description>
   <screenshots>
     <screenshot type="default">
@@ -830,17 +830,11 @@
       </description>
     </release>
   </releases>
-  <url type="homepage">https://keepassxc.org</url>
-  <url type="bugtracker">https://github.com/keepassxreboot/keepassxc/issues</url>
-  <url type="faq">https://keepassxc.org/docs/#faq</url>
-  <url type="help">https://keepassxc.org/docs/</url>
-  <url type="donation">https://keepassxc.org/donate/</url>
-  <url type="translate">https://explore.transifex.com/keepassxc/keepassxc/</url>
-  <url type="contact">https://keepassxc.org/team/#contact</url>
-  <url type="vcs-browser">https://github.com/keepassxreboot/keepassxc</url>
-  <url type="contribute">https://keepassxc.org/docs/#contribute</url>
+  <url type="homepage">https://openvireo.com</url>
+  <url type="bugtracker">https://github.com/openvireo/openvireo/issues</url>
+  <url type="vcs-browser">https://github.com/openvireo/openvireo</url>
   <content_rating type="oars-1.1"/>
-  <launchable type="desktop-id">com.bonganimbigi.KeePassXC.desktop</launchable>
+  <launchable type="desktop-id">com.openvireo.OpenVireo.desktop</launchable>
   <branding>
     <color type="primary" scheme_preference="light">#5b982a</color>
     <color type="primary" scheme_preference="dark">#5b982a</color>
