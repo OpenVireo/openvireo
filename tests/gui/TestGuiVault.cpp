@@ -594,7 +594,7 @@ void TestGuiVault::testSearchTitle()
     QTRY_VERIFY(hasLabelWithText(commandBar, "Work"));
 }
 
-// Saves Light and Dark captures when KPXC_VAULT_SCREENSHOT_DIR is set, for visual review
+// Saves Light and Dark captures when OPENVIREO_VAULT_SCREENSHOT_DIR is set, for visual review
 void TestGuiVault::testFluentSearchBox()
 {
     auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
@@ -646,7 +646,7 @@ void TestGuiVault::testDatabasePicker()
             menuItems << (action->isSeparator() ? QStringLiteral("-") : action->objectName());
         }
         firstChecked = menu->actions().at(0)->isChecked();
-        const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+        const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
         if (!dir.isEmpty()) {
             QTest::qWait(300);
             m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-picker.png"));
@@ -1075,7 +1075,7 @@ void TestGuiVault::testAboutModal()
 void TestGuiVault::testFluentMessageBox()
 {
     using fluent::dialogs_flyouts::ContentDialog;
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
 
     // A question shows as a content dialog over the window, with the rejecting button as its close command
     bool shown = false;
@@ -1196,7 +1196,7 @@ void TestGuiVault::testPasskeyConfirmationDialog()
 {
 #ifdef KPXC_FEATURE_BROWSER
     using fluent::dialogs_flyouts::ContentDialog;
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
 
     auto* first = new Entry();
     first->setTitle("Example");
@@ -1309,7 +1309,7 @@ void TestGuiVault::testAccessControlDialog()
 {
 #ifdef KPXC_FEATURE_BROWSER
     using fluent::dialogs_flyouts::ContentDialog;
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
 
     auto* first = new Entry();
     first->setTitle("Example");
@@ -1443,7 +1443,7 @@ void TestGuiVault::testNewDatabaseModal()
         titles << title->text();
         steps << modal->currentStep();
 
-        const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+        const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
         QTest::keyClicks(name, "Created in a modal");
         if (!dir.isEmpty()) {
             m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-new-database-general.png"));
@@ -1520,7 +1520,7 @@ void TestGuiVault::testImportModal()
     const auto sizeBefore = m_mainWindow->size();
     m_mainWindow->resize(1180, 720);
     auto* importAction = m_mainWindow->findChild<QAction*>("actionImport");
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
     auto screenshot = [&](const QString& name) {
         if (!dir.isEmpty()) {
             m_mainWindow->grab().save(QDir(dir).absoluteFilePath(name));
@@ -1802,9 +1802,9 @@ void TestGuiVault::testSidebarListsOnlyTags()
 
 void TestGuiVault::testScreenshots()
 {
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
     if (dir.isEmpty()) {
-        QSKIP("Set KPXC_VAULT_SCREENSHOT_DIR to save screenshots");
+        QSKIP("Set OPENVIREO_VAULT_SCREENSHOT_DIR to save screenshots");
     }
 
     selectGroup(m_workGroup);
@@ -1878,9 +1878,9 @@ void TestGuiVault::testScreenshots()
 // Screenshots of the views around the main window: editors, generator, reports, unlock and welcome
 void TestGuiVault::testViewScreenshots()
 {
-    const auto dir = qEnvironmentVariable("KPXC_VAULT_SCREENSHOT_DIR");
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
     if (dir.isEmpty()) {
-        QSKIP("Set KPXC_VAULT_SCREENSHOT_DIR to save screenshots");
+        QSKIP("Set OPENVIREO_VAULT_SCREENSHOT_DIR to save screenshots");
     }
 
     auto save = [this, dir](const QString& name, const QString& theme) {

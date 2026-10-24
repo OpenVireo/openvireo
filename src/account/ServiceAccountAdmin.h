@@ -40,7 +40,7 @@
  * vaults they could open.
  *
  * Everything secret is made here, on the client: the SA keyset, its master key, which is sealed to every
- * owner and admin of the org, and each secret with its `kek`. The token `kpx_sa_…` that carries a secret
+ * owner and admin of the org, and each secret with its `kek`. The token `ov_sa_…` that carries a secret
  * and its kek exists only in the callback that creates it, to be shown once; the server keeps a hash of
  * the secret and the master key wrapped with the kek.
  */
@@ -125,7 +125,7 @@ public:
     using MembersCallback = std::function<void(const QList<Member>& members, const QString& error)>;
     using ListCallback = std::function<void(const QList<ServiceAccount>& accounts, const QString& error)>;
     using SecretsCallback = std::function<void(const QList<Secret>& secrets, const QString& error)>;
-    // `token` is the kpx_sa_… token, to show once
+    // `token` is the ov_sa_… token, to show once
     using TokenCallback =
         std::function<void(const ServiceAccount& account, const QString& token, const QString& error)>;
     using AuditCallback =
@@ -153,10 +153,10 @@ public:
     void listInvitations(const QString& orgId, InvitationsCallback done);
     void invite(const QString& orgId, const QString& email, const QString& role, Done done);
     void cancelInvitation(const QString& orgId, const QString& invitationId, Done done);
-    // Accept an invitation from its link (…#token=kpx_inv_…) or the bare token. The member then waits for
+    // Accept an invitation from its link (…#token=ov_inv_…) or the bare token. The member then waits for
     // an owner or admin to confirm them before they get any keys.
     void acceptInvitation(const QString& linkOrToken, Done done);
-    // The kpx_inv_ token in a pasted link or token, empty when there is none
+    // The ov_inv_ token in a pasted link or token, empty when there is none
     static QString invitationToken(const QString& linkOrToken);
     // Confirm an accepted member. Owners and admins get every org vault with manage and the master key of
     // every service account; a regular member gets the vaults in `vaults` (vault id -> read or write),

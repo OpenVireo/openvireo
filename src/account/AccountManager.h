@@ -82,7 +82,7 @@ public:
     };
     Q_ENUM(State)
 
-    // What /.well-known/kpx-configuration says about the hosted instance (SPEC §10)
+    // What /.well-known/openvireo-configuration says about the hosted instance (SPEC §10)
     struct ServerConfig
     {
         QString issuer;
@@ -192,7 +192,7 @@ public slots:
     // `secretKey` is needed on a device that doesn't keep the account's Secret Key yet
     void signIn(const QString& email, const QString& password, const QString& secretKey = {});
     void submitMfa(const QString& totp);
-    // Sign in with a service account token (kpx_sa_...)
+    // Sign in with a service account token (ov_sa_...)
     void signInServiceAccount(const QString& token);
     // After a restart: pick the session up from the keychain, Locked until unlock()
     bool restoreSession(const QString& accountId);

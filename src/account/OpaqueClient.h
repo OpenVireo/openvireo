@@ -39,7 +39,7 @@ public:
     {
         // The account email, lowercased and trimmed
         QByteArray user;
-        // The issuer host, e.g. accounts.keepassxc.org
+        // The issuer host, e.g. accounts.openvireo.com
         QByteArray server;
     };
 

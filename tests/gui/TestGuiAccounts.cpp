@@ -290,7 +290,7 @@ void TestGuiAccounts::testSignsInOnANewDeviceWithMfa()
     signIn(Email, secretKey);
     QTRY_COMPARE_WITH_TIMEOUT(start->currentPage(), AccountStartWidget::Page::Mfa, 10000);
     // The sync server came from the account server's discovery document
-    QVERIFY(m_server->requests.contains("GET .well-known/kpx-configuration"));
+    QVERIFY(m_server->requests.contains("GET .well-known/openvireo-configuration"));
     QCOMPARE(m_mainWindow->accountController()->account()->server().sync, SyncUrl);
 
     // A wrong code keeps the prompt
@@ -631,7 +631,7 @@ void TestGuiAccounts::testServiceAccountsDialog()
     QTRY_VERIFY(dialog->tokenDialog());
     auto* tokenField = child<QLineEdit>(dialog->tokenDialog(), "serviceAccountToken");
     const auto token = tokenField->text();
-    QVERIFY(token.startsWith("kpx_sa_"));
+    QVERIFY(token.startsWith("ov_sa_"));
     QTRY_COMPARE(dialog->currentServiceAccount().isEmpty(), false);
     const auto saId = dialog->currentServiceAccount();
     // Shown once: closing the window forgets it
@@ -879,7 +879,7 @@ void TestGuiAccounts::testAcceptsAnInvitation()
 
     // A pasted code that isn't one is refused before anything is sent
     QSignalSpy messages(controller, &AccountController::message);
-    controller->acceptInvitation("https://app.keepassxc.example/invitations");
+    controller->acceptInvitation("https://app.openvireo.example/invitations");
     QTRY_COMPARE(messages.size(), 1);
     QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Error);
     QVERIFY(m_server->requests.filter("invitations/accept").isEmpty());

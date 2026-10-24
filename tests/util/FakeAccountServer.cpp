@@ -26,11 +26,11 @@ using namespace AccountCrypto;
 
 namespace FakeAccount
 {
-    const QString Issuer = QStringLiteral("https://accounts.keepassxc.example");
-    const QString SyncUrl = QStringLiteral("https://sync.keepassxc.example/api/v1");
+    const QString Issuer = QStringLiteral("https://accounts.openvireo.example");
+    const QString SyncUrl = QStringLiteral("https://sync.openvireo.example/api/v1");
     const QString SelfHostedUrl = QStringLiteral("https://sync.home.example");
     const QString Totp = QStringLiteral("123456");
-    const QString InvitationUrl = QStringLiteral("https://app.keepassxc.example/invitations");
+    const QString InvitationUrl = QStringLiteral("https://app.openvireo.example/invitations");
 
     namespace
     {
@@ -172,7 +172,7 @@ namespace FakeAccount
 
     QJsonObject Server::newSession(const User& user)
     {
-        const auto refresh = next("kpx_rt_");
+        const auto refresh = next("ov_rt_");
         refreshTokens.insert(refresh, user.id);
         return {{"access_token", issueAccessToken("user:" + user.id)},
                 {"refresh_token", refresh},
@@ -279,8 +279,8 @@ namespace FakeAccount
             reply(status, {{"error", message.isEmpty() ? code : message}, {"code", code}});
         };
 
-        if (url.path() == "/.well-known/kpx-configuration") {
-            server.requests << "GET .well-known/kpx-configuration";
+        if (url.path() == "/.well-known/openvireo-configuration") {
+            server.requests << "GET .well-known/openvireo-configuration";
             if (url.host() == QUrl(Issuer).host()) {
                 reply(200,
                       {{"issuer", Issuer},
@@ -288,7 +288,7 @@ namespace FakeAccount
                        {"sync", SyncUrl},
                        {"jwks_uri", Issuer + "/.well-known/jwks.json"},
                        {"opaque",
-                        QJsonObject{{"lib", "libopaque"}, {"context", "kpx-opaque-v1"}, {"ids", QUrl(Issuer).host()}}},
+                        QJsonObject{{"lib", "libopaque"}, {"context", "ov-opaque-v1"}, {"ids", QUrl(Issuer).host()}}},
                        {"kdf_min", QJsonObject{{"m", 19456}, {"t", 2}}}});
             } else {
                 error(404, "not_found");
@@ -436,7 +436,7 @@ namespace FakeAccount
                 error(401, "unauthorized");
             } else {
                 const auto userId = server.refreshTokens.take(token);
-                const auto refresh = server.next("kpx_rt_");
+                const auto refresh = server.next("ov_rt_");
                 server.refreshTokens.insert(refresh, userId);
                 reply(200,
                       {{"access_token", server.issueAccessToken("user:" + userId)},
@@ -899,8 +899,8 @@ namespace FakeAccount
             } else if (existing && existing->status != "invited") {
                 error(409, "conflict", "That account is already a member");
             } else {
-                // kpx_inv_ + base64url(32 random bytes); only its hash is kept (SPEC §12)
-                const auto token = "kpx_inv_" + toBase64Url(randomSecure(32));
+                // ov_inv_ + base64url(32 random bytes); only its hash is kept (SPEC §12)
+                const auto token = "ov_inv_" + toBase64Url(randomSecure(32));
                 Server::Invitation invitation;
                 invitation.id = uuid();
                 invitation.orgId = orgId;

@@ -1076,7 +1076,7 @@ void ServiceAccountsDialog::showToken(const QString& title, const QString& token
     dialog->setWindowTitle(title);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     auto* label = new QLabel(tr("Copy this token now and store it where it will be used, e.g. as a CI secret "
-                                "named KPX_SERVICE_ACCOUNT_TOKEN. It is shown only once and can't be recovered; "
+                                "named OPENVIREO_SERVICE_ACCOUNT_TOKEN. It is shown only once and can't be recovered; "
                                 "issue a new secret if it is lost."),
                              dialog);
     label->setWordWrap(true);
