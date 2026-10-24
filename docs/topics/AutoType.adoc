@@ -1,11 +1,11 @@
-= KeePassXC – Auto-Type
+= OpenVireo – Auto-Type
 :imagesdir: ../images
 
 // tag::content[]
 == Auto-Type
 The Auto-Type feature acts like a virtual keyboard to populate data from your entries directly into the corresponding websites or applications that you use. You can use the Auto-Type feature on a global level or entry level. Each entry can be configured to be associated with a particular window title and multiple Auto-Type sequences can be pre-defined and selected upon use.
 
-NOTE: Auto-Type is a completely separate feature from Browser Integration. You do not need to have the KeePassXC browser extension installed in your browser to use Auto-Type.
+NOTE: Auto-Type is a completely separate feature from Browser Integration. You do not need to have the OpenVireo browser extension installed in your browser to use Auto-Type.
 
 === Configure Global Auto-Type
 You can define a global Auto-Type hotkey that starts the Auto-Type process. To configure the hotkey, perform the following steps:
@@ -20,7 +20,7 @@ You can configure additional Auto-Type settings in this window such as start del
 You can also set the time to remember the last used entry between presses of the global Auto-Type hotkey. This is useful for typing parts of a sequence during complex login workflows without having to find the specific each time.
 
 === Configure Auto-Type Sequences
-Each entry in your database can have multiple Auto-Type sequences associated with various window titles. Simulated key presses can be sent to any other currently open window of your choice (web browser windows, login dialogs boxes, and so on). When the Global Auto-Type hotkey is pressed, KeePassXC will search your database for entries matching the current selected window title.
+Each entry in your database can have multiple Auto-Type sequences associated with various window titles. Simulated key presses can be sent to any other currently open window of your choice (web browser windows, login dialogs boxes, and so on). When the Global Auto-Type hotkey is pressed, OpenVireo will search your database for entries matching the current selected window title.
 
 NOTE: The default Auto-Type sequence is `{USERNAME}{TAB}{PASSWORD}{ENTER}`. This means that it first types the username of the selected entry, then presses the kbd:[Tab] key, then types the password of the entry and finally presses the kbd:[Enter] key.
 
@@ -84,7 +84,7 @@ TIP: Use modifiers to hold down special keys before typing the next character. F
 === Performing Global Auto-Type
 The global Auto-Type keyboard shortcut is used when you have focus on the window you want to type into. To make use of this feature, you must have previously configured an Auto-Type hotkey.
 
-When you press the global Auto-Type hotkey, KeePassXC searches all unlocked databases for entries that match the focused window title. The selection dialog will appear when there are no matches, multiple matches, the active window title is not available, or "Always ask before performing Auto-Type" is enabled. The selection is remembered for a short while to help retype with the same entry in quick succession.
+When you press the global Auto-Type hotkey, OpenVireo searches all unlocked databases for entries that match the focused window title. The selection dialog will appear when there are no matches, multiple matches, the active window title is not available, or "Always ask before performing Auto-Type" is enabled. The selection is remembered for a short while to help retype with the same entry in quick succession.
 
 .Auto-Type sequence selection
 image::autotype_selection_dialog.png[,70%]
@@ -104,7 +104,7 @@ The option to type just the username, password, or current TOTP value is availab
 TIP: On Windows, you will see an option to use a virtual keyboard in this sub-menu. This is an experimental feature that allows you to type into virtual machines by simulating actual keyboard presses. Some international keyboards may be unsupported due to limitations in the Windows API.
 
 === Performing Entry-Level Auto-Type
-You can quickly activate the default Auto-Type sequence for a particular entry using Entry-Level Auto-Type. For this operation, the KeePassXC window will be minimized and the Auto-Type sequence occurs in the previously selected window. You can perform Entry-Level Auto-Type from the toolbar icon *(A)*, entry context menu *(B)*, or by pressing kbd:[Ctrl+Shift+V].
+You can quickly activate the default Auto-Type sequence for a particular entry using Entry-Level Auto-Type. For this operation, the OpenVireo window will be minimized and the Auto-Type sequence occurs in the previously selected window. You can perform Entry-Level Auto-Type from the toolbar icon *(A)*, entry context menu *(B)*, or by pressing kbd:[Ctrl+Shift+V].
 
 WARNING: Be careful when using Entry-Level Auto-Type as you can inadvertently type into the wrong window. For example, a chat window or email.
 
@@ -115,20 +115,20 @@ image::autotype_entrylevel.png[]
 
 On Linux, Auto-Type uses https://flatpak.github.io/xdg-desktop-portal/[XDG Desktop Portals] when running under a Wayland compositor. An implementation of the Remote Desktop Portal and Global Shortcuts Portal must be available on your system for Auto-Type to be available. The following desktop environments are known to provide full or partial support:
 
-* **KDE Plasma 6.6+** — Supported since 5.27: reconfiguration before 6.6 is done via _System Settings_ -> _Shortcuts_ -> _KeePassXC_; before 6.4 have a bug that brings up the configuration dialog on every start.
-* **GNOME 51+** — Supported since 48: reconfiguration from 48 to 50 is done via _GNOME Settings_ -> _Apps_ -> _KeePassXC_.
+* **KDE Plasma 6.6+** — Supported since 5.27: reconfiguration before 6.6 is done via _System Settings_ -> _Shortcuts_ -> _OpenVireo_; before 6.4 have a bug that brings up the configuration dialog on every start.
+* **GNOME 51+** — Supported since 48: reconfiguration from 48 to 50 is done via _GNOME Settings_ -> _Apps_ -> _OpenVireo_.
 * **Other compositors** (Sway, labwc, Hyprland, etc.) — May require a custom XDG Desktop Portal implementation to provide Remote Desktop and Global Shortcuts services. A generic Python-based implementation, https://github.com/hifi/xdg-desktop-portal-pyrtal[xdg-desktop-portal-pyrtal], can be used as a workaround until official implementations are available.
 
 When running under Wayland, the following limitations apply:
 
 * **No window title matching.** Wayland does not expose the active window title to applications. When you press the global Auto-Type shortcut, the selection dialog will show all available entries from your unlocked databases. Use the keyboard to filter entries quickly. The "remember last used entry" feature is especially useful in this workflow.
-* **No active window tracking.** KeePassXC does not track the focused window on Wayland. If keyboard focus changes during an Auto-Type sequence, the typing will not be interrupted and will continue into the newly focused window.
-* **IME / Input Method compatibility.** Some input method frameworks (e.g., fcitx5, ibus) may interfere with key simulation, particularly for CJK or virtual keyboard setups. This can cause character corruption or modifier key state issues. These issues are caused by the compositor or the input method framework, not by KeePassXC. If you experience problems, try disabling your IME temporarily during Auto-Type, or check your desktop environment's virtual keyboard settings. Please report any issues directly to your compositor or input method project.
+* **No active window tracking.** OpenVireo does not track the focused window on Wayland. If keyboard focus changes during an Auto-Type sequence, the typing will not be interrupted and will continue into the newly focused window.
+* **IME / Input Method compatibility.** Some input method frameworks (e.g., fcitx5, ibus) may interfere with key simulation, particularly for CJK or virtual keyboard setups. This can cause character corruption or modifier key state issues. These issues are caused by the compositor or the input method framework, not by OpenVireo. If you experience problems, try disabling your IME temporarily during Auto-Type, or check your desktop environment's virtual keyboard settings. Please report any issues directly to your compositor or input method project.
 
 Additional configuration options are available in the Auto-Type settings when using the desktop portal backend:
 
 * **Keep remote desktop connection open after performing Auto-Type** — When enabled, the remote desktop session remains open after typing, allowing subsequent Auto-Type operations without re-requesting permission.
-* **Remote desktop mode** — Controls how long the remote desktop authorization is persisted: never remember (authorization is forgotten immediately), remember until exit (authorization persists until KeePassXC closes), or remember until revoked by desktop (authorization persists until the desktop environment revokes it).
+* **Remote desktop mode** — Controls how long the remote desktop authorization is persisted: never remember (authorization is forgotten immediately), remember until exit (authorization persists until OpenVireo closes), or remember until revoked by desktop (authorization persists until the desktop environment revokes it).
 * **Use remote desktop for clipboard access** — Experimental option to use the remote desktop session for clipboard operations (copy and clearing).
 * **Experimental: Prefer desktop portals (Wayland implementation)** — When enabled on X11, attempts to use the desktop portal backend instead of the native X11 implementation. This is unlikely to work on most setups and is provided for completeness to support legacy X11 desktops with portals if available.
 // end::content[]

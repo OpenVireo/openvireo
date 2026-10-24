@@ -10,8 +10,8 @@
         <translation>Teave</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>Vigadest teatamise koht: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>Vigadest teatamise koht: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>Kaasautorid</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;Vaata kaasautoreid GitHubis&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;Vaata kaasautoreid GitHubis&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10619,8 +10619,8 @@ Näide: JBSWY3DPEHPK3PXP</translation>
         <translation>Uuenduse teabe hankimisel ilmnes viga. Proovi natukese aja pärast uuesti.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Uus versioon on saadaval.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 saab &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;alla laadida siit&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Uus versioon on saadaval.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 saab &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;alla laadida siit&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

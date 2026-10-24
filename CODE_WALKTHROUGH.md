@@ -1,6 +1,6 @@
-# KeePassXC Code Walkthrough
+# OpenVireo Code Walkthrough
 
-A guided tour of the KeePassXC source tree. It covers how the app starts, how a `.kdbx` file is decrypted into objects in memory, how the GUI sits on top of that, and where the integrations (browser, auto-type, SSH agent, Secret Service, CLI) connect.
+A guided tour of the OpenVireo source tree (a fork of KeePassXC). It covers how the app starts, how a `.kdbx` file is decrypted into objects in memory, how the GUI sits on top of that, and where the integrations (browser, auto-type, SSH agent, Secret Service, CLI) connect.
 
 > Paths are relative to the repository root. Line numbers are approximate and drift as the code changes.
 
@@ -8,15 +8,15 @@ A guided tour of the KeePassXC source tree. It covers how the app starts, how a 
 
 ## 1. The big picture
 
-KeePassXC is a C++17 / Qt 6 application. Cryptography comes from **Botan** (plus **libsodium** for browser messaging). The build splits it into a few targets ([src/CMakeLists.txt](src/CMakeLists.txt)):
+OpenVireo is a C++17 / Qt 6 application. Cryptography comes from **Botan** (plus **libsodium** for browser messaging). The build splits it into a few targets ([src/CMakeLists.txt](src/CMakeLists.txt)):
 
 | Target | What it contains |
 |---|---|
 | `keepassxc_core` (static lib) | Data model, file formats, crypto, keys, streams, CLI helpers. No widgets. |
 | `keepassxc_gui` (static lib) | Everything under `src/gui`, plus the GUI-facing parts of the integrations |
-| `keepassxc` (executable) | [src/main.cpp](src/main.cpp), the desktop app |
-| `keepassxc-cli` | [src/cli/keepassxc-cli.cpp](src/cli/keepassxc-cli.cpp), the command-line tool |
-| `keepassxc-proxy` | [src/proxy/](src/proxy/), the native-messaging bridge between browser extensions and the app |
+| `OpenVireo` / `openvireo` (executable) | [src/main.cpp](src/main.cpp), the desktop app |
+| `keepassxc-cli` target, built as `openvireo-cli` | [src/cli/keepassxc-cli.cpp](src/cli/keepassxc-cli.cpp), the command-line tool |
+| `keepassxc-proxy` target, built as `openvireo-proxy` | [src/proxy/](src/proxy/), the native-messaging bridge between browser extensions and the app |
 
 Optional features are switched on and off by CMake options in [CMakeLists.txt](CMakeLists.txt) (`KPXC_FEATURE_BROWSER`, `KPXC_FEATURE_SSHAGENT`, `KPXC_FEATURE_FDOSECRETS`, `KPXC_FEATURE_NETWORK`, `KPXC_MINIMAL`, …). In the code, these show up as `#ifdef WITH_XC_*` guards.
 

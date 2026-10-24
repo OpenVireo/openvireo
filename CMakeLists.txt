@@ -66,7 +66,8 @@ endif()
 
 # Minor Feature Flags
 option(KPXC_FEATURE_NETWORK "Include code that reaches out to external networks (e.g. downloading icons)" ON)
-option(KPXC_FEATURE_UPDATES "Include automatic update checks; disable for managed distributions" ON)
+# Off by default: the checker asks api.github.com for openvireo/openvireo releases, which do not exist yet
+option(KPXC_FEATURE_UPDATES "Include automatic update checks; disable for managed distributions" OFF)
 option(KPXC_FEATURE_DOCS "Build offline documentation; requires asciidoctor tool" ON)
 
 # Reconcile update feature with overall network feature

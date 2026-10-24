@@ -10,8 +10,8 @@
         <translation>Tungkol</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>Mag-ulat ng mga bug sa: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>Mag-ulat ng mga bug sa: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>Mga contributor</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;Tingnan ang Mga Kontribusyon sa GitHub&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;Tingnan ang Mga Kontribusyon sa GitHub&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10577,8 +10577,8 @@ Halimbawa: JBSWY3DPEHPK3PXP</translation>
         <translation>Nagkaroon ng error noong sinusubukang ibalik ang na-update na impormasyon, pakisubukang muli sa ibang pagkakataon.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Available ang bagong bersyon.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 ay maaaring &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;i-download dito&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Available ang bagong bersyon.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 ay maaaring &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;i-download dito&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

@@ -1,23 +1,23 @@
-= KeePassXC – Welcome
+= OpenVireo – Welcome
 include::.sharedheader[]
 :imagesdir: ../images
 
 // tag::content[]
 == Welcome
-KeePassXC is a modern, secure, and open-source password manager that stores and manages your most sensitive information. You can run KeePassXC on Windows, macOS, and Linux systems.
+OpenVireo is a modern, secure, and open-source password manager that stores and manages your most sensitive information. You can run OpenVireo on Windows, macOS, and Linux systems.
 
-KeePassXC is for people with extremely high demands of secure personal data management. It saves many different types of information, such as usernames, passwords, URLs, attachments, and notes in an encrypted file that can be stored in any location, including private and public cloud solutions, or in the vaults of an optional KeePassXC account that syncs them between your devices. For easy identification and management, user-defined titles and icons can be specified for entries. In addition, entries are sorted in customizable groups. An integrated search function allows you to use advanced patterns to easily find any entry in your database. A customizable, fast, and easy-to-use password generator utility allows you to create passwords with any combination of characters or easy to remember passphrases.
+OpenVireo is for people with extremely high demands of secure personal data management. It saves many different types of information, such as usernames, passwords, URLs, attachments, and notes in an encrypted file that can be stored in any location, including private and public cloud solutions, or in the vaults of an optional OpenVireo account that syncs them between your devices. For easy identification and management, user-defined titles and icons can be specified for entries. In addition, entries are sorted in customizable groups. An integrated search function allows you to use advanced patterns to easily find any entry in your database. A customizable, fast, and easy-to-use password generator utility allows you to create passwords with any combination of characters or easy to remember passphrases.
 
 === Overview
-You can store an unlimited number of passwords and information in a KeePassXC database. Every piece of information you store in your database is encrypted at all times within the `kdbx` file. When you are accessing your database from within KeePassXC, your information is decrypted and stored in your computer's memory. KeePassXC places controls over the access to this data so other applications cannot read it (unless they have administrative rights). The interface is designed to let you quickly access your passwords, search for the right entry, perform Auto-Type or copy/paste operations, make and save changes, and then get out of your way.
+You can store an unlimited number of passwords and information in an OpenVireo database. Every piece of information you store in your database is encrypted at all times within the `kdbx` file. When you are accessing your database from within OpenVireo, your information is decrypted and stored in your computer's memory. OpenVireo places controls over the access to this data so other applications cannot read it (unless they have administrative rights). The interface is designed to let you quickly access your passwords, search for the right entry, perform Auto-Type or copy/paste operations, make and save changes, and then get out of your way.
 
-KeePassXC ships with light and dark themes specifically designed to meet accessibility standards. By default the theme follows your system's light or dark appearance, but you can always set a specific theme in the application settings.
+OpenVireo ships with light and dark themes specifically designed to meet accessibility standards. By default the theme follows your system's light or dark appearance, but you can always set a specific theme in the application settings.
 
 .Light and Dark Themes
 image::theme_comparison.png[]
 
 === Features
-KeePassXC has numerous features for novice and power users alike. This guide will go over the basic features to get you up and running quickly. The User Guide contains more in-depth discussions on the major features in the application.
+OpenVireo has numerous features for novice and power users alike. This guide will go over the basic features to get you up and running quickly. The User Guide contains more in-depth discussions on the major features in the application.
 
 * Basic Features
  ** Create, open, and save databases in the KDBX format (KeePass Compatible)
@@ -29,7 +29,7 @@ KeePassXC has numerous features for novice and power users alike. This guide wil
  ** Support for passkeys using the browser integration
  ** Entry icon download
  ** Import databases from CSV, 1Password, Bitwarden, Proton Pass, and KeePass1 formats
- ** Optional KeePassXC account: vaults that sync between your computers and KeePass Web in the browser, encrypted end to end
+ ** Optional OpenVireo account: vaults that sync between your computers and OpenVireo Web in the browser, encrypted end to end
 
 * Advanced Features
  ** Database reports (password health, HIBP, and statistics)
@@ -39,26 +39,25 @@ KeePassXC has numerous features for novice and power users alike. This guide wil
  ** File attachments and custom attributes
  ** Entry history and data restoration
  ** YubiKey/OnlyKey challenge-response support
- ** Command line interface (keepassxc-cli)
+ ** Command line interface (openvireo-cli)
  ** Auto-Open databases
  ** KeeShare shared databases (import, export, and synchronize)
- ** Automatic sync with your own KeePassXC Sync Server, with field-by-field merging, version history, and device pairing
+ ** Automatic sync with your own OpenVireo Sync Server, with field-by-field merging, version history, and device pairing
  ** Remote sync with your own download and upload commands (scp, sftp, rsync, …)
- ** Shared vaults, organizations, and service accounts for CI, servers, and Kubernetes (with a KeePassXC account)
+ ** Shared vaults, organizations, and service accounts for CI, servers, and Kubernetes (with an OpenVireo account)
  ** SSH Agent
  ** FreeDesktop.org Secret Service (replace Gnome keyring, etc.)
  ** Additional encryption choices: Twofish and ChaCha20
 
 == Contact Us
 
-We are committed to continually improve KeePassXC through customer experience and your feedback is important to us.
-Please report any bugs you encounter at our https://github.com/keepassxreboot/keepassxc/issues[GitHub issue tracker].
+We are committed to continually improve OpenVireo through customer experience and your feedback is important to us.
+Please report any bugs you encounter at our https://github.com/openvireo/openvireo/issues[GitHub issue tracker].
 
-We are also https://matrix.to/#/#keepassxc-community:mozilla.org[available on Matrix] for real-time feedback and
-discussions. See our https://keepassxc.org/team/#contact[contact page] for further options.
+OpenVireo is a fork of https://keepassxc.org[KeePassXC]. Credit and thanks go to the KeePassXC Team and its contributors, who build KeePassXC; please do not report OpenVireo problems to them.
 
 Thank You, +
-Team KeePassXC
+OpenVireo
 
 // end::content[]
 // tag::advanced[]

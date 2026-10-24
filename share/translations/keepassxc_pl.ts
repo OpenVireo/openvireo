@@ -10,8 +10,8 @@
         <translation>O programie</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>Zgłoś błędy na: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>Zgłoś błędy na: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>Współtwórcy</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;Zobacz wkłady na GitHubie&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;Zobacz wkłady na GitHubie&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10620,8 +10620,8 @@ Przykład: JBSWY3DPEHPK3PXP</translation>
         <translation>Wystąpił błąd podczas próby pobrania informacji o aktualizacji, spróbuj ponownie później.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Dostępna jest nowa wersja.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 może być &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;pobrany tutaj&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Dostępna jest nowa wersja.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 może być &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;pobrany tutaj&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

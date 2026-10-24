@@ -14,4 +14,4 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 == REPORTING BUGS
-Bugs and feature requests can be reported on GitHub at https://github.com/keepassxreboot/keepassxc/issues.
+Bugs and feature requests can be reported on GitHub at https://github.com/openvireo/openvireo/issues.

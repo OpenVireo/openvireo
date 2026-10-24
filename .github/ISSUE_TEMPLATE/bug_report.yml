@@ -44,7 +44,7 @@ body:
   - type: textarea
     id: debug_info
     attributes:
-      label: KeePassXC Debug Information
+      label: OpenVireo Debug Information
       placeholder: "Paste the output of: Help -> About -> Debug Info"
       render: Text
 

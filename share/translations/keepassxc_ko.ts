@@ -10,8 +10,8 @@
         <translation>정보</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt; 사이트에 버그를 보고해 주십시오</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt; 사이트에 버그를 보고해 주십시오</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>기여자</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;GitHub에서 기여자 보기&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;GitHub에서 기여자 보기&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10616,8 +10616,8 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>업데이트 정보를 가져오는 중 오류가 발생했습니다. 나중에 다시 시도하십시오.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;새 버전을 사용할 수 없습니다.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1을 &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;여기에서 다운로드&lt;/a&gt;할 수 있습니다.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;새 버전을 사용할 수 없습니다.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1을 &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;여기에서 다운로드&lt;/a&gt;할 수 있습니다.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

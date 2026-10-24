@@ -10,8 +10,8 @@
         <translation>အကြောင်း</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>ပြဿနာများကို &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt; သို့ အစီရင်ခံပါ</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>ပြဿနာများကို &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt; သို့ အစီရင်ခံပါ</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>ပါဝင်ကူညီသူများ</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;ကူညီပံ့ပိုးမှုများကို GitHub တွင် ကြည့်ပါ&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;ကူညီပံ့ပိုးမှုများကို GitHub တွင် ကြည့်ပါ&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10561,8 +10561,8 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>အပ်ဒိတ်အချက်အလက်ကို ပြန်လည်ရယူရန် ကြိုးပမ်းစဉ် ပြဿနာ ဖြစ်ပေါ်ခဲ့သည်။ ကျေးဇူးပြု၍ နောက်မှ ထပ်မံကြိုးစားပါ။</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;ဗားရှင်းအသစ် ရရှိနိုင်ပါပြီ။&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 ကို &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;ဒီမှာ ဒေါင်းလုဒ်လုပ်နိုင်ပါသည်&lt;/a&gt;။</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;ဗားရှင်းအသစ် ရရှိနိုင်ပါပြီ။&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 ကို &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;ဒီမှာ ဒေါင်းလုဒ်လုပ်နိုင်ပါသည်&lt;/a&gt;။</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>
