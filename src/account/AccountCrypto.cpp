@@ -34,18 +34,18 @@
 
 namespace AccountCrypto
 {
-    const QByteArray KeysetAad = QByteArrayLiteral("kpx-keyset-v1");
+    const QByteArray KeysetAad = QByteArrayLiteral("ov-keyset-v1");
 
     namespace
     {
-        const QByteArray PublicKeysContext = QByteArrayLiteral("kpx-pubkeys-v1");
-        const QByteArray FingerprintContext = QByteArrayLiteral("kpx-fp-v1");
-        const QByteArray SealInfo = QByteArrayLiteral("kpx-seal-v1");
-        const QByteArray AukInfo = QByteArrayLiteral("kpx-auk-v1");
-        const QByteArray VaultNameInfo = QByteArrayLiteral("kpx-vault-name-v1");
+        const QByteArray PublicKeysContext = QByteArrayLiteral("ov-pubkeys-v1");
+        const QByteArray FingerprintContext = QByteArrayLiteral("ov-fp-v1");
+        const QByteArray SealInfo = QByteArrayLiteral("ov-seal-v1");
+        const QByteArray AukInfo = QByteArrayLiteral("ov-auk-v1");
+        const QByteArray VaultNameInfo = QByteArrayLiteral("ov-vault-name-v1");
         const QString SecretKeyPrefix = QStringLiteral("K1");
         const char CrockfordAlphabet[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-        const QString ServiceAccountPrefix = QStringLiteral("kpx_sa_");
+        const QString ServiceAccountPrefix = QStringLiteral("ov_sa_");
 
         const uint8_t* bytes(const QByteArray& data)
         {
@@ -131,17 +131,17 @@ namespace AccountCrypto
 
     QByteArray vaultKeyAad(const QString& vaultId)
     {
-        return "kpx-vault-key|" + vaultId.toUtf8();
+        return "ov-vault-key|" + vaultId.toUtf8();
     }
 
     QByteArray saMasterAad(const QString& saId)
     {
-        return "kpx-sa-master-v1|" + saId.toUtf8();
+        return "ov-sa-master-v1|" + saId.toUtf8();
     }
 
     QByteArray vaultNameAad(const QString& vaultId)
     {
-        return "kpx-vault-name|" + vaultId.toUtf8();
+        return "ov-vault-name|" + vaultId.toUtf8();
     }
 
     QString toBase64Url(const QByteArray& data)

@@ -51,7 +51,7 @@ struct AccountManager::Pending
 
 namespace
 {
-    const QString LastAccountKey = QStringLiteral("kpx-account-last");
+    const QString LastAccountKey = QStringLiteral("ov-account-last");
 
     qint64 now()
     {
@@ -270,7 +270,7 @@ bool AccountManager::canQuickUnlock() const
 
 QUuid AccountManager::quickUnlockId() const
 {
-    return QUuid::createUuidV5(QuickUnlockNamespace, "kpx-account:" + defaultServerId() + ":" + m_accountId);
+    return QUuid::createUuidV5(QuickUnlockNamespace, "ov-account:" + defaultServerId() + ":" + m_accountId);
 }
 
 void AccountManager::rememberAuk(const SecureBytes& auk)
@@ -324,17 +324,17 @@ OpaqueClient::Ids AccountManager::opaqueIds(const QString& email) const
 
 QString AccountManager::sessionKey(const QString& accountId)
 {
-    return "kpx-account-session:" + accountId;
+    return "ov-account-session:" + accountId;
 }
 
 QString AccountManager::secretKeyKey(const QString& serverId, const QString& email)
 {
-    return "kpx-account-secret-key:" + serverId + ":" + email.trimmed().toLower();
+    return "ov-account-secret-key:" + serverId + ":" + email.trimmed().toLower();
 }
 
 QString AccountManager::deviceKey(const QString& serverId, const QString& email)
 {
-    return "kpx-account-device:" + serverId + ":" + email.trimmed().toLower();
+    return "ov-account-device:" + serverId + ":" + email.trimmed().toLower();
 }
 
 QString AccountManager::storedSecretKey(const QString& serverId, const QString& email)

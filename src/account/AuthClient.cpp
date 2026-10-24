@@ -122,7 +122,7 @@ void AuthClient::discover(const QString& issuerUrl, Callback callback)
     while (base.endsWith('/')) {
         base.chop(1);
     }
-    request("GET", QUrl(base + "/.well-known/kpx-configuration"), {}, false, std::move(callback));
+    request("GET", QUrl(base + "/.well-known/openvireo-configuration"), {}, false, std::move(callback));
 }
 
 void AuthClient::registerStart(const QString& email, const QByteArray& request, Callback callback)

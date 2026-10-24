@@ -516,14 +516,14 @@ void ServiceAccountAdmin::cancelInvitation(const QString& orgId, const QString& 
 QString ServiceAccountAdmin::invitationToken(const QString& linkOrToken)
 {
     auto text = linkOrToken.trimmed();
-    // The link carries the token in its fragment: KPX_INVITATION_URL#token=kpx_inv_… (SPEC §12)
+    // The link carries the token in its fragment: OPENVIREO_INVITATION_URL#token=ov_inv_… (SPEC §12)
     const auto marker = text.indexOf(QStringLiteral("token="));
     if (marker >= 0) {
         text = text.mid(marker + 6);
         text = text.left(text.indexOf('&') < 0 ? text.size() : text.indexOf('&'));
         text = QUrl::fromPercentEncoding(text.toUtf8()).trimmed();
     }
-    static const QRegularExpression pattern(QStringLiteral("^kpx_inv_[A-Za-z0-9_-]+={0,2}$"));
+    static const QRegularExpression pattern(QStringLiteral("^ov_inv_[A-Za-z0-9_-]+={0,2}$"));
     return pattern.match(text).hasMatch() ? text : QString();
 }
 

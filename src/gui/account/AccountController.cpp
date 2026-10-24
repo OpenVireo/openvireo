@@ -203,7 +203,7 @@ void AccountController::ensureServer(const QString& issuerUrl, Done done)
         done(true, {});
         return;
     }
-    // GET <issuer>/.well-known/kpx-configuration tells where the API and the sync server are
+    // GET <issuer>/.well-known/openvireo-configuration tells where the API and the sync server are
     auto* waiter = new QObject(this);
     auto finish = [waiter, url, done](bool ok, const QString& error) {
         if (waiter->property("done").toBool()) {
@@ -223,7 +223,7 @@ void AccountController::ensureServer(const QString& issuerUrl, Done done)
 
 QString AccountController::selfHostedTokenKey(const QString& url)
 {
-    return "kpx-selfhosted-token:" + url;
+    return "ov-selfhosted-token:" + url;
 }
 
 bool AccountController::selfHostedServer(QString* url, QString* token)
