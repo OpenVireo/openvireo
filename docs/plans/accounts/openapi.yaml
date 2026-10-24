@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: KeePassXC auth server API (kpx v1)
+  title: OpenVireo auth server API (ov v1)
   version: 1.0.0
   description: |
-    The contract between the auth server (Flask, `keepassxc-auth`), the sync server (Drogon,
-    `keepassxc-sync-server`) and the clients (Qt, `kpnx-sdk`). Crypto formats are in SPEC.md.
+    The contract between the auth server (Flask, `openvireo-auth`), the sync server (Drogon,
+    `openvireo-sync-server`) and the clients (Qt, `openvireo-sdk`). Crypto formats are in SPEC.md.
 
-    Paths tagged `auth` are served by the auth server under `{api}` (e.g. https://accounts.keepassxc.org/api/v1).
-    Paths tagged `sync` are served by the sync server under `{sync}` (e.g. https://sync.keepassxc.org/api/v1).
+    Paths tagged `auth` are served by the auth server under `{api}` (e.g. https://accounts.openvireo.com/api/v1).
+    Paths tagged `sync` are served by the sync server under `{sync}` (e.g. https://sync.openvireo.com/api/v1).
     The existing legacy sync routes (`/databases/*`, `/devices/pairing*`, `/health`) are unchanged and not repeated here.
 
     Conventions:
@@ -20,7 +20,7 @@ info:
     - Timestamps are RFC 3339 UTC strings.
     - Auth server JSON routes are CSRF-exempt and use only bearer auth; they don't read cookies.
 servers:
-  - url: https://accounts.keepassxc.org/api/v1
+  - url: https://accounts.openvireo.com/api/v1
     description: auth server ({api}); the sync server's JWT routes are in sync-openapi.yaml
 tags:
   - name: auth
@@ -217,7 +217,7 @@ paths:
                 properties:
                   access_token: { type: string }
                   expires_in: { type: integer }
-                  wrapped_master: { $ref: '#/components/schemas/B64', description: 'wrap(kek, master, "kpx-sa-master-v1|<sa>")' }
+                  wrapped_master: { $ref: '#/components/schemas/B64', description: 'wrap(kek, master, "ov-sa-master-v1|<sa>")' }
                   keyset: { $ref: '#/components/schemas/WrappedKeyset', description: wrapped with the SA master key }
         '401': { $ref: '#/components/responses/Error', description: 'unknown, revoked or expired secret' }
 
@@ -290,7 +290,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, required: [code, expires_in], properties: { code: { type: string, description: 'kpx_ws_ + base64url(32 bytes)' }, expires_in: { type: integer } } }
+              schema: { type: object, required: [code, expires_in], properties: { code: { type: string, description: 'ov_ws_ + base64url(32 bytes)' }, expires_in: { type: integer } } }
   /me/email:
     post:
       tags: [auth]
@@ -760,7 +760,7 @@ components:
         - type: object
           required: [wrapped]
           properties:
-            wrapped: { $ref: '#/components/schemas/B64', description: 'wrap(AUK or SA master, enc_sk ‖ sign_seed, "kpx-keyset-v1")' }
+            wrapped: { $ref: '#/components/schemas/B64', description: 'wrap(AUK or SA master, enc_sk ‖ sign_seed, "ov-keyset-v1")' }
     PublicPrincipal:
       allOf:
         - $ref: '#/components/schemas/PublicKeys'
@@ -803,14 +803,14 @@ components:
         principal: { $ref: '#/components/schemas/Principal' }
         role: { $ref: '#/components/schemas/VaultRole' }
         key_version: { type: integer }
-        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, vault key, "kpx-vault-key|<vault>")' }
+        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, vault key, "ov-vault-key|<vault>")' }
     SaMasterGrant:
       type: object
       required: [sa_id, principal, sealed_key]
       properties:
         sa_id: { type: string, format: uuid }
         principal: { $ref: '#/components/schemas/Principal' }
-        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, SA master key, "kpx-sa-master-v1|<sa>")' }
+        sealed_key: { $ref: '#/components/schemas/B64', description: 'seal(enc_pk, SA master key, "ov-sa-master-v1|<sa>")' }
     SaSecret:
       type: object
       properties:
