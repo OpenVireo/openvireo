@@ -12,7 +12,8 @@ KeePassXC allows you to import external databases from the following options:
 * Bitwarden (.json)
 * Proton Pass (.json)
 * KeePass 1 Database (.kdb)
-* Remote database (.kdbx)
+* Remote database (.kdbx), downloaded with a command
+* KeePassXC Sync Server (.kdbx)
 
 To import any of these files, start KeePassXC and either click the `Import File` button on the welcome screen or use the menu Database > Import... to launch the Import Wizard.
 
@@ -93,6 +94,21 @@ To import (or temporarily open) a remote database file in KeePassXC, perform the
 4. Click `Continue` to unlock and preview the import. Click `Done` to complete the import.
 
 Opening without importing a remote database is possible by selecting Temporary Database in the Import Into section of the wizard.
+
+=== Importing from a Sync Server
+A database stored on a KeePassXC Sync Server can be downloaded into KeePassXC to start syncing it on this device:
+
+1. Open the Import Wizard as shown above. Select the Sync Server option.
+
+2. Enter the server URL and your access token, or a pairing code from another of your devices (see <<Adding Another Device>>). Click `Load` to list the databases on the server and choose the _Database ID_.
+
+3. Enter the password for the database and optionally provide a key file.
+
+4. Under Import Into, choose _Local Copy_ to keep a copy on this device that keeps the server database's credentials and is already set up to sync with the server, or import the entries into an existing or temporary database.
+
+5. Click `Continue` to unlock and preview the import. Click `Done` to complete the import.
+
+See <<KeePassXC Sync Server>> for automatic sync and the other sync server features.
 
 == Exporting Databases
 KeePassXC supports multiple ways to export your database for transfer to another program or to print out and archive.

@@ -5,18 +5,22 @@ include::.sharedheader[]
 // tag::content[]
 == Interface Overview
 === Application Layout
-The KeePassXC interface is designed for simplicity and easy access to your information. The main database view is split into four main partitions detailed below. You can open multiple databases at the same time, they will appear in tabs.
+The KeePassXC interface is designed for simplicity and easy access to your information. The main database view is split into four main partitions detailed below.
+
+You can open multiple databases at the same time. The database picker in the top-left corner shows the current database; click it to switch to another open database, to open your account's vaults (see <<KeePassXC Accounts>>), to create or open a database, to open the Database Settings, or to lock or close databases.
 
 .Main database interface
 image::main_interface.png[]
 
-*(A) Groups* – Organize your entries into discrete groups to bring order to all of your sensitive information. Groups can be nested under each other to create a hierarchy. Settings from parent groups get applied to their children. You can hide this panel on the View menu.
+*(A) Sidebar* – Organize your entries into discrete groups to bring order to all of your sensitive information. Groups can be nested under each other to create a hierarchy. Settings from parent groups get applied to their children. Below the groups, the tags used in the database list their entries with one click; any number of custom tags can be added when editing an entry. At the bottom are the Password Generator, Database Reports, and the application Settings. You can hide this panel on the View menu.
 
-*(B) Searches and Tags* – Dynamic groups of entries that can be quickly displayed with one click. Any number of custom tags can be added when editing an entry. This panel also includes useful pre-defined and custom saved searches, such as finding expired and weak passwords.
+*(B) Search* – Search the database as you type. The buttons next to the search box set the search options (case sensitive, limit the search to the selected group, press Enter to search), save the search, and show the search tips (also kbd:[Ctrl + J]). See <<Search>>.
 
-*\(C) Entries* – Entries contain all the information for a website or application you are storing in KeePassXC. This view shows all the entries in the selected group. Each column can be resized, reordered, and shown or hidden based on your preference. Right-click the header row to see all available options.
+*\(C) Entries* – Entries contain all the information for a website or application you are storing in KeePassXC. This list shows all the entries in the selected group with their username and URL, and marks expired entries and weak passwords.
 
-*(D) Preview* – Shows a preview of the selected group or entry. You can interact with most information stored in an entry from here without opening the entry for editing. You can temporarily hide this preview using the down-arrow button on the right hand side or completely disable it from the View menu.
+*(D) Entry details* – Shows the selected entry. You can copy the username, password, one-time code, and URL, reveal the password, and open the URL without opening the entry for editing. Tags, expiry, attachments, and notes are shown below. Editing an entry opens it in place of this card.
+
+When a database syncs with a sync server or belongs to a KeePassXC account, a sync status chip at the far right of the header shows whether it is synced, syncing, offline, or needs your attention; click it to sync again or to act on the problem. In account mode an account button next to it shows who is signed in and opens the account menu.
 
 [TIP]
 ====
@@ -29,17 +33,11 @@ To enable it:
 . Under *Entry Management*, check the box for _"Copy data on double clicking field in entry view"_.
 ====
 
-=== Toolbar
-The toolbar provides a quick way to perform common tasks with your database. Some entries in the toolbar are dynamically disabled based on the information contained in the selected entry. Every common action in KeePassXC can be controlled with a keyboard shortcut as well.
+=== Command Bar
+The command bar above the entries shows the selected group and its number of entries, and provides a quick way to perform common tasks: _New Entry_, _Perform Auto-Type_, _Edit Entry_, _Delete Entry_, and _Lock Database_. The _More commands_ button (…) holds Clone Entry, Download Favicon, New Group, Edit Group, and Save Database. Commands that don't apply to the selected entry are disabled. While you edit an entry, the command bar shows _Cancel_ and _Save_. Every common action in KeePassXC can be controlled with a keyboard shortcut as well, and all of them are in the menus.
 
-.Toolbar overview
+.Command bar
 image::toolbar.png[]
-
-*(A) Database* – Open Database, Save Database, Lock Database +
-*(B) Entries* – Create Entry, Edit Entry, Delete Selected Entries +
-*\(C) Entry Data* – Copy Username, Copy Password, Copy URL, Perform Auto-Type +
-*(D) Tools* – Database Settings, Reports, Password Generator, Application Settings +
-*(E) Search*
 
 === Screenshot Security
 By default, KeePassXC prevents recordings and screenshots of the application window on Windows and macOS. This prevents inadvertent spillage of information during meetings and disallows other applications to capture the window contents. If you would like to enable screen capture temporarily, navigate to _View_ menu and select _Allow Screen Capture_. Alternatively, you can start the application with the `--allow-screencapture` command line flag.
@@ -49,13 +47,13 @@ By default, KeePassXC prevents recordings and screenshots of the application win
 You can customize the appearance of KeePassXC to your liking. The following options are available in the _View_ menu:
 
 ==== Themes
-KeePassXC ships with light and dark themes specifically designed to meet accessibility standards. In most cases, the appropriate theme for your system will be determined automatically, but you can always set a specific theme by using the _View_ menu. When a new theme is selected you will be prompted to restart KeePassXC to apply the theme immediately.
+KeePassXC ships with light and dark themes specifically designed to meet accessibility standards. By default (_Automatic_) the theme follows your system's light or dark appearance, but you can always choose _Light_, _Dark_, or _Classic_ (the platform's native look) with the _Theme_ setting *(A)* under _Tools_ -> _Settings_ -> _General_ -> _User Interface_, or from the _View_ -> _Theme_ menu.
 
 .Setting the theme
 image::theme_selection.png[]
 
 === Application Settings
-Users can configure KeePassXC to their personal tastes with a wide variety of general and security settings that apply to the whole application. These settings are accessible from _Tools_ -> _Settings_ or the cog wheel icon from the toolbar. Settings include: startup options, file management, entry management, user interface, language, security controls, and integration settings (Auto-Type, Browser, etc).
+Users can configure KeePassXC to their personal tastes with a wide variety of general and security settings that apply to the whole application. These settings are accessible from _Tools_ -> _Settings_ or _Settings_ at the bottom of the sidebar, and open in a window over the database. Settings include: startup options, file management, entry management, user interface, language, security controls, and integration settings (Auto-Type, Browser, etc).
 
 === Keyboard Shortcuts
 include::KeyboardShortcuts.adoc[tag=content, leveloffset=+1]

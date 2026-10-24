@@ -127,8 +127,8 @@ image:browser_integration_additional_attribute.png[]
 === Clearing Remembered Sites
 Entries that you have chosen to remember allow/deny rules are stored in their respect custom data fields. You can clear all of these remembered settings at once through the database settings. Follow these steps:
 
-1. Go to *Database* → *Database Settings* or click the database settings icon in the toolbar.
-2. Go to the *Browser Integration* tab, then click on the *Forget all site-specific settings on entries* button. 
+1. Go to *Database* → *Database Settings*, or open the database picker and select *Database Settings…*.
+2. Go to the *Browser Integration* page, then click on the *Forget all site-specific settings on entries* button. 
 3. Confirm this action in the popup dialog. This cannot be undone once the database is saved. 
 +
 .Clear Remembered Sites
@@ -159,7 +159,7 @@ Database-wide operations are available in the database settings. To access these
 .Database browser settings
 image::browser_database_settings.png[]
 
-Finally, advanced application-wide settings are available in the Browser Integration tab of the application settings.
+Finally, advanced application-wide settings are available on the Browser Integration page of the application settings.
 
 WARNING: We do not recommend changing any of these settings as they may break the browser integration plugin.
 
