@@ -10,7 +10,7 @@ NOTE: Auto-Type is a completely separate feature from Browser Integration. You d
 === Configure Global Auto-Type
 You can define a global Auto-Type hotkey that starts the Auto-Type process. To configure the hotkey, perform the following steps:
 
-Navigate to _Tools_ -> _Settings_ -> Auto-Type tab *(1)*. Click into the _Global Auto-Type shortcut_ box and press the desired key combination that will trigger the Auto-Type process *(2)*.
+Navigate to _Tools_ -> _Settings_ -> _Auto-Type_ *(1)*. Click into the _Global Auto-Type shortcut_ box and press the desired key combination that will trigger the Auto-Type process *(2)*.
 
 .Auto-Type settings
 image::autotype_settings.png[]

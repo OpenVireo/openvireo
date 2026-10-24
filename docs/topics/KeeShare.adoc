@@ -22,7 +22,7 @@ If you checked _Allow export_ in the Sharing settings you can now share a group 
 NOTE: KeeShare does not synchronize group structure after the initial share is created. At this time, KeeShare operates at the entry level; shared entries moved outside of a shared group are still synchronized.
 
 1. Open the edit sheet on a group you want to share.
-2. Select the KeeShare category on the left toolbar.
+2. Select the KeeShare category on the left.
 3. Choose a sharing type:
   a. *Inactive* – Disable sharing this group
   b. *Import* – Read-only import of entries, merge changes

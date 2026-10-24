@@ -76,6 +76,7 @@ private:
 
     void populate();
     void unlock();
+    void showStartScreen(bool show);
     void walkNewDatabaseWizard(const Shot& shot);
     void walkImportWizard(const Shot& shot);
     void walkPasswordGenerator(const Shot& shot);

@@ -45,13 +45,13 @@ kbd:[Ctrl + E]
 |Sort Groups Z-A                 | kbd:[Ctrl + Up]
 |Minimize Window                 | kbd:[Ctrl + M]
 |Hide Window                     | kbd:[Ctrl + Shift + M]
-|Select Next Database Tab        | kbd:[Ctrl + Tab] +
+|Select Next Database            | kbd:[Ctrl + Tab] +
 _or_ +
 kbd:[Ctrl + PgDn]
-|Select Previous Database Tab    | kbd:[Ctrl + Shift + Tab] +
+|Select Previous Database        | kbd:[Ctrl + Shift + Tab] +
 _or_ +
 kbd:[Ctrl + PgUp]
-|Select the nth database         | kbd:[Ctrl + &lt;n&gt;], where kbd:[&lt;n&gt;] is the number of the database tab
+|Select the nth database         | kbd:[Ctrl + &lt;n&gt;], where kbd:[&lt;n&gt;] is the database's position in the database picker
 |Toggle Passwords Hidden         | kbd:[Ctrl + Shift + C]
 |Toggle Usernames Hidden         | kbd:[Ctrl + Shift + B]
 |Focus Groups (edit if focused)  | kbd:[F1]
@@ -60,6 +60,7 @@ kbd:[Ctrl + PgUp]
 _or_ +
 kbd:[Ctrl + F]
 |Clear Search                    | kbd:[Esc]
+|Show Search Tips                | kbd:[Ctrl + J]
 |Show Keyboard Shortcuts         | kbd:[Ctrl + /]
 |===
 // end::content[]

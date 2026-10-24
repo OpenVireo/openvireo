@@ -9,7 +9,7 @@ To start using KeePassXC, you need to first create a database that will store th
 
 To create a database, perform the following steps:
 
-1. Open your KeePassXC application. Click the create new database button *(A)*:
+1. Open your KeePassXC application. The first time, the start screen asks how you want to use KeePassXC; choose _Use without an account_ for a database file of your own (see <<Ways to Use KeePassXC>> for the other choices). Click the _Create Database_ button *(A)*:
 +
 .Create database – Welcome screen
 image::welcome_screen.png[]
@@ -92,7 +92,7 @@ All the details such as usernames, passwords, URLs, attachments, notes, and so o
 
 To add an entry, perform the following step:
 
-1. Navigate to Entries > New Entry (or press kbd:[Ctrl+N]). The following screen appears:
+1. Click _New Entry_ in the command bar, navigate to Entries > New Entry, or press kbd:[Ctrl+N]. The entry opens in a window over the database:
 +
 .Adding a new entry
 image::edit_entry.png[]
@@ -104,22 +104,22 @@ image::edit_entry.png[]
 
    c. After you add a URL to an entry you can press the download button to automatically download the website's icon for this entry.
 
-3. _(Optional)_ Add tags to the entry to quickly search for it using the tags panel on the main database view. You can easily add new tags or select existing ones from the drop-down list.
+3. _(Optional)_ Add tags to the entry to quickly find it using the tags in the sidebar. You can easily add new tags or select existing ones from the drop-down list.
 
 4. _(Optional)_ Select the _Expires_ check-box to set the expiry date for the password. You can manually enter the date and time or click the _Presets_ button to select an expiry date and time for your password.
 
-5. Click *OK* to add the entry to your database.
+5. Click *Save* to add the entry to your database.
 
 ==== Editing an Entry
 To edit the details in an entry, perform the following steps:
 
 1. Select the entry you want to edit.
 
-2. Press kbd:[Enter], click the edit toolbar icon, or right-click and select Edit Entry from the menu.
+2. Press kbd:[Enter], click the _Edit Entry_ (pencil) button in the command bar, or right-click and select Edit Entry from the menu. The entry details become editable in place.
 
 3. Make the desired changes.
 
-4. Click *OK*.
+4. Click *Save* in the command bar, or *Cancel* to discard the changes.
 
 ==== Adding TOTP to an Entry
 Timed One-Time Passwords (TOTP) are a popular choice for two-factor authentication methods. These codes are typically six digits long and change every 30 seconds. They are derived from a shared secret value and the current time. Once set up, KeePassXC can calculate TOTP codes like any authenticator app, such as Google Authenticator. The codes can be used with copy/paste, browser extension, and Auto-Type.
@@ -202,7 +202,7 @@ KeePassXC can handle URLs in various ways. Standard URLs will be opened in your 
 
 |kdbx://
 |`kdbx://~/dbs/passwords.kdbx`
-|Opens the specified database file. Set the entry's username to the keyfile path (if required) and password to the database password. The database will open in a new tab.
+|Opens the specified database file. Set the entry's username to the keyfile path (if required) and password to the database password. The database will open alongside the others; switch to it with the database picker.
 
 |===
 
@@ -366,13 +366,13 @@ NOTE: You can setup an entry to open on double click of the URL field by prepend
 == Database Settings
 At any point of time, you can change the settings for your database. To make changes to the general settings, perform the following steps:
 
-1.	Navigate to _Database_ -> _Database settings_. The following screen appears:
+1.	Navigate to _Database_ -> _Database settings_, or open the database picker and select _Database Settings…_. The following screen appears:
 +
 .Database settings
 image::database_settings.png[]
 
 2.	Click the General button in the left-hand menu bar to access the following settings:
- * *Database name:* This is the default identifier for your database and is shown in the tab bar and title bar (when active). You can change this name as desired.
+ * *Database name:* This is the default identifier for your database and is shown in the database picker and title bar (when active). You can change this name as desired.
  * *Database description:* Provide some meaningful description for your database.
  * *Default username:* Provide a default username for all new entries that you create in this database.
  * *Public Database Metadata:* Here you can set a public (unencrypted) name, icon, and color for your database. This is used on the database unlock screen to help distinguish multiple databases from each other.
@@ -418,10 +418,10 @@ KeePassXC offers some maintenance features that can be applied to clean up your 
 image::database_maintenance.png[]
 
 == Remote database support
-KeePassXC provides support for syncing database files that reside in a remote location. If you can download/upload the database file via a commandline tool (e.g. rsync, ssh, scp etc.) KeePassXC offers easy to use functionality to sync the remote database.
+KeePassXC provides support for syncing database files that reside in a remote location. If you can download/upload the database file via a commandline tool (e.g. rsync, ssh, scp etc.) KeePassXC offers easy to use functionality to sync the remote database. To sync with a KeePassXC Sync Server instead, automatically and with a version history, see <<KeePassXC Sync Server>>.
 
 === Sync with remote database
-Open the remote sync settings via _Database > Database Settings… > Remote_ to create commands to sync a local database or a temporary local copy of a remote database.
+Open the remote sync settings via _Database > Database Settings… > Remote Sync_ and keep the _Type_ set to _Commands (scp, sftp, …)_ to create commands to sync a local database or a temporary local copy of a remote database.
 
 Define a name for your sync command and specify a download *(A)* as well as an upload command *(B)*. The command and/or input need a `{TEMP_DATABASE}` placeholder specified where the remote database is temporarily stored. Do not forget to save the command settings with the save button *\(C)*. Remote settings are added as menu entries below the _Remote Sync…_ menu for quick access.
 
@@ -430,7 +430,7 @@ WARNING: If your download or upload command require a password prompt, the comma
 .Remote sync settings
 image::sync_remote_settings.png[]
 
-Select the remote sync command from the _Database > Remote Sync…_ menu to start the syncing process and a progress bar will show up in the lower right corner.
+Select the remote sync command from the _Database > Remote Sync…_ menu to start the syncing process. The sync status chip at the far right of the header shows its progress.
 
 WARNING: In case the remote database is changed by another user/process after the downloading command finishes and before uploading again, those changes will be overwritten. Syncing is not an atomic operation.
 
