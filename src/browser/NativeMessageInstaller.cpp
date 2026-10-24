@@ -37,8 +37,8 @@ using namespace BrowserShared;
 
 namespace
 {
-    const QString HOST_NAME = QStringLiteral("com.bonganimbigi.keepassxc_browser");
-    const QStringList ALLOWED_EXTENSIONS = QStringList() << QStringLiteral("keepassxc-browser@bonganimbigi.com");
+    const QString HOST_NAME = QStringLiteral("com.openvireo.browser");
+    const QStringList ALLOWED_EXTENSIONS = QStringList() << QStringLiteral("browser@openvireo.com");
     const QStringList ALLOWED_ORIGINS = QStringList() << QStringLiteral("chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/");
 #if defined(Q_OS_MACOS)
     const QString TARGET_DIR_CHROME = QStringLiteral("/Library/Application Support/Google/Chrome/NativeMessagingHosts");
@@ -52,16 +52,16 @@ namespace
     const QString TARGET_DIR_EDGE = QStringLiteral("/Library/Application Support/Microsoft Edge/NativeMessagingHosts");
 #elif defined(Q_OS_WIN)
     const QString TARGET_DIR_CHROME = QStringLiteral(
-        "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
+        "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.openvireo.browser");
     const QString TARGET_DIR_CHROMIUM =
-        QStringLiteral("HKEY_CURRENT_USER\\Software\\Chromium\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
+        QStringLiteral("HKEY_CURRENT_USER\\Software\\Chromium\\NativeMessagingHosts\\com.openvireo.browser");
     const QString TARGET_DIR_FIREFOX =
-        QStringLiteral("HKEY_CURRENT_USER\\Software\\Mozilla\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
+        QStringLiteral("HKEY_CURRENT_USER\\Software\\Mozilla\\NativeMessagingHosts\\com.openvireo.browser");
     const QString TARGET_DIR_VIVALDI = TARGET_DIR_CHROME;
     const QString TARGET_DIR_TOR_BROWSER = TARGET_DIR_FIREFOX;
     const QString TARGET_DIR_BRAVE = TARGET_DIR_CHROME;
     const QString TARGET_DIR_EDGE = QStringLiteral(
-        "HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\NativeMessagingHosts\\com.bonganimbigi.keepassxc_browser");
+        "HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\NativeMessagingHosts\\com.openvireo.browser");
 #else
     const QString TARGET_DIR_CHROME = QStringLiteral("/google-chrome/NativeMessagingHosts");
     const QString TARGET_DIR_CHROMIUM = QStringLiteral("/chromium/NativeMessagingHosts");
@@ -254,7 +254,7 @@ QString NativeMessageInstaller::getNativeMessagePath(SupportedBrowsers browser) 
 #ifdef KEEPASSXC_DIST_FLATPAK
 /** Constructs a host accessible proxy path for use with flatpak
  *
- * @return path Path to host accessible wrapper script (com.bonganimbigi.KeePassXC)
+ * @return path Path to host accessible wrapper script (com.openvireo.OpenVireo)
  */
 QString constructFlatpakPath()
 {
@@ -268,10 +268,10 @@ QString constructFlatpakPath()
     QRegularExpressionMatch match = re.match(appPath);
     if (match.hasMatch()) {
         // Construct a proxy path that should work with all flatpak installations
-        path = match.captured(1) + "/exports/bin/" + "com.bonganimbigi.KeePassXC";
+        path = match.captured(1) + "/exports/bin/" + "com.openvireo.OpenVireo";
     } else {
         // Fallback to the most common and default flatpak installation path
-        path = "/var/lib/flatpak/exports/bin/com.bonganimbigi.KeePassXC";
+        path = "/var/lib/flatpak/exports/bin/com.openvireo.OpenVireo";
     }
     settings.endGroup();
 
@@ -304,9 +304,9 @@ QString NativeMessageInstaller::getInstalledProxyPath() const
 #elif defined(KEEPASSXC_DIST_FLATPAK)
     path = constructFlatpakPath();
 #elif defined(KEEPASSXC_DIST_SNAP)
-    path = "/snap/bin/keepassxc.proxy";
+    path = "/snap/bin/openvireo.proxy";
 #else
-    path = QCoreApplication::applicationDirPath() + QStringLiteral("/keepassxc-proxy");
+    path = QCoreApplication::applicationDirPath() + QStringLiteral("/openvireo-proxy");
 #ifdef Q_OS_WIN
     path.append(QStringLiteral(".exe"));
 #endif // #ifdef Q_OS_WIN

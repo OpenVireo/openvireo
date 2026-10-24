@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=KeePassXC
+Name=OpenVireo
 GenericName=Password Manager
 GenericName[ar]=مدير كلمات المرور
 GenericName[bg]=Мениджър на пароли
@@ -35,10 +35,10 @@ Comment=Community-driven port of the Windows application “KeePass Password Saf
 Comment[da]=Fællesskabsdrevet port af Windows-programmet “KeePass Password Safe”
 Comment[et]=Kogukonna arendatav port Windowsi programmist KeePass Password Safe
 Comment[ru]=Разработанный сообществом порт Windows-приложения KeePass Password Safe
-Exec=keepassxc %f
-TryExec=keepassxc
+Exec=openvireo %f
+TryExec=openvireo
 Icon=@APP_ICON_NAME@
-StartupWMClass=keepassxc
+StartupWMClass=openvireo
 StartupNotify=false
 Terminal=false
 Type=Application

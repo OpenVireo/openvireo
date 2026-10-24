@@ -36,7 +36,7 @@ if(UNIX AND NOT APPLE AND NOT HAIKU)
         foreach(icon_match ${ICON_FILES})
             get_filename_component(icon_name ${icon_match} NAME)
             get_filename_component(icon_dir ${icon_match} DIRECTORY)
-            # Prefix all icons with application id: "com.bonganimbigi.KeePassXC"
+            # Prefix all icons with application id: "com.openvireo.OpenVireo"
             string(REGEX REPLACE "^keepassxc(.*)?(\\.png|\\.svg)$" "${APP_ID}\\1\\2" icon_name ${icon_name})
             string(REGEX REPLACE "^(application-x-keepassxc\\.svg)$" "${APP_ID}-\\1" icon_name ${icon_name})
             # Find icon sub dir ex. "scalable/mimetypes/"
@@ -45,17 +45,23 @@ if(UNIX AND NOT APPLE AND NOT HAIKU)
                     RENAME ${icon_name})
         endforeach()
     else()
-        set(APP_ICON_NAME "keepassxc")
-        set(MIME_ICON "application-x-keepassxc")
-        configure_file(linux/keepassxc.xml.in ${CMAKE_CURRENT_BINARY_DIR}/linux/keepassxc.xml @ONLY)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/linux/keepassxc.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+        # Installed under the OpenVireo name so that it can sit next to an installed KeePassXC
+        set(APP_ICON_NAME "openvireo")
+        set(MIME_ICON "application-x-openvireo")
+        configure_file(linux/keepassxc.xml.in ${CMAKE_CURRENT_BINARY_DIR}/linux/openvireo.xml @ONLY)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/linux/openvireo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
 
-        install(DIRECTORY icons/application/ DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor
-                FILES_MATCHING PATTERN "keepassx*.png" PATTERN "keepassx*.svg"
-                PATTERN "status" EXCLUDE PATTERN "actions" EXCLUDE PATTERN "categories" EXCLUDE)
-        install(DIRECTORY icons/application/ DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor
-                FILES_MATCHING PATTERN "application-x-keepassxc.svg" PATTERN "status"
-                EXCLUDE PATTERN "actions" EXCLUDE PATTERN "categories" EXCLUDE)
+        file(GLOB_RECURSE ICON_FILES LIST_DIRECTORIES false
+             "icons/application/*/keepassxc*.png"
+             "icons/application/*/*keepassxc*.svg")
+        foreach(icon_match ${ICON_FILES})
+            get_filename_component(icon_name ${icon_match} NAME)
+            get_filename_component(icon_dir ${icon_match} DIRECTORY)
+            string(REPLACE "keepassxc" "openvireo" icon_name ${icon_name})
+            file(RELATIVE_PATH icon_subdir ${CMAKE_CURRENT_SOURCE_DIR}/icons/application ${icon_dir})
+            install(FILES ${icon_match} DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${icon_subdir}
+                    RENAME ${icon_name})
+        endforeach()
     endif(KEEPASSXC_DIST_FLATPAK)
     configure_file(linux/${APP_ID}.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/linux/${APP_ID}.desktop @ONLY)
     configure_file(linux/${APP_ID}.policy.in ${CMAKE_CURRENT_BINARY_DIR}/linux/${APP_ID}.policy @ONLY)

@@ -70,7 +70,7 @@ Application::Application(int& argc, char** argv)
     VaultMenu::installTextEditingMenus();
 
     // Build identifier
-    auto identifier = QStringLiteral("keepassxc");
+    auto identifier = QStringLiteral("openvireo");
     auto username = Tools::cleanUsername();
     if (!username.isEmpty()) {
         identifier += QChar('-') + username;

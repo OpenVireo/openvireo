@@ -527,7 +527,7 @@ class Check(Command):
 
     @staticmethod
     def check_app_stream_info(version, cwd=None):
-        appstream = Path('share/linux/com.bonganimbigi.KeePassXC.appdata.xml')
+        appstream = Path('share/linux/com.openvireo.OpenVireo.appdata.xml')
         if cwd:
             appstream = Path(cwd) / appstream
         if not appstream.is_file():
@@ -855,9 +855,9 @@ class Build(Command):
             logger.info('Packaging application...')
             _run(['cpack', '-G', 'DragNDrop'], cwd=build_dir, capture_output=False)
 
-            output_file = Path(build_dir) / f'KeePassXC-{version}.dmg'
+            output_file = Path(build_dir) / f'OpenVireo-{version}.dmg'
             unsigned_suffix = '-unsigned' if not sign else ''
-            output_file.rename(output_dir / f'KeePassXC-{version}-{platform_target}{unsigned_suffix}.dmg')
+            output_file.rename(output_dir / f'OpenVireo-{version}-{platform_target}{unsigned_suffix}.dmg')
 
         if sign:
             logger.info('All done!')
@@ -904,7 +904,7 @@ class Build(Command):
                 self._run_tests(cwd=build_dir, parallelism=parallelism)
 
             logger.info('Bundling AppDir...')
-            app_dir = Path(build_dir) / f'KeePassXC-{version}-{platform_target}.AppDir'
+            app_dir = Path(build_dir) / f'OpenVireo-{version}-{platform_target}.AppDir'
             _run(['cmake', '--install', '.', '--strip',
                   '--prefix', (app_dir.absolute() / install_prefix.lstrip('/')).as_posix()],
                  cwd=build_dir, capture_output=False, **docker_args)
@@ -939,9 +939,9 @@ class Build(Command):
 
         env_path = ':'.join([bin_dir.as_posix(), _get_bin_path()])
         install_prefix = app_dir / install_prefix.lstrip('/')
-        desktop_file = install_prefix / 'share/applications/com.bonganimbigi.KeePassXC.desktop'
-        icon_file = install_prefix / 'share/icons/hicolor/256x256/apps/keepassxc.png'
-        executables = (install_prefix / 'bin').glob('keepassxc*')
+        desktop_file = install_prefix / 'share/applications/com.openvireo.OpenVireo.desktop'
+        icon_file = install_prefix / 'share/icons/hicolor/256x256/apps/openvireo.png'
+        executables = (install_prefix / 'bin').glob('openvireo*')
         app_run = src_dir / 'share/linux/appimage-apprun.sh'
 
         # Ensure QMAKE points to qmake6 for linuxdeploy-plugin-qt to find Qt6
@@ -955,10 +955,10 @@ class Build(Command):
              cwd=build_dir, capture_output=False, path=env_path, env=env, **docker_args, docker_privileged=True)
 
         logger.debug('Running appimagetool...')
-        appimage_name = f'KeePassXC-{version}-{platform_target}.AppImage'
+        appimage_name = f'OpenVireo-{version}-{platform_target}.AppImage'
         desktop_file.write_text(desktop_file.read_text().strip() + f'\nX-AppImage-Version={version}\n')
-        _run(['appimagetool', '--updateinformation=gh-releases-zsync|keepassxreboot|keepassxc|latest|' +
-              f'KeePassXC-*-{platform_target}.AppImage.zsync',
+        _run(['appimagetool', '--updateinformation=gh-releases-zsync|openvireo|openvireo|latest|' +
+              f'OpenVireo-*-{platform_target}.AppImage.zsync',
               app_dir.as_posix(), (output_dir.absolute() / appimage_name).as_posix()],
              cwd=build_dir, capture_output=False, path=env_path, env=env, **docker_args, docker_privileged=True)
         # Move appimage zsync file to output dir
@@ -989,7 +989,7 @@ class BuildSrc(Command):
                 raise Error('Build aborted!')
 
         logger.info('Exporting sources...')
-        prefix = f'keepassxc-{version}'
+        prefix = f'openvireo-{version}'
         output_file = Path(output_dir) / f'{prefix}-src.tar.xz'
         tag_name = tag_name or version
 
@@ -1333,7 +1333,7 @@ def main():
         # noinspection PyUnresolvedReferences
         ctypes.windll.kernel32.SetConsoleMode(ctypes.windll.kernel32.GetStdHandle(-11), 7)
 
-    sys.stderr.write(fmt.bold(f'{fmt.green("KeePassXC")} Release Preparation Tool\n'))
+    sys.stderr.write(fmt.bold(f'{fmt.green("OpenVireo")} Release Preparation Tool\n'))
     sys.stderr.write(f'Copyright (C) 2016-{datetime.now().year} KeePassXC Team <https://keepassxc.org/>\n\n')
 
     parser = argparse.ArgumentParser(add_help=True)

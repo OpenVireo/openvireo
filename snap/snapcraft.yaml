@@ -1,48 +1,48 @@
-name: keepassxc
-adopt-info: keepassxc
+name: openvireo
+adopt-info: openvireo
 grade: stable
 base: core22
 confinement: strict
 compression: lzo
 
 apps:
-  keepassxc:
-    command: usr/bin/keepassxc
-    common-id: com.bonganimbigi.KeePassXC.desktop
+  openvireo:
+    command: usr/bin/openvireo
+    common-id: com.openvireo.OpenVireo.desktop
     extensions: [kde-neon]
     plugs: [home, unity7, network, network-bind, removable-media, raw-usb, password-manager-service, browser-native-messaging]
-    autostart: com.bonganimbigi.KeePassXC.desktop
+    autostart: com.openvireo.OpenVireo.desktop
   cli:
-    command: usr/bin/keepassxc-cli
+    command: usr/bin/openvireo-cli
     extensions: [kde-neon]
     plugs: [home, removable-media, raw-usb]
   proxy:
-    command: usr/bin/keepassxc-proxy
+    command: usr/bin/openvireo-proxy
     extensions: [kde-neon]
 
 plugs:
   browser-native-messaging:
     interface: personal-files
     write:
-      - $HOME/.mozilla/native-messaging-hosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.config/chromium/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.config/google-chrome/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.config/microsoft-edge/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.config/vivaldi/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.bonganimbigi.keepassxc_browser.json
-      - $HOME/.local/share/torbrowser/tbb/x86_64/tor-browser_en-US/Browser/TorBrowser/Data/Browser/.mozilla/native-messaging-hosts/com.bonganimbigi.keepassxc_browser.json
+      - $HOME/.mozilla/native-messaging-hosts/com.openvireo.browser.json
+      - $HOME/.config/chromium/NativeMessagingHosts/com.openvireo.browser.json
+      - $HOME/.config/google-chrome/NativeMessagingHosts/com.openvireo.browser.json
+      - $HOME/.config/microsoft-edge/NativeMessagingHosts/com.openvireo.browser.json
+      - $HOME/.config/vivaldi/NativeMessagingHosts/com.openvireo.browser.json
+      - $HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.openvireo.browser.json
+      - $HOME/.local/share/torbrowser/tbb/x86_64/tor-browser_en-US/Browser/TorBrowser/Data/Browser/.mozilla/native-messaging-hosts/com.openvireo.browser.json
 
 slots:
   session-dbus-interface:
     interface: dbus
-    name: com.bonganimbigi.KeePassXC.MainWindow
+    name: com.openvireo.OpenVireo.MainWindow
     bus: session
 
 parts:
-  keepassxc:
+  openvireo:
     source: .
     plugin: cmake
-    parse-info: [usr/share/metainfo/com.bonganimbigi.KeePassXC.appdata.xml]
+    parse-info: [usr/share/metainfo/com.openvireo.OpenVireo.appdata.xml]
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr

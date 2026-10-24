@@ -5,7 +5,7 @@
 : ${KDBX_SEARCH:=~/.KeePass/*.kdbx}
 
 PROG=${0##*/}
-KEEPASSXC=$(which -a keepassxc | sed -e "\\,$0,d" -e 'q')
+KEEPASSXC=$(which -a openvireo | sed -e "\\,$0,d" -e 'q')
 
 daemon_main() {
   # open kdewallet
@@ -19,7 +19,7 @@ daemon_main() {
     DBs[$(realpath $DBPATH)]=$(qdbus6 org.kde.kwalletd6 /modules/kwalletd6 readPassword "$handle" "Passwords" "${DBPATH##*/}" "$PROG")
   done
 
-  # launch real keepassxc
+  # launch real openvireo
   IFS=$'\n\n\n'
   "$KEEPASSXC" --pw-stdin "${!DBs[@]}" <<<"${DBs[*]}" &
 
