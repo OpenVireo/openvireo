@@ -1793,7 +1793,7 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
 QString DatabaseWidget::missingTokenMessage(const RemoteParams& params)
 {
     if (params.type == RemoteParams::Type::AccountVault) {
-        return tr("Sign in to your KeePassXC account to sync %1.").arg(params.name);
+        return tr("Sign in to your OpenVireo account to sync %1.").arg(params.name);
     }
     return tr("This device has no access token for %1 yet. Enter one in the Remote Sync settings.").arg(params.name);
 }
@@ -3444,7 +3444,7 @@ bool DatabaseWidget::save()
         // Saving failed 3 times, issue a warning and attempt to resolve
         auto result = MessageBox::question(this,
                                            tr("Disable safe saves?"),
-                                           tr("KeePassXC has failed to save the database multiple times. "
+                                           tr("OpenVireo has failed to save the database multiple times. "
                                               "This is likely caused by file sync services holding a lock on "
                                               "the save file.\nDisable safe saves and try again?"),
                                            MessageBox::Disable | MessageBox::Cancel,

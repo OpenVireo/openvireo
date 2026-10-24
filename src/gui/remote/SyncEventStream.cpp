@@ -130,7 +130,7 @@ void SyncEventStream::openConnection(const QString& token)
     }
     QNetworkRequest request(SyncServerClient::endpoint(m_params, "events"));
     request.setRawHeader("Authorization", "Bearer " + token.trimmed().toUtf8());
-    request.setRawHeader("User-Agent", "KeePassXC");
+    request.setRawHeader("User-Agent", "OpenVireo");
     request.setRawHeader("Accept", "text/event-stream");
     // Never follow redirects, they could forward the access token to another host
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);

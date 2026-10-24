@@ -240,7 +240,7 @@ namespace
             CFRelease(update);
             if (status == errSecItemNotFound) {
                 CFDictionarySetValue(query, kSecValueData, data);
-                CFDictionarySetValue(query, kSecAttrLabel, CFSTR("KeePassXC sync server access token"));
+                CFDictionarySetValue(query, kSecAttrLabel, CFSTR("OpenVireo sync server access token"));
                 status = SecItemAdd(query, nullptr);
             }
             CFRelease(query);
@@ -268,7 +268,7 @@ namespace
                 kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
             const auto account = key.toCFString();
             CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword);
-            CFDictionarySetValue(query, kSecAttrService, CFSTR("KeePassXC Sync"));
+            CFDictionarySetValue(query, kSecAttrService, CFSTR("OpenVireo Sync"));
             CFDictionarySetValue(query, kSecAttrAccount, account);
             CFDictionarySetValue(query, kSecAttrSynchronizable, kCFBooleanFalse);
             CFRelease(account);
@@ -302,11 +302,11 @@ namespace
             CREDENTIALW credential = {};
             credential.Type = CRED_TYPE_GENERIC;
             credential.TargetName = const_cast<LPWSTR>(name.c_str());
-            credential.Comment = const_cast<LPWSTR>(L"KeePassXC sync server access token");
+            credential.Comment = const_cast<LPWSTR>(L"OpenVireo sync server access token");
             credential.CredentialBlobSize = static_cast<DWORD>(bytes.size());
             credential.CredentialBlob = reinterpret_cast<LPBYTE>(bytes.data());
             credential.Persist = CRED_PERSIST_LOCAL_MACHINE;
-            credential.UserName = const_cast<LPWSTR>(L"KeePassXC");
+            credential.UserName = const_cast<LPWSTR>(L"OpenVireo");
             return CredWriteW(&credential, 0);
         }
 
@@ -323,7 +323,7 @@ namespace
     private:
         static std::wstring target(const QString& key)
         {
-            return QStringLiteral("KeePassXC Sync/%1").arg(key).toStdWString();
+            return QStringLiteral("OpenVireo Sync/%1").arg(key).toStdWString();
         }
     };
 #endif

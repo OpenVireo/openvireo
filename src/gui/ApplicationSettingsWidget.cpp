@@ -303,7 +303,7 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     entries->addSetting(ui->faviconTimeoutLabel, ui->faviconTimeoutSpinBox);
 
     auto appearance = page.addSection(ui->generalGroup);
-    appearance->addSetting(ui->languageLabel_2, ui->languageComboBox, tr("Takes effect after restarting KeePassXC"));
+    appearance->addSetting(ui->languageLabel_2, ui->languageComboBox, tr("Takes effect after restarting OpenVireo"));
     appearance->addSetting(ui->appThemeLabel, ui->appThemeComboBox);
     appearance->addSetting(ui->fontSizeLabel, ui->fontSizeComboBox);
     appearance->addToggle(ui->menubarShowCheckBox);
@@ -632,7 +632,7 @@ void ApplicationSettingsWidget::saveSettings()
         config()->get(Config::AutoTypePreferDesktopPortals).toBool() != preferDesktopPortals;
     if (preferDesktopPortalsChanged) {
         getMainWindow()->displayGlobalMessage(
-            tr("Restart KeePassXC to apply the Auto-Type desktop portals preference."), MessageWidget::Information);
+            tr("Restart OpenVireo to apply the Auto-Type desktop portals preference."), MessageWidget::Information);
     }
     config()->set(Config::AutoTypePreferDesktopPortals, preferDesktopPortals);
     config()->set(Config::AutoTypeDesktopPortalPersistConnection,
@@ -781,7 +781,7 @@ void ApplicationSettingsWidget::resetSettings()
 
 void ApplicationSettingsWidget::importSettings()
 {
-    auto file = fileDialog()->getOpenFileName(this, tr("Import KeePassXC Settings"), {}, "*.ini");
+    auto file = fileDialog()->getOpenFileName(this, tr("Import OpenVireo Settings"), {}, "*.ini");
     if (file.isEmpty()) {
         return;
     }
@@ -798,7 +798,7 @@ void ApplicationSettingsWidget::importSettings()
 
 void ApplicationSettingsWidget::exportSettings()
 {
-    auto file = fileDialog()->getSaveFileName(this, tr("Export KeePassXC Settings"), {}, "*.ini");
+    auto file = fileDialog()->getSaveFileName(this, tr("Export OpenVireo Settings"), {}, "*.ini");
     if (file.isEmpty()) {
         return;
     }

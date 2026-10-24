@@ -38,7 +38,7 @@ QString EmergencyKit::html() const
         return "<tr><td><b>" + label.toHtmlEscaped() + "</b></td><td>" + value + "</td></tr>";
     };
     QString html;
-    html += "<h1>" + tr("KeePassXC Emergency Kit").toHtmlEscaped() + "</h1>";
+    html += "<h1>" + tr("OpenVireo Emergency Kit").toHtmlEscaped() + "</h1>";
     html += "<p>"
             + tr("Created %1. Print it or keep it somewhere safe, away from your devices.").arg(created).toHtmlEscaped()
             + "</p>";
@@ -54,11 +54,11 @@ QString EmergencyKit::html() const
          {tr("Signing in on a new device takes your master password and this Secret Key."),
           tr("Your vaults are encrypted with both, on your devices. The server has neither and can't reset them: if "
              "you lose both this kit and every signed-in device, your vaults can't be recovered."),
-          tr("Write your master password on the line by hand if you want to; KeePassXC never stores it.")}) {
+          tr("Write your master password on the line by hand if you want to; OpenVireo never stores it.")}) {
         html += "<li>" + point.toHtmlEscaped() + "</li>";
     }
     html += "</ul><p><small>"
-            + tr("Never share this kit or enter the Secret Key anywhere but in KeePassXC.").toHtmlEscaped()
+            + tr("Never share this kit or enter the Secret Key anywhere but in OpenVireo.").toHtmlEscaped()
             + "</small></p>";
     return html;
 }
@@ -69,8 +69,8 @@ bool EmergencyKit::writePdf(const QString& filePath, QString* error) const
         // The file is complete once the writer is gone
         QPdfWriter writer(filePath);
         writer.setPageSize(QPageSize(QPageSize::A4));
-        writer.setTitle(tr("KeePassXC Emergency Kit"));
-        writer.setCreator(QStringLiteral("KeePassXC"));
+        writer.setTitle(tr("OpenVireo Emergency Kit"));
+        writer.setCreator(QStringLiteral("OpenVireo"));
         QTextDocument document;
         document.setHtml(html());
         document.print(&writer);

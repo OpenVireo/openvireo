@@ -2,8 +2,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About KeePassXC</source>
-        <translation>حَولَ KeePassXC</translation>
+        <source>About OpenVireo</source>
+        <translation>حَولَ OpenVireo</translation>
     </message>
     <message>
         <source>About</source>
@@ -14,8 +14,8 @@
         <translation>للإبلاغ عن العلل: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
-        <source>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
-        <translation>يتم توزيع KeePassXC بمُوجة شُروط رخصة GNU العمومية (GPL) الإصار الثاني (حسب اختيارك) الإصدار الثالث.</translation>
+        <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
+        <translation>يتم توزيع OpenVireo بمُوجة شُروط رخصة GNU العمومية (GPL) الإصار الثاني (حسب اختيارك) الإصدار الثالث.</translation>
     </message>
     <message>
         <source>Project Maintainers:</source>
@@ -49,8 +49,8 @@
 <context>
     <name>AccessControlDialog</name>
     <message>
-        <source>KeePassXC -  Access Request</source>
-        <translation>KeePassXC - طلب الوصول</translation>
+        <source>OpenVireo -  Access Request</source>
+        <translation>OpenVireo - طلب الوصول</translation>
     </message>
     <message>
         <source>Non-existing/inaccessible executable path. Please double-check the client is legit.</source>
@@ -81,7 +81,7 @@
         <translation>التفاصيل</translation>
     </message>
     <message>
-        <source>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</source>
+        <source>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</source>
         <translation>سيتم تذكر قرارك طوال المدة أثناء تشغيل كِلا من العميل الطالب وKeePassXC.</translation>
     </message>
     <message>
@@ -249,16 +249,16 @@
         <translation>هل أنت متأكد أنك تريد تصفير كافة الإعدادات إلى الوضع الافتراضي؟</translation>
     </message>
     <message>
-        <source>Import KeePassXC Settings</source>
-        <translation>استورد إعدادات KeePassXC</translation>
+        <source>Import OpenVireo Settings</source>
+        <translation>استورد إعدادات OpenVireo</translation>
     </message>
     <message>
         <source>Failed to import settings from %1, not a valid settings file.</source>
         <translation>فشل استيراد الإعدادات من %1، ملف إعدادات غير صالح.</translation>
     </message>
     <message>
-        <source>Export KeePassXC Settings</source>
-        <translation>صدّر إعدادات KeePassXC</translation>
+        <source>Export OpenVireo Settings</source>
+        <translation>صدّر إعدادات OpenVireo</translation>
     </message>
     <message>
         <source>Small</source>
@@ -285,7 +285,7 @@
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>Restart KeePassXC to apply the Auto-Type desktop portals preference.</source>
+        <source>Restart OpenVireo to apply the Auto-Type desktop portals preference.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -300,12 +300,12 @@
         <translation>بدء التشغيل</translation>
     </message>
     <message>
-        <source>Start only a single instance of KeePassXC</source>
-        <translation>شغّل تطبيق واحد فقط من KeePassXC</translation>
+        <source>Start only a single instance of OpenVireo</source>
+        <translation>شغّل تطبيق واحد فقط من OpenVireo</translation>
     </message>
     <message>
-        <source>Automatically launch KeePassXC at system startup</source>
-        <translation>شغّل KeePassXC تلقائيًا عند بدء تشغيل النظام</translation>
+        <source>Automatically launch OpenVireo at system startup</source>
+        <translation>شغّل OpenVireo تلقائيًا عند بدء تشغيل النظام</translation>
     </message>
     <message>
         <source>Minimize window at application startup</source>
@@ -778,13 +778,13 @@
         <translation>إذن السماح مطلوب</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation> KeePassXC يطلب إذن السماح بالدخول لإنجاز التغييرات المبدئية وفق الكتابة التلقائية . إذا كنت قد أعطيت الإذن بالسماح 
- فقد يستوجب منك ذلك إعادة تشغيل  KeePassXC   </translation>
+        <source>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation> OpenVireo يطلب إذن السماح بالدخول لإنجاز التغييرات المبدئية وفق الكتابة التلقائية . إذا كنت قد أعطيت الإذن بالسماح 
+ فقد يستوجب منك ذلك إعادة تشغيل  OpenVireo   </translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>KeePassXC يتطلب إذن إمكانية الوصول ومسجل الشاشة من أجل إجراء الكتابة التلقائية العالمية. تسجيل الشاشة ضروري لاستخدام عنوان النافذة للعثور على الإدخالات. إذا كنت قد منحت الإذن بالفعل، فقد تضطر إلى إعادة تشغيل KeePassXC.</translation>
+        <source>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>OpenVireo يتطلب إذن إمكانية الوصول ومسجل الشاشة من أجل إجراء الكتابة التلقائية العالمية. تسجيل الشاشة ضروري لاستخدام عنوان النافذة للعثور على الإدخالات. إذا كنت قد منحت الإذن بالفعل، فقد تضطر إلى إعادة تشغيل OpenVireo.</translation>
     </message>
     <message>
         <source>Invalid entry provided</source>
@@ -890,8 +890,8 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - KeePassXC</source>
-        <translation>الكتابة التلقائية  - KeePassXC</translation>
+        <source>Auto-Type - OpenVireo</source>
+        <translation>الكتابة التلقائية  - OpenVireo</translation>
     </message>
     <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
@@ -983,7 +983,7 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
 <context>
     <name>BrowserAccessControlDialog</name>
     <message>
-        <source>KeePassXC - Browser Access Request</source>
+        <source>OpenVireo - Browser Access Request</source>
         <translation>KEEPASSXC - طلب الوصول إلى المتصفح</translation>
     </message>
     <message>
@@ -1036,8 +1036,8 @@ Please select the correct database for saving credentials.</source>
 الرجاء إختيار قاعدة البيانات الصحيحة لحفظ المسوغات </translation>
     </message>
     <message>
-        <source>KeePassXC - Select Database</source>
-        <translation>KeePassXC - حدّد قاعدة البيانات</translation>
+        <source>OpenVireo - Select Database</source>
+        <translation>OpenVireo - حدّد قاعدة البيانات</translation>
     </message>
 </context>
 <context>
@@ -1075,8 +1075,8 @@ Please select the correct database for saving credentials.</source>
         <translation>اسم المستخدم: %1</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - بيانات اعتماد مفتاح المرور</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - بيانات اعتماد مفتاح المرور</translation>
     </message>
     <message>
         <source>Add to existing entry</source>
@@ -1148,27 +1148,27 @@ Do you want to delete the entry?
         <translation>%1 (مفتاح مرور)</translation>
     </message>
     <message>
-        <source>KeePassXC - Create a new group</source>
-        <translation>KeePassXC - أنشِئ مجموعة جديدة</translation>
+        <source>OpenVireo - Create a new group</source>
+        <translation>OpenVireo - أنشِئ مجموعة جديدة</translation>
     </message>
     <message>
         <source>Disable</source>
         <translation>تعطيل</translation>
     </message>
     <message>
-        <source>KeePassXC - Overwrite existing key?</source>
+        <source>OpenVireo - Overwrite existing key?</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>KeePassXC - Update Entry</source>
-        <translation>KeePassXC - حدّث الإدخال</translation>
+        <source>OpenVireo - Update Entry</source>
+        <translation>OpenVireo - حدّث الإدخال</translation>
     </message>
     <message>
-        <source>KeePassXC - Delete entry</source>
-        <translation>KeePassXC - احذف المُدخل</translation>
+        <source>OpenVireo - Delete entry</source>
+        <translation>OpenVireo - احذف المُدخل</translation>
     </message>
     <message>
-        <source>KeePassXC - New key association request</source>
+        <source>OpenVireo - New key association request</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1176,15 +1176,15 @@ Do you want to delete the entry?
         <translation>مفتاح المرور</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - بيانات اعتماد مفتاح المرور</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - بيانات اعتماد مفتاح المرور</translation>
     </message>
     <message>
         <source>Register a new passkey to this entry:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>KeePassXC - Update passkey</source>
+        <source>OpenVireo - Update passkey</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1204,8 +1204,8 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <translation>الحوار</translation>
     </message>
     <message>
-        <source>This is required for accessing your databases with KeePassXC-Browser</source>
-        <translation>هذا مطلوب للوصول إلى قواعد بياناتك مع KeePassXC-Browser</translation>
+        <source>This is required for accessing your databases with OpenVireo Browser</source>
+        <translation>هذا مطلوب للوصول إلى قواعد بياناتك مع OpenVireo Browser</translation>
     </message>
     <message>
         <source>Enable browser integration</source>
@@ -1325,8 +1325,8 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <translation>لا تسئل في ترحيل إعدادات KeePassHTTP.</translation>
     </message>
     <message>
-        <source>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</source>
-        <translation>تحديثات مسارات KeePassXC أو keepassxc-proxy تلقائيًا لبرامج المراسلات الأصلية عند بدء التشغيل.</translation>
+        <source>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</source>
+        <translation>تحديثات مسارات OpenVireo أو openvireo-proxy تلقائيًا لبرامج المراسلات الأصلية عند بدء التشغيل.</translation>
     </message>
     <message>
         <source>Update native messaging manifest files at startup</source>
@@ -1403,7 +1403,7 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <translation>حدد موقع مجلد لإستاضفة الأصلي للمراسلة</translation>
     </message>
     <message>
-        <source>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</source>
+        <source>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1435,8 +1435,8 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
-        <translation>يلزم وجود KeePassXC-Browser لكي يعمل تكامل المتصفح. &lt;br /&gt;نزله لـ %1 و %2 و %3.</translation>
+        <source>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
+        <translation>يلزم وجود OpenVireo Browser لكي يعمل تكامل المتصفح. &lt;br /&gt;نزله لـ %1 و %2 و %3.</translation>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
@@ -1673,15 +1673,15 @@ Backup database located at %2</source>
 <context>
     <name>DatabaseOpenDialog</name>
     <message>
-        <source>Unlock Database - KeePassXC</source>
-        <translation>افتح قاعدة البيانات - KeePassXC</translation>
+        <source>Unlock Database - OpenVireo</source>
+        <translation>افتح قاعدة البيانات - OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>DatabaseOpenWidget</name>
     <message>
-        <source>Unlock KeePassXC Database</source>
-        <translation>افتح قاعدة بيانات KeePassXC</translation>
+        <source>Unlock OpenVireo Database</source>
+        <translation>افتح قاعدة بيانات OpenVireo</translation>
     </message>
     <message>
         <source>Enter Password:</source>
@@ -1729,19 +1729,19 @@ Backup database located at %2</source>
     </message>
     <message>
         <source>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</source>
+We recommend you update your OpenVireo installation.</source>
         <translation>كانت قاعدة البيانات التي تحاول فتحها على الأرجح
-تم إنشاؤه بواسطة إصدار أحدث من KeePassXC.
+تم إنشاؤه بواسطة إصدار أحدث من OpenVireo.
 
 يمكنك محاولة فتحه على أي حال ، لكنه قد يكون غير مكتمل
 وحفظ أي تغييرات قد يؤدي إلى فقدان البيانات.
 
-نوصيك بتحديث تثبيت KeePassXC الخاص بك.</translation>
+نوصيك بتحديث تثبيت OpenVireo الخاص بك.</translation>
     </message>
     <message>
         <source>Open database anyway</source>
@@ -1778,7 +1778,7 @@ To prevent this error from appearing, you must go to &quot;Database Settings / S
         <translation>تنسيق ملف المفتاح قديم</translation>
     </message>
     <message>
-        <source>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
+        <source>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
         <translation>أنت تستخدم تنسيق ملف مفتاح قديم قد يقوم به KEEPASSXC&lt;br&gt;توقف عن الدعم في المستقبل.&lt;br&gt;&lt;br&gt;يرجى التفكير في إنشاء ملف مفتاح جديد بالانتقال إلى:&lt;br&gt;&lt;strong&gt;قاعدة البيانات &amp;gt; أمان قاعدة البيانات &amp;gt; تغيير ملف المفتاح.&lt;/strong&gt;&lt;br&gt;</translation>
     </message>
     <message>
@@ -1832,8 +1832,8 @@ If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;
 إذا لم يكن لديك ملف مفتاح أو لا تعرف ما هو، فلا داعي لتحديد واحد.</translation>
     </message>
     <message>
-        <source>KeePassXC database file selected</source>
-        <translation>حدّدت ملف قاعدة بيانات KeePassXC</translation>
+        <source>OpenVireo database file selected</source>
+        <translation>حدّدت ملف قاعدة بيانات OpenVireo</translation>
     </message>
     <message>
         <source>The file you selected looks like a database file.
@@ -1924,7 +1924,7 @@ Are you sure you want to continue with this file?.</source>
 <context>
     <name>DatabaseSettingsWidgetBrowser</name>
     <message>
-        <source>KeePassXC-Browser settings</source>
+        <source>OpenVireo Browser settings</source>
         <translation>إعدادات متصفح KEEPASSXC</translation>
     </message>
     <message>
@@ -1988,12 +1988,12 @@ This may prevent connection to the browser plugin.</source>
 قد يمنع هذا الاتصال بالمكون الإضافي للمتصفح.</translation>
     </message>
     <message>
-        <source>No shared encryption keys found in KeePassXC settings.</source>
-        <translation>لم يتم العثور على مفاتيح تعمية مشتركة في إعدادات KeePassXC.</translation>
+        <source>No shared encryption keys found in OpenVireo settings.</source>
+        <translation>لم يتم العثور على مفاتيح تعمية مشتركة في إعدادات OpenVireo.</translation>
     </message>
     <message numerus="yes">
-        <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
-        <translation><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التعمية %n بنجاح من إعدادات KeePassXC.</numerusform></translation>
+        <source>Successfully removed %n encryption key(s) from OpenVireo settings.</source>
+        <translation><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التشفير ٪n بنجاح من إعدادات كي باس إكس سي.</numerusform><numerusform>تمت إزالة مفتاح (مفاتيح) التعمية %n بنجاح من إعدادات OpenVireo.</numerusform></translation>
     </message>
     <message>
         <source>Do you really want forget all site-specific settings on every entry?
@@ -2028,8 +2028,8 @@ This is only necessary if your database is a copy of another and the browser ext
 يعد هذا ضروريًا فقط إذا كانت قاعدة بياناتك نسخة من أخرى ولا يمكن توصيل امتداد المتصفح.</translation>
     </message>
     <message>
-        <source>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</source>
-        <translation>تحويل صفات KeePassHTTP القديمة إلى بيانات مخصّصة متوافقة مع KeePassXC-Browser</translation>
+        <source>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</source>
+        <translation>تحويل صفات KeePassHTTP القديمة إلى بيانات مخصّصة متوافقة مع OpenVireo Browser</translation>
     </message>
     <message>
         <source>No keys found</source>
@@ -2843,9 +2843,9 @@ Save changes?</source>
         <translation>هل تريد تعطيل الحفظ الآمن؟</translation>
     </message>
     <message>
-        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <source>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</source>
-        <translation>KeePassXC قد فشل في حفظ قاعدة البيانات عدة مرات. هذا غالبا ما يحدث بسبب خدمات مزامنة الملف حيث تقوم بمنع الكتابة على الملف.
+        <translation>OpenVireo قد فشل في حفظ قاعدة البيانات عدة مرات. هذا غالبا ما يحدث بسبب خدمات مزامنة الملف حيث تقوم بمنع الكتابة على الملف.
 أتريد إلغاء خيار الحفظ الامن ثم المحاولة مرة أخرى؟</translation>
     </message>
     <message>
@@ -3756,9 +3756,9 @@ Would you like to correct it?</source>
         <translation>مزامنة</translation>
     </message>
     <message>
-        <source>Your KeePassXC version does not support sharing this container type.
+        <source>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</source>
-        <translation>إصدار KeePassXC الخاص بك لا يدعم مشاركة هذا النوع من الحاوية.
+        <translation>إصدار OpenVireo الخاص بك لا يدعم مشاركة هذا النوع من الحاوية.
 الامتداد المدعومة هي: %1.</translation>
     </message>
     <message>
@@ -4724,7 +4724,7 @@ This will leave your passwords and sensitive information vulnerable!
 <context>
     <name>GlobalShortcutsPortal</name>
     <message>
-        <source>KeePassXC - Global Shortcuts</source>
+        <source>OpenVireo - Global Shortcuts</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -5698,8 +5698,8 @@ If this reoccurs, then your database file may be corrupt.</source>
         <translation>تنسيق ملف المفتاح قديم</translation>
     </message>
     <message>
-        <source>You selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
-        <translation>لقد قمت بتحديد ملف مفتاح بتنسيق قديم قد يتوقف KeePassXC&lt;br&gt; عن دعمه في المستقبل.&lt;br&gt;&lt;br&gt;يُرجى التفكير في إنشاء ملف مفتاح جديد بدلاً من ذلك.</translation>
+        <source>You selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
+        <translation>لقد قمت بتحديد ملف مفتاح بتنسيق قديم قد يتوقف OpenVireo&lt;br&gt; عن دعمه في المستقبل.&lt;br&gt;&lt;br&gt;يُرجى التفكير في إنشاء ملف مفتاح جديد بدلاً من ذلك.</translation>
     </message>
     <message>
         <source>Error loading the key file '%1'
@@ -6148,8 +6148,8 @@ Are you sure you want to continue with this file?</source>
         <translation>التحقق من وجود تحديثات عند بدء التشغيل؟</translation>
     </message>
     <message>
-        <source>Would you like KeePassXC to check for updates on startup?</source>
-        <translation>هل ترغب في أن يقوم KeePassXC بالتحقق من التحديثات عند بدء التشغيل؟</translation>
+        <source>Would you like OpenVireo to check for updates on startup?</source>
+        <translation>هل ترغب في أن يقوم OpenVireo بالتحقق من التحديثات عند بدء التشغيل؟</translation>
     </message>
     <message>
         <source>You can always check for updates manually from the application menu.</source>
@@ -6160,8 +6160,8 @@ Are you sure you want to continue with this file?</source>
         <translation>تبديل النافذة</translation>
     </message>
     <message>
-        <source>Quit KeePassXC</source>
-        <translation>إغلاق KeePassXC</translation>
+        <source>Quit OpenVireo</source>
+        <translation>إغلاق OpenVireo</translation>
     </message>
     <message numerus="yes">
         <source>%1 Entry(s)</source>
@@ -6468,7 +6468,7 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of KeePassXC.
+        <source>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</source>
         <translation type="unfinished"/>
@@ -6673,8 +6673,8 @@ This version is not meant for production use.</source>
 <context>
     <name>NewDatabaseWizard</name>
     <message>
-        <source>Create a new KeePassXC database…</source>
-        <translation>أنشئ قاعدة بيانات KeePassXC جديدة…</translation>
+        <source>Create a new OpenVireo database…</source>
+        <translation>أنشئ قاعدة بيانات OpenVireo جديدة…</translation>
     </message>
     <message>
         <source>Root</source>
@@ -6948,8 +6948,8 @@ This version is not meant for production use.</source>
 <context>
     <name>PasskeyExportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Export</source>
-        <translation>KeePassXC - تصدير Passkey</translation>
+        <source>OpenVireo - Passkey Export</source>
+        <translation>OpenVireo - تصدير Passkey</translation>
     </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
@@ -7004,7 +7004,7 @@ Do you want to overwrite it?
 <context>
     <name>PasskeyImportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Import</source>
+        <source>OpenVireo - Passkey Import</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -7136,8 +7136,8 @@ The following data is missing:
         <translation>تم تعيين كلمة المرور، انقر للتغيير أو الإزالة</translation>
     </message>
     <message>
-        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;كلمة المرور هي الطريقة الأساسية لتأمين قاعدة بياناتك.&lt;/p&gt;&lt;p&gt;كلمات المرور الجيدة طويلة وفريدة من نوعها. يمكن لـ KeePassXC إنشاء واحد لك.&lt;/p&gt;</translation>
+        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;كلمة المرور هي الطريقة الأساسية لتأمين قاعدة بياناتك.&lt;/p&gt;&lt;p&gt;كلمات المرور الجيدة طويلة وفريدة من نوعها. يمكن لـ OpenVireo إنشاء واحد لك.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Passwords do not match.</source>
@@ -7492,8 +7492,8 @@ Do you want to overwrite it?</source>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>KeePassXC - Pick Characters</source>
-        <translation>KeePassXC - اختر الحروف</translation>
+        <source>OpenVireo - Pick Characters</source>
+        <translation>OpenVireo - اختر الحروف</translation>
     </message>
     <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
@@ -7589,8 +7589,8 @@ Do you want to overwrite it?</source>
         <translation>فشل تعمية الرسالة.</translation>
     </message>
     <message>
-        <source>KeePassXC association failed, try again</source>
-        <translation>تعذر إرتباط KeePassXC، حاول مرة أخرى</translation>
+        <source>OpenVireo association failed, try again</source>
+        <translation>تعذر إرتباط OpenVireo، حاول مرة أخرى</translation>
     </message>
     <message>
         <source>Encryption key is not recognized</source>
@@ -8678,11 +8678,11 @@ Available commands:
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>WARNING: You are using an old key file format which KeePassXC may
+        <source>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</source>
-        <translation>تحذير: أنت تستخدم تنسيق ملف مفتاح قديم قد يتوقف KeePassXC
+        <translation>تحذير: أنت تستخدم تنسيق ملف مفتاح قديم قد يتوقف OpenVireo
 عن دعمة في المستقبل.
 
 يُرجى النظر في إنشاء ملف مفتاح جديد.</translation>
@@ -9059,8 +9059,8 @@ Kernel: %3 %4</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>KeePassXC - cross-platform password manager</source>
-        <translation>KeePassXC - مدير كلمات المرور لعدة أنظمة</translation>
+        <source>OpenVireo - cross-platform password manager</source>
+        <translation>OpenVireo - مدير كلمات المرور لعدة أنظمة</translation>
     </message>
     <message>
         <source>filenames of the password databases to open (*.kdbx)</source>
@@ -9091,20 +9091,20 @@ Kernel: %3 %4</source>
         <translation>فشل قفل قاعدة البيانات.</translation>
     </message>
     <message>
-        <source>Another instance of KeePassXC is already running.</source>
-        <translation>نسخة أخرى من KeePassXC قيد التشغيل.</translation>
+        <source>Another instance of OpenVireo is already running.</source>
+        <translation>نسخة أخرى من OpenVireo قيد التشغيل.</translation>
     </message>
     <message>
-        <source>KeePassXC is not running. No open database to lock</source>
-        <translation>KeePassXC لا يعمل. لا توجد قاعدة بيانات مفتوحة لقفلها</translation>
+        <source>OpenVireo is not running. No open database to lock</source>
+        <translation>OpenVireo لا يعمل. لا توجد قاعدة بيانات مفتوحة لقفلها</translation>
     </message>
     <message>
         <source>Fatal error while testing the cryptographic functions.</source>
         <translation>خطأ فادح أثناء اختبار وظائف التشفير.</translation>
     </message>
     <message>
-        <source>KeePassXC - Error</source>
-        <translation>KeePassXC - خطأ</translation>
+        <source>OpenVireo - Error</source>
+        <translation>OpenVireo - خطأ</translation>
     </message>
     <message>
         <source>Database password: </source>
@@ -9226,7 +9226,7 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>Failed to init KeePassXC crypto.</source>
+        <source>Failed to init OpenVireo crypto.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9747,8 +9747,8 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation>أظهِر أيضًا الإدخالات التي تم استبعادها من التقارير</translation>
     </message>
     <message>
-        <source>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
-        <translation>لا يحتوي هذا الإصدار من KeePassXC على وظائف الشبكة. يلزم الاتصال بالشبكة للتحقق من كلمات مرورك في قواعد بيانات Have I Been Pwned.</translation>
+        <source>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
+        <translation>لا يحتوي هذا الإصدار من OpenVireo على وظائف الشبكة. يلزم الاتصال بالشبكة للتحقق من كلمات مرورك في قواعد بيانات Have I Been Pwned.</translation>
     </message>
     <message>
         <source>Congratulations, no exposed passwords!</source>
@@ -10216,8 +10216,8 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation>خيارات</translation>
     </message>
     <message>
-        <source>Enable KeepassXC Freedesktop.org Secret Service integration</source>
-        <translation>فعّل دمج الخدمة السرية Freedesktop.org في KeepassXC</translation>
+        <source>Enable OpenVireo Freedesktop.org Secret Service integration</source>
+        <translation>فعّل دمج الخدمة السرية Freedesktop.org في OpenVireo</translation>
     </message>
     <message>
         <source>General</source>
@@ -10582,19 +10582,19 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>حدث خطأ أثناء محاولة استرداد معلومات التحديث، يُرجى المحاولة مرة أخرى لاحقًا.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;تتوفر نسخة جديدة.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 يمكن &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;تنزيلها هنا&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;تتوفر نسخة جديدة.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 يمكن &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;تنزيلها هنا&lt;/a&gt;.</translation>
     </message>
     <message>
-        <source>You have the latest version of KeePassXC</source>
-        <translation>لديك أحدث إصدار من KeePassXC</translation>
+        <source>You have the latest version of OpenVireo</source>
+        <translation>لديك أحدث إصدار من OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Start storing your passwords securely in a KeePassXC database</source>
-        <translation>إبدأ بتخزين كلمات مرورك بأمان في قاعدة بيانات KeePassXC</translation>
+        <source>Start storing your passwords securely in an OpenVireo database</source>
+        <translation>إبدأ بتخزين كلمات مرورك بأمان في قاعدة بيانات OpenVireo</translation>
     </message>
     <message>
         <source>Recent databases</source>
@@ -10605,8 +10605,8 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>افتح قاعدة بيانات حديثة</translation>
     </message>
     <message>
-        <source>Welcome to KeePassXC %1</source>
-        <translation>مرحبا بك في KeePassXC %1</translation>
+        <source>Welcome to OpenVireo %1</source>
+        <translation>مرحبا بك في OpenVireo %1</translation>
     </message>
     <message>
         <source>Create Database</source>

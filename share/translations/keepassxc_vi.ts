@@ -2,8 +2,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About KeePassXC</source>
-        <translation>Về KeePassXC</translation>
+        <source>About OpenVireo</source>
+        <translation>Về OpenVireo</translation>
     </message>
     <message>
         <source>About</source>
@@ -14,8 +14,8 @@
         <translation>Báo cáo lỗi tại: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
-        <source>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
-        <translation>KeePassXC được phân phối theo các điều khoản của Giấy phép Công cộng GNU (GPL) phiên bản 2 hoặc (tùy chọn của bạn) phiên bản 3.</translation>
+        <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
+        <translation>OpenVireo được phân phối theo các điều khoản của Giấy phép Công cộng GNU (GPL) phiên bản 2 hoặc (tùy chọn của bạn) phiên bản 3.</translation>
     </message>
     <message>
         <source>Project Maintainers:</source>
@@ -49,8 +49,8 @@
 <context>
     <name>AccessControlDialog</name>
     <message>
-        <source>KeePassXC -  Access Request</source>
-        <translation>KeePassXC - Yêu cầu truy cập</translation>
+        <source>OpenVireo -  Access Request</source>
+        <translation>OpenVireo - Yêu cầu truy cập</translation>
     </message>
     <message>
         <source>Non-existing/inaccessible executable path. Please double-check the client is legit.</source>
@@ -81,8 +81,8 @@
         <translation>Chi tiết</translation>
     </message>
     <message>
-        <source>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</source>
-        <translation>Quyết định của bạn sẽ được ghi nhớ trong suốt thời gian cả ứng dụng yêu cầu VÀ KeePassXC đang chạy.</translation>
+        <source>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</source>
+        <translation>Quyết định của bạn sẽ được ghi nhớ trong suốt thời gian cả ứng dụng yêu cầu VÀ OpenVireo đang chạy.</translation>
     </message>
     <message>
         <source>Remember</source>
@@ -249,16 +249,16 @@
         <translation>Bạn có chắc chắn muốn đặt lại tất cả cài đặt về mặc định không?</translation>
     </message>
     <message>
-        <source>Import KeePassXC Settings</source>
-        <translation>Nhập cài đặt KeePassXC</translation>
+        <source>Import OpenVireo Settings</source>
+        <translation>Nhập cài đặt OpenVireo</translation>
     </message>
     <message>
         <source>Failed to import settings from %1, not a valid settings file.</source>
         <translation>Không thể nhập cài đặt từ %1, không phải tệp cài đặt hợp lệ.</translation>
     </message>
     <message>
-        <source>Export KeePassXC Settings</source>
-        <translation>Xuất cài đặt KeePassXC</translation>
+        <source>Export OpenVireo Settings</source>
+        <translation>Xuất cài đặt OpenVireo</translation>
     </message>
     <message>
         <source>Small</source>
@@ -285,7 +285,7 @@
         <translation type="unfinished"/>
     </message>
     <message>
-        <source>Restart KeePassXC to apply the Auto-Type desktop portals preference.</source>
+        <source>Restart OpenVireo to apply the Auto-Type desktop portals preference.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -300,12 +300,12 @@
         <translation>Khởi động</translation>
     </message>
     <message>
-        <source>Start only a single instance of KeePassXC</source>
-        <translation>Chỉ khởi động một phiên bản KeePassXC</translation>
+        <source>Start only a single instance of OpenVireo</source>
+        <translation>Chỉ khởi động một phiên bản OpenVireo</translation>
     </message>
     <message>
-        <source>Automatically launch KeePassXC at system startup</source>
-        <translation>Tự động khởi chạy KeePassXC khi hệ thống khởi động</translation>
+        <source>Automatically launch OpenVireo at system startup</source>
+        <translation>Tự động khởi chạy OpenVireo khi hệ thống khởi động</translation>
     </message>
     <message>
         <source>Minimize window at application startup</source>
@@ -778,12 +778,12 @@
         <translation>Yêu cầu quyền</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>KeePassXC yêu cầu quyền Trợ năng để thực hiện Tự động nhập cấp mục. Nếu bạn đã cấp quyền, bạn có thể phải khởi động lại KeePassXC.</translation>
+        <source>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>OpenVireo yêu cầu quyền Trợ năng để thực hiện Tự động nhập cấp mục. Nếu bạn đã cấp quyền, bạn có thể phải khởi động lại OpenVireo.</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>KeePassXC yêu cầu quyền Trợ năng và Ghi màn hình để thực hiện Tự động nhập toàn cục. Ghi màn hình cần thiết để sử dụng tiêu đề cửa sổ tìm mục. Nếu bạn đã cấp quyền, bạn có thể phải khởi động lại KeePassXC.</translation>
+        <source>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>OpenVireo yêu cầu quyền Trợ năng và Ghi màn hình để thực hiện Tự động nhập toàn cục. Ghi màn hình cần thiết để sử dụng tiêu đề cửa sổ tìm mục. Nếu bạn đã cấp quyền, bạn có thể phải khởi động lại OpenVireo.</translation>
     </message>
     <message>
         <source>Invalid entry provided</source>
@@ -889,8 +889,8 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - KeePassXC</source>
-        <translation>Tự động nhập - KeePassXC</translation>
+        <source>Auto-Type - OpenVireo</source>
+        <translation>Tự động nhập - OpenVireo</translation>
     </message>
     <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
@@ -993,8 +993,8 @@ Ctrl+Shift+4 - Sao chép URL&lt;br/&gt;
 <context>
     <name>BrowserAccessControlDialog</name>
     <message>
-        <source>KeePassXC - Browser Access Request</source>
-        <translation>KeePassXC - Yêu cầu truy cập trình duyệt</translation>
+        <source>OpenVireo - Browser Access Request</source>
+        <translation>OpenVireo - Yêu cầu truy cập trình duyệt</translation>
     </message>
     <message>
         <source>%1 is requesting access to the following entries:</source>
@@ -1046,8 +1046,8 @@ Please select the correct database for saving credentials.</source>
 Vui lòng chọn cơ sở dữ liệu chính xác để lưu thông tin đăng nhập.</translation>
     </message>
     <message>
-        <source>KeePassXC - Select Database</source>
-        <translation>KeePassXC - Chọn cơ sở dữ liệu</translation>
+        <source>OpenVireo - Select Database</source>
+        <translation>OpenVireo - Chọn cơ sở dữ liệu</translation>
     </message>
 </context>
 <context>
@@ -1085,8 +1085,8 @@ Vui lòng chọn cơ sở dữ liệu chính xác để lưu thông tin đăng n
         <translation>Tên người dùng: %1</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - Thông tin đăng nhập Passkey</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - Thông tin đăng nhập Passkey</translation>
     </message>
     <message>
         <source>Add to existing entry</source>
@@ -1160,44 +1160,44 @@ Bạn có muốn xóa mục này không?
         <translation>%1 (Passkey)</translation>
     </message>
     <message>
-        <source>KeePassXC - Create a new group</source>
-        <translation>KeePassXC - Tạo nhóm mới</translation>
+        <source>OpenVireo - Create a new group</source>
+        <translation>OpenVireo - Tạo nhóm mới</translation>
     </message>
     <message>
         <source>Disable</source>
         <translation>Tắt</translation>
     </message>
     <message>
-        <source>KeePassXC - Overwrite existing key?</source>
-        <translation>KeePassXC - Ghi đè khóa hiện có?</translation>
+        <source>OpenVireo - Overwrite existing key?</source>
+        <translation>OpenVireo - Ghi đè khóa hiện có?</translation>
     </message>
     <message>
-        <source>KeePassXC - Update Entry</source>
-        <translation>KeePassXC - Cập nhật mục</translation>
+        <source>OpenVireo - Update Entry</source>
+        <translation>OpenVireo - Cập nhật mục</translation>
     </message>
     <message>
-        <source>KeePassXC - Delete entry</source>
-        <translation>KeePassXC - Xóa mục</translation>
+        <source>OpenVireo - Delete entry</source>
+        <translation>OpenVireo - Xóa mục</translation>
     </message>
     <message>
-        <source>KeePassXC - New key association request</source>
-        <translation>KeePassXC - Yêu cầu liên kết khóa mới</translation>
+        <source>OpenVireo - New key association request</source>
+        <translation>OpenVireo - Yêu cầu liên kết khóa mới</translation>
     </message>
     <message>
         <source>Passkey</source>
         <translation>Passkey</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - Thông tin đăng nhập Passkey</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - Thông tin đăng nhập Passkey</translation>
     </message>
     <message>
         <source>Register a new passkey to this entry:</source>
         <translation>Đăng ký passkey mới cho mục này:</translation>
     </message>
     <message>
-        <source>KeePassXC - Update passkey</source>
-        <translation>KeePassXC - Cập nhật passkey</translation>
+        <source>OpenVireo - Update passkey</source>
+        <translation>OpenVireo - Cập nhật passkey</translation>
     </message>
     <message>
         <source>Entry already has a passkey.
@@ -1217,8 +1217,8 @@ Bạn có muốn ghi đè passkey trong %1 - %2 không?</translation>
         <translation>Hộp thoại</translation>
     </message>
     <message>
-        <source>This is required for accessing your databases with KeePassXC-Browser</source>
-        <translation>Điều này cần thiết để truy cập cơ sở dữ liệu của bạn bằng KeePassXC-Browser</translation>
+        <source>This is required for accessing your databases with OpenVireo Browser</source>
+        <translation>Điều này cần thiết để truy cập cơ sở dữ liệu của bạn bằng OpenVireo Browser</translation>
     </message>
     <message>
         <source>Enable browser integration</source>
@@ -1338,8 +1338,8 @@ Bạn có muốn ghi đè passkey trong %1 - %2 không?</translation>
         <translation>Không nhắc di chuyển cài đặt KeePassHTTP.</translation>
     </message>
     <message>
-        <source>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</source>
-        <translation>Tự động cập nhật đường dẫn nhị phân KeePassXC hoặc keepassxc-proxy vào script native messaging khi khởi động.</translation>
+        <source>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</source>
+        <translation>Tự động cập nhật đường dẫn nhị phân OpenVireo hoặc openvireo-proxy vào script native messaging khi khởi động.</translation>
     </message>
     <message>
         <source>Update native messaging manifest files at startup</source>
@@ -1416,8 +1416,8 @@ Bạn có muốn ghi đè passkey trong %1 - %2 không?</translation>
         <translation>Chọn vị trí thư mục native messaging host</translation>
     </message>
     <message>
-        <source>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</source>
-        <translation>Cho phép keepassxc-proxy liệt kê tất cả mục với tiêu đề, URL và UUID trong cơ sở dữ liệu được kết nối.</translation>
+        <source>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</source>
+        <translation>Cho phép openvireo-proxy liệt kê tất cả mục với tiêu đề, URL và UUID trong cơ sở dữ liệu được kết nối.</translation>
     </message>
     <message>
         <source>Allow limited access to all entries in connected databases (ignores site access restrictions)</source>
@@ -1448,8 +1448,8 @@ Bạn có muốn ghi đè passkey trong %1 - %2 không?</translation>
         <translation>Cho phép sử dụng localhost với passkey</translation>
     </message>
     <message>
-        <source>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
-        <translation>KeePassXC-Browser cần thiết để tích hợp trình duyệt hoạt động. &lt;br /&gt;Tải xuống cho %1 và %2 và %3.</translation>
+        <source>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
+        <translation>OpenVireo Browser cần thiết để tích hợp trình duyệt hoạt động. &lt;br /&gt;Tải xuống cho %1 và %2 và %3.</translation>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
@@ -1686,15 +1686,15 @@ Cơ sở dữ liệu sao lưu nằm tại %2</translation>
 <context>
     <name>DatabaseOpenDialog</name>
     <message>
-        <source>Unlock Database - KeePassXC</source>
-        <translation>Mở khóa cơ sở dữ liệu - KeePassXC</translation>
+        <source>Unlock Database - OpenVireo</source>
+        <translation>Mở khóa cơ sở dữ liệu - OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>DatabaseOpenWidget</name>
     <message>
-        <source>Unlock KeePassXC Database</source>
-        <translation>Mở khóa cơ sở dữ liệu KeePassXC</translation>
+        <source>Unlock OpenVireo Database</source>
+        <translation>Mở khóa cơ sở dữ liệu OpenVireo</translation>
     </message>
     <message>
         <source>Enter Password:</source>
@@ -1742,19 +1742,19 @@ Cơ sở dữ liệu sao lưu nằm tại %2</translation>
     </message>
     <message>
         <source>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</source>
+We recommend you update your OpenVireo installation.</source>
         <translation>Cơ sở dữ liệu bạn đang cố mở có thể
-được tạo bởi phiên bản KeePassXC mới hơn.
+được tạo bởi phiên bản OpenVireo mới hơn.
 
 Bạn có thể thử mở nó, nhưng nó có thể không đầy đủ
 và lưu bất kỳ thay đổi nào có thể gây mất dữ liệu.
 
-Chúng tôi khuyên bạn nên cập nhật KeePassXC.</translation>
+Chúng tôi khuyên bạn nên cập nhật OpenVireo.</translation>
     </message>
     <message>
         <source>Open database anyway</source>
@@ -1791,8 +1791,8 @@ Bạn có muốn thử lại với mật khẩu &quot;trống&quot; không?
         <translation>Định dạng tệp khóa cũ</translation>
     </message>
     <message>
-        <source>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
-        <translation>Bạn đang sử dụng định dạng tệp khóa cũ mà KeePassXC có thể&lt;br&gt;ngừng hỗ trợ trong tương lai.&lt;br&gt;&lt;br&gt;Vui lòng xem xét tạo tệp khóa mới bằng cách vào:&lt;br&gt;&lt;strong&gt;Cơ sở dữ liệu &amp;gt; Bảo mật cơ sở dữ liệu &amp;gt; Thay đổi tệp khóa.&lt;/strong&gt;&lt;br&gt;</translation>
+        <source>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
+        <translation>Bạn đang sử dụng định dạng tệp khóa cũ mà OpenVireo có thể&lt;br&gt;ngừng hỗ trợ trong tương lai.&lt;br&gt;&lt;br&gt;Vui lòng xem xét tạo tệp khóa mới bằng cách vào:&lt;br&gt;&lt;strong&gt;Cơ sở dữ liệu &amp;gt; Bảo mật cơ sở dữ liệu &amp;gt; Thay đổi tệp khóa.&lt;/strong&gt;&lt;br&gt;</translation>
     </message>
     <message>
         <source>Don&apos;t show this warning again</source>
@@ -1845,8 +1845,8 @@ If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;
 Nếu bạn không có tệp khóa hoặc không biết đó là gì, bạn không cần chọn.</translation>
     </message>
     <message>
-        <source>KeePassXC database file selected</source>
-        <translation>Đã chọn tệp cơ sở dữ liệu KeePassXC</translation>
+        <source>OpenVireo database file selected</source>
+        <translation>Đã chọn tệp cơ sở dữ liệu OpenVireo</translation>
     </message>
     <message>
         <source>The file you selected looks like a database file.
@@ -1936,8 +1936,8 @@ Bạn có chắc chắn muốn tiếp tục với tệp này không?.</translati
 <context>
     <name>DatabaseSettingsWidgetBrowser</name>
     <message>
-        <source>KeePassXC-Browser settings</source>
-        <translation>Cài đặt KeePassXC-Browser</translation>
+        <source>OpenVireo Browser settings</source>
+        <translation>Cài đặt OpenVireo Browser</translation>
     </message>
     <message>
         <source>Disconnect all browsers</source>
@@ -2000,11 +2000,11 @@ This may prevent connection to the browser plugin.</source>
 Điều này có thể ngăn kết nối đến plugin trình duyệt.</translation>
     </message>
     <message>
-        <source>No shared encryption keys found in KeePassXC settings.</source>
-        <translation>Không tìm thấy khóa mã hóa được chia sẻ trong cài đặt KeePassXC.</translation>
+        <source>No shared encryption keys found in OpenVireo settings.</source>
+        <translation>Không tìm thấy khóa mã hóa được chia sẻ trong cài đặt OpenVireo.</translation>
     </message>
     <message numerus="yes">
-        <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
+        <source>Successfully removed %n encryption key(s) from OpenVireo settings.</source>
         <translation type="unfinished"><numerusform></numerusform></translation>
     </message>
     <message>
@@ -2040,8 +2040,8 @@ This is only necessary if your database is a copy of another and the browser ext
 Điều này chỉ cần thiết nếu cơ sở dữ liệu của bạn là bản sao của cơ sở dữ liệu khác và tiện ích mở rộng trình duyệt không thể kết nối.</translation>
     </message>
     <message>
-        <source>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</source>
-        <translation>Chuyển đổi thuộc tính KeePassHTTP cũ sang dữ liệu tùy chỉnh tương thích với KeePassXC-Browser</translation>
+        <source>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</source>
+        <translation>Chuyển đổi thuộc tính KeePassHTTP cũ sang dữ liệu tùy chỉnh tương thích với OpenVireo Browser</translation>
     </message>
     <message>
         <source>No keys found</source>
@@ -2867,9 +2867,9 @@ Lưu thay đổi?</translation>
         <translation>Tắt lưu an toàn?</translation>
     </message>
     <message>
-        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <source>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</source>
-        <translation>KeePassXC đã không thể lưu cơ sở dữ liệu nhiều lần. Điều này có thể do dịch vụ đồng bộ tệp đang giữ khóa trên tệp lưu.
+        <translation>OpenVireo đã không thể lưu cơ sở dữ liệu nhiều lần. Điều này có thể do dịch vụ đồng bộ tệp đang giữ khóa trên tệp lưu.
 Tắt lưu an toàn và thử lại?</translation>
     </message>
     <message>
@@ -3780,9 +3780,9 @@ Bạn có muốn sửa nó không?</translation>
         <translation>Đồng bộ</translation>
     </message>
     <message>
-        <source>Your KeePassXC version does not support sharing this container type.
+        <source>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</source>
-        <translation>Phiên bản KeePassXC của bạn không hỗ trợ chia sẻ loại container này.
+        <translation>Phiên bản OpenVireo của bạn không hỗ trợ chia sẻ loại container này.
 Các phần mở rộng được hỗ trợ là: %1.</translation>
     </message>
     <message>
@@ -4744,7 +4744,7 @@ This will leave your passwords and sensitive information vulnerable!
 <context>
     <name>GlobalShortcutsPortal</name>
     <message>
-        <source>KeePassXC - Global Shortcuts</source>
+        <source>OpenVireo - Global Shortcuts</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -5725,8 +5725,8 @@ Nếu điều này xảy ra lại, tệp cơ sở dữ liệu của bạn có th
         <translation>Định dạng tệp khóa cũ</translation>
     </message>
     <message>
-        <source>You selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
-        <translation>Bạn đã chọn tệp khóa ở định dạng cũ mà KeePassXC&lt;br&gt;có thể ngừng hỗ trợ trong tương lai.&lt;br&gt;&lt;br&gt;Vui lòng xem xét tạo tệp khóa mới thay thế.</translation>
+        <source>You selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
+        <translation>Bạn đã chọn tệp khóa ở định dạng cũ mà OpenVireo&lt;br&gt;có thể ngừng hỗ trợ trong tương lai.&lt;br&gt;&lt;br&gt;Vui lòng xem xét tạo tệp khóa mới thay thế.</translation>
     </message>
     <message>
         <source>Error loading the key file '%1'
@@ -6175,8 +6175,8 @@ Bạn có chắc chắn muốn tiếp tục với tệp này không?</translatio
         <translation>Kiểm tra cập nhật khi khởi động?</translation>
     </message>
     <message>
-        <source>Would you like KeePassXC to check for updates on startup?</source>
-        <translation>Bạn có muốn KeePassXC kiểm tra cập nhật khi khởi động không?</translation>
+        <source>Would you like OpenVireo to check for updates on startup?</source>
+        <translation>Bạn có muốn OpenVireo kiểm tra cập nhật khi khởi động không?</translation>
     </message>
     <message>
         <source>You can always check for updates manually from the application menu.</source>
@@ -6187,8 +6187,8 @@ Bạn có chắc chắn muốn tiếp tục với tệp này không?</translatio
         <translation>Chuyển đổi cửa sổ</translation>
     </message>
     <message>
-        <source>Quit KeePassXC</source>
-        <translation>Thoát KeePassXC</translation>
+        <source>Quit OpenVireo</source>
+        <translation>Thoát OpenVireo</translation>
     </message>
     <message numerus="yes">
         <source>%1 Entry(s)</source>
@@ -6495,7 +6495,7 @@ Bạn có chắc chắn muốn tiếp tục với tệp này không?</translatio
         <translation>Thiết lập đồng bộ từ xa…</translation>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of KeePassXC.
+        <source>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</source>
         <translation type="unfinished"/>
@@ -6700,8 +6700,8 @@ This version is not meant for production use.</source>
 <context>
     <name>NewDatabaseWizard</name>
     <message>
-        <source>Create a new KeePassXC database…</source>
-        <translation>Tạo cơ sở dữ liệu KeePassXC mới…</translation>
+        <source>Create a new OpenVireo database…</source>
+        <translation>Tạo cơ sở dữ liệu OpenVireo mới…</translation>
     </message>
     <message>
         <source>Root</source>
@@ -6975,8 +6975,8 @@ This version is not meant for production use.</source>
 <context>
     <name>PasskeyExportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Export</source>
-        <translation>KeePassXC - Xuất Passkey</translation>
+        <source>OpenVireo - Passkey Export</source>
+        <translation>OpenVireo - Xuất Passkey</translation>
     </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
@@ -7033,8 +7033,8 @@ Bạn có muốn ghi đè nó không?
 <context>
     <name>PasskeyImportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Import</source>
-        <translation>KeePassXC - Nhập Passkey</translation>
+        <source>OpenVireo - Passkey Import</source>
+        <translation>OpenVireo - Nhập Passkey</translation>
     </message>
     <message>
         <source>Username: %1</source>
@@ -7167,8 +7167,8 @@ Dữ liệu sau bị thiếu:
         <translation>Mật khẩu đã đặt, nhấp để thay đổi hoặc xóa</translation>
     </message>
     <message>
-        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;Mật khẩu là phương pháp chính để bảo mật cơ sở dữ liệu của bạn.&lt;/p&gt;&lt;p&gt;Mật khẩu tốt là dài và duy nhất. KeePassXC có thể tạo một mật khẩu cho bạn.&lt;/p&gt;</translation>
+        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Mật khẩu là phương pháp chính để bảo mật cơ sở dữ liệu của bạn.&lt;/p&gt;&lt;p&gt;Mật khẩu tốt là dài và duy nhất. OpenVireo có thể tạo một mật khẩu cho bạn.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Passwords do not match.</source>
@@ -7523,8 +7523,8 @@ Bạn có muốn ghi đè nó không?</translation>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>KeePassXC - Pick Characters</source>
-        <translation>KeePassXC - Chọn ký tự</translation>
+        <source>OpenVireo - Pick Characters</source>
+        <translation>OpenVireo - Chọn ký tự</translation>
     </message>
     <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
@@ -7620,8 +7620,8 @@ Bạn có muốn ghi đè nó không?</translation>
         <translation>Mã hóa thông điệp thất bại.</translation>
     </message>
     <message>
-        <source>KeePassXC association failed, try again</source>
-        <translation>Liên kết KeePassXC thất bại, thử lại</translation>
+        <source>OpenVireo association failed, try again</source>
+        <translation>Liên kết OpenVireo thất bại, thử lại</translation>
     </message>
     <message>
         <source>Encryption key is not recognized</source>
@@ -8709,11 +8709,11 @@ Các lệnh khả dụng:
         <translation>Không thể tải tệp khóa %1: %2</translation>
     </message>
     <message>
-        <source>WARNING: You are using an old key file format which KeePassXC may
+        <source>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</source>
-        <translation>CẢNH BÁO: Bạn đang sử dụng định dạng tệp khóa cũ mà KeePassXC có thể
+        <translation>CẢNH BÁO: Bạn đang sử dụng định dạng tệp khóa cũ mà OpenVireo có thể
 ngừng hỗ trợ trong tương lai.
 
 Vui lòng xem xét tạo tệp khóa mới.</translation>
@@ -9091,8 +9091,8 @@ Kernel: %3 %4</translation>
         <translation>Dữ liệu tệp khóa không mong đợi! Tệp khóa có thể bị hỏng.</translation>
     </message>
     <message>
-        <source>KeePassXC - cross-platform password manager</source>
-        <translation>KeePassXC - trình quản lý mật khẩu đa nền tảng</translation>
+        <source>OpenVireo - cross-platform password manager</source>
+        <translation>OpenVireo - trình quản lý mật khẩu đa nền tảng</translation>
     </message>
     <message>
         <source>filenames of the password databases to open (*.kdbx)</source>
@@ -9123,20 +9123,20 @@ Kernel: %3 %4</translation>
         <translation>Không thể khóa cơ sở dữ liệu.</translation>
     </message>
     <message>
-        <source>Another instance of KeePassXC is already running.</source>
-        <translation>Một phiên bản khác của KeePassXC đang chạy.</translation>
+        <source>Another instance of OpenVireo is already running.</source>
+        <translation>Một phiên bản khác của OpenVireo đang chạy.</translation>
     </message>
     <message>
-        <source>KeePassXC is not running. No open database to lock</source>
-        <translation>KeePassXC không chạy. Không có cơ sở dữ liệu nào đang mở để khóa</translation>
+        <source>OpenVireo is not running. No open database to lock</source>
+        <translation>OpenVireo không chạy. Không có cơ sở dữ liệu nào đang mở để khóa</translation>
     </message>
     <message>
         <source>Fatal error while testing the cryptographic functions.</source>
         <translation>Lỗi nghiêm trọng khi kiểm tra các hàm mã hóa.</translation>
     </message>
     <message>
-        <source>KeePassXC - Error</source>
-        <translation>KeePassXC - Lỗi</translation>
+        <source>OpenVireo - Error</source>
+        <translation>OpenVireo - Lỗi</translation>
     </message>
     <message>
         <source>Database password: </source>
@@ -9259,8 +9259,8 @@ Tùy chọn này đã lỗi thời, sử dụng --set-key-file thay thế.</tran
         <translation>Không có nhà cung cấp Mở khóa nhanh nào khả dụng</translation>
     </message>
     <message>
-        <source>Failed to init KeePassXC crypto.</source>
-        <translation>Không thể khởi tạo mã hóa KeePassXC.</translation>
+        <source>Failed to init OpenVireo crypto.</source>
+        <translation>Không thể khởi tạo mã hóa OpenVireo.</translation>
     </message>
     <message>
         <source>Failed to encrypt key data.</source>
@@ -9780,8 +9780,8 @@ Tùy chọn này đã lỗi thời, sử dụng --set-key-file thay thế.</tran
         <translation>Cũng hiển thị các mục đã bị loại trừ khỏi báo cáo</translation>
     </message>
     <message>
-        <source>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
-        <translation>Bản dựng KeePassXC này không có chức năng mạng. Cần có mạng để kiểm tra mật khẩu của bạn với cơ sở dữ liệu Have I Been Pwned.</translation>
+        <source>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
+        <translation>Bản dựng OpenVireo này không có chức năng mạng. Cần có mạng để kiểm tra mật khẩu của bạn với cơ sở dữ liệu Have I Been Pwned.</translation>
     </message>
     <message>
         <source>Congratulations, no exposed passwords!</source>
@@ -10249,8 +10249,8 @@ Tùy chọn này đã lỗi thời, sử dụng --set-key-file thay thế.</tran
         <translation>Tùy chọn</translation>
     </message>
     <message>
-        <source>Enable KeepassXC Freedesktop.org Secret Service integration</source>
-        <translation>Bật tích hợp Dịch vụ bí mật Freedesktop.org của KeepassXC</translation>
+        <source>Enable OpenVireo Freedesktop.org Secret Service integration</source>
+        <translation>Bật tích hợp Dịch vụ bí mật Freedesktop.org của OpenVireo</translation>
     </message>
     <message>
         <source>General</source>
@@ -10616,19 +10616,19 @@ Ví dụ: JBSWY3DPEHPK3PXP</translation>
         <translation>Đã xảy ra lỗi khi cố gắng truy xuất thông tin cập nhật, vui lòng thử lại sau.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;Có phiên bản mới.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 có thể được &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;tải xuống tại đây&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;Có phiên bản mới.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 có thể được &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;tải xuống tại đây&lt;/a&gt;.</translation>
     </message>
     <message>
-        <source>You have the latest version of KeePassXC</source>
-        <translation>Bạn đã có phiên bản mới nhất của KeePassXC</translation>
+        <source>You have the latest version of OpenVireo</source>
+        <translation>Bạn đã có phiên bản mới nhất của OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Start storing your passwords securely in a KeePassXC database</source>
-        <translation>Bắt đầu lưu trữ mật khẩu của bạn một cách an toàn trong cơ sở dữ liệu KeePassXC</translation>
+        <source>Start storing your passwords securely in an OpenVireo database</source>
+        <translation>Bắt đầu lưu trữ mật khẩu của bạn một cách an toàn trong cơ sở dữ liệu OpenVireo</translation>
     </message>
     <message>
         <source>Recent databases</source>
@@ -10639,8 +10639,8 @@ Ví dụ: JBSWY3DPEHPK3PXP</translation>
         <translation>Mở cơ sở dữ liệu gần đây</translation>
     </message>
     <message>
-        <source>Welcome to KeePassXC %1</source>
-        <translation>Chào mừng đến với KeePassXC %1</translation>
+        <source>Welcome to OpenVireo %1</source>
+        <translation>Chào mừng đến với OpenVireo %1</translation>
     </message>
     <message>
         <source>Create Database</source>

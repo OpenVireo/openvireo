@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     QStandardPaths::setTestModeEnabled(true);
     // DatabaseWidget relies on KeePassXC's application object for its theme
     Application app(argc, argv);
-    app.setApplicationName("KeePassXC");
+    app.setApplicationName("OpenVireo");
     app.setQuitOnLastWindowClosed(false);
     app.applyTheme();
     TestGuiAutoSync tc;
@@ -573,7 +573,7 @@ void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
     const auto accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     RemoteParams params;
-    params.name = "KeePassXC account";
+    params.name = "OpenVireo account";
     params.type = RemoteParams::Type::AccountVault;
     // Nothing listens here; the event stream just keeps retrying
     params.serverUrl = "http://127.0.0.1:9/api/v1";

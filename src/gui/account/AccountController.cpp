@@ -264,7 +264,7 @@ void AccountController::pairSelfHosted(const QString& url, const QString& code, 
         if (health.status != 200) {
             client->deleteLater();
             done(false,
-                 tr("No KeePassXC sync server answers at %1: %2")
+                 tr("No OpenVireo sync server answers at %1: %2")
                      .arg(serverUrl, SyncServerClient::errorMessage(health)));
             return;
         }
@@ -415,7 +415,7 @@ bool AccountController::ensureAccountRemote(const QSharedPointer<Database>& db, 
         }
     }
     auto* params = new RemoteParams(m_account->vaultRemoteParams(vaultId));
-    params->name = tr("KeePassXC account");
+    params->name = tr("OpenVireo account");
     settings.addRemoteParams(params);
     settings.saveSettings();
     return true;

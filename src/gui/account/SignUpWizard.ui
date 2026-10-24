@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Create a KeePassXC account</string>
+   <string>Create an OpenVireo account</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
