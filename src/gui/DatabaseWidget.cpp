@@ -1167,11 +1167,7 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
             // The message box owns the checkbox and deletes it on closing
             auto checkbox = new QCheckBox(tr("Remember my choice"));
             bool remember = false;
-            QObject::connect(checkbox, &QCheckBox::stateChanged, [&](int state) {
-                if (static_cast<Qt::CheckState>(state) == Qt::CheckState::Checked) {
-                    remember = true;
-                }
-            });
+            QObject::connect(checkbox, &QCheckBox::toggled, [&](bool checked) { remember = checked; });
 
             auto result = MessageBox::question(this,
                                                tr("Execute command?"),

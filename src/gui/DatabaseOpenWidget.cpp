@@ -604,8 +604,8 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
             && !config()->get(Config::Messages_NoLegacyKeyFileWarning).toBool()) {
             // The message box owns the checkbox and deletes it on closing
             auto dontShowAgain = new QCheckBox(tr("Don't show this warning again"));
-            connect(dontShowAgain, &QCheckBox::stateChanged, this, [](int state) {
-                config()->set(Config::Messages_NoLegacyKeyFileWarning, state == Qt::CheckState::Checked);
+            connect(dontShowAgain, &QCheckBox::toggled, this, [](bool checked) {
+                config()->set(Config::Messages_NoLegacyKeyFileWarning, checked);
             });
 
             MessageBox::warning(this,
