@@ -76,7 +76,7 @@ void AutofillSettingsWidget::buildVaultPage()
 
     auto provider = page.addSection();
     provider->addToggle(m_enableCheckBox,
-                        tr("Also turn KeePassXC on in System Settings under General, AutoFill & Passwords."));
+                        tr("Also turn OpenVireo on in System Settings under General, AutoFill & Passwords."));
     provider->addSetting(tr("System Settings"), m_openSettingsButton);
 
     auto behavior = page.addSection(tr("Suggestions"));
@@ -121,7 +121,7 @@ void AutofillSettingsWidget::loadSettings()
     if (!available) {
         m_statusMessage->showMessage(tr("AutoFill needs macOS 11 or later."), MessageWidget::Warning);
     } else if (!AutofillService::isSignedForAutofill()) {
-        m_statusMessage->showMessage(tr("This build of KeePassXC is not signed for AutoFill, so AutoFill stays off."),
+        m_statusMessage->showMessage(tr("This build of OpenVireo is not signed for AutoFill, so AutoFill stays off."),
                                      MessageWidget::Warning);
     } else {
         updateProviderStatus();
@@ -162,11 +162,11 @@ void AutofillSettingsWidget::updateProviderStatus()
 {
     AutofillPlatform::queryProviderEnabled(this, [this](bool enabled) {
         if (enabled) {
-            m_statusMessage->showMessage(tr("KeePassXC is turned on as an AutoFill provider in System Settings."),
+            m_statusMessage->showMessage(tr("OpenVireo is turned on as an AutoFill provider in System Settings."),
                                          MessageWidget::Positive);
         } else {
             m_statusMessage->showMessage(
-                tr("KeePassXC is not turned on in System Settings yet. Open AutoFill Settings and turn it on "
+                tr("OpenVireo is not turned on in System Settings yet. Open AutoFill Settings and turn it on "
                    "under AutoFill From."),
                 MessageWidget::Information);
         }

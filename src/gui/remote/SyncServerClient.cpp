@@ -325,7 +325,7 @@ void SyncServerClient::send(const QByteArray& verb,
     }
 
     QNetworkRequest request(url);
-    request.setRawHeader("User-Agent", "KeePassXC");
+    request.setRawHeader("User-Agent", "OpenVireo");
     // Never follow redirects, they could forward the access token to another host
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     request.setTransferTimeout(timeoutMsec);
@@ -362,7 +362,7 @@ void SyncServerClient::send(const QByteArray& verb,
     Q_UNUSED(headers)
     Q_UNUSED(body)
     Q_UNUSED(timeoutMsec)
-    response.networkError = tr("This build of KeePassXC was compiled without network support.");
+    response.networkError = tr("This build of OpenVireo was compiled without network support.");
     deliverLater(response, std::move(callback));
 #endif
 }

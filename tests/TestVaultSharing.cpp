@@ -481,7 +481,7 @@ void TestVaultSharing::testMovesADatabaseToTheAccount()
         }
     }
     remotes.sort();
-    QCOMPARE(remotes, QStringList({"KeePassXC account", "scp"}));
+    QCOMPARE(remotes, QStringList({"OpenVireo account", "scp"}));
 
     // The original database wasn't touched
     QByteArray after;

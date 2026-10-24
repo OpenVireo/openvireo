@@ -88,7 +88,7 @@
 int main(int argc, char* argv[])
 {
     Application app(argc, argv);
-    app.setApplicationName("KeePassXC");
+    app.setApplicationName("OpenVireo");
     app.setApplicationVersion(KEEPASSXC_VERSION);
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);

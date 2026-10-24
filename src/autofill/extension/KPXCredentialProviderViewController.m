@@ -68,7 +68,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 {
     NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 460, 380)];
 
-    self.titleLabel = [NSTextField labelWithString:@"KeePassXC"];
+    self.titleLabel = [NSTextField labelWithString:@"OpenVireo"];
     self.titleLabel.font = [NSFont boldSystemFontOfSize:15];
 
     self.messageLabel = [NSTextField wrappingLabelWithString:@""];
@@ -139,7 +139,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 
     self.view = view;
     self.preferredContentSize = view.frame.size;
-    [self showMessage:@"" title:@"KeePassXC"];
+    [self showMessage:@"" title:@"OpenVireo"];
 }
 
 - (void)showListUI:(BOOL)list
@@ -164,13 +164,13 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 
 - (void)showWaiting:(NSString*)message
 {
-    [self showMessage:message title:@"KeePassXC"];
+    [self showMessage:message title:@"OpenVireo"];
     [self.spinner startAnimation:nil];
 }
 
 - (void)showMessage:(NSString*)message action:(NSString*)actionTitle perform:(void (^)(void))action
 {
-    [self showMessage:message title:@"KeePassXC"];
+    [self showMessage:message title:@"OpenVireo"];
     self.actionButton.title = actionTitle;
     self.actionButton.hidden = NO;
     self.secondaryAction = action;
@@ -227,7 +227,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
                          if (error.code == KPXAutofillErrorNotRunning) {
                              [self showNotRunning];
                          } else {
-                             [self showMessage:error.localizedDescription title:@"KeePassXC"];
+                             [self showMessage:error.localizedDescription title:@"OpenVireo"];
                          }
                          return;
                      }
@@ -237,15 +237,15 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
                      } else if ([failure isEqualToString:@"locked"]) {
                          [self showLocked];
                      } else if ([failure isEqualToString:@"disabled"]) {
-                         [self showMessage:NSLocalizedString(@"AutoFill is turned off in KeePassXC. Turn it on in "
-                                                             @"KeePassXC under Settings, AutoFill.",
+                         [self showMessage:NSLocalizedString(@"AutoFill is turned off in OpenVireo. Turn it on in "
+                                                             @"OpenVireo under Settings, AutoFill.",
                                                              nil)
-                                     title:@"KeePassXC"];
+                                     title:@"OpenVireo"];
                      } else if ([failure isEqualToString:@"notFound"]) {
-                         [self showMessage:NSLocalizedString(@"KeePassXC has no matching entry in its unlocked "
+                         [self showMessage:NSLocalizedString(@"OpenVireo has no matching entry in its unlocked "
                                                              @"databases.",
                                                              nil)
-                                     title:@"KeePassXC"];
+                                     title:@"OpenVireo"];
                      } else if ([failure isEqualToString:@"canceled"]) {
                          [self showLocked];
                      } else if ([failure isEqualToString:@"excluded"]) {
@@ -253,13 +253,13 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
                          if (@available(macOS 15.0, *)) {
                              [self failWithCode:ASExtensionErrorCodeMatchedExcludedCredential];
                          } else {
-                             [self showMessage:NSLocalizedString(@"KeePassXC already has a passkey for this account.",
+                             [self showMessage:NSLocalizedString(@"OpenVireo already has a passkey for this account.",
                                                                  nil)
-                                         title:@"KeePassXC"];
+                                         title:@"OpenVireo"];
                          }
                      } else {
-                         [self showMessage:NSLocalizedString(@"KeePassXC could not complete the request.", nil)
-                                     title:@"KeePassXC"];
+                         [self showMessage:NSLocalizedString(@"OpenVireo could not complete the request.", nil)
+                                     title:@"OpenVireo"];
                      }
                  }];
 }
@@ -267,8 +267,8 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 - (void)showLocked
 {
     __weak typeof(self) weakSelf = self;
-    [self showMessage:NSLocalizedString(@"Your KeePassXC database is locked.", nil)
-               action:NSLocalizedString(@"Unlock in KeePassXC", nil)
+    [self showMessage:NSLocalizedString(@"Your OpenVireo database is locked.", nil)
+               action:NSLocalizedString(@"Unlock in OpenVireo", nil)
               perform:^{
                   [weakSelf unlock];
               }];
@@ -277,8 +277,8 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 - (void)showNotRunning
 {
     __weak typeof(self) weakSelf = self;
-    [self showMessage:NSLocalizedString(@"KeePassXC is not running.", nil)
-               action:NSLocalizedString(@"Open KeePassXC", nil)
+    [self showMessage:NSLocalizedString(@"OpenVireo is not running.", nil)
+               action:NSLocalizedString(@"Open OpenVireo", nil)
               perform:^{
                   [weakSelf launchAndUnlock];
               }];
@@ -286,7 +286,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 
 - (void)unlock
 {
-    [self showWaiting:NSLocalizedString(@"Unlock your database in KeePassXC to continue.", nil)];
+    [self showWaiting:NSLocalizedString(@"Unlock your database in OpenVireo to continue.", nil)];
     __weak typeof(self) weakSelf = self;
     [self send:@{@"type" : @"requestUnlock"}
         timeout:KPXUnlockTimeout
@@ -299,12 +299,12 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 
 - (void)launchAndUnlock
 {
-    [self showWaiting:NSLocalizedString(@"Opening KeePassXC…", nil)];
+    [self showWaiting:NSLocalizedString(@"Opening OpenVireo…", nil)];
     __weak typeof(self) weakSelf = self;
     [KPXAutofillClient launchKeePassXC:^(BOOL launched) {
         if (!launched) {
-            [weakSelf showMessage:NSLocalizedString(@"Could not open KeePassXC. Open it yourself, then try again.", nil)
-                            title:@"KeePassXC"];
+            [weakSelf showMessage:NSLocalizedString(@"Could not open OpenVireo. Open it yourself, then try again.", nil)
+                            title:@"OpenVireo"];
             return;
         }
         [weakSelf waitForAppUntil:[NSDate dateWithTimeIntervalSinceNow:KPXLaunchTimeout]];
@@ -417,7 +417,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
     NSString* service = self.serviceIdentifiers.firstObject.identifier;
     self.titleLabel.stringValue = service.length > 0
                                       ? [NSString stringWithFormat:NSLocalizedString(@"Entries for %@", nil), service]
-                                      : NSLocalizedString(@"KeePassXC entries", nil);
+                                      : NSLocalizedString(@"OpenVireo entries", nil);
     self.messageLabel.stringValue =
         items.count == 0 ? NSLocalizedString(@"Your unlocked databases have no entries to fill.", nil) : @"";
     if (items.count == 0 && self.serviceIdentifiers.count > 0) {
@@ -795,7 +795,7 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
     ASPasskeyCredentialRequest* request = self.registrationRequest;
     ASPasskeyCredentialIdentity* identity = (ASPasskeyCredentialIdentity*)request.credentialIdentity;
     // The user confirms here; KeePassXC adds the entry without asking again
-    [self showMessage:[NSString stringWithFormat:NSLocalizedString(@"Save a passkey for “%@” on %@ in KeePassXC?", nil),
+    [self showMessage:[NSString stringWithFormat:NSLocalizedString(@"Save a passkey for “%@” on %@ in OpenVireo?", nil),
                                                  identity.userName,
                                                  identity.relyingPartyIdentifier]
                 title:NSLocalizedString(@"Save Passkey", nil)];
@@ -844,10 +844,10 @@ static NSString* const KPXCellIdentifier = @"KPXCredentialCell";
 
 - (void)prepareInterfaceForExtensionConfiguration
 {
-    [self showMessage:NSLocalizedString(@"KeePassXC fills passwords, passkeys and one-time codes from your unlocked "
-                                        @"databases. Turn on AutoFill in KeePassXC under Settings, AutoFill too.",
+    [self showMessage:NSLocalizedString(@"OpenVireo fills passwords, passkeys and one-time codes from your unlocked "
+                                        @"databases. Turn on AutoFill in OpenVireo under Settings, AutoFill too.",
                                         nil)
-                title:NSLocalizedString(@"KeePassXC AutoFill is on", nil)];
+                title:NSLocalizedString(@"OpenVireo AutoFill is on", nil)];
     self.cancelButton.hidden = YES;
     __weak typeof(self) weakSelf = self;
     [self showPrimary:NSLocalizedString(@"Done", nil)

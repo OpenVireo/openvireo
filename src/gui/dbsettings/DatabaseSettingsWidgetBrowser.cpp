@@ -257,7 +257,7 @@ void DatabaseSettingsWidgetBrowser::removeSharedEncryptionKeys()
 
     if (keysToRemove.isEmpty()) {
         MessageBox::information(
-            this, tr("No keys found"), tr("No shared encryption keys found in KeePassXC settings."), MessageBox::Ok);
+            this, tr("No keys found"), tr("No shared encryption keys found in OpenVireo settings."), MessageBox::Ok);
         return;
     }
 
@@ -268,7 +268,7 @@ void DatabaseSettingsWidgetBrowser::removeSharedEncryptionKeys()
     const int count = keysToRemove.count();
     MessageBox::information(this,
                             tr("Removed keys from database"),
-                            tr("Successfully removed %n encryption key(s) from KeePassXC settings.", "", count),
+                            tr("Successfully removed %n encryption key(s) from OpenVireo settings.", "", count),
                             MessageBox::Ok);
 }
 

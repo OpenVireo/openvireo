@@ -205,7 +205,7 @@ namespace
 
             QVariantMap properties;
             properties.insert(ItemInterface + ".Label",
-                              QCoreApplication::translate("SyncTokenStore", "KeePassXC sync server access token"));
+                              QCoreApplication::translate("SyncTokenStore", "OpenVireo sync server access token"));
             properties.insert(ItemInterface + ".Attributes", QVariant::fromValue(attributes(key)));
             Secret secret{session, {}, token.toUtf8(), QStringLiteral("text/plain")};
 
@@ -249,7 +249,7 @@ namespace
         static StringMap attributes(const QString& key)
         {
             return {{QStringLiteral("xdg:schema"), QStringLiteral("com.openvireo.SyncToken")},
-                    {QStringLiteral("service"), QStringLiteral("KeePassXC Sync")},
+                    {QStringLiteral("service"), QStringLiteral("OpenVireo Sync")},
                     {QStringLiteral("account"), key}};
         }
 

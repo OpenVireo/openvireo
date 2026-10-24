@@ -155,7 +155,7 @@ void AccountManager::discover(const QString& issuerUrl)
     m_client->discover(issuerUrl, [this](const AuthClient::Response& response) {
         const auto config = ServerConfig::fromJson(response.json());
         if (!response.isSuccess() || !config.isValid()) {
-            emit error(response.isSuccess() ? tr("The server isn't a KeePassXC account server.")
+            emit error(response.isSuccess() ? tr("The server isn't an OpenVireo account server.")
                                             : AuthClient::errorMessage(response));
             return;
         }
@@ -367,7 +367,7 @@ void AccountManager::registerAccount(const QString& email, const QString& passwo
     QByteArray request;
     if (!m_opaque->createRegistrationRequest(m_pending->password, &m_pending->opaqueSecret, &request)) {
         fail(OpaqueClient::isAvailable() ? tr("Could not start the registration.")
-                                         : tr("This build of KeePassXC can't sign in to accounts."));
+                                         : tr("This build of OpenVireo can't sign in to accounts."));
         return;
     }
     m_client->registerStart(m_pending->email, request, [this](const AuthClient::Response& response) {
@@ -451,7 +451,7 @@ void AccountManager::signIn(const QString& email, const QString& password, const
     QByteArray ke1;
     if (!m_opaque->createCredentialRequest(m_pending->password, &m_pending->opaqueSecret, &ke1)) {
         fail(OpaqueClient::isAvailable() ? tr("Could not start signing in.")
-                                         : tr("This build of KeePassXC can't sign in to accounts."));
+                                         : tr("This build of OpenVireo can't sign in to accounts."));
         return;
     }
     m_client->loginStart(m_pending->email, ke1, [this](const AuthClient::Response& response) {
@@ -1046,7 +1046,7 @@ RemoteParams AccountManager::vaultRemoteParams(const QString& vaultId) const
 {
     RemoteParams params;
     const auto name = m_keyring.vault(vaultId).name;
-    params.name = name.isEmpty() ? tr("KeePassXC account") : tr("KeePassXC account (%1)").arg(name);
+    params.name = name.isEmpty() ? tr("OpenVireo account") : tr("OpenVireo account (%1)").arg(name);
     params.type = RemoteParams::Type::AccountVault;
     params.serverUrl = m_config.sync;
     params.accountId = m_accountId;

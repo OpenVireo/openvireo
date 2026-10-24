@@ -17,14 +17,17 @@
 
 #include "TestBrowser.h"
 
+#include "browser/BrowserEntryConfig.h"
 #include "browser/BrowserHost.h"
 #include "browser/BrowserMessageBuilder.h"
 #include "browser/BrowserSettings.h"
 #include "core/Group.h"
+#include "keys/PasswordKey.h"
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
 
 #include <QJsonObject>
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <botan/sodium.h>
@@ -980,6 +983,48 @@ void TestBrowser::testRestrictBrowserKey()
     QCOMPARE(sorted[1]->url(), QString("https://example.com/2b"));
     QCOMPARE(sorted[2]->url(), QString("https://example.com/2"));
     QCOMPARE(sorted[3]->url(), QString("https://example.com/0"));
+}
+
+// Databases written by KeePassXC keep their per-entry browser settings under the KDBX custom data key
+// "KeePassXC-Browser Settings"; OpenVireo must read and write that same key so files stay interchangeable.
+void TestBrowser::testBrowserSettingsKeyRoundTrip()
+{
+    const QString key = QStringLiteral("KeePassXC-Browser Settings");
+    QCOMPARE(BrowserService::KEEPASSXCBROWSER_NAME, key);
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const auto path = dir.filePath("browser.kdbx");
+    auto compositeKey = QSharedPointer<CompositeKey>::create();
+    compositeKey->addKey(QSharedPointer<PasswordKey>::create("a"));
+
+    {
+        auto db = QSharedPointer<Database>::create();
+        db->setKey(compositeKey);
+        auto* entry = new Entry();
+        entry->setUuid(QUuid::createUuid());
+        entry->setTitle("Login");
+        entry->setGroup(db->rootGroup());
+        // As written by upstream KeePassXC
+        entry->customData()->set(key, R"({"Allow":["example.com"],"Deny":["evil.example"],"Realm":"r"})");
+        QString error;
+        QVERIFY2(db->saveAs(path, Database::Atomic, {}, &error), qPrintable(error));
+    }
+
+    auto db = QSharedPointer<Database>::create();
+    QString error;
+    QVERIFY2(db->open(path, compositeKey, &error), qPrintable(error));
+    auto* entry = db->rootGroup()->entries().first();
+    BrowserEntryConfig config;
+    QVERIFY(config.load(entry));
+    QCOMPARE(config.property("Allow").toStringList(), QStringList{"example.com"});
+    QCOMPARE(config.property("Deny").toStringList(), QStringList{"evil.example"});
+    QCOMPARE(config.property("Realm").toString(), QString("r"));
+    QVERIFY(config.isAllowed("example.com"));
+
+    config.allow("other.example");
+    config.save(entry);
+    QVERIFY(entry->customData()->value(key).contains("other.example"));
 }
 
 void TestBrowser::testHideEntry()

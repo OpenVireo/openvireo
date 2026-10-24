@@ -89,7 +89,7 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     // Each device has its own token, so it isn't stored in the database that all devices share
     m_ui->serverTokenEdit->setPlaceholderText(
         tr("Stored on this device only, in %1. Each device needs its own token: enter a pairing code from "
-           "Pair Device… on another device, or from keepassxc-sync-server devices pair <user>")
+           "Pair Device… on another device, or from openvireo-sync-server devices pair <user>")
             .arg(SyncTokenStore::description()));
 
     if (FluentTheme::vaultLayoutEnabled()) {

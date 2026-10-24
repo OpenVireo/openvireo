@@ -326,7 +326,7 @@ QJsonObject NativeMessageInstaller::constructFile(SupportedBrowsers browser)
 {
     QJsonObject script;
     script["name"] = HOST_NAME;
-    script["description"] = QStringLiteral("KeePassXC integration with native messaging support");
+    script["description"] = QStringLiteral("OpenVireo integration with native messaging support");
     script["path"] = getProxyPath();
     script["type"] = QStringLiteral("stdio");
 

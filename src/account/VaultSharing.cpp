@@ -131,7 +131,7 @@ void VaultSharing::lookupRecipient(const QString& email, RecipientCallback done)
     m_account->client()->lookupUser(email, [done](const AuthClient::Response& response) {
         if (!response.isSuccess()) {
             done({},
-                 response.status == 404 ? tr("There is no KeePassXC account with this email address.")
+                 response.status == 404 ? tr("There is no OpenVireo account with this email address.")
                                         : AuthClient::errorMessage(response));
             return;
         }
@@ -609,7 +609,7 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
     db->setKey(VaultKeyring::compositeKeyFor(vaultKey), true, true);
     db->rootGroup()->setName(vaultName);
     auto params = m_account->vaultRemoteParams(vaultId);
-    params.name = tr("KeePassXC account");
+    params.name = tr("OpenVireo account");
     setAccountRemote(db, params);
 
     emit progress(tr("Creating the vault…"));

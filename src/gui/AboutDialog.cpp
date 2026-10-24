@@ -434,7 +434,7 @@ void AboutDialog::setupVaultHero()
     ui->iconLabel->setFixedSize(64, 64);
     ui->iconLabel->setPixmap(icons()->applicationIcon().pixmap(64));
 
-    ui->nameLabel->setText(QStringLiteral("KeePassXC"));
+    ui->nameLabel->setText(QStringLiteral("OpenVireo"));
     ui->nameLabel->setIndent(0);
     auto version = new QLabel(tr("Version %1").arg(KEEPASSXC_VERSION), hero);
     version->setObjectName("aboutVersion");
@@ -568,7 +568,7 @@ void AboutDialog::setupVaultAboutPage()
                         ui->label_3->text());
 
     auto team = page.addSection(tr("Project maintainers"));
-    auto maintainersCard = team->addSetting(tr("The KeePassXC team"), QWidgetList{}, ui->label_7->text());
+    auto maintainersCard = team->addSetting(tr("The OpenVireo team"), QWidgetList{}, ui->label_7->text());
     maintainersCard->setCollapsible(false);
     for (const auto& maintainer : maintainers) {
         auto name = QString::fromUtf8(maintainer.name);
@@ -594,7 +594,7 @@ void AboutDialog::setupVaultContributorsPage()
                      hyperlink(tr("See contributions on GitHub"),
                                QStringLiteral("https://github.com/keepassxreboot/keepassxc/graphs/contributors"),
                                this),
-                     tr("KeePassXC is built by its community"));
+                     tr("OpenVireo is built by its community"));
 
     for (const auto& group : contributorGroups(aboutContributors)) {
         auto section = page.addSection(group.title);

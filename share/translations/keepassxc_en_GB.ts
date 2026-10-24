@@ -2,8 +2,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About KeePassXC</source>
-        <translation>About KeePassXC</translation>
+        <source>About OpenVireo</source>
+        <translation>About OpenVireo</translation>
     </message>
     <message>
         <source>About</source>
@@ -14,8 +14,8 @@
         <translation>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
-        <source>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
-        <translation>KeePassXC is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</translation>
+        <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
+        <translation>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</translation>
     </message>
     <message>
         <source>Project Maintainers:</source>
@@ -49,8 +49,8 @@
 <context>
     <name>AccessControlDialog</name>
     <message>
-        <source>KeePassXC -  Access Request</source>
-        <translation>KeePassXC -  Access Request</translation>
+        <source>OpenVireo -  Access Request</source>
+        <translation>OpenVireo -  Access Request</translation>
     </message>
     <message>
         <source>Non-existing/inaccessible executable path. Please double-check the client is legit.</source>
@@ -81,8 +81,8 @@
         <translation>Details</translation>
     </message>
     <message>
-        <source>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</source>
-        <translation>Your decision will be remembered for the duration while both the requesting client AND KeePassXC are running.</translation>
+        <source>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</source>
+        <translation>Your decision will be remembered for the duration while both the requesting client AND OpenVireo are running.</translation>
     </message>
     <message>
         <source>Remember</source>
@@ -249,16 +249,16 @@
         <translation>Are you sure you want to reset all settings to default?</translation>
     </message>
     <message>
-        <source>Import KeePassXC Settings</source>
-        <translation>Import KeePassXC Settings</translation>
+        <source>Import OpenVireo Settings</source>
+        <translation>Import OpenVireo Settings</translation>
     </message>
     <message>
         <source>Failed to import settings from %1, not a valid settings file.</source>
         <translation>Failed to import settings from %1, not a valid settings file.</translation>
     </message>
     <message>
-        <source>Export KeePassXC Settings</source>
-        <translation>Export KeePassXC Settings</translation>
+        <source>Export OpenVireo Settings</source>
+        <translation>Export OpenVireo Settings</translation>
     </message>
     <message>
         <source>Small</source>
@@ -285,8 +285,8 @@
         <translation>None</translation>
     </message>
     <message>
-        <source>Restart KeePassXC to apply the Auto-Type desktop portals preference.</source>
-        <translation>Restart KeePassXC to apply the Auto-Type desktop portals preference.</translation>
+        <source>Restart OpenVireo to apply the Auto-Type desktop portals preference.</source>
+        <translation>Restart OpenVireo to apply the Auto-Type desktop portals preference.</translation>
     </message>
 </context>
 <context>
@@ -300,12 +300,12 @@
         <translation>Startup</translation>
     </message>
     <message>
-        <source>Start only a single instance of KeePassXC</source>
-        <translation>Start only a single instance of KeePassXC</translation>
+        <source>Start only a single instance of OpenVireo</source>
+        <translation>Start only a single instance of OpenVireo</translation>
     </message>
     <message>
-        <source>Automatically launch KeePassXC at system startup</source>
-        <translation>Automatically launch KeePassXC at system startup</translation>
+        <source>Automatically launch OpenVireo at system startup</source>
+        <translation>Automatically launch OpenVireo at system startup</translation>
     </message>
     <message>
         <source>Minimize window at application startup</source>
@@ -778,12 +778,12 @@
         <translation>Permission Required</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>KeePassXC requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart KeePassXC.</translation>
+        <source>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>OpenVireo requires the Accessibility permission in order to perform entry level Auto-Type. If you already granted permission, you may have to restart OpenVireo.</translation>
     </message>
     <message>
-        <source>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart KeePassXC.</source>
-        <translation>KeePassXC requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you&apos;ve already granted permission, you may have to restart KeePassXC.</translation>
+        <source>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you already granted permission, you may have to restart OpenVireo.</source>
+        <translation>OpenVireo requires the Accessibility and Screen Recorder permission in order to perform global Auto-Type. Screen Recording is necessary to use the window title to find entries. If you&apos;ve already granted permission, you may have to restart OpenVireo.</translation>
     </message>
     <message>
         <source>Invalid entry provided</source>
@@ -889,8 +889,8 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - KeePassXC</source>
-        <translation>Auto-Type - KeePassXC</translation>
+        <source>Auto-Type - OpenVireo</source>
+        <translation>Auto-Type - OpenVireo</translation>
     </message>
     <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
@@ -993,8 +993,8 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
 <context>
     <name>BrowserAccessControlDialog</name>
     <message>
-        <source>KeePassXC - Browser Access Request</source>
-        <translation>KeePassXC - Browser Access Request</translation>
+        <source>OpenVireo - Browser Access Request</source>
+        <translation>OpenVireo - Browser Access Request</translation>
     </message>
     <message>
         <source>%1 is requesting access to the following entries:</source>
@@ -1046,8 +1046,8 @@ Please select the correct database for saving credentials.</source>
 Please select the correct database for saving credentials.</translation>
     </message>
     <message>
-        <source>KeePassXC - Select Database</source>
-        <translation>KeePassXC - Select Database</translation>
+        <source>OpenVireo - Select Database</source>
+        <translation>OpenVireo - Select Database</translation>
     </message>
 </context>
 <context>
@@ -1085,8 +1085,8 @@ Please select the correct database for saving credentials.</translation>
         <translation>Username: %1</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - Passkey credentials</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - Passkey credentials</translation>
     </message>
     <message>
         <source>Add to existing entry</source>
@@ -1160,44 +1160,44 @@ Do you want to delete the entry?
         <translation>%1 (Passkey)</translation>
     </message>
     <message>
-        <source>KeePassXC - Create a new group</source>
-        <translation>KeePassXC - Create a new group</translation>
+        <source>OpenVireo - Create a new group</source>
+        <translation>OpenVireo - Create a new group</translation>
     </message>
     <message>
         <source>Disable</source>
         <translation>Disable</translation>
     </message>
     <message>
-        <source>KeePassXC - Overwrite existing key?</source>
-        <translation>KeePassXC - Overwrite existing key?</translation>
+        <source>OpenVireo - Overwrite existing key?</source>
+        <translation>OpenVireo - Overwrite existing key?</translation>
     </message>
     <message>
-        <source>KeePassXC - Update Entry</source>
-        <translation>KeePassXC - Update Entry</translation>
+        <source>OpenVireo - Update Entry</source>
+        <translation>OpenVireo - Update Entry</translation>
     </message>
     <message>
-        <source>KeePassXC - Delete entry</source>
-        <translation>KeePassXC - Delete entry</translation>
+        <source>OpenVireo - Delete entry</source>
+        <translation>OpenVireo - Delete entry</translation>
     </message>
     <message>
-        <source>KeePassXC - New key association request</source>
-        <translation>KeePassXC - New key association request</translation>
+        <source>OpenVireo - New key association request</source>
+        <translation>OpenVireo - New key association request</translation>
     </message>
     <message>
         <source>Passkey</source>
         <translation>Passkey</translation>
     </message>
     <message>
-        <source>KeePassXC - Passkey credentials</source>
-        <translation>KeePassXC - Passkey credentials</translation>
+        <source>OpenVireo - Passkey credentials</source>
+        <translation>OpenVireo - Passkey credentials</translation>
     </message>
     <message>
         <source>Register a new passkey to this entry:</source>
         <translation>Register a new passkey to this entry:</translation>
     </message>
     <message>
-        <source>KeePassXC - Update passkey</source>
-        <translation>KeePassXC - Update passkey</translation>
+        <source>OpenVireo - Update passkey</source>
+        <translation>OpenVireo - Update passkey</translation>
     </message>
     <message>
         <source>Entry already has a passkey.
@@ -1217,8 +1217,8 @@ Do you want to overwrite the passkey in %1 - %2?</translation>
         <translation>Dialog</translation>
     </message>
     <message>
-        <source>This is required for accessing your databases with KeePassXC-Browser</source>
-        <translation>This is required for accessing your databases with KeePassXC-Browser</translation>
+        <source>This is required for accessing your databases with OpenVireo Browser</source>
+        <translation>This is required for accessing your databases with OpenVireo Browser</translation>
     </message>
     <message>
         <source>Enable browser integration</source>
@@ -1338,8 +1338,8 @@ Do you want to overwrite the passkey in %1 - %2?</translation>
         <translation>Do not prompt for KeePassHTTP settings migration.</translation>
     </message>
     <message>
-        <source>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</source>
-        <translation>Updates KeePassXC or keepassxc-proxy binary path automatically to native messaging scripts on startup.</translation>
+        <source>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</source>
+        <translation>Updates OpenVireo or openvireo-proxy binary path automatically to native messaging scripts on startup.</translation>
     </message>
     <message>
         <source>Update native messaging manifest files at startup</source>
@@ -1416,8 +1416,8 @@ Do you want to overwrite the passkey in %1 - %2?</translation>
         <translation>Select native messaging host folder location</translation>
     </message>
     <message>
-        <source>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</source>
-        <translation>Allow keepassxc-proxy to list all entries with their title, URL and UUID in connected databases.</translation>
+        <source>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</source>
+        <translation>Allow openvireo-proxy to list all entries with their title, URL and UUID in connected databases.</translation>
     </message>
     <message>
         <source>Allow limited access to all entries in connected databases (ignores site access restrictions)</source>
@@ -1448,8 +1448,8 @@ Do you want to overwrite the passkey in %1 - %2?</translation>
         <translation>Allow using localhost with passkeys</translation>
     </message>
     <message>
-        <source>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
-        <translation>KeePassXC-Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</translation>
+        <source>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</source>
+        <translation>OpenVireo Browser is needed for the browser integration to work. &lt;br /&gt;Download it for %1 and %2 and %3.</translation>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
@@ -1686,15 +1686,15 @@ Backup database located at %2</translation>
 <context>
     <name>DatabaseOpenDialog</name>
     <message>
-        <source>Unlock Database - KeePassXC</source>
-        <translation>Unlock Database - KeePassXC</translation>
+        <source>Unlock Database - OpenVireo</source>
+        <translation>Unlock Database - OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>DatabaseOpenWidget</name>
     <message>
-        <source>Unlock KeePassXC Database</source>
-        <translation>Unlock KeePassXC Database</translation>
+        <source>Unlock OpenVireo Database</source>
+        <translation>Unlock OpenVireo Database</translation>
     </message>
     <message>
         <source>Enter Password:</source>
@@ -1742,19 +1742,19 @@ Backup database located at %2</translation>
     </message>
     <message>
         <source>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</source>
+We recommend you update your OpenVireo installation.</source>
         <translation>The database you are trying to open was most likely
-created by a newer version of KeePassXC.
+created by a newer version of OpenVireo.
 
 You can try to open it anyway, but it may be incomplete
 and saving any changes may incur data loss.
 
-We recommend you update your KeePassXC installation.</translation>
+We recommend you update your OpenVireo installation.</translation>
     </message>
     <message>
         <source>Open database anyway</source>
@@ -1791,8 +1791,8 @@ To prevent this error from appearing, you must go to &quot;Database Settings / S
         <translation>Old key file format</translation>
     </message>
     <message>
-        <source>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
-        <translation>You are using an old key file format which KeePassXC may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</translation>
+        <source>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</source>
+        <translation>You are using an old key file format which OpenVireo may&lt;br&gt;stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file by going to:&lt;br&gt;&lt;strong&gt;Database &amp;gt; Database Security &amp;gt; Change Key File.&lt;/strong&gt;&lt;br&gt;</translation>
     </message>
     <message>
         <source>Don&apos;t show this warning again</source>
@@ -1845,8 +1845,8 @@ If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;
 If you don&apos;t have a key file or don&apos;t know what that is, you don&apos;t have to select one.</translation>
     </message>
     <message>
-        <source>KeePassXC database file selected</source>
-        <translation>KeePassXC database file selected</translation>
+        <source>OpenVireo database file selected</source>
+        <translation>OpenVireo database file selected</translation>
     </message>
     <message>
         <source>The file you selected looks like a database file.
@@ -1936,8 +1936,8 @@ Are you sure you want to continue with this file?.</translation>
 <context>
     <name>DatabaseSettingsWidgetBrowser</name>
     <message>
-        <source>KeePassXC-Browser settings</source>
-        <translation>KeePassXC-Browser settings</translation>
+        <source>OpenVireo Browser settings</source>
+        <translation>OpenVireo Browser settings</translation>
     </message>
     <message>
         <source>Disconnect all browsers</source>
@@ -2000,12 +2000,12 @@ This may prevent connection to the browser plugin.</source>
 This may prevent connection to the browser plugin.</translation>
     </message>
     <message>
-        <source>No shared encryption keys found in KeePassXC settings.</source>
-        <translation>No shared encryption keys found in KeePassXC settings.</translation>
+        <source>No shared encryption keys found in OpenVireo settings.</source>
+        <translation>No shared encryption keys found in OpenVireo settings.</translation>
     </message>
     <message numerus="yes">
-        <source>Successfully removed %n encryption key(s) from KeePassXC settings.</source>
-        <translation><numerusform>Successfully removed %n encryption key from KeePassXC settings.</numerusform><numerusform>Successfully removed %n encryption keys from KeePassXC settings.</numerusform></translation>
+        <source>Successfully removed %n encryption key(s) from OpenVireo settings.</source>
+        <translation><numerusform>Successfully removed %n encryption key from OpenVireo settings.</numerusform><numerusform>Successfully removed %n encryption keys from OpenVireo settings.</numerusform></translation>
     </message>
     <message>
         <source>Do you really want forget all site-specific settings on every entry?
@@ -2040,8 +2040,8 @@ This is only necessary if your database is a copy of another and the browser ext
 This is only necessary if your database is a copy of another and the browser extension cannot connect.</translation>
     </message>
     <message>
-        <source>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</source>
-        <translation>Convert legacy KeePassHTTP attributes to KeePassXC-Browser compatible custom data</translation>
+        <source>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</source>
+        <translation>Convert legacy KeePassHTTP attributes to OpenVireo Browser compatible custom data</translation>
     </message>
     <message>
         <source>No keys found</source>
@@ -2867,9 +2867,9 @@ Save changes?</translation>
         <translation>Disable safe saves?</translation>
     </message>
     <message>
-        <source>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <source>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</source>
-        <translation>KeePassXC has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
+        <translation>OpenVireo has failed to save the database multiple times. This is likely caused by file sync services holding a lock on the save file.
 Disable safe saves and try again?</translation>
     </message>
     <message>
@@ -3780,9 +3780,9 @@ Would you like to correct it?</translation>
         <translation>Synchronise</translation>
     </message>
     <message>
-        <source>Your KeePassXC version does not support sharing this container type.
+        <source>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</source>
-        <translation>Your KeePassXC version does not support sharing this container type.
+        <translation>Your OpenVireo version does not support sharing this container type.
 Supported extensions are: %1.</translation>
     </message>
     <message>
@@ -4745,8 +4745,8 @@ This will leave your passwords and sensitive information vulnerable!
 <context>
     <name>GlobalShortcutsPortal</name>
     <message>
-        <source>KeePassXC - Global Shortcuts</source>
-        <translation>KeePassXC - Global Shortcuts</translation>
+        <source>OpenVireo - Global Shortcuts</source>
+        <translation>OpenVireo - Global Shortcuts</translation>
     </message>
     <message>
         <source>The XDG Desktop Portal for global shortcuts is not available on this system.</source>
@@ -5726,8 +5726,8 @@ If this reoccurs, your database file may be corrupt.</translation>
         <translation>Old key file format</translation>
     </message>
     <message>
-        <source>You selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
-        <translation>You&apos;ve selected a key file in an old format which KeePassXC&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</translation>
+        <source>You selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</source>
+        <translation>You&apos;ve selected a key file in an old format which OpenVireo&lt;br&gt;may stop supporting in the future.&lt;br&gt;&lt;br&gt;Please consider generating a new key file instead.</translation>
     </message>
     <message>
         <source>Error loading the key file '%1'
@@ -6176,8 +6176,8 @@ Are you sure you want to continue with this file?</translation>
         <translation>Check for updates on startup?</translation>
     </message>
     <message>
-        <source>Would you like KeePassXC to check for updates on startup?</source>
-        <translation>Would you like KeePassXC to check for updates on startup?</translation>
+        <source>Would you like OpenVireo to check for updates on startup?</source>
+        <translation>Would you like OpenVireo to check for updates on startup?</translation>
     </message>
     <message>
         <source>You can always check for updates manually from the application menu.</source>
@@ -6188,8 +6188,8 @@ Are you sure you want to continue with this file?</translation>
         <translation>Toggle window</translation>
     </message>
     <message>
-        <source>Quit KeePassXC</source>
-        <translation>Quit KeePassXC</translation>
+        <source>Quit OpenVireo</source>
+        <translation>Quit OpenVireo</translation>
     </message>
     <message numerus="yes">
         <source>%1 Entry(s)</source>
@@ -6496,10 +6496,10 @@ Are you sure you want to continue with this file?</translation>
         <translation>Setup Remote Sync…</translation>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of KeePassXC.
+        <source>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</source>
-        <translation>WARNING: You are using a development snapshot build of KeePassXC.
+        <translation>WARNING: You are using a development snapshot build of OpenVireo.
 Maintain a backup of your databases in the event of unknown bugs.
 This version is not meant for production use.</translation>
     </message>
@@ -6703,8 +6703,8 @@ This version is not meant for production use.</translation>
 <context>
     <name>NewDatabaseWizard</name>
     <message>
-        <source>Create a new KeePassXC database…</source>
-        <translation>Create a new KeePassXC database…</translation>
+        <source>Create a new OpenVireo database…</source>
+        <translation>Create a new OpenVireo database…</translation>
     </message>
     <message>
         <source>Root</source>
@@ -6978,8 +6978,8 @@ This version is not meant for production use.</translation>
 <context>
     <name>PasskeyExportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Export</source>
-        <translation>KeePassXC - Passkey Export</translation>
+        <source>OpenVireo - Passkey Export</source>
+        <translation>OpenVireo - Passkey Export</translation>
     </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
@@ -7036,8 +7036,8 @@ Do you want to overwrite it?
 <context>
     <name>PasskeyImportDialog</name>
     <message>
-        <source>KeePassXC - Passkey Import</source>
-        <translation>KeePassXC - Passkey Import</translation>
+        <source>OpenVireo - Passkey Import</source>
+        <translation>OpenVireo - Passkey Import</translation>
     </message>
     <message>
         <source>Username: %1</source>
@@ -7170,8 +7170,8 @@ The following data is missing:
         <translation>Password set, click to change or remove</translation>
     </message>
     <message>
-        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. KeePassXC can generate one for you.&lt;/p&gt;</translation>
+        <source>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;A password is the primary method for securing your database.&lt;/p&gt;&lt;p&gt;Good passwords are long and unique. OpenVireo can generate one for you.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Passwords do not match.</source>
@@ -7526,8 +7526,8 @@ Do you want to overwrite it?</translation>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>KeePassXC - Pick Characters</source>
-        <translation>KeePassXC - Pick Characters</translation>
+        <source>OpenVireo - Pick Characters</source>
+        <translation>OpenVireo - Pick Characters</translation>
     </message>
     <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
@@ -7623,8 +7623,8 @@ Do you want to overwrite it?</translation>
         <translation>Message encryption failed.</translation>
     </message>
     <message>
-        <source>KeePassXC association failed, try again</source>
-        <translation>KeePassXC association failed, try again</translation>
+        <source>OpenVireo association failed, try again</source>
+        <translation>OpenVireo association failed, try again</translation>
     </message>
     <message>
         <source>Encryption key is not recognized</source>
@@ -8712,11 +8712,11 @@ Available commands:
         <translation>Failed to load key file %1: %2</translation>
     </message>
     <message>
-        <source>WARNING: You are using an old key file format which KeePassXC may
+        <source>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</source>
-        <translation>WARNING: You are using an old key file format which KeePassXC may
+        <translation>WARNING: You are using an old key file format which OpenVireo may
 stop supporting in the future.
 
 Please consider generating a new key file.</translation>
@@ -9094,8 +9094,8 @@ Kernel: %3 %4</translation>
         <translation>Unexpected key file data! Key file may be corrupt.</translation>
     </message>
     <message>
-        <source>KeePassXC - cross-platform password manager</source>
-        <translation>KeePassXC - cross-platform password manager</translation>
+        <source>OpenVireo - cross-platform password manager</source>
+        <translation>OpenVireo - cross-platform password manager</translation>
     </message>
     <message>
         <source>filenames of the password databases to open (*.kdbx)</source>
@@ -9126,20 +9126,20 @@ Kernel: %3 %4</translation>
         <translation>Database failed to lock.</translation>
     </message>
     <message>
-        <source>Another instance of KeePassXC is already running.</source>
-        <translation>Another instance of KeePassXC is already running.</translation>
+        <source>Another instance of OpenVireo is already running.</source>
+        <translation>Another instance of OpenVireo is already running.</translation>
     </message>
     <message>
-        <source>KeePassXC is not running. No open database to lock</source>
-        <translation>KeePassXC is not running. No open database to lock</translation>
+        <source>OpenVireo is not running. No open database to lock</source>
+        <translation>OpenVireo is not running. No open database to lock</translation>
     </message>
     <message>
         <source>Fatal error while testing the cryptographic functions.</source>
         <translation>Fatal error while testing the cryptographic functions.</translation>
     </message>
     <message>
-        <source>KeePassXC - Error</source>
-        <translation>KeePassXC - Error</translation>
+        <source>OpenVireo - Error</source>
+        <translation>OpenVireo - Error</translation>
     </message>
     <message>
         <source>Database password: </source>
@@ -9262,8 +9262,8 @@ This option is deprecated, use --set-key-file instead.</translation>
         <translation>No Quick Unlock provider is available</translation>
     </message>
     <message>
-        <source>Failed to init KeePassXC crypto.</source>
-        <translation>Failed to init KeePassXC crypto.</translation>
+        <source>Failed to init OpenVireo crypto.</source>
+        <translation>Failed to init OpenVireo crypto.</translation>
     </message>
     <message>
         <source>Failed to encrypt key data.</source>
@@ -9783,8 +9783,8 @@ This option is deprecated, use --set-key-file instead.</translation>
         <translation>Also show entries that have been excluded from reports</translation>
     </message>
     <message>
-        <source>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
-        <translation>This build of KeePassXC does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</translation>
+        <source>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</source>
+        <translation>This build of OpenVireo does not have network functions. Networking is required to check your passwords against Have I Been Pwned databases.</translation>
     </message>
     <message>
         <source>Congratulations, no exposed passwords!</source>
@@ -10252,8 +10252,8 @@ This option is deprecated, use --set-key-file instead.</translation>
         <translation>Options</translation>
     </message>
     <message>
-        <source>Enable KeepassXC Freedesktop.org Secret Service integration</source>
-        <translation>Enable KeepassXC Freedesktop.org Secret Service integration</translation>
+        <source>Enable OpenVireo Freedesktop.org Secret Service integration</source>
+        <translation>Enable OpenVireo Freedesktop.org Secret Service integration</translation>
     </message>
     <message>
         <source>General</source>
@@ -10619,19 +10619,19 @@ Example: JBSWY3DPEHPK3PXP</translation>
         <translation>An error occurred when trying to retrieve update information. Please try again later.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;KeePassXC %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</translation>
     </message>
     <message>
-        <source>You have the latest version of KeePassXC</source>
-        <translation>You have the latest version of KeePassXC</translation>
+        <source>You have the latest version of OpenVireo</source>
+        <translation>You have the latest version of OpenVireo</translation>
     </message>
 </context>
 <context>
     <name>WelcomeWidget</name>
     <message>
-        <source>Start storing your passwords securely in a KeePassXC database</source>
-        <translation>Start storing your passwords securely in a KeePassXC database</translation>
+        <source>Start storing your passwords securely in an OpenVireo database</source>
+        <translation>Start storing your passwords securely in an OpenVireo database</translation>
     </message>
     <message>
         <source>Recent databases</source>
@@ -10642,8 +10642,8 @@ Example: JBSWY3DPEHPK3PXP</translation>
         <translation>Open a recent database</translation>
     </message>
     <message>
-        <source>Welcome to KeePassXC %1</source>
-        <translation>Welcome to KeePassXC %1</translation>
+        <source>Welcome to OpenVireo %1</source>
+        <translation>Welcome to OpenVireo %1</translation>
     </message>
     <message>
         <source>Create Database</source>

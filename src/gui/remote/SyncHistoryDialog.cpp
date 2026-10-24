@@ -153,7 +153,7 @@ void SyncHistoryDialog::openSelected()
         }
         // A folder of its own, so the name can say which version it is; it outlives the dialog
         // because the tab keeps using the file
-        const auto dir = QDir::temp().filePath("KeePassXC-version-" + QUuid::createUuid().toString(QUuid::Id128));
+        const auto dir = QDir::temp().filePath("OpenVireo-version-" + QUuid::createUuid().toString(QUuid::Id128));
         const auto filePath =
             QDir(dir).filePath(tr("%1 (version %2).kdbx").arg(m_params.remoteDatabaseId()).arg(revision));
         QFile file(filePath);
