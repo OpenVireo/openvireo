@@ -1,10 +1,10 @@
-= KeePassXC – Reference
+= OpenVireo – Reference
 include::.sharedheader[]
 :imagesdir: ../images
 
 // tag::content[]
 == Reference
-This section contains full details on advanced features available in KeePassXC.
+This section contains full details on advanced features available in OpenVireo.
 
 === Entry Placeholders
 [grid=rows, frame=none, width=90%]

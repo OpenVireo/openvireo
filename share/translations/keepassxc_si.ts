@@ -10,8 +10,8 @@
         <translation>පිළිබඳ</translation>
     </message>
     <message>
-        <source>Report bugs at: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
-        <translation>දෝෂ වාර්තාව: &lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
+        <source>Report bugs at: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</source>
+        <translation>දෝෂ වාර්තාව: &lt;a href=&quot;https://github.com/openvireo/openvireo/issues&quot; style=&quot;text-decoration: underline;&quot;&gt;https://github.com&lt;/a&gt;</translation>
     </message>
     <message>
         <source>OpenVireo is distributed under the terms of the GNU General Public License (GPL) version 2 or (at your option) version 3.</source>
@@ -30,8 +30,8 @@
         <translation>දායකයින්</translation>
     </message>
     <message>
-        <source>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
-        <translation>&lt;a href=&quot;https://github.com/keepassxreboot/keepassxc/graphs/contributors&quot;&gt;දායකත්‍ව ගිට්හබ් හි බලන්න&lt;/a&gt;</translation>
+        <source>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;See Contributions on GitHub&lt;/a&gt;</source>
+        <translation>&lt;a href=&quot;https://github.com/openvireo/openvireo/graphs/contributors&quot;&gt;දායකත්‍ව ගිට්හබ් හි බලන්න&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Debug Info</source>
@@ -10567,8 +10567,8 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation>යාවත්කාලීන තොරතුරු ලබා ගැනීමට උත්සාහ කිරීමේදී දෝෂයක් ඇති විය, කරුණාකර පසුව නැවත උත්සාහ කරන්න.</translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;downloaded here&lt;/a&gt;.</source>
-        <translation>&lt;strong&gt;නව අනුවාදයක් තිබේ.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 &lt;a href=&quot;https://keepassxc.org/download/&quot;&gt;මෙතැනින් බාගත හැකිය&lt;/a&gt;.</translation>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <translation>&lt;strong&gt;නව අනුවාදයක් තිබේ.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;මෙතැනින් බාගත හැකිය&lt;/a&gt;.</translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>

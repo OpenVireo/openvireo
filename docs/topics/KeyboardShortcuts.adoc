@@ -1,4 +1,4 @@
-= KeePassXC – Keyboard Shortcuts
+= OpenVireo – Keyboard Shortcuts
 include::.sharedheader[]
 :imagesdir: ../images
 

@@ -554,21 +554,24 @@ void AboutDialog::setupVaultAboutPage()
 
     auto links = page.addSection(tr("Links"));
     links->addSetting(tr("Website"),
-                      hyperlink(QStringLiteral("keepassxc.org"), QStringLiteral("https://keepassxc.org/"), this),
+                      hyperlink(QStringLiteral("openvireo.com"), QStringLiteral("https://openvireo.com/"), this),
                       tr("News, documentation and downloads"));
     links->addSetting(tr("Report a bug"),
                       hyperlink(tr("GitHub issues"),
-                                QStringLiteral("https://github.com/keepassxreboot/keepassxc/issues"),
+                                QStringLiteral("https://github.com/openvireo/openvireo/issues"),
                                 this),
                       tr("Include the debug info when you report a bug"));
+    links->addSetting(tr("OpenVireo is a fork of KeePassXC"),
+                      hyperlink(QStringLiteral("keepassxc.org"), QStringLiteral("https://keepassxc.org/"), this),
+                      tr("Built on the work of the KeePassXC Team and its contributors"));
 
     auto license = page.addSection(tr("License"));
     license->addSetting(tr("GNU General Public License"),
                         hyperlink(tr("Read the license"), QStringLiteral("https://www.gnu.org/licenses/"), this),
                         ui->label_3->text());
 
-    auto team = page.addSection(tr("Project maintainers"));
-    auto maintainersCard = team->addSetting(tr("The OpenVireo team"), QWidgetList{}, ui->label_7->text());
+    auto team = page.addSection(tr("KeePassXC maintainers"));
+    auto maintainersCard = team->addSetting(tr("The KeePassXC Team"), QWidgetList{}, ui->label_7->text());
     maintainersCard->setCollapsible(false);
     for (const auto& maintainer : maintainers) {
         auto name = QString::fromUtf8(maintainer.name);
@@ -592,9 +595,9 @@ void AboutDialog::setupVaultContributorsPage()
     auto code = page.addSection();
     code->addSetting(tr("Everyone who contributed code"),
                      hyperlink(tr("See contributions on GitHub"),
-                               QStringLiteral("https://github.com/keepassxreboot/keepassxc/graphs/contributors"),
+                               QStringLiteral("https://github.com/openvireo/openvireo/graphs/contributors"),
                                this),
-                     tr("OpenVireo is built by its community"));
+                     tr("OpenVireo builds on KeePassXC, which is built by its community"));
 
     for (const auto& group : contributorGroups(aboutContributors)) {
         auto section = page.addSection(group.title);

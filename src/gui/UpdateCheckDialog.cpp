@@ -53,7 +53,7 @@ void UpdateCheckDialog::showUpdateCheckResponse(bool hasUpdate, const QString& v
     } else if (hasUpdate) {
         m_ui->statusLabel->setText(
             tr("<strong>A new version is available.</strong><br/>"
-               "OpenVireo %1 can be <a href=\"https://keepassxc.org/download/\">downloaded here</a>.")
+               "OpenVireo %1 can be <a href=\"https://github.com/openvireo/openvireo/releases\">downloaded here</a>.")
                 .arg(version, KEEPASSXC_VERSION));
     } else {
         m_ui->statusLabel->setText(tr("You have the latest version of OpenVireo"));

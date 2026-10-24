@@ -1,16 +1,16 @@
-= KeePassXC – Sync Server
+= OpenVireo – Sync Server
 include::.sharedheader[]
 :imagesdir: ../images
 
 // tag::content[]
-== KeePassXC Sync Server
-The KeePassXC Sync Server keeps a database in sync between your devices. It runs on a server you control (see the https://github.com/bongani-m/keepassxc-sync-server[keepassxc-sync-server] project) and only ever stores your encrypted `.kdbx` file: it never sees your master password and cannot read your entries. Every merge happens in KeePassXC on your devices.
+== OpenVireo Sync Server
+The OpenVireo Sync Server keeps a database in sync between your devices. It runs on a server you control (see the https://github.com/openvireo/openvireo-sync-server[openvireo-sync-server] project) and only ever stores your encrypted `.kdbx` file: it never sees your master password and cannot read your entries. Every merge happens in OpenVireo on your devices.
 
-Your database keeps its own master password and key file. To sync with KeePassXC on other computers and with KeePass Web without managing a server yourself, see <<KeePassXC Accounts>> instead.
+Your database keeps its own master password and key file. To sync with OpenVireo on other computers and with OpenVireo Web without managing a server yourself, see <<OpenVireo Accounts>> instead.
 
 === Connecting a Database
 1. Open and unlock the database, then open _Database_ -> _Database Settings…_ -> _Remote Sync_.
-2. Enter a name for the configuration and set _Type_ to _KeePassXC Sync Server_.
+2. Enter a name for the configuration and set _Type_ to _OpenVireo Sync Server_.
 3. Enter the _Server URL_ and the _Database ID_, the name of the database on the server (for example `personal`). A new database ID is created on the first upload.
 4. Enter an _Access token_ or a pairing code (see <<Adding Another Device>>). Access tokens are stored on this device only, in the macOS Keychain, the Windows Credential Manager, or the Secret Service on Linux, and never in the database file. Each device has its own token, so one device can be signed out on the server without affecting the others.
 5. Click _Test Connection_ to check the server, URL, and token.
@@ -18,15 +18,15 @@ Your database keeps its own master password and key file. To sync with KeePassXC
 
 The configuration is added to the _Database_ -> _Remote Sync…_ menu. Select it there to sync at any time.
 
-TIP: You can also start from a database that is already on the server: open the Import Wizard (_Database_ -> _Import…_ or _Import File_ on the welcome screen), choose _KeePassXC Sync Server_, enter the server URL and your token, and click _Load_ to list the databases on the server. Enter the database's password and choose _Local Copy_ under _Import Into_ to keep a local copy that syncs with the server and keeps the server database's credentials.
+TIP: You can also start from a database that is already on the server: open the Import Wizard (_Database_ -> _Import…_ or _Import File_ on the welcome screen), choose _OpenVireo Sync Server_, enter the server URL and your token, and click _Load_ to list the databases on the server. Enter the database's password and choose _Local Copy_ under _Import Into_ to keep a local copy that syncs with the server and keeps the server database's credentials.
 
 === Adding Another Device
-To add another of your devices without asking the server's admin for a new token, click _Pair Device…_ next to _Test Connection_ on a device that is already connected. It shows an eight-character pairing code that is valid for 10 minutes and can be used once. On the new device, enter the code wherever an access token is asked for, in the Remote Sync settings or the Import Wizard. KeePassXC trades it for the new device's own token and names the device after the computer.
+To add another of your devices without asking the server's admin for a new token, click _Pair Device…_ next to _Test Connection_ on a device that is already connected. It shows an eight-character pairing code that is valid for 10 minutes and can be used once. On the new device, enter the code wherever an access token is asked for, in the Remote Sync settings or the Import Wizard. OpenVireo trades it for the new device's own token and names the device after the computer.
 
 The server's admin can also create a pairing code or a token for a user with the server's command line tool.
 
 === Automatic Sync
-With _Sync automatically_ turned on, KeePassXC syncs after each save, when the database is unlocked, when your computer comes back online or KeePassXC comes to the front, and every minute while the database is open. When the server announces changes from your other devices, KeePassXC syncs at once and checks every five minutes instead.
+With _Sync automatically_ turned on, OpenVireo syncs after each save, when the database is unlocked, when your computer comes back online or OpenVireo comes to the front, and every minute while the database is open. When the server announces changes from your other devices, OpenVireo syncs at once and checks every five minutes instead.
 
 Background syncs never interrupt you: they wait while you edit an entry or have unsaved changes, and never show a dialog. The sync status chip at the far right of the header shows what is happening:
 
@@ -36,7 +36,7 @@ Background syncs never interrupt you: they wait while you edit an entry or have 
 
 |Synced | The database matches the server. Hover over the chip to see when it last synced.
 |Syncing… | A sync is in progress.
-|Offline | The server can't be reached. KeePassXC tries again automatically; click the chip to try now.
+|Offline | The server can't be reached. OpenVireo tries again automatically; click the chip to try now.
 |Sync failed | The last sync failed. Click the chip to sync again.
 |Unlock needed | The database on the server uses a different password or key file. Click the chip to unlock it.
 |Token needed | This device has no access token for the server yet. Click the chip to open the Remote Sync settings.
@@ -44,10 +44,10 @@ Background syncs never interrupt you: they wait while you edit an entry or have 
 |===
 
 === Conflicts
-When the same database changed on two devices, KeePassXC merges both copies field by field, using the copy from the last sync to tell which device changed what. A field changed on only one device keeps that change. When both devices changed the same field differently, the newer change is kept, the other is in the entry's history, and a message lists the entries concerned. Entries that were deleted on one device and changed on another are listed as well, so you can check them.
+When the same database changed on two devices, OpenVireo merges both copies field by field, using the copy from the last sync to tell which device changed what. A field changed on only one device keeps that change. When both devices changed the same field differently, the newer change is kept, the other is in the entry's history, and a message lists the entries concerned. Entries that were deleted on one device and changed on another are listed as well, so you can check them.
 
 === Protection Against Old Copies
-KeePassXC remembers the newest version of the database it has seen from the server. If the server later serves an older copy, or a database this device has synced before disappears, syncing stops and the status chip shows _Check server_. This can happen when the server was restored from a backup, but it can also mean someone is tampering with it. Clicking the chip explains the problem; syncing anyway merges the server's copy into your database and uploads the result, so nothing on this device is lost.
+OpenVireo remembers the newest version of the database it has seen from the server. If the server later serves an older copy, or a database this device has synced before disappears, syncing stops and the status chip shows _Check server_. This can happen when the server was restored from a backup, but it can also mean someone is tampering with it. Clicking the chip explains the problem; syncing anyway merges the server's copy into your database and uploads the result, so nothing on this device is lost.
 
 === Older Versions
 The sync server keeps the latest versions of each database. Select _Database_ -> _Remote Sync…_ -> _Versions on <name>…_ to list them. Opening a version downloads it and opens it next to your database, locked, so you can unlock it and copy entries from it or merge it into your database. Nothing on the server changes.

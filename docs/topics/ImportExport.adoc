@@ -1,10 +1,10 @@
-= KeePassXC – Import/Export Operations
+= OpenVireo – Import/Export Operations
 include::.sharedheader[]
 :imagesdir: ../images
 
 // tag::content[]
 == Importing Databases
-KeePassXC allows you to import external databases from the following options:
+OpenVireo allows you to import external databases from the following options:
 
 * Comma Separated Values (.csv)
 * 1Password Export (.1pux)
@@ -13,17 +13,17 @@ KeePassXC allows you to import external databases from the following options:
 * Proton Pass (.json)
 * KeePass 1 Database (.kdb)
 * Remote database (.kdbx), downloaded with a command
-* KeePassXC Sync Server (.kdbx)
+* OpenVireo Sync Server (.kdbx)
 
-To import any of these files, start KeePassXC and either click the `Import File` button on the welcome screen or use the menu Database > Import... to launch the Import Wizard.
+To import any of these files, start OpenVireo and either click the `Import File` button on the welcome screen or use the menu Database > Import... to launch the Import Wizard.
 
 .Import Wizard
 image::import_wizard.png[]
 
-For each of the import options, you will be prompted to select the file to import and then provide credentials to unlock the file, if necessary. You can then choose to import the file into a new database or into an existing database that is already unlocked in KeePassXC.
+For each of the import options, you will be prompted to select the file to import and then provide credentials to unlock the file, if necessary. You can then choose to import the file into a new database or into an existing database that is already unlocked in OpenVireo.
 
 === Importing CSV File
-WARNING: A CSV file is unencrypted and you should securely delete this file after successfully importing it into KeePassXC.
+WARNING: A CSV file is unencrypted and you should securely delete this file after successfully importing it into OpenVireo.
 
 1. Follow the steps above and click `Continue`. The CSV import wizard will appear.
 
@@ -35,10 +35,10 @@ image::csv_import.png[]
 3. Click `Done` to complete the import. If you chose to create a new database, the New Database dialog will appear. Otherwise your entries will be nested under the group you chose for the existing database.
 
 === Importing from Other Applications
-KeePassXC allows you to import databases from various applications including 1Password (1PUX and OPVault), Bitwarden, and Proton Pass. Each import option involves selecting the file, providing necessary credentials (if required), and choosing to import into a new or existing database. Note that CSV, 1Password Export, Bitwarden, and Proton Pass files are unencrypted and should be securely deleted after import.
+OpenVireo allows you to import databases from various applications including 1Password (1PUX and OPVault), Bitwarden, and Proton Pass. Each import option involves selecting the file, providing necessary credentials (if required), and choosing to import into a new or existing database. Note that CSV, 1Password Export, Bitwarden, and Proton Pass files are unencrypted and should be securely deleted after import.
 
 ==== 1Password Export
-WARNING: A 1Password Export file is unencrypted and you should securely delete this file after successfully importing it into KeePassXC.
+WARNING: A 1Password Export file is unencrypted and you should securely delete this file after successfully importing it into OpenVireo.
 
 1. Open the Import Wizard as shown above. Select the 1Password Export option.
 
@@ -54,7 +54,7 @@ Save your 1Password Vault locally to create an OPVault directory. Please see 1Pa
 2. Enter the password for your vault and click `Continue` to unlock and preview the import. Click `Done` to complete the import.
 
 ==== Bitwarden
-WARNING: A Bitwarden Export file may be unencrypted and you should securely delete this file after successfully importing it into KeePassXC.
+WARNING: A Bitwarden Export file may be unencrypted and you should securely delete this file after successfully importing it into OpenVireo.
 
 1. Open the Import Wizard as shown above. Select the Bitwarden option.
 
@@ -63,16 +63,16 @@ WARNING: A Bitwarden Export file may be unencrypted and you should securely dele
 3. Click `Continue` to unlock and preview the import. Click `Done` to complete the import.
 
 ==== Proton Pass
-WARNING: A Proton Pass Export file is unencrypted and you should securely delete this file after successfully importing it into KeePassXC.
+WARNING: A Proton Pass Export file is unencrypted and you should securely delete this file after successfully importing it into OpenVireo.
 
 1. Open the Import Wizard as shown above. Select the Proton Pass option.
 
 2. Click `Continue` to preview the import. Click `Done` to complete the import.
 
 === Importing KeePass 1 Database
-KeePass 1 database is an older format of the database created using a legacy version of KeePass. KeePassXC lets your import this older format of the database and you can seamlessly start using this database in your new KeePassXC application.
+KeePass 1 database is an older format of the database created using a legacy version of KeePass. OpenVireo lets your import this older format of the database and you can seamlessly start using this database in your new OpenVireo application.
 
-To import a KeePass 1 database file in KeePassXC, perform the following steps:
+To import a KeePass 1 database file in OpenVireo, perform the following steps:
 
 1. Open the Import Wizard as shown above. Select the KeePass1 Database option.
 
@@ -81,9 +81,9 @@ To import a KeePass 1 database file in KeePassXC, perform the following steps:
 3. Click `Continue` to unlock and preview the import. Click `Done` to complete the import.
 
 === Importing Remote Database
-Database files that are stored in a remote location can be imported or opened with KeePassXC if you provide a command to download the file from the remote location.
+Database files that are stored in a remote location can be imported or opened with OpenVireo if you provide a command to download the file from the remote location.
 
-To import (or temporarily open) a remote database file in KeePassXC, perform the following steps:
+To import (or temporarily open) a remote database file in OpenVireo, perform the following steps:
 
 1. Open the Import Wizard as shown above. Select the Remote Database option.
 
@@ -96,7 +96,7 @@ To import (or temporarily open) a remote database file in KeePassXC, perform the
 Opening without importing a remote database is possible by selecting Temporary Database in the Import Into section of the wizard.
 
 === Importing from a Sync Server
-A database stored on a KeePassXC Sync Server can be downloaded into KeePassXC to start syncing it on this device:
+A database stored on an OpenVireo Sync Server can be downloaded into OpenVireo to start syncing it on this device:
 
 1. Open the Import Wizard as shown above. Select the Sync Server option.
 
@@ -108,10 +108,10 @@ A database stored on a KeePassXC Sync Server can be downloaded into KeePassXC to
 
 5. Click `Continue` to unlock and preview the import. Click `Done` to complete the import.
 
-See <<KeePassXC Sync Server>> for automatic sync and the other sync server features.
+See <<OpenVireo Sync Server>> for automatic sync and the other sync server features.
 
 == Exporting Databases
-KeePassXC supports multiple ways to export your database for transfer to another program or to print out and archive.
+OpenVireo supports multiple ways to export your database for transfer to another program or to print out and archive.
 
 WARNING: These exports do not contain all the information in your database due to various limitations in the export format. For example, the CSV export does not support attachments, advanced attributes, Auto-Type settings, or custom icons. The XML export does not support attachments. The HTML export is mainly for printing and does not support attachments and some custom data fields.
 

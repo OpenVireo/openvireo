@@ -1,9 +1,9 @@
-# Build and Install KeePassXC
+# Build and Install OpenVireo
 
-This document will guide you through the steps to build and install KeePassXC from source.
-For more information, see also the [_Building KeePassXC_](https://github.com/keepassxreboot/keepassxc/wiki/Building-KeePassXC) page on the wiki.
+This document will guide you through the steps to build and install OpenVireo from source.
+OpenVireo is a fork of KeePassXC and builds the same way; for more information, see also the [_Building KeePassXC_](https://github.com/keepassxreboot/keepassxc/wiki/Building-KeePassXC) page on the KeePassXC wiki.
 
-The [QuickStart Guide](https://keepassxc.org/docs/KeePassXC_GettingStarted.html) gets you started using KeePassXC on your Windows, macOS, or Linux computer using pre-compiled binaries from the [downloads page](https://keepassxc.org/download).
+Pre-compiled binaries for Windows, macOS, and Linux are on the [releases page](https://github.com/openvireo/openvireo/releases).
 
 ## Toolchain and Build Dependencies
 
@@ -19,7 +19,7 @@ The following minimum versions of libraries must exist:
 * botan (>= 2.12.0 or >= 3.0.0)
 * zlib (>= 1.2.0)
 
-* Besides a working C++ toolchain, KeePassXC also has a number of direct build and runtime dependencies. For detailed information about how to install them, please refer to the GitHub wiki:
+* Besides a working C++ toolchain, OpenVireo also has a number of direct build and runtime dependencies. For detailed information about how to install them, please refer to the GitHub wiki:
 
 * [Set up Build Environment on Linux](https://github.com/keepassxreboot/keepassxc/wiki/Set-up-Build-Environment-on-Linux)
 * [Set up Build Environment on Windows](https://github.com/keepassxreboot/keepassxc/wiki/Set-up-Build-Environment-on-Windows)
@@ -27,16 +27,16 @@ The following minimum versions of libraries must exist:
 
 ## Build Steps
 
-We recommend using the release tool to perform builds, please read up-to-date instructions [on our wiki](https://github.com/keepassxreboot/keepassxc/wiki/Building-KeePassXC#building-using-the-release-tool).
+We recommend using the release tool to perform builds, please read up-to-date instructions [on the KeePassXC wiki](https://github.com/keepassxreboot/keepassxc/wiki/Building-KeePassXC#building-using-the-release-tool).
 
 To compile from source, open a **Terminal (Linux/MacOS)**, the **MSVC Tools Command Prompt (Windows)**, or **MSYS2-MinGW shell (Windows)**. For code development on Windows, you can use Visual Studio 2022, Visual Studio Code, or CLion.
 
-1. Download the KeePassXC [source tarball](https://keepassxc.org/download#source) or check out the latest version from our [Git repository](https://github.com/keepassxreboot/keepassxc).
+1. Download the OpenVireo source tarball from the [releases page](https://github.com/openvireo/openvireo/releases) or check out the latest version from our [Git repository](https://github.com/openvireo/openvireo).
 
    To clone the project from Git, `cd` to a suitable location and run
 
    ```
-   git clone https://github.com/keepassxreboot/keepassxc.git
+   git clone https://github.com/openvireo/openvireo.git
    ```
 
    This will clone the entire contents of the repository and check out the current `develop` branch.
@@ -55,11 +55,11 @@ To compile from source, open a **Terminal (Linux/MacOS)**, the **MSVC Tools Comm
    cmake --build ./build
    ```
 
-If you have `vcpkg` installed, add `-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake` to the `cmake` command to automatically download and install all required build and runtime dependencies locally to your build directory before compiling KeePassXC. Using `vcpkg` is the preferred way to install dependencies on macOS and required on Windows if using the MSVC toolchain.
+If you have `vcpkg` installed, add `-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake` to the `cmake` command to automatically download and install all required build and runtime dependencies locally to your build directory before compiling OpenVireo. Using `vcpkg` is the preferred way to install dependencies on macOS and required on Windows if using the MSVC toolchain.
 
 For more detailed build instructions for each platform, please refer to the [GitHub wiki](https://github.com/keepassxreboot/keepassxc/wiki/Building-KeePassXC).
 
-Note: These steps place the compiled KeePassXC binary inside the `./build/src/` directory (`src/KeePassXC.app/Contents/MacOS` on macOS).
+Note: These steps place the compiled OpenVireo binary inside the `./build/src/` directory (`src/OpenVireo.app/Contents/MacOS` on macOS).
 
 ## MacOS Build Notes
 
@@ -75,10 +75,10 @@ If you are using MSYS2, you have to add ```-G "MSYS Makefiles"``` at the beginni
 
 ## Additional CMake Parameters
 
-KeePassXC comes with a variety of build options that can turn on/off features. Each of these build options are supplied at the time of calling cmake:
+OpenVireo comes with a variety of build options that can turn on/off features. Each of these build options are supplied at the time of calling cmake:
 
 ```
--DKPXC_MINIMAL=[ON|OFF] Build KeePassXC with the minimal feature set required for basic usage (default: OFF)
+-DKPXC_MINIMAL=[ON|OFF] Build OpenVireo with the minimal feature set required for basic usage (default: OFF)
 -DKPXC_FEATURE_BROWSER=[ON|OFF] Browser integration and passkeys support (default: ON)
 -DKPXC_FEATURE_SSHAGENT=[ON|OFF] SSH Agent integration (default: ON)
 -DKPXC_FEATURE_FDOSECRETS=[ON|OFF] (Linux Only) freedesktop.org Secret Service integration; replace system keyring (default:ON)
@@ -86,7 +86,7 @@ KeePassXC comes with a variety of build options that can turn on/off features. E
 -DKPXC_FEATURE_NETWORK=[ON|OFF] Include code that reaches out to external networks (e.g. downloading icons) (default: ON)
 -DKPXC_FEATURE_UPDATES=[ON|OFF] Include automatic update checks; disable for managed distributions (requires networking) (default: ON)
 -DKPXC_FEATURE_DOCS=[ON|OFF] Build offline documentation; requires asciidoctor tool (default: ON)
--DKPXC_FEATURE_ACCOUNTS=[ON|OFF] Sign in to KeePassXC accounts with OPAQUE; requires libopaque, liboprf and libsodium (default: ON when they are found)
+-DKPXC_FEATURE_ACCOUNTS=[ON|OFF] Sign in to OpenVireo accounts with OPAQUE; requires libopaque, liboprf and libsodium (default: ON when they are found)
 -DOPAQUE_ROOT=[path] Where libopaque and liboprf are installed, if not in a standard location
 
 -DWITH_TESTS=[ON|OFF] Enable/Disable building of unit tests (default: ON)
@@ -107,10 +107,10 @@ KeePassXC comes with a variety of build options that can turn on/off features. E
 Note: Even though you can build the application with all TCP/IP networking code disabled, we still require and link against
 Qt6's network library to use local named pipes on all operating systems.
 
-### KeePassXC accounts (OPAQUE)
+### OpenVireo accounts (OPAQUE)
 
-Signing in to a KeePassXC account uses OPAQUE through the C core of [libopaque](https://github.com/stef/libopaque),
-which needs [liboprf](https://github.com/stef/liboprf) and libsodium (1.0.19 or newer). Without them KeePassXC builds
+Signing in to an OpenVireo account uses OPAQUE through the C core of [libopaque](https://github.com/stef/libopaque),
+which needs [liboprf](https://github.com/stef/liboprf) and libsodium (1.0.19 or newer). Without them OpenVireo builds
 as usual and only account sign-in is unavailable. The versions are pinned by the accounts spec
 (`docs/plans/accounts/SPEC.md`, §8). To build them as static libraries on macOS or Linux:
 
@@ -128,7 +128,7 @@ cmake -DOPAQUE_ROOT=$PREFIX -DKPXC_FEATURE_ACCOUNTS=ON ..
 
 ## Installation
 
-After you have successfully built KeePassXC, install the binary by executing the following:
+After you have successfully built OpenVireo, install the binary by executing the following:
 
 ```
 sudo make install
@@ -136,7 +136,7 @@ sudo make install
 
 ## Packaging
 
-You can create a package to redistribute KeePassXC (zip, deb, rpm, dmg, etc..). Refer to [keepassxc-packaging](https://github.com/keepassxreboot/keepassxc-packaging) for packaging scripts.
+You can create a package to redistribute OpenVireo (zip, deb, rpm, dmg, etc..). Refer to [keepassxc-packaging](https://github.com/keepassxreboot/keepassxc-packaging) for packaging scripts.
 
 To package using CMake, run the following command using whichever [generators](https://cmake.org/cmake/help/latest/manual/cpack-generators.7.html) you would like to package with.
 
