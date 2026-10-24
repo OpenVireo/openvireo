@@ -1,15 +1,15 @@
 openapi: 3.1.0
 info:
-  title: KeePassXC sync server JWT routes (kpx v1)
+  title: OpenVireo sync server JWT routes (ov v1)
   version: 1.0.0
   description: |
-    New routes on `keepassxc-sync-server` when SYNC_AUTH_MODE is `jwt` or `both` (SPEC.md §11 and §13).
+    New routes on `openvireo-sync-server` when SYNC_AUTH_MODE is `jwt` or `both` (SPEC.md §11 and §13).
     Shared schemas and the error format come from openapi.yaml. Legacy routes (`/databases/*`,
     `/devices/pairing*`, `/health`, legacy `/events`) are unchanged and not repeated here.
     CORS: every route answers preflight for origins in SYNC_ALLOWED_ORIGINS and exposes
     `ETag, X-Database-Revision, Last-Modified`, allowing headers `Authorization, Content-Type, If-Match, If-None-Match`.
 servers:
-  - url: https://sync.keepassxc.org/api/v1
+  - url: https://sync.openvireo.com/api/v1
 security:
   - bearer: []
 paths:
@@ -110,5 +110,5 @@ paths:
       responses: { '204': { description: delivered (best effort) } }
 components:
   securitySchemes:
-    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: an access token with aud kpx-sync; in `both` mode a device token works on the legacy routes }
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: an access token with aud ov-sync; in `both` mode a device token works on the legacy routes }
     internal: { type: http, scheme: bearer, description: SYNC_INTERNAL_TOKEN shared secret }

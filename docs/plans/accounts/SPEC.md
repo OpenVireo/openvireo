@@ -1,7 +1,7 @@
-# KeePassXC accounts: crypto and protocol spec (kpx v1)
+# OpenVireo accounts: crypto and protocol spec (ov v1)
 
-This is the shared contract for the Flask auth server (`keepassxc-auth`), the sync server
-(`keepassxc-sync-server`), the Qt desktop (`keepassxc`), and the TS SDK (`kpnx-sdk`). The plan
+This is the shared contract for the Flask auth server (`openvireo-auth`), the sync server
+(`openvireo-sync-server`), the Qt desktop (`openvireo`), and the TS SDK (`openvireo-sdk`). The plan
 that explains why is in `../accounts-and-sharing.md`. The HTTP API is in `openapi.yaml`.
 
 Every implementation must pass `test-vectors.json` and open `vault-fixture.kdbx`. If you think the
@@ -39,7 +39,7 @@ spec is wrong, report it; don't change one implementation on its own.
 ```
 pw         = UTF-8(NFKC(master password))          # not trimmed
 stretched  = Argon2id(pw, kdf.salt, m=kdf.m KiB, t=kdf.t, p=kdf.p, version 0x13, len 32)
-AUK        = HKDF(ikm=stretched, salt=SecretKey(16 bytes), info="kpx-auk-v1", L=32)
+AUK        = HKDF(ikm=stretched, salt=SecretKey(16 bytes), info="ov-auk-v1", L=32)
 ```
 
 - `kdf` = `{"alg":"argon2id","salt":<16 bytes>,"m":65536,"t":3,"p":1}`. These are the production
@@ -58,34 +58,34 @@ A first byte other than `0x01` is an "unsupported version" error.
 
 | Use | Key | Plaintext | AAD |
 |---|---|---|---|
-| User keyset | AUK | `enc_sk(32) ‖ sign_seed(32)` | `kpx-keyset-v1` |
-| SA keyset | SA master key | `enc_sk(32) ‖ sign_seed(32)` | `kpx-keyset-v1` |
-| SA master key, per secret | `kek` from the SA token | master key (32) | `kpx-sa-master-v1|<sa uuid>` |
-| Vault name | `HKDF(vault_key, salt="", info="kpx-vault-name-v1")` | UTF-8 name | `kpx-vault-name|<vault uuid>` |
+| User keyset | AUK | `enc_sk(32) ‖ sign_seed(32)` | `ov-keyset-v1` |
+| SA keyset | SA master key | `enc_sk(32) ‖ sign_seed(32)` | `ov-keyset-v1` |
+| SA master key, per secret | `kek` from the SA token | master key (32) | `ov-sa-master-v1|<sa uuid>` |
+| Vault name | `HKDF(vault_key, salt="", info="ov-vault-name-v1")` | UTF-8 name | `ov-vault-name|<vault uuid>` |
 
 ## 5. Keysets and public keys
 
 - Each principal has an **X25519** encryption keypair and an **Ed25519** signing keypair (the
   32-byte seed is stored). The public part is
-  `{"enc_pk","sign_pk","sig"}`, where `sig = Ed25519.sign(sign_seed, "kpx-pubkeys-v1" ‖ enc_pk ‖ sign_pk)`.
+  `{"enc_pk","sign_pk","sig"}`, where `sig = Ed25519.sign(sign_seed, "ov-pubkeys-v1" ‖ enc_pk ‖ sign_pk)`.
   Every client checks `sig` before sealing anything to a public key.
 - **Fingerprint** (shown in share dialogs, Phase 6 verification): the first 20 bytes of
-  `SHA-256("kpx-fp-v1" ‖ enc_pk ‖ sign_pk)` as lowercase hex in groups of 4 separated by spaces.
+  `SHA-256("ov-fp-v1" ‖ enc_pk ‖ sign_pk)` as lowercase hex in groups of 4 separated by spaces.
 - Clients keep the decrypted keyset only in memory while the account is unlocked.
 
-## 6. Seal (public-key envelope, "kpx-seal-v1")
+## 6. Seal (public-key envelope, "ov-seal-v1")
 
 ```
 esk, epk  = fresh X25519 keypair
 shared    = X25519(esk, recipient_enc_pk)       # reject an all-zero result
-key       = HKDF(ikm=shared, salt=epk ‖ recipient_enc_pk, info="kpx-seal-v1", L=32)
+key       = HKDF(ikm=shared, salt=epk ‖ recipient_enc_pk, info="ov-seal-v1", L=32)
 sealed    = 0x01 || epk(32) || nonce(24) || XChaCha20-Poly1305(key, nonce, plaintext, aad)
 ```
 
 | Use | Plaintext | AAD |
 |---|---|---|
-| Vault key for a member | vault key (32) | `kpx-vault-key|<vault uuid>` |
-| SA master key for an org owner/admin | SA master key (32) | `kpx-sa-master-v1|<sa uuid>` |
+| Vault key for a member | vault key (32) | `ov-vault-key|<vault uuid>` |
+| SA master key for an org owner/admin | SA master key (32) | `ov-sa-master-v1|<sa uuid>` |
 
 The AAD binds a sealed key to its vault, so the server can't move one between vaults.
 
@@ -146,7 +146,7 @@ removes a member without a new key version.
 - Passwords go into OPAQUE as their real NFKC UTF-8 bytes. The stock libopaque.js wrapper passes
   the UTF-16 length and truncates non-ASCII passwords, so JS clients call the raw exports.
 - Ids: `idU` = the account email, lowercased and trimmed. `idS` = the issuer host
-  (e.g. `accounts.keepassxc.org`). Context = `kpx-opaque-v1`.
+  (e.g. `accounts.openvireo.com`). Context = `ov-opaque-v1`.
 - The server uses a **per-user server keypair** (`CreateRegistrationResponse` with `skS = null`).
 - Registration: `CreateRegistrationRequest` → `register/start` →
   `CreateRegistrationResponse`. The server keeps `sec` in Redis for 5 minutes under `session_id`.
@@ -172,8 +172,8 @@ removes a member without a new key version.
 
 | Claim | Value |
 |---|---|
-| `iss` | issuer URL, the same as in `/.well-known/kpx-configuration` |
-| `aud` | `["kpx-api","kpx-sync"]` |
+| `iss` | issuer URL, the same as in `/.well-known/openvireo-configuration` |
+| `aud` | `["ov-api","ov-sync"]` |
 | `sub` | `user:<uuid>` or `sa:<uuid>` |
 | `dev` | device uuid (users only) |
 | `org` | owning org uuid (SAs only) |
@@ -181,7 +181,7 @@ removes a member without a new key version.
 | `iat`, `nbf`, `exp` | `exp = iat + 600` |
 | `jti` | uuid |
 
-- Verifiers accept only `alg` `EdDSA`, check `iss` and `aud` (the sync server needs `kpx-sync`),
+- Verifiers accept only `alg` `EdDSA`, check `iss` and `aud` (the sync server needs `ov-sync`),
   and allow 60 seconds of clock skew on `exp` and `nbf`. If they see an unknown `kid`, they refetch
   the JWKS at most once every 30 seconds.
 - Roles: `read` < `write` < `manage`. `write` can PUT a blob. `manage` can create or delete the
@@ -189,7 +189,7 @@ removes a member without a new key version.
 
 ### Refresh tokens
 
-- `kpx_rt_` + base64url(32 random bytes). The server stores `SHA-256(utf8(token))` hex. A refresh
+- `ov_rt_` + base64url(32 random bytes). The server stores `SHA-256(utf8(token))` hex. A refresh
   token is bound to one device, lives 30 days without use, and is replaced by every refresh.
 - **Reuse detection:** presenting a token that was already rotated revokes the whole family (the
   device's session), and the user has to log in again.
@@ -197,7 +197,7 @@ removes a member without a new key version.
 ### Service account tokens
 
 ```
-kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b64url 32>,"kek":<b64url 32>})
+ov_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b64url 32>,"kek":<b64url 32>})
 ```
 
 - A secret's `expires_at` lives on the server only (the token doesn't carry it), so an owner or
@@ -205,7 +205,7 @@ kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b6
   it at once, `null` removes the expiry) without issuing a new token. An SA's own `expires_at`
   applies on top of each secret's.
 - The server stores `SHA-256(secret)` hex, `prefix` = the first 8 characters of the base64url
-  secret (for display), and the per-secret `wrapped_master = wrap(kek, sa_master_key, "kpx-sa-master-v1|<sa>")`.
+  secret (for display), and the per-secret `wrapped_master = wrap(kek, sa_master_key, "ov-sa-master-v1|<sa>")`.
 - The SA keyset is stored once, wrapped by the SA **master key**. The master key is sealed to every
   org owner and admin, so any of them can issue new secrets without having the old ones.
 - Exchange: `POST /api/v1/auth/service-account {sa_id, secret}` returns
@@ -215,13 +215,13 @@ kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b6
 
 ## 10. Discovery
 
-`GET /.well-known/kpx-configuration` on the auth server:
+`GET /.well-known/openvireo-configuration` on the auth server:
 
 ```json
-{"issuer":"https://accounts.keepassxc.org","api":"https://accounts.keepassxc.org/api/v1",
- "sync":"https://sync.keepassxc.org/api/v1","jwks_uri":"https://accounts.keepassxc.org/.well-known/jwks.json",
- "opaque":{"lib":"libopaque","version":"1.0.1-6e9ac92","context":"kpx-opaque-v1","ids":"accounts.keepassxc.org"},
- "kdf_min":{"m":19456,"t":2},"web":"https://app.keepassxc.org"}
+{"issuer":"https://accounts.openvireo.com","api":"https://accounts.openvireo.com/api/v1",
+ "sync":"https://sync.openvireo.com/api/v1","jwks_uri":"https://accounts.openvireo.com/.well-known/jwks.json",
+ "opaque":{"lib":"libopaque","version":"1.0.1-6e9ac92","context":"ov-opaque-v1","ids":"accounts.openvireo.com"},
+ "kdf_min":{"m":19456,"t":2},"web":"https://app.openvireo.com"}
 ```
 
 `web` is the web app's URL (§16). It is optional; clients that don't find it hide "Manage account".
@@ -257,8 +257,8 @@ effort: the auth server sends it after the commit and logs failures.
 
 ## 12. Invitations
 
-An org invitation token is `kpx_inv_` + base64url(32 random bytes); the server stores only its
-SHA-256. It reaches the invitee only by email, as a link to `KPX_INVITATION_URL#token=<token>` (in
+An org invitation token is `ov_inv_` + base64url(32 random bytes); the server stores only its
+SHA-256. It reaches the invitee only by email, as a link to `OPENVIREO_INVITATION_URL#token=<token>` (in
 the fragment, so it never reaches a server log), and is accepted with `POST /api/v1/invitations/accept`.
 
 ### Confirming members
@@ -295,8 +295,8 @@ under a user) and vault blobs (`vaults/{id}`) never share storage keys.
 
 ## 14. Secret references
 
-`kpx://<vault>/[<group>/…]<entry>/<field>` names one field; without `/<field>` it names a whole entry
-(an *item*, for `kpx item` and `kpx connect`).
+`ov://<vault>/[<group>/…]<entry>/<field>` names one field; without `/<field>` it names a whole entry
+(an *item*, for `openvireo item` and `openvireo connect`).
 
 - Segments are split on `/` and then percent-decoded (UTF-8), so a `/` inside a name is `%2F`. An
   empty segment is an error (`invalid_reference`).
@@ -307,25 +307,25 @@ under a user) and vault blobs (`vaults/{id}`) never share storage keys.
   that must match exactly one entry under that group, recursively, outside the Recycle Bin.
 - `<field>` is a field name: an exact match first, then the aliases `title`, `username`/`user`,
   `password`, `url`, `notes` (any case) for the standard fields, then a case-insensitive match.
-- In templates (`kpx inject`) a bare reference runs up to whitespace, a quote, a backtick or `}`;
-  `{{ kpx://… }}` (any spacing inside the braces) delimits one followed by other text.
+- In templates (`openvireo inject`) a bare reference runs up to whitespace, a quote, a backtick or `}`;
+  `{{ ov://… }}` (any spacing inside the braces) delimits one followed by other text.
 
 ## 15. Service-account tools
 
-**`kpx run --env-file`** reads a `.env` file: `KEY=value` lines, an optional `export ` prefix, `#`
+**`openvireo run --env-file`** reads a `.env` file: `KEY=value` lines, an optional `export ` prefix, `#`
 comments, `"double quotes"` (escapes `\n`, `\t`, `\"`, `\\`; may span lines) and `'single quotes'`
 (literal). A value that is a reference, or contains `{{ … }}` references, is resolved. Variables
 already in the environment are resolved the same way. The child never receives
-`KPX_SERVICE_ACCOUNT_TOKEN`, `KPX_PASSWORD` or `KPX_SECRET_KEY`.
+`OPENVIREO_SERVICE_ACCOUNT_TOKEN`, `OPENVIREO_PASSWORD` or `OPENVIREO_SECRET_KEY`.
 
 **Masking:** every resolved value, and every line of 4 or more characters of a multi-line value, is
-replaced by `<concealed by kpx>` in the child's stdout and stderr, including when a value is split
+replaced by `<concealed by openvireo>` in the child's stdout and stderr, including when a value is split
 across writes.
 
-**`kpx connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
-sync API and lives in `kpnx-sdk/packages/connect`.
+**`openvireo connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
+sync API and lives in `openvireo-sdk/packages/connect`.
 
-- Its bearer tokens are `kpx_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
+- Its bearer tokens are `ov_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
   token) is configured, as `{name, sha256, vaults, access}`: `vaults` lists vault ids or names, or
   `"*"`, and `access` is `read` or `write`. They are unrelated to the SA token.
 - Routes: `GET /health` and `GET /ready` (no auth); `GET /v1/vaults`, `GET /v1/vaults/{vault}`;
@@ -368,7 +368,7 @@ sealed key stay as they are.
    mails a notice to the old address. Sessions stay signed in.
 
 Clients keep the Secret Key and device id on the device under the email (SDK `secret_key:<idU>`,
-Qt `kpx-account-secret-key:<idS>:<email>`). When `GET /me` returns an email that differs from the
+Qt `ov-account-secret-key:<idS>:<email>`). When `GET /me` returns an email that differs from the
 stored session's, the client moves those entries to the new email and updates its session, so other
 devices that are signed in follow the change without asking for the Secret Key again.
 
@@ -376,7 +376,7 @@ devices that are signed in follow the change without asking for the Secret Key a
   with `&return=<path>` when a page on the auth website asked for it. The web app signs in as usual
   (first sign-in on a device needs the Secret Key) and then hands the session over as below.
 - **Handover:** `POST /api/v1/me/web-session` (user token) returns `{"code","expires_in":60}`, where
-  `code` is `kpx_ws_` + base64url(32 random bytes); the server keeps `SHA-256(utf8(code))` for 60
+  `code` is `ov_ws_` + base64url(32 random bytes); the server keeps `SHA-256(utf8(code))` for 60
   seconds, bound to the user. The client then navigates the browser to
   `{issuer}/session/claim?code=<code>&next=<path>`. The auth website consumes the code once, sets
   its cookie session and redirects to `next` if it is a path on the auth website (`/settings`
@@ -384,3 +384,29 @@ devices that are signed in follow the change without asking for the Secret Key a
 - Accounts made before this (a password hash and no OPAQUE record) can't sign in anywhere and are
   deleted; admins are account users whose role is set with `flask users role <email> admin`.
 
+
+## 17. Names
+
+The fork is published as **OpenVireo**. This is a clean break from the earlier `kpx v1` names:
+nothing accepts the old prefixes, labels or variables, and nothing migrates. Every implementation
+uses these names:
+
+| Thing | Name |
+|---|---|
+| Protocol | `ov v1`; every crypto label (§3–§8) starts `ov-` |
+| JWT audiences | `ov-api`, `ov-sync` |
+| Discovery | `/.well-known/openvireo-configuration` |
+| Tokens | `ov_rt_`, `ov_sa_`, `ov_inv_`, `ov_ct_`, `ov_ws_` |
+| Secret references | `ov://` |
+| Environment variables | `OPENVIREO_*` (e.g. `OPENVIREO_SERVICE_ACCOUNT_TOKEN`, `OPENVIREO_INVITATION_URL`); the sync server's `SYNC_*` keep their names |
+| CLI command | `openvireo` (alias `ov`); masking text `<concealed by openvireo>` |
+| Desktop | app `OpenVireo`, binaries `openvireo`, `openvireo-cli`, `openvireo-proxy`, app/bundle id `com.openvireo.OpenVireo`, URL scheme `openvireo://` |
+| Browser extension | `OpenVireo Browser`, native-messaging host `com.openvireo.browser` |
+| Keychain | sync token service `com.openvireo.SyncToken`; Secret Key `ov-account-secret-key:<idS>:<email>` |
+| Repos and packages | `openvireo-*` repos; npm `@openvireo/*` |
+| Hosts | `openvireo.com` (site), `app.` (web app), `accounts.` (issuer), `sync.` (sync server) |
+
+These keep their old names: the KeePassXC copyright and licence notices, KDBX data keys
+(`KeePassXC-Browser Settings`, `KeePassXC-Browser Passkeys`, `KPEX_PASSKEY_*`,
+`KPXC_REMOTE_SYNC_SETTINGS`) so databases still open in other KeePass clients, internal Qt symbols
+(`KPXC_FEATURE_*`, `KEEPASSXC_*`, namespaces, classes, file names) and links to upstream issues.
