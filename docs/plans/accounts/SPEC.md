@@ -221,8 +221,10 @@ kpx_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b6
 {"issuer":"https://accounts.keepassxc.org","api":"https://accounts.keepassxc.org/api/v1",
  "sync":"https://sync.keepassxc.org/api/v1","jwks_uri":"https://accounts.keepassxc.org/.well-known/jwks.json",
  "opaque":{"lib":"libopaque","version":"1.0.1-6e9ac92","context":"kpx-opaque-v1","ids":"accounts.keepassxc.org"},
- "kdf_min":{"m":19456,"t":2}}
+ "kdf_min":{"m":19456,"t":2},"web":"https://app.keepassxc.org"}
 ```
+
+`web` is the web app's URL (§16). It is optional; clients that don't find it hide "Manage account".
 
 ## 11. Events
 
@@ -279,11 +281,11 @@ their SA master keys on the server. Removing a member flags the org vaults they 
 
 | `SYNC_AUTH_MODE` | Accepted tokens | Routes |
 |---|---|---|
-| `legacy` (default) | device tokens | `databases/*`, `devices/pairing*`, `events` (legacy) |
+| `standalone` (default; `legacy` is accepted as its old name) | device tokens | `databases/*`, `devices/pairing*`, `events` (legacy) |
 | `jwt` | JWTs | `vaults/*`, `events`, `internal/notify` |
 | `both` | either; a token with two `.` separators is a JWT | all of the above |
 
-`vaults/*` and `internal/notify` return 404 in `legacy` mode. In `both` mode, a JWT on a legacy route or a
+`vaults/*` and `internal/notify` return 404 in `standalone` mode. In `both` mode, a JWT on a legacy route or a
 device token on a vault route gets 403 `forbidden`. Creating a vault blob needs `If-None-Match: *`
 and updating it needs `If-Match`; a vault PUT with neither gets 428, even when the blob doesn't
 exist (unlike legacy databases, which can be created without a header). The sync server stores
@@ -339,3 +341,46 @@ sync API and lives in `kpnx-sdk/packages/connect`.
   Responses carry `Cache-Control: no-store`.
 - Service accounts download the whole vault, as every client does; connect reuses a downloaded copy
   for a configured time and then checks it with a conditional HEAD.
+
+## 16. Web account and settings
+
+The auth website (billing, locale, admin) has no password form and never sees a password or the
+Secret Key. Everything that needs the AUK lives in a client: the web app's **Account** page
+(`{web}/?view=account`) changes the master password (`/me/password/*`, keyset re-wrapped, same
+public keys), changes the email (below), turns TOTP on and off (the enrolment secret is shown as a QR
+code of its `otpauth_uri` and as text), lists and revokes devices, and downloads the Emergency Kit
+again from the Secret Key stored on the device. Qt's "Manage account…" opens that page in the browser.
+
+**Changing the email.** The email is OPAQUE's `idU`, so the OPAQUE record is registered again under
+the new one. The AUK doesn't depend on the email, so the KDF, the keyset, the Secret Key and every
+sealed key stay as they are.
+
+1. `POST /me/email {email}` (user token issued in the last 5 minutes): 409 if another account has the
+   email. The server mails an 8-digit code to the new address and keeps `{email, SHA-256(code)}` for
+   30 minutes under the user (a new request replaces it). 3 requests per hour per user.
+2. The client checks the master password by unwrapping the keyset with it (a wrong password must
+   never become the new OPAQUE record), then `POST /me/email/start {email, code, request}`, where
+   `request` is `CreateRegistrationRequest(password)` and `email` must match the pending one. A wrong
+   code is 400 `invalid_code`; the 5th wrong code drops the pending change (410 `session_expired`).
+   The answer is `{session_id, response}`, as for `/me/password/start`.
+3. `FinalizeRequest` with `idU` = the new email → `POST /me/email/finish {session_id, record}` (204).
+   The server stores the record and the email at once (409 if the email was taken meanwhile) and
+   mails a notice to the old address. Sessions stay signed in.
+
+Clients keep the Secret Key and device id on the device under the email (SDK `secret_key:<idU>`,
+Qt `kpx-account-secret-key:<idS>:<email>`). When `GET /me` returns an email that differs from the
+stored session's, the client moves those entries to the new email and updates its session, so other
+devices that are signed in follow the change without asking for the Secret Key again.
+
+- **Sign-in and sign-up** on the auth website redirect to `{web}/?view=signin` or `?view=signup`,
+  with `&return=<path>` when a page on the auth website asked for it. The web app signs in as usual
+  (first sign-in on a device needs the Secret Key) and then hands the session over as below.
+- **Handover:** `POST /api/v1/me/web-session` (user token) returns `{"code","expires_in":60}`, where
+  `code` is `kpx_ws_` + base64url(32 random bytes); the server keeps `SHA-256(utf8(code))` for 60
+  seconds, bound to the user. The client then navigates the browser to
+  `{issuer}/session/claim?code=<code>&next=<path>`. The auth website consumes the code once, sets
+  its cookie session and redirects to `next` if it is a path on the auth website (`/settings`
+  otherwise). An unknown, used or expired code goes to sign-in.
+- Accounts made before this (a password hash and no OPAQUE record) can't sign in anywhere and are
+  deleted; admins are account users whose role is set with `flask users role <email> admin`.
+
