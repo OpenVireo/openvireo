@@ -10,7 +10,7 @@ const py = spawn(process.env.PYTHON ?? "venv/bin/python3", [new URL("./server.py
 const rl = readline.createInterface({ input: py.stdout })[Symbol.asyncIterator]();
 const call = async (m) => { py.stdin.write(JSON.stringify(m) + "\n"); return JSON.parse((await rl.next()).value); };
 const hex = (u) => Buffer.from(u).toString("hex"), unhex = (s) => new Uint8Array(Buffer.from(s, "hex"));
-const ids = { idU: "alice@example.com", idS: "kpx.example" }, context = "kpx-opaque-v1";
+const ids = { idU: "alice@example.com", idS: "openvireo.example" }, context = "ov-opaque-v1";
 
 let { sec, M } = opaque.createRegistrationRequest({ pwdU: pwd });
 const { pub } = await call({ op: "reg", M: hex(M) });
