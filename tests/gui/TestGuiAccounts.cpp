@@ -53,6 +53,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFile>
 #include <QInputDialog>
@@ -1230,4 +1231,31 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     account->setQuickUnlock(nullptr);
     const auto restored = m_server;
     AccountController::setAccountManagerFactory([restored] { return createManager(restored); });
+}
+
+void TestGuiAccounts::openUrl(const QUrl& url)
+{
+    m_openedUrls.append(url);
+}
+
+void TestGuiAccounts::testLinksToAccountRecovery()
+{
+    createWindow({});
+    auto* start = m_mainWindow->startScreen();
+    auto* link = child<QLabel>(start, "recoverLink");
+    QVERIFY(!link->isHidden());
+
+    m_openedUrls.clear();
+    QDesktopServices::setUrlHandler("http", this, "openUrl");
+    QDesktopServices::setUrlHandler("https", this, "openUrl");
+    // The form is on the website of the server the sign-in form points at
+    child<QLineEdit>(start, "serverEdit")->setText("https://accounts.example.org/");
+    emit link->linkActivated("#");
+    QDesktopServices::unsetUrlHandler("http");
+    QDesktopServices::unsetUrlHandler("https");
+    QCOMPARE(m_openedUrls, QList<QUrl>{QUrl("https://accounts.example.org/recover")});
+
+    QCOMPARE(AccountController::recoveryRequestUrl(" http://localhost:8000// "), QUrl("http://localhost:8000/recover"));
+    QCOMPARE(AccountController::recoveryRequestUrl({}).toString(),
+             AccountController::hostedServerUrl() + QStringLiteral("/recover"));
 }
