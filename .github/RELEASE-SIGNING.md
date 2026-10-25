@@ -75,8 +75,9 @@ website's "Verifying Signatures" page. Update both places when the key or its ex
 1. Create an Artifact Signing account and a public-trust certificate profile, and complete identity validation.
 2. Create an app registration, give it the "Artifact Signing Certificate Profile Signer" role on the
    certificate profile, and add a federated credential for GitHub Actions: organization `OpenVireo`,
-   repository `openvireo`, entity `Environment`, name `signing` (subject
-   `repo:OpenVireo/openvireo:environment:signing`; it is case-sensitive). The build jobs run in that environment,
+   repository `openvireo`, entity `Environment`, name `signing`. The repository sends immutable OIDC
+   subjects, so the credential's subject must be `repo:OpenVireo@347287727/openvireo@1432261311:environment:signing`
+   (see `gh api repos/OpenVireo/openvireo/actions/oidc/customization/sub`). The build jobs run in that environment,
    so one credential covers nightlies and release tags; no client secret is needed. In the repository's
    `signing` environment, deployment branch and tag rules can limit signing to `develop` and version tags.
 3. Set the secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
