@@ -19,15 +19,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="1.3580841"
-     inkscape:cx="47.12521"
-     inkscape:cy="92.777757"
+     inkscape:zoom="3.459524"
+     inkscape:cx="50.151408"
+     inkscape:cy="124.29456"
      inkscape:window-width="1512"
      inkscape:window-height="921"
      inkscape:window-x="0"
      inkscape:window-y="33"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg17" />
+     inkscape:current-layer="Chrome-3-0-9" />
   <defs
      id="defs17">
     <linearGradient
@@ -201,52 +201,41 @@
        id="Chrome-3-0-9"
        transform="translate(433,78)">
       <path
-   id="chrome-9-4-3"
-   class="st0"
-   d="m -419.9,19.8 c 0,17 13.7,30.7 30.7,30.7 17,0 30.7,-13.7 30.7,-30.7 0,-17 -13.7,-30.7 -30.7,-30.7 -17,0 -30.7,13.7 -30.7,30.7 z"
-   style="clip-rule:evenodd;fill:#ffffff;fill-rule:evenodd">
-      </path>
-
+         id="chrome-9-4-3"
+         class="st0"
+         d="m -419.9,19.8 c 0,17 13.7,30.7 30.7,30.7 17,0 30.7,-13.7 30.7,-30.7 0,-17 -13.7,-30.7 -30.7,-30.7 -17,0 -30.7,13.7 -30.7,30.7 z"
+         style="clip-rule:evenodd;fill:#ffffff;fill-rule:evenodd" />
       <path
-   id="color-0-6-8"
-   class="st1"
-   d="m -389.2,-4.3 c 13.3,0 24.1,10.8 24.1,24.1 0,13.3 -10.8,24.1 -24.1,24.1 -13.3,0 -24.1,-10.8 -24.1,-24.1 -0.1,-13.3 10.8,-24.1 24.1,-24.1"
-   style="clip-rule:evenodd;fill:#45862b;fill-opacity:1;fill-rule:evenodd">
-      </path>
-
+         id="color-0-6-8"
+         class="st1"
+         d="m -389.2,-4.3 c 13.3,0 24.1,10.8 24.1,24.1 0,13.3 -10.8,24.1 -24.1,24.1 -13.3,0 -24.1,-10.8 -24.1,-24.1 -0.1,-13.3 10.8,-24.1 24.1,-24.1"
+         style="clip-rule:evenodd;fill:#45862b;fill-opacity:1;fill-rule:evenodd" />
       <path
-   id="chrome_1_-5-0-02"
-   class="st2"
-   d="m -421,19.8 c 0,17.6 14.2,31.8 31.8,31.8 17.6,0 31.8,-14.2 31.8,-31.8 0,-17.6 -14.2,-31.8 -31.8,-31.8 -17.6,0 -31.8,14.2 -31.8,31.8 z m 1.1,0 v 0 c 0,-17 13.7,-30.7 30.7,-30.7 17,0 30.7,13.8 30.7,30.7 0,17 -13.7,30.7 -30.7,30.7 -17,0 -30.7,-13.7 -30.7,-30.7 z"
-   style="opacity:0.5;enable-background:new">
-      </path>
-
+         id="chrome_1_-5-0-02"
+         class="st2"
+         d="m -421,19.8 c 0,17.6 14.2,31.8 31.8,31.8 17.6,0 31.8,-14.2 31.8,-31.8 0,-17.6 -14.2,-31.8 -31.8,-31.8 -17.6,0 -31.8,14.2 -31.8,31.8 z m 1.1,0 v 0 c 0,-17 13.7,-30.7 30.7,-30.7 17,0 30.7,13.8 30.7,30.7 0,17 -13.7,30.7 -30.7,30.7 -17,0 -30.7,-13.7 -30.7,-30.7 z"
+         style="opacity:0.5;enable-background:new" />
       <path
-   id="shadows-2-3-4"
-   class="st3"
-   d="m -358.6,18.1 c 0,0.5 0,1.1 0,1.6 0,17 -13.7,30.7 -30.7,30.7 -17,0 -30.6,-13.6 -30.6,-30.6 0,-0.6 0,-1.1 0,-1.6 0.9,16.2 14.3,29.1 30.7,29.1 16.3,0 29.6,-12.7 30.6,-28.7 z m -30.6,-25.7 c 14.8,0 26.9,12 26.9,26.9 0,8.3 -3.8,15.7 -9.7,20.6 4.9,-4.6 8,-11.2 8,-18.5 0,-13.9 -11.3,-25.2 -25.2,-25.2 -13.9,0 -25.2,11.3 -25.2,25.2 0,7.3 3.1,13.8 8,18.5 -5.9,-4.9 -9.7,-12.3 -9.7,-20.6 0,-14.9 12,-26.9 26.9,-26.9 z"
-   style="clip-rule:evenodd;fill-opacity:0.0524476;fill-rule:evenodd">
-      </path>
-
-     </g>
+         id="shadows-2-3-4"
+         class="st3"
+         d="m -358.6,18.1 c 0,0.5 0,1.1 0,1.6 0,17 -13.7,30.7 -30.7,30.7 -17,0 -30.6,-13.6 -30.6,-30.6 0,-0.6 0,-1.1 0,-1.6 0.9,16.2 14.3,29.1 30.7,29.1 16.3,0 29.6,-12.7 30.6,-28.7 z m -30.6,-25.7 c 14.8,0 26.9,12 26.9,26.9 0,8.3 -3.8,15.7 -9.7,20.6 4.9,-4.6 8,-11.2 8,-18.5 0,-13.9 -11.3,-25.2 -25.2,-25.2 -13.9,0 -25.2,11.3 -25.2,25.2 0,7.3 3.1,13.8 8,18.5 -5.9,-4.9 -9.7,-12.3 -9.7,-20.6 0,-14.9 12,-26.9 26.9,-26.9 z"
+         style="clip-rule:evenodd;fill-opacity:1;fill-rule:evenodd;fill:#f2f2f2" />
+    </g>
     <path
        id="inside-shadow-outer-2-2-83"
        class="st4"
        d="m 43.800001,73.7 c 13.3,0 24.1,10.8 24.1,24.1 0,13.3 -10.8,24.1 -24.1,24.1 -13.2,0 -23.9,-10.6 -24.1,-23.7 v -0.4 c -0.1,-13.3 10.7,-24.1 24.1,-24.1 z m 0,1.1 c -12.7,0 -23,10.3 -23,23 0,12.7 10.3,23 23,23 12.7,0 23,-10.3 23,-23 0,-12.7 -10.3,-23 -23,-23 z"
-       style="opacity:0.2561;enable-background:new">
-     </path>
+       style="opacity:0.2561;enable-background:new" />
     <path
        id="inside-shadow-7-6-9"
        class="st5"
        d="m 43.900001,78.6 c -10.7,0 -19.3,8.6 -19.3,19.3 0,10.5 8.6,19.1 19.3,19.1 10.5,0 19.1,-8.6 19.1,-19.1 0,-10.7 -8.6,-19.3 -19.1,-19.3 z m 0,1.1 c 9.9,0 18,8.1 18,18.2 0,9.9 -8.1,18 -18,18 -10.1,0 -18.2,-8.1 -18.2,-18 0,-10.1 8.1,-18.2 18.2,-18.2 z"
-       style="fill-opacity:0.25">
-     </path>
+       style="fill-opacity:0.25" />
     <path
        id="inside-3-9-0"
        class="st6"
        d="m 43.900001,79.7 c 9.9,0 18,8.1 18,18.2 0,9.9 -8.1,18 -18,18 -10.1,0 -18.2,-8.1 -18.2,-18 0,-10.1 8.1,-18.2 18.2,-18.2 z"
-       style="clip-rule:evenodd;fill:#f7f7f7;fill-rule:evenodd">
-     </path>
+       style="clip-rule:evenodd;fill:#f7f7f7;fill-rule:evenodd" />
     <path
        id="path6-5"
        style="fill:url(#linearGradient2);fill-opacity:1;stroke:#264817;stroke-width:1.14;stroke-dasharray:none;stroke-opacity:1"
