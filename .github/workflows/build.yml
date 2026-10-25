@@ -1,0 +1,242 @@
+name: "Build Packages"
+
+# Builds the downloadable packages with release-tool.py; called by the nightly and release workflows.
+# macOS and Windows build Qt and the other dependencies with vcpkg, which takes hours on a cold cache.
+# The vcpkg binary cache is saved even when a build fails, so a re-run picks up where the last one stopped.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build"
+        type: string
+        required: true
+      version:
+        description: "Version number in CMakeLists.txt, e.g. 2.8.0"
+        type: string
+        required: true
+      snapshot-version:
+        description: "Build a snapshot from ref, shown as this version (empty for a tagged release build)"
+        type: string
+        default: ""
+    secrets:
+      MACOS_CERTIFICATE_P12:
+        required: false
+      MACOS_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      APPLE_APP_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Both macOS builds run on Apple Silicon: CMakeLists.txt expects vcpkg's host triplet to be arm64-osx
+          - name: macOS arm64
+            os: macos-15
+            platform: macos
+            arch: arm64
+          - name: macOS x86_64
+            os: macos-15
+            platform: macos
+            arch: x86_64
+          # The oldest supported Ubuntu keeps the AppImage's glibc requirement low; it has Qt 6.2.4
+          - name: Linux x86_64
+            os: ubuntu-22.04
+            platform: linux
+            arch: x86_64
+          - name: Linux aarch64
+            os: ubuntu-22.04-arm
+            platform: linux
+            arch: aarch64
+          - name: Windows x64
+            os: windows-2022
+            platform: windows
+            arch: amd64
+    defaults:
+      run:
+        shell: bash
+    env:
+      # linuxdeploy and appimagetool are AppImages themselves, and the runners have no FUSE
+      APPIMAGE_EXTRACT_AND_RUN: 1
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
+      HAS_MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          # release-tool.py checks out the release tag by name
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up paths
+        run: |
+          echo "OUTPUT_DIR=$GITHUB_WORKSPACE/release-out" >> "$GITHUB_ENV"
+          echo "OPAQUE_PREFIX=$RUNNER_TEMP/opaque" >> "$GITHUB_ENV"
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_CACHE=$RUNNER_TEMP/vcpkg-cache" >> "$GITHUB_ENV"
+
+      - name: Install dependencies (macOS)
+        if: matrix.platform == 'macos'
+        # release-tool.py requires gpg even when it does not sign
+        run: brew install ninja asciidoctor gnupg pkgconf autoconf autoconf-archive automake libtool
+
+      - name: Install dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build pkgconf asciidoctor file \
+            qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qmake6 qt6-tools-dev qt6-tools-dev-tools \
+            qt6-l10n-tools qt6-svg-dev qt6-wayland qt6-qpa-plugins libqt6svg6 libgl-dev \
+            libbotan-2-dev libminizip-dev libqrencode-dev zlib1g-dev libreadline-dev libkeyutils-dev \
+            libpcsclite-dev libusb-1.0-0-dev libxi-dev libxtst-dev libxkbcommon-dev
+
+      - name: Install dependencies (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          git config --global core.longpaths true
+          gem install asciidoctor --no-document
+          # WiX 3 for the MSI; release-tool.py looks for candle.exe, light.exe and heat.exe on the PATH
+          curl -fsSL -o "$RUNNER_TEMP/wix.zip" \
+            https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
+          mkdir -p "$RUNNER_TEMP/wix" && unzip -q "$RUNNER_TEMP/wix.zip" -d "$RUNNER_TEMP/wix"
+          cygpath -w "$RUNNER_TEMP/wix" >> "$GITHUB_PATH"
+
+      # Windows gets libopaque from the vcpkg overlay port in utils/vcpkg_ports instead
+      - name: Build libopaque
+        if: matrix.platform != 'windows'
+        env:
+          MACOS_ARCH: ${{ matrix.platform == 'macos' && matrix.arch || '' }}
+        run: .github/scripts/build-opaque.sh "$OPAQUE_PREFIX"
+
+      - name: Set up vcpkg
+        if: matrix.platform != 'linux'
+        run: |
+          baseline=$(python -c "import json; print(json.load(open('vcpkg.json'))['builtin-baseline'])")
+          git clone --quiet https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout --quiet "$baseline"
+          if [ "$RUNNER_OS" = Windows ]; then
+            "$VCPKG_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          else
+            "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+          mkdir -p "$VCPKG_CACHE"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$VCPKG_CACHE,readwrite" >> "$GITHUB_ENV"
+          echo "VCPKG_CACHE_PREFIX=vcpkg-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/triplets/**', 'utils/vcpkg_ports/**') }}" >> "$GITHUB_ENV"
+
+      # Saved caches are keyed by their contents, so only restore-keys match: this restores the newest
+      # cache for this manifest, or the newest for this platform if the manifest changed
+      - name: Restore vcpkg binary cache
+        if: matrix.platform != 'linux'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.VCPKG_CACHE }}
+          key: ${{ env.VCPKG_CACHE_PREFIX }}
+          restore-keys: |
+            ${{ env.VCPKG_CACHE_PREFIX }}-
+            vcpkg-${{ matrix.platform }}-${{ matrix.arch }}-
+
+      - name: Import signing certificate (macOS)
+        id: macos-signing
+        if: matrix.platform == 'macos' && env.HAS_MACOS_CERTIFICATE == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(openssl rand -hex 16)
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain"
+          rm "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          if [ -n "$APPLE_ID" ]; then
+            xcrun notarytool store-credentials notarization-creds --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+            echo "args=--sign --notarize --keychain-profile notarization-creds" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=--sign" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build packages
+        env:
+          VERSION: ${{ inputs.version }}
+          SNAPSHOT_VERSION: ${{ inputs.snapshot-version }}
+        run: |
+          args=(build "$VERSION" --yes --output-dir "$OUTPUT_DIR" --platform-target "${{ matrix.arch }}")
+          if [ -n "$SNAPSHOT_VERSION" ]; then
+            args+=(--snapshot --override-version "$SNAPSHOT_VERSION")
+          fi
+          case "${{ matrix.platform }}" in
+            macos)
+              args+=(--build-qt ${{ steps.macos-signing.outputs.args }} --cmake-opts
+                     -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
+                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a")
+              ;;
+            linux)
+              args+=(--use-system-deps --appimage --cmake-opts
+                     -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
+                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a")
+              ;;
+            windows)
+              # Release-only triplets build Qt once instead of in debug and release; the host triplet
+              # must match so that windeployqt comes from the same Qt
+              args+=(--build-qt --cmake-opts -DKPXC_FEATURE_ACCOUNTS=ON
+                     -DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_HOST_TRIPLET=x64-windows-release)
+              ;;
+          esac
+          # SODIUM_LIBRARY is named explicitly so a shared libsodium elsewhere on the runner is never linked
+          python release-tool.py "${args[@]}"
+
+      - name: Prepare vcpkg binary cache
+        if: always() && matrix.platform != 'linux'
+        run: |
+          # The cache is content-addressed by file name, so its listing identifies it; an unchanged cache
+          # gets the key it was restored from and is not uploaded again
+          contents=$(cd "$VCPKG_CACHE" && find . -type f | sort | python -c "import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:16])")
+          echo "VCPKG_CACHE_KEY=$VCPKG_CACHE_PREFIX-$contents" >> "$GITHUB_ENV"
+
+      - name: Save vcpkg binary cache
+        if: always() && matrix.platform != 'linux'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.VCPKG_CACHE }}
+          key: ${{ env.VCPKG_CACHE_KEY }}
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.platform }}-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            release-out/*.dmg
+            release-out/*.AppImage
+            release-out/*.AppImage.zsync
+            release-out/*.msi
+            release-out/*.zip
