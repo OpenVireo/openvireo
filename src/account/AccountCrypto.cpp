@@ -30,7 +30,11 @@
 #include <botan/mem_ops.h>
 #include <botan/pubkey.h>
 #include <botan/pwdhash.h>
+#ifdef WITH_BOTAN3
 #include <botan/x25519.h>
+#else
+#include <botan/curve25519.h>
+#endif
 
 namespace AccountCrypto
 {
