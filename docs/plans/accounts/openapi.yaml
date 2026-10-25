@@ -530,7 +530,7 @@ paths:
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
     delete:
       tags: [auth]
-      summary: Delete the org and its vaults' access rows (owner only). Clients delete the blobs from the sync server first.
+      summary: Delete the org, its vaults and their access rows (owner only). The auth server deletes the vault blobs on the sync server afterwards (DELETE {sync}/internal/vaults/{id}, SPEC.md §18), retrying failures.
       responses: { '204': { description: deleted } }
   /orgs/{org}/members:
     parameters: [ { $ref: '#/components/parameters/Org' } ]
