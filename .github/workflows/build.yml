@@ -43,15 +43,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Both macOS builds run on Apple Silicon: CMakeLists.txt expects vcpkg's host triplet to be arm64-osx
+          # Both macOS builds run on Apple Silicon. vcpkg's default host triplet, arm64-osx, would build
+          # a second, debug and release Qt for the host tools, which does not fit on the runner's disk.
+          # The arm64 build is its own host; the x86_64 build needs a static host Qt, because CMakeLists.txt
+          # copies macdeployqt into the target's tools and a dynamic one would load x86_64 Qt libraries.
           - name: macOS arm64
             os: macos-15
             platform: macos
             arch: arm64
+            host-triplet: arm64-osx-dynamic-release
           - name: macOS x86_64
             os: macos-15
             platform: macos
             arch: x86_64
+            host-triplet: arm64-osx-release
           # The oldest supported Ubuntu keeps the AppImage's glibc requirement low; it has Qt 6.2.4
           - name: Linux x86_64
             os: ubuntu-22.04
@@ -196,7 +201,8 @@ jobs:
             macos)
               args+=(--build-qt ${{ steps.macos-signing.outputs.args }} --cmake-opts
                      -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
-                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a")
+                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a"
+                     -DVCPKG_HOST_TRIPLET=${{ matrix.host-triplet }} -DVCPKG_INSTALL_OPTIONS=--clean-after-build)
               ;;
             linux)
               args+=(--use-system-deps --appimage --cmake-opts
@@ -207,10 +213,12 @@ jobs:
               # Release-only triplets build Qt once instead of in debug and release; the host triplet
               # must match so that windeployqt comes from the same Qt
               args+=(--build-qt --cmake-opts -DKPXC_FEATURE_ACCOUNTS=ON
-                     -DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_HOST_TRIPLET=x64-windows-release)
+                     -DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_HOST_TRIPLET=x64-windows-release
+                     -DVCPKG_INSTALL_OPTIONS=--clean-after-build)
               ;;
           esac
-          # SODIUM_LIBRARY is named explicitly so a shared libsodium elsewhere on the runner is never linked
+          # SODIUM_LIBRARY is named explicitly so a shared libsodium elsewhere on the runner is never linked.
+          # --clean-after-build deletes each port's build tree once it is installed; Qt's build trees would fill the runner's disk.
           python release-tool.py "${args[@]}"
 
       - name: Prepare vcpkg binary cache
