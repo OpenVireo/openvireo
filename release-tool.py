@@ -680,6 +680,10 @@ class Build(Command):
             parser.add_argument('-p', '--platform-target', help='Build target platform (default: %(default)s).',
                                 choices=['x86_64', 'aarch64'], default=platform.uname().machine)
             parser.add_argument('-a', '--appimage', help='Build an AppImage.', action='store_true')
+            parser.add_argument('--appimage-update-tag', default='latest',
+                                help='GitHub release whose zsync file updates the AppImage, e.g. nightly '
+                                     '(default: %(default)s, the newest release).')
+            parser.add_argument('--appimage-sign-key', help='Embed a GnuPG signature by this key in the AppImage.')
         elif sys.platform == 'win32':
             parser.add_argument('-p', '--platform-target', help='Build target platform (default: %(default)s).',
                                 choices=['amd64', 'arm64'], default='amd64')
@@ -688,6 +692,9 @@ class Build(Command):
             parser.add_argument('--sign-identity', help='SHA1 fingerprint of the signing certificate.')
             parser.add_argument('--sign-timestamp-url', help='Timestamp URL for signing binaries.',
                                 default='http://timestamp.acs.microsoft.com')
+            parser.add_argument('--sign-dlib', help='SignTool dlib that signs remotely, e.g. Azure Artifact Signing\'s '
+                                                    'Azure.CodeSigning.Dlib.dll (instead of --sign-identity).')
+            parser.add_argument('--sign-metadata', help='Metadata JSON file for --sign-dlib.')
             parser.set_defaults(cmake_generator='Ninja')
 
         parser.add_argument('-c', '--cmake-opts', nargs=argparse.REMAINDER,
@@ -777,11 +784,20 @@ class Build(Command):
 
     # noinspection PyMethodMayBeStatic
     def build_windows(self, version, src_dir, output_dir, *, parallelism, cmake_opts, platform_target,
-                      sign, sign_identity, sign_timestamp_url, with_tests, mingw, use_system_deps,
-                      build_qt, **_):
+                      sign, sign_identity, sign_timestamp_url, sign_dlib, sign_metadata, with_tests, mingw,
+                      use_system_deps, build_qt, **_):
         # Setup build signing if requested
         if sign:
-            cmake_opts.append(f'-DWITH_XC_CODESIGN_IDENTITY={sign_identity}')
+            if sign_dlib:
+                if not sign_metadata:
+                    raise Error('--sign-dlib needs --sign-metadata.')
+                for f in (sign_dlib, sign_metadata):
+                    if not Path(f).is_file():
+                        raise Error('File "%s" does not exist!', f)
+                cmake_opts.append(f'-DWITH_XC_CODESIGN_DLIB={Path(sign_dlib).resolve().as_posix()}')
+                cmake_opts.append(f'-DWITH_XC_CODESIGN_METADATA={Path(sign_metadata).resolve().as_posix()}')
+                sign_identity = 'dlib'
+            cmake_opts.append(f'-DWITH_XC_CODESIGN_IDENTITY={sign_identity or "auto"}')
             cmake_opts.append(f'-DWITH_XC_CODESIGN_TIMESTAMP_URL={sign_timestamp_url}')
         # windeployqt must run before app-local copying when Qt comes from
         # vcpkg, otherwise it can lock DLLs that it subsequently replaces.
@@ -831,7 +847,9 @@ class Build(Command):
 
             artifacts = list(Path(build_dir).glob("*.zip")) + list(Path(build_dir).glob("*.msi"))
             for artifact in artifacts:
-                artifact.replace(output_dir / artifact.name)
+                # The build directory can be on another drive (e.g. C:\ temp vs. a D:\ workspace), which
+                # Path.replace() cannot move across; shutil.move() falls back to copying
+                shutil.move(artifact, output_dir / artifact.name)
                 logger.info(f'Created artifact: {output_dir / artifact.name}')
 
     # noinspection PyMethodMayBeStatic
@@ -869,7 +887,7 @@ class Build(Command):
 
             output_file = Path(build_dir) / f'OpenVireo-{version}.dmg'
             unsigned_suffix = '-unsigned' if not sign else ''
-            output_file.rename(output_dir / f'OpenVireo-{version}-{platform_target}{unsigned_suffix}.dmg')
+            shutil.move(output_file, output_dir / f'OpenVireo-{version}-{platform_target}{unsigned_suffix}.dmg')
 
         if sign:
             logger.info('All done!')
@@ -885,7 +903,7 @@ class Build(Command):
             outfile.chmod(outfile.stat().st_mode | stat.S_IEXEC)
 
     def build_linux(self, version, src_dir, output_dir, *, install_prefix, parallelism, cmake_opts, use_system_deps,
-                    platform_target, appimage, docker_image, with_tests, **_):
+                    platform_target, appimage, appimage_update_tag, appimage_sign_key, docker_image, with_tests, **_):
         if use_system_deps and platform_target != platform.uname().machine and not docker_image:
             raise Error('Need --docker-image for cross-platform compilation when not building with vcpkg!')
 
@@ -924,10 +942,11 @@ class Build(Command):
 
             if appimage:
                 self._build_linux_appimage(
-                    version, src_dir, output_dir, app_dir, build_dir, install_prefix, platform_target, docker_args)
+                    version, src_dir, output_dir, app_dir, build_dir, install_prefix, platform_target,
+                    appimage_update_tag, appimage_sign_key, docker_args)
 
     def _build_linux_appimage(self, version, src_dir, output_dir, app_dir, build_dir, install_prefix,
-                              platform_target, docker_args):
+                              platform_target, update_tag, sign_key, docker_args):
         if (app_dir / 'AppRun').exists():
             raise Error('AppDir has already been run through linuxdeploy! Please create a fresh AppDir and try again.')
 
@@ -969,7 +988,11 @@ class Build(Command):
         logger.debug('Running appimagetool...')
         appimage_name = f'OpenVireo-{version}-{platform_target}.AppImage'
         desktop_file.write_text(desktop_file.read_text().strip() + f'\nX-AppImage-Version={version}\n')
-        _run(['appimagetool', '--updateinformation=gh-releases-zsync|openvireo|openvireo|latest|' +
+        # AppImageUpdate fetches the zsync file from the given release, so a nightly AppImage stays on nightlies.
+        # It only accepts an update signed with the same key as the AppImage it replaces.
+        sign_args = ['--sign', f'--sign-key={sign_key}'] if sign_key else []
+        _run(['appimagetool', *sign_args,
+              f'--updateinformation=gh-releases-zsync|openvireo|openvireo|{update_tag}|' +
               f'OpenVireo-*-{platform_target}.AppImage.zsync',
               app_dir.as_posix(), (output_dir.absolute() / appimage_name).as_posix()],
              cwd=build_dir, capture_output=False, path=env_path, env=env, **docker_args, docker_privileged=True)
