@@ -22,11 +22,7 @@
 #include "core/Clock.h"
 #include "core/Config.h"
 
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QNetworkReply>
-#include <QRegularExpression>
 
 const QString UpdateChecker::ErrorVersion("error");
 UpdateChecker* UpdateChecker::m_instance(nullptr);
@@ -55,16 +51,10 @@ void UpdateChecker::checkForUpdates(bool manuallyRequested)
     if (m_isManuallyRequested || Clock::currentSecondsSinceEpoch() >= nextCheck) {
         m_bytesReceived.clear();
 
-        QString apiUrlStr = QString("https://api.github.com/repos/openvireo/openvireo/releases");
-
-        if (!config()->get(Config::GUI_CheckForUpdatesIncludeBetas).toBool()) {
-            apiUrlStr += "/latest";
-        }
-
-        QUrl apiUrl = QUrl(apiUrlStr);
-
-        QNetworkRequest request(apiUrl);
-        request.setRawHeader("Accept", "application/json");
+        // The feed is a GitHub release asset, which redirects to its storage host
+        QNetworkRequest request(UpdateFeed::feedUrl(UpdateFeed::channel()));
+        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+        request.setRawHeader("Accept", "application/rss+xml, application/xml");
 
         m_reply = getNetMgr()->get(request);
 
@@ -89,17 +79,14 @@ void UpdateChecker::fetchFinished()
     m_reply = nullptr;
 
     if (!error) {
-        QJsonDocument jsonResponse = QJsonDocument::fromJson(m_bytesReceived);
-        QJsonObject jsonObject = jsonResponse.object();
-
-        if (config()->get(Config::GUI_CheckForUpdatesIncludeBetas).toBool()) {
-            QJsonArray jsonArray = jsonResponse.array();
-            jsonObject = jsonArray.at(0).toObject();
-        }
-
-        if (!jsonObject.value("tag_name").isUndefined()) {
-            version = jsonObject.value("tag_name").toString();
-            hasNewVersion = compareVersions(QString(KEEPASSXC_VERSION), version);
+        m_latestRelease = UpdateFeed::latestRelease(m_bytesReceived);
+        if (m_latestRelease.isValid()) {
+            version = m_latestRelease.displayVersion;
+            // Builds outside every channel have no update version and are never offered an update
+            hasNewVersion = UpdateFeed::isEnabled()
+                            && UpdateFeed::compareVersions(KEEPASSXC_UPDATE_VERSION, m_latestRelease.version) < 0;
+        } else {
+            version = ErrorVersion;
         }
 
         // Check again in 7 days
@@ -111,58 +98,9 @@ void UpdateChecker::fetchFinished()
     emit updateCheckFinished(hasNewVersion, version, m_isManuallyRequested);
 }
 
-bool UpdateChecker::compareVersions(const QString& localVersion, const QString& remoteVersion)
+UpdateFeed::Release UpdateChecker::latestRelease() const
 {
-    // Quick full-string equivalence check
-    if (localVersion == remoteVersion) {
-        return false;
-    }
-
-    QRegularExpression verRegex(R"(^((?:\d+\.){2}\d+)(?:-(\w+?)(\d+)?)?$)");
-
-    auto lmatch = verRegex.match(localVersion);
-    auto rmatch = verRegex.match(remoteVersion);
-
-    auto lVersion = lmatch.captured(1).split(".");
-    auto lSuffix = lmatch.captured(2);
-    auto lBetaNum = lmatch.captured(3);
-
-    auto rVersion = rmatch.captured(1).split(".");
-    auto rSuffix = rmatch.captured(2);
-    auto rBetaNum = rmatch.captured(3);
-
-    if (!lVersion.isEmpty() && !rVersion.isEmpty()) {
-        if (lSuffix.compare("snapshot", Qt::CaseInsensitive) == 0) {
-            // Snapshots are not checked for version updates
-            return false;
-        }
-
-        // Check "-beta[X]" versions
-        if (lVersion == rVersion && !lSuffix.isEmpty()) {
-            // Check if stable version has been released or new beta is available
-            // otherwise the version numbers are equal
-            return rSuffix.isEmpty() || lBetaNum.toInt() < rBetaNum.toInt();
-        }
-
-        for (int i = 0; i < 3; i++) {
-            int l = lVersion[i].toInt();
-            int r = rVersion[i].toInt();
-
-            if (l == r) {
-                continue;
-            }
-
-            if (l > r) {
-                return false; // Installed version is newer than release
-            } else {
-                return true; // Installed version is outdated
-            }
-        }
-
-        return false; // Installed version is the same
-    }
-
-    return false; // Invalid version string
+    return m_latestRelease;
 }
 
 UpdateChecker* UpdateChecker::instance()

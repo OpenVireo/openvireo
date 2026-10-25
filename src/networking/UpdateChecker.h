@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2019 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2025 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,10 +17,17 @@
 
 #ifndef KEEPASSXC_UPDATECHECK_H
 #define KEEPASSXC_UPDATECHECK_H
+
+#include "UpdateFeed.h"
+
 #include <QObject>
 
 class QNetworkReply;
 
+/**
+ * Reports new versions from the update feed of the selected channel. Builds with Sparkle or
+ * WinSparkle install updates with those instead (see AutoUpdater); this checker serves the rest.
+ */
 class UpdateChecker : public QObject
 {
     Q_OBJECT
@@ -29,7 +36,7 @@ public:
     ~UpdateChecker() override;
 
     void checkForUpdates(bool manuallyRequested);
-    static bool compareVersions(const QString& localVersion, const QString& remoteVersion);
+    UpdateFeed::Release latestRelease() const;
     static UpdateChecker* instance();
 
     static const QString ErrorVersion;
@@ -45,6 +52,7 @@ private:
     QNetworkReply* m_reply;
     QByteArray m_bytesReceived;
     bool m_isManuallyRequested;
+    UpdateFeed::Release m_latestRelease;
 
     static UpdateChecker* m_instance;
 
