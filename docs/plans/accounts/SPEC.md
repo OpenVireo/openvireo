@@ -494,13 +494,14 @@ In one transaction, the server:
 
 ### Restore within 30 days
 
-While an archive exists, `GET /me/recovery` returns `{archived: true, expires_at, vaults, locked}`
-(`{archived: false}` otherwise), and the web Account page offers a restore. All restore routes need
-a user token issued in the last 5 minutes. They allow 5 attempts per hour, and 10 failed `verify`
+While an archive exists, `GET /me/recovery` returns `{archived: true, email, expires_at, vaults, locked}`
+(`{archived: false}` otherwise), where `email` is the archived one, and the web Account page offers a restore. All restore routes need
+a user token issued in the last 5 minutes (403 `forbidden` otherwise, as for `/me/password/*`). They allow 5 attempts per hour, and 10 failed `verify`
 or `finish` calls lock the archive (403 `restore_locked`) until an admin unlocks it.
 
 1. `POST /me/recovery/restore/start {ke1}`: OPAQUE login against the **archived** record, with the
-   archived email as `idU` → `{session_id, ke2}`.
+   archived email as `idU` → `{session_id, ke2, email}`. The client finishes OPAQUE with that `email` as
+   `idU`; it differs from the account's current email if the email changed after the reset.
 2. `POST /me/recovery/restore/verify {session_id, auth_u}`: 401 for a wrong old password. Otherwise
    → `{kdf, keyset, grants}`, the archived kdf and wrapped keyset plus every archived grant whose
    vault still exists **and** is still at that key version, as
