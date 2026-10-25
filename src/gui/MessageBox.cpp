@@ -37,6 +37,19 @@ namespace
 {
     // Width of the alert card, matching WinUI's content dialogs
     constexpr int FluentAlertWidth = 448;
+
+    // Fluent buttons draw their text as is, so drop the mnemonic markers of Qt's standard button texts
+    QString withoutMnemonic(const QString& text)
+    {
+        QString plain;
+        for (int i = 0; i < text.size(); ++i) {
+            if (text[i] == '&' && i + 1 < text.size()) {
+                ++i;
+            }
+            plain += text[i];
+        }
+        return plain;
+    }
 } // namespace
 
 QWindow* MessageBox::m_overrideParent(nullptr);
@@ -206,9 +219,10 @@ bool MessageBox::fluentMessageBox(QWidget* parent,
     ContentDialog dialog(parent->window());
     dialog.setThemeSource(parent->window());
     dialog.setTitle(title);
-    dialog.setPrimaryButtonText(m_buttonDefs.value(commands.value(0, NoButton)).first);
-    dialog.setSecondaryButtonText(m_buttonDefs.value(commands.value(1, NoButton)).first);
-    dialog.setCloseButtonText(m_buttonDefs.value(closeButton).first);
+    auto buttonText = [](Button button) { return withoutMnemonic(m_buttonDefs.value(button).first); };
+    dialog.setPrimaryButtonText(buttonText(commands.value(0, NoButton)));
+    dialog.setSecondaryButtonText(buttonText(commands.value(1, NoButton)));
+    dialog.setCloseButtonText(buttonText(closeButton));
 
     // Each button maps to the dialog result that answers with it
     QHash<int, Button> results;
@@ -226,7 +240,7 @@ bool MessageBox::fluentMessageBox(QWidget* parent,
         auto barLayout = qobject_cast<QHBoxLayout*>(bar->layout());
         Q_ASSERT(barLayout);
         for (int i = 2; i < commands.size(); ++i) {
-            auto button = new fluent::basicinput::Button(m_buttonDefs.value(commands[i]).first, bar);
+            auto button = new fluent::basicinput::Button(buttonText(commands[i]), bar);
             button->setMinimumWidth(96);
             barLayout->insertWidget(i, button, 1);
             const int result = ContentDialog::ResultSecondary + i - 1;
@@ -285,7 +299,7 @@ bool MessageBox::fluentMessageBox(QWidget* parent,
                                     : defaultButton == commands.value(0) ? ContentDialog::Primary
                                                                          : ContentDialog::Secondary);
         }
-        const auto defaultText = m_buttonDefs.value(defaultButton).first;
+        const auto defaultText = buttonText(defaultButton);
         for (auto button : dialog.findChildren<QPushButton*>()) {
             // Not focused: the dialog takes focus on opening, and a button losing focus stops being the default
             if (button->text() == defaultText) {
