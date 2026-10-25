@@ -89,7 +89,7 @@ Progress as of 2026-10-14: the main app now signs, notarizes and launches under 
       `com.bonganimbigi.keepassxc`, register the App ID `com.bonganimbigi.keepassxc.autofill` with the same capability,
       and register the App Group `DP5U2UP42V.com.bonganimbigi.keepassxc` for both.
 - [ ] **Developer account:** issue Developer ID profiles for both IDs and save them as
-      `share/macosx/autofill/KeePassXC.provisionprofile` and `share/macosx/autofill/KeePassXCAutofill.provisionprofile`.
+      `share/macosx/autofill/OpenVireo.provisionprofile` and `share/macosx/autofill/OpenVireoAutofill.provisionprofile`.
       CMake warns while either is missing. The app's profile replaces `share/macosx/embedded.provisionprofile` in
       AutoFill builds.
 - [x] `share/macosx/autofill/`: `Info.plist.in` with `ProvidesPasswords`, `ProvidesPasskeys`, `ProvidesOneTimeCodes`
