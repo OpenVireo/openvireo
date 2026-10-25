@@ -28,6 +28,7 @@
 #include "gui/MessageWidget.h"
 #include "gui/entry/EntryModel.h"
 #include "remote/RemoteHandler.h"
+#include "remote/SyncEngine.h"
 
 class DatabaseOpenDialog;
 class DatabaseOpenWidget;
@@ -47,8 +48,6 @@ class EntryPreviewWidget;
 class TagView;
 class ElidedLabel;
 class RemoteSettings;
-class SyncEngine;
-struct SyncConflict;
 class SyncScheduler;
 class SyncEventStream;
 class EntryDetailCard;
