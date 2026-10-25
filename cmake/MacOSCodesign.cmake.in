@@ -14,11 +14,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+set(CODESIGN_IDENTITY "@WITH_XC_CODESIGN_IDENTITY@")
+
 # CPACK_PACKAGE_FILES is set only during POST_BUILD
 if(NOT CPACK_PACKAGE_FILES)     # PRE_BUILD: Sign binaries
 
     set(PROGNAME "@PROGNAME@")
-    set(CODESIGN_IDENTITY "@WITH_XC_CODESIGN_IDENTITY@")
     set(ENTITLEMENTS @MACOSX_BUNDLE_APPLE_ENTITLEMENTS@)
     set(AUTOFILL_EXTENSION "@MACOSX_BUNDLE_AUTOFILL_EXTENSION@")
     set(AUTOFILL_ENTITLEMENTS "@MACOSX_BUNDLE_AUTOFILL_ENTITLEMENTS@")
@@ -84,6 +85,20 @@ else()       # POST_BUILD: Notarize DMG
     endif()
 
     foreach(DMG_FILE ${CPACK_PACKAGE_FILES})
+        # Sign the DMG itself, so Gatekeeper can check the download before it is opened
+        execute_process(
+                COMMAND xcrun codesign --sign=${CODESIGN_IDENTITY} --force --timestamp "${DMG_FILE}"
+                RESULT_VARIABLE SIGN_RESULT
+                OUTPUT_VARIABLE SIGN_OUTPUT
+                ERROR_VARIABLE SIGN_ERROR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_STRIP_TRAILING_WHITESPACE
+                ECHO_OUTPUT_VARIABLE
+        )
+        if (NOT SIGN_RESULT EQUAL 0)
+            message(FATAL_ERROR "Signing the DMG failed: ${SIGN_ERROR}")
+        endif()
+
         # Submit for notarization
         message(STATUS "Submitting DMG bundle for notarization, this may take while...")
         execute_process(

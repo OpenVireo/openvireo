@@ -74,11 +74,11 @@ if(KPXC_FEATURE_AUTOFILL)
             "-framework AuthenticationServices")
 
     # Profiles from the developer account, with the AutoFill entitlement and the App Group
-    set(AUTOFILL_EXTENSION_PROFILE "${CMAKE_SOURCE_DIR}/share/macosx/autofill/KeePassXCAutofill.provisionprofile")
-    set(AUTOFILL_APP_PROFILE "${CMAKE_SOURCE_DIR}/share/macosx/autofill/KeePassXC.provisionprofile")
+    set(AUTOFILL_EXTENSION_PROFILE "${CMAKE_SOURCE_DIR}/share/macosx/autofill/OpenVireoAutofill.provisionprofile")
+    set(AUTOFILL_APP_PROFILE "${CMAKE_SOURCE_DIR}/share/macosx/autofill/OpenVireo.provisionprofile")
     if(NOT EXISTS ${AUTOFILL_EXTENSION_PROFILE} OR NOT EXISTS ${AUTOFILL_APP_PROFILE})
-        message(WARNING "AutoFill: share/macosx/autofill/ lacks KeePassXC.provisionprofile or "
-                        "KeePassXCAutofill.provisionprofile. Signed builds won't launch or register the extension "
+        message(WARNING "AutoFill: share/macosx/autofill/ lacks OpenVireo.provisionprofile or "
+                        "OpenVireoAutofill.provisionprofile. Signed builds won't launch or register the extension "
                         "until both are issued with the AutoFill entitlement and the ${AUTOFILL_APP_GROUP} App Group.")
     endif()
     if(EXISTS ${AUTOFILL_EXTENSION_PROFILE})
