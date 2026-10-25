@@ -1,0 +1,14 @@
+{
+  "name": "libopaque",
+  "version-string": "6e9ac92",
+  "description": "C core of libopaque (OPAQUE asymmetric PAKE) with the liboprf parts it uses, as static libraries.",
+  "homepage": "https://github.com/stef/libopaque",
+  "license": "LGPL-3.0-or-later",
+  "dependencies": [
+    "libsodium",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

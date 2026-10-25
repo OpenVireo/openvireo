@@ -9,6 +9,10 @@
     "readline",
     "zlib",
     {
+      "name": "libopaque",
+      "platform": "windows"
+    },
+    {
       "name": "libusb",
       "platform": "linux | freebsd"
     },

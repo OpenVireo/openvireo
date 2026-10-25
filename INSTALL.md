@@ -126,6 +126,10 @@ PREFIX=$PWD/opaque-prefix && mkdir -p $PREFIX/include/oprf $PREFIX/lib
 cmake -DOPAQUE_ROOT=$PREFIX -DKPXC_FEATURE_ACCOUNTS=ON ..
 ```
 
+On Windows, vcpkg builds them from the `libopaque` overlay port in `utils/vcpkg_ports`. Both libraries use C99 variable
+length arrays, which MSVC does not support, so the port compiles them with clang-cl; install the "C++ Clang tools for
+Windows" component of Visual Studio.
+
 ## Installation
 
 After you have successfully built OpenVireo, install the binary by executing the following:

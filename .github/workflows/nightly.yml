@@ -1,0 +1,102 @@
+name: "Nightly"
+
+# Builds develop every night it has changed and publishes the packages to the rolling "nightly"
+# pre-release, replacing the previous night's packages.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Build even if develop has not changed since the last nightly"
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+      sha: ${{ steps.check.outputs.sha }}
+      version: ${{ steps.check.outputs.version }}
+      snapshot-version: ${{ steps.check.outputs.snapshot-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Check for changes
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          last=$(gh api "repos/$GITHUB_REPOSITORY/commits/nightly" --jq .sha 2>/dev/null || true)
+          if [ "$sha" = "$last" ] && [ "$FORCE" != true ]; then
+            echo "develop is still at $sha, the last nightly; nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          version=$(sed -nE 's/^set\(KEEPASSXC_VERSION_(MAJOR|MINOR|PATCH) "([0-9]+)"\)$/\2/p' CMakeLists.txt | paste -sd. -)
+          echo "build=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "snapshot-version=$version-nightly-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: prepare
+    if: needs.prepare.outputs.build == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+      version: ${{ needs.prepare.outputs.version }}
+      snapshot-version: ${{ needs.prepare.outputs.snapshot-version }}
+    secrets: inherit
+
+  publish:
+    name: Publish
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+
+      - name: Write checksums
+        working-directory: packages
+        run: sha256sum * > SHA256SUMS.txt
+
+      - name: Replace the nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          VERSION: ${{ needs.prepare.outputs.snapshot-version }}
+        run: |
+          gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
+          # Deleting the tag is not instant; creating the release again too soon reuses the old tag
+          for _ in 1 2 3 4 5; do
+            gh api "repos/$GH_REPO/git/ref/tags/nightly" > /dev/null 2>&1 || break
+            sleep 5
+          done
+          gh release create nightly packages/* \
+            --target "$SHA" \
+            --prerelease \
+            --latest=false \
+            --title "Nightly build $VERSION" \
+            --notes "Untested development build of [\`${SHA:0:7}\`](https://github.com/$GH_REPO/commit/$SHA) from \`develop\`. It replaces the previous nightly build and may have bugs that corrupt databases, so keep backups. Check downloads against \`SHA256SUMS.txt\`."
