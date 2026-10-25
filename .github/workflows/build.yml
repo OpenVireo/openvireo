@@ -294,7 +294,15 @@ jobs:
           SNAPSHOT_VERSION: ${{ inputs.snapshot-version }}
           UPDATE_CHANNEL: ${{ inputs.update-channel }}
           UPDATE_BUILD: ${{ inputs.update-build }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
+          if [ -n "${{ steps.windows-signing.outputs.args }}" ]; then
+            # The Azure login from before the build expires long before SignTool runs
+            bash .github/scripts/azure-login-refresh.sh &
+            refresh_pid=$!
+            trap 'kill $refresh_pid' EXIT
+          fi
           args=(build "$VERSION" --yes --output-dir "$OUTPUT_DIR" --platform-target "${{ matrix.arch }}")
           if [ -n "$SNAPSHOT_VERSION" ]; then
             args+=(--snapshot --override-version "$SNAPSHOT_VERSION")
