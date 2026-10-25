@@ -32,7 +32,6 @@
 
 #include <QClipboard>
 #include <QFontDatabase>
-#include <QRegularExpression>
 #include <QScrollArea>
 #include <QTabBar>
 #include <QTimer>
@@ -47,12 +46,7 @@ namespace
     };
 
     const Maintainer maintainers[] = {
-        {"Jonathan White", "droidmonkey", false},
-        {"Janek Bevendorff", "phoerious", false},
-        {"Sami V\u00e4nttinen", "varjolintu", false},
-        {"Toni Spets", "hifi", false},
-        {"Louis-Bertrand", "louib", false},
-        {"TheZ3ro", "TheZ3ro", true},
+        {"Bongani Mbigi", "bongani-m", false},
     };
 
     QUrl githubProfile(const Maintainer& maintainer)
@@ -76,283 +70,13 @@ namespace
         }
         return html + QStringLiteral("</ul></p>");
     }
-
-    // A heading of the contributors list and the names under it, which may carry markup such as <strong>
-    struct ContributorGroup
-    {
-        QString title;
-        QStringList names;
-    };
 } // namespace
 
-static const QString aboutContributors = R"(
-<style>ul { list-style: disk; margin-left: 12px; -qt-list-indent: 0; }</style>
-<h3>VIP Patreon Supporters:</h3>
-<ul>
-    <li>Sergey Vilgelm</li>
-    <li>Victor Engmark</li>
-    <li>NarwhalOfAges</li>
-    <li>No Name</li>
-    <li>SG</li>
-    <li>Riley Moses</li>
-    <li>Esteban Martinez</li>
-    <li>Marc Morocutti</li>
-    <li>Zivix</li>
-    <li>Benedikt Heine</li>
-    <li>Hugo Locurcio</li>
-    <li>William Petrides</li>
-    <li>Gunar Gessner</li>
-    <li>Christian Wittenhorst</li>
-    <li>Matt Cardarelli</li>
-    <li>Paul Ammann</li>
-    <li>Steve Isom</li>
-    <li>GodSpell</li>
-    <li>Lionel Laské</li>
-    <li>Daniel Epp</li>
-    <li>Oleksii Aleksieiev</li>
-    <li>Julian Stier</li>
-    <li>Ruben Schade</li>
-    <li>Bernhard</li>
-    <li>Wojciech Kozlowski</li>
-    <li>Caleb Currie</li>
-    <li>Morgan Courbet</li>
-    <li>Kyle Kneitinger</li>
-    <li>Chris Sohns</li>
-    <li>Shmavon Gazanchyan</li>
-    <li>xjdwc</li>
-    <li>Igor Zinovik</li>
-    <li>Jeff</li>
-    <li>Max Andersen</li>
-    <li>super scampy</li>
-    <li>Mischa Peters</li>
-    <li>Rainer-Maria Fritsch</li>
-    <li>Micha Ober</li>
-    <li>Ivan Gromov</li>
-    <li>Joshua Go</li>
-    <li>pancakeplant</li>
-    <li>Hans-Joachim Forker</li>
-    <li>Nicolas Vandemaele</li>
-    <li>Saturnio</li>
-    <li>Robert Schaffar-Taurok</li>
-    <li>Mike</li>
-    <li>Thomas Renz</li>
-    <li>Toby Cline</li>
-    <li>Emre Dessoi</li>
-    <li>Michael Babnick</li>
-    <li>kernellinux</li>
-    <li>Patrick Evans</li>
-    <li>Marco</li>
-    <li>Jeremy Rubin</li>
-    <li>Korbi</li>
-    <li>andreas</li>
-    <li>Tyche's tidings</li>
-    <li>Daniel Kuebler</li>
-    <li>Brandon Corujo</li>
-    <li>AheroX</li>
-    <li>Alexandre G</li>
-    <li>AshinaGa</li>
-    <li>BYTEBOLT</li>
-    <li>CEH</li>
-    <li>Chris Stone</li>
-    <li>Christof Böckler</li>
-    <li>Claude</li>
-    <li>CzLer</li>
-    <li>Daniel Burridge</li>
-    <li>dark</li>
-    <li>Dave G</li>
-    <li>David Bowers</li>
-    <li>dickv</li>
-    <li>fp4</li>
-    <li>Huser IT Solutions GmbH</li>
-    <li>irf</li>
-    <li>Isaiah Rahmany</li>
-    <li>JackNYC</li>
-    <li>Jacob Emmert-Aronson</li>
-    <li>John Donadeo</li>
-    <li>Kosta Medinsky</li>
-    <li>leinad987</li>
-    <li>Lux</li>
-    <li>marek</li>
-    <li>mattlongname</li>
-    <li>mattock</li>
-    <li>Max Christian Pohle</li>
-    <li>nta/norma</li>
-    <li>picatsv</li>
-    <li>proto</li>
-    <li>Raymond Lau</li>
-    <li>Waido</li>
-    <li>Weinmann Willy</li>
-    <li>WildMage</li>
-</ul>
-<h3>Notable Code Contributions:</h3>
-<ul>
-    <li>droidmonkey</li>
-    <li>phoerious</li>
-    <li>varjolintu (Browser Integration)</li>
-    <li>louib (CLI)</li>
-    <li>hifi (SSH Agent)</li>
-    <li>xvallspl (Tags)</li>
-    <li>Aetf (FdoSecrets Storage Server)</li>
-    <li>smlu (Visual Studio support)</li>
-    <li>ckieschnick (KeeShare)</li>
-    <li>seatedscribe (CSV Import)</li>
-    <li>weslly (macOS improvements)</li>
-    <li>brainplot (many improvements)</li>
-    <li>kneitinger (many improvements)</li>
-    <li>frostasm (many improvements)</li>
-    <li>libklein (many improvements)</li>
-    <li>w15eacre (many improvements)</li>
-    <li>fonic (Entry Table View)</li>
-    <li>kylemanna (YubiKey)</li>
-    <li>c4rlo (Offline HIBP Checker)</li>
-    <li>wolframroesler (HTML Export, Statistics, Password Health, HIBP integration)</li>
-    <li>mdaniel (OpVault Importer)</li>
-    <li>angelsl (KDBX 4)</li>
-    <li>TheZ3ro (retired lead)</li>
-    <li>debfx (KeePassX)</li>
-    <li>BlueIce (KeePassX)</li>
-</ul>
-<h3>Patreon Supporters:</h3>
-<ul>
-    <li>Shintaro Matsushima</li>
-    <li>Paul Ellenbogen</li>
-    <li>John C</li>
-    <li>Markus</li>
-    <li>Crimson Idol</li>
-    <li>Steven</li>
-    <li>Ellie</li>
-    <li>Anthony Avina</li>
-    <li>PlushElderGod</li>
-    <li>zapscribe</li>
-    <li>Christopher Hillenbrand</li>
-    <li>Dave Jones</li>
-    <li>Brett</li>
-    <li>Ralph Azucena</li>
-    <li>Florian</li>
-    <li>Kristoffer Winther Balling</li>
-    <li>Peter Link</li>
-    <li>David S H Rosenthal</li>
-    <li>Michael Soares</li>
-    <li>Vlad Didenko</li>
-    <li>henloo</li>
-    <li>Erik Rigtorp</li>
-    <li>Barry McKenzie</li>
-    <li>Sebastian van der Est</li>
-    <li>J.C. Polanycia</li>
-    <li>Peter Upfold</li>
-    <li>Josh Yates-Walker</li>
-    <li>Adam</li>
-    <li>HJ</li>
-    <li>bjorndown</li>
-    <li>Tony Wang</li>
-    <li>Nol Aders</li>
-    <li>Dirk Bergstrom</li>
-    <li>proco</li>
-    <li>Philipp Baderschneider</li>
-    <li>Neša</li>
-    <li>Dimitris Kogias</li>
-    <li>Robin Hellsten</li>
-    <li>Scott Williams</li>
-    <li>klepto68</li>
-    <li>Uwe S.</li>
-    <li>codiflow</li>
-    <li>eugene</li>
-    <li>Anton Fisher</li>
-    <li>David Daly</li>
-    <li>Crispy_Steak</li>
-    <li>Cilestin</li>
-    <li>Benjamin</li>
-    <li>Daniel Lakeland</li>
-    <li>erinacio</li>
-    <li>Leo</li>
-    <li>Payton</li>
-    <li>Saicxs</li>
-    <li>Gorund O</li>
-    <li>Tony G</li>
-    <li>Simonas S.</li>
-    <li>LordKnoppers</li>
-    <li>Fabien Duchaussois</li>
-    <li>Tim Bahnes</li>
-    <li>Aleksei Gusev</li>
-    <li>J Hanssen</li>
-    <li>schoepp</li>
-    <li>Klaus</li>
-    <li>Eric</li>
-    <li>Griffondale</li>
-    <li>Andy D</li>
-    <li>YAMAMOTO Yuji</li>
-    <li>elmiko</li>
-    <li>David</li>
-    <li>Nate Wynd</li>
-    <li>Nicolas</li>
-    <li>magila</li>
-    <li>Bryan Fisher</li>
-    <li>Mark Nicholson</li>
-    <li>Asperatus</li>
-    <li>Patrick Buchan-Hepburn</li>
-    <li>Richárd Faragó</li>
-    <li>David Koch</li>
-    <li>cheese_cake</li>
-    <li>duke_money</li>
-    <li>lund</li>
-    <li>Ivana Kellyer</li>
-    <li>Skullzam</li>
-    <li>Chris Bier</li>
-    <li>Gustavo</li>
-    <li>Henning_IdB</li>
-    <li>Edd</li>
-    <li>Net</li>
-    <li>Sergei Slipchenko</li>
-    <li>Amanita</li>
-    <li>Gaara</li>
-    <li>Max</li>
-    <li>5h4d3</li>
-    <li>James Taylor</li>
-    <li>Alexei Bond</li>
-    <li>cck</li>
-    <li>David L</li>
-    <li>devNull</li>
-    <li>Erica</li>
-    <li>Matthew O</li>
-    <li>Druggo Yang</li>
-    <li>Eric Stokes</li>
-</ul>
-<h3>VIP GitHub Sponsors:</h3>
-<ul>
-    <li>oliverkroener</li>
-</ul>
-<h3>Translations:</h3>
-<ul>
-    <li><strong>Arabic:</strong> kmutahar</li>
-    <li><strong>Chinese (China):</strong> Biggulu, Brandon_c, hoilc, ligyxy, Small_Ku, umi_neko, vc5</li>
-    <li><strong>Chinese (Taiwan):</strong> BestSteve, flachesis, MiauLightouch, Small_Ku, yan12125, ymhuang0808</li>
-    <li><strong>Czech:</strong> DanielMilde, pavelb, tpavelek</li>
-    <li><strong>English (United Kingdom):</strong> YCMHARHZ</li>
-    <li><strong>English (United States):</strong> alexandercrice, DarkHolme, nguyenlekhtn</li>
-    <li><strong>Finnish:</strong> artnay, hif1, MawKKe, varjolintu</li>
-    <li><strong>Galician:</strong> enfeitizador</li>
-    <li><strong>German:</strong> antsas, BasicBaer, Calyrx, codejunky, DavidHamburg, eth0, for1real, jensrutschmann,
-        joe776, kflesch, marcbone, MarcEdinger, mcliquid, mfernau77, montilo, nursoda, omnisome4, origin_de, pcrcoding,
-        rgloor, vlenzer, waster, Wyrrrd</li>
-    <li><strong>Greek:</strong> magkopian, nplatis, tassos.b, xinomilo</li>
-    <li><strong>Hungarian:</strong> bubu, meskobalazs, urbalazs</li>
-    <li><strong>Indonesian:</strong> zk</li>
-    <li><strong>Italian:</strong> amaxis, duncanmid, FranzMari, lucaim, NITAL, Peo, tosky, VosaxAlo</li>
-    <li><strong>Japanese:</strong> masoo, p2635, Shinichirou_Yamada, vmemjp, yukinakato</li>
-    <li><strong>Korean:</strong> cancantun, peremen</li>
-    <li><strong>Lithuanian:</strong> Moo</li>
-    <li><strong>Norwegian Bokmål:</strong> eothred, haarek, torgeirf</li>
-    <li><strong>Polish:</strong> keypress, mrerexx, psobczak</li>
-    <li><strong>Portuguese (Brazil):</strong> danielbibit, fabiom, flaviobn, newmanisaac, vitor895, weslly</li>
-    <li><strong>Portuguese (Portugal):</strong> a.santos, American_Jesus, hds, lmagomes, smarquespt</li>
-    <li><strong>Romanian:</strong> alexminza</li>
-    <li><strong>Russian:</strong> _nomoretears_, agag11507, alexminza, anm, artemkonenko, denoos, KekcuHa, Mogost,
-        netforhack, NetWormKido, RKuchma, ShareDVI, talvind, VictorR2007, vsvyatski, wkill95</li>
-    <li><strong>Swedish:</strong> Anders_Bergqvist, henziger, jpyllman, peron, Thelin</li>
-    <li><strong>Turkish:</strong> etc, N3pp</li>
-    <li><strong>Ukrainian:</strong> brisk022, netforhack, ShareDVI, zoresvit</li>
-</ul>
-)";
+static const QString aboutContributors = QStringLiteral(
+    "<p>OpenVireo is built by <a href=\"https://github.com/openvireo/openvireo/graphs/contributors\">its contributors</a>"
+    " on GitHub.</p>"
+    "<p>It is based on <a href=\"https://keepassxc.org/\">KeePassXC</a> and KeePassX, and includes the work of their"
+    " <a href=\"https://github.com/keepassxreboot/keepassxc/graphs/contributors\">contributors</a> and translators.</p>");
 
 AboutDialog::AboutDialog(QWidget* parent)
     : QDialog(parent)
@@ -365,6 +89,7 @@ AboutDialog::AboutDialog(QWidget* parent)
 
     m_ui->maintainers->setText(aboutMaintainers());
     m_ui->contributors->setText(aboutContributors);
+    m_ui->contributors->setOpenExternalLinks(true);
 
     setAttribute(Qt::WA_DeleteOnClose);
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
@@ -524,26 +249,6 @@ namespace
         scrollArea->viewport()->setAutoFillBackground(false);
         cards->setAutoFillBackground(false);
     }
-
-    QList<ContributorGroup> contributorGroups(const QString& html)
-    {
-        static const QRegularExpression groupPattern(QStringLiteral("<h3>(.*?):?</h3>\\s*<ul>(.*?)</ul>"),
-                                                     QRegularExpression::DotMatchesEverythingOption);
-        static const QRegularExpression namePattern(QStringLiteral("<li>(.*?)</li>"),
-                                                    QRegularExpression::DotMatchesEverythingOption);
-        QList<ContributorGroup> groups;
-        auto match = groupPattern.globalMatch(html);
-        while (match.hasNext()) {
-            const auto group = match.next();
-            ContributorGroup contributors{group.captured(1).trimmed(), {}};
-            auto names = namePattern.globalMatch(group.captured(2));
-            while (names.hasNext()) {
-                contributors.names << names.next().captured(1).simplified();
-            }
-            groups << contributors;
-        }
-        return groups;
-    }
 } // namespace
 
 // Links, the license and the people behind the project as settings cards
@@ -561,17 +266,19 @@ void AboutDialog::setupVaultAboutPage()
                                 QStringLiteral("https://github.com/openvireo/openvireo/issues"),
                                 this),
                       tr("Include the debug info when you report a bug"));
-    links->addSetting(tr("OpenVireo is a fork of KeePassXC"),
-                      hyperlink(QStringLiteral("keepassxc.org"), QStringLiteral("https://keepassxc.org/"), this),
-                      tr("Built on the work of the KeePassXC Team and its contributors"));
+    links->addSetting(tr("Contribute"),
+                      hyperlink(tr("Contributing guide"),
+                                QStringLiteral("https://github.com/openvireo/openvireo/blob/develop/.github/CONTRIBUTING.md"),
+                                this),
+                      tr("Code, translations and bug reports are welcome"));
 
     auto license = page.addSection(tr("License"));
     license->addSetting(tr("GNU General Public License"),
                         hyperlink(tr("Read the license"), QStringLiteral("https://www.gnu.org/licenses/"), this),
                         ui->label_3->text());
 
-    auto team = page.addSection(tr("KeePassXC maintainers"));
-    auto maintainersCard = team->addSetting(tr("The KeePassXC Team"), QWidgetList{}, ui->label_7->text());
+    auto team = page.addSection(tr("Maintainers"));
+    auto maintainersCard = team->addSetting(tr("The OpenVireo maintainers"), QWidgetList{}, ui->label_7->text());
     maintainersCard->setCollapsible(false);
     for (const auto& maintainer : maintainers) {
         auto name = QString::fromUtf8(maintainer.name);
@@ -597,24 +304,14 @@ void AboutDialog::setupVaultContributorsPage()
                      hyperlink(tr("See contributions on GitHub"),
                                QStringLiteral("https://github.com/openvireo/openvireo/graphs/contributors"),
                                this),
-                     tr("OpenVireo builds on KeePassXC, which is built by its community"));
+                     tr("OpenVireo is built by its community"));
 
-    for (const auto& group : contributorGroups(aboutContributors)) {
-        auto section = page.addSection(group.title);
-        // Translators are listed by language, one language to a line; everyone else flows along the line
-        const bool byLanguage = group.names.value(0).startsWith(QStringLiteral("<strong>"));
-        auto names = new QLabel(byLanguage ? group.names.join(QStringLiteral("<br>"))
-                                           : group.names.join(QStringLiteral(" \u00b7 ")),
-                                this);
-        names->setTextFormat(Qt::RichText);
-        names->setWordWrap(true);
-        names->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        names->setContentsMargins(0, 4, 0, 4);
-        Vault::followTheme(names, [names] {
-            Vault::styleLabel(names, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
-        });
-        section->addWidget(names);
-    }
+    auto upstream = page.addSection(tr("Based on KeePassXC"));
+    upstream->addSetting(tr("KeePassXC and KeePassX contributors"),
+                         hyperlink(tr("See contributions on GitHub"),
+                                   QStringLiteral("https://github.com/keepassxreboot/keepassxc/graphs/contributors"),
+                                   this),
+                         tr("OpenVireo includes the work of everyone who contributed code and translations upstream"));
 
     page.finish();
     scrollCards(ui->contribTab);
