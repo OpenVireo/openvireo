@@ -126,7 +126,7 @@
        <item>
         <widget class="QLabel" name="forkLabel">
          <property name="text">
-          <string>OpenVireo is a fork of &lt;a href=&quot;https://keepassxc.org/&quot; style=&quot;text-decoration: underline;&quot;&gt;KeePassXC&lt;/a&gt;. Credit and thanks go to the KeePassXC Team and its contributors.</string>
+          <string>OpenVireo is a fork of &lt;a href=&quot;https://keepassxc.org/&quot; style=&quot;text-decoration: underline;&quot;&gt;KeePassXC&lt;/a&gt;.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -171,7 +171,7 @@
        <item>
         <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>KeePassXC Project Maintainers:</string>
+          <string>Maintainers:</string>
          </property>
         </widget>
        </item>
@@ -203,7 +203,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>Special thanks from the KeePassXC team go to debfx for creating the original KeePassX.</string>
+          <string>OpenVireo is an independent project, not affiliated with or endorsed by the KeePassXC Team.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
