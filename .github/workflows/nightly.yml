@@ -1,11 +1,11 @@
 name: "Nightly"
 
-# Builds develop every night it has changed and publishes the packages to the rolling "nightly"
-# pre-release, replacing the previous night's packages.
+# Builds develop once a week, if it has changed, and publishes the packages to the rolling "nightly"
+# pre-release, replacing the previous build's packages. Run it by hand for an extra build.
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * 1'   # Mondays 03:00 UTC
   workflow_dispatch:
     inputs:
       force:
