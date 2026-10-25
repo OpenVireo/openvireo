@@ -16,6 +16,8 @@
 set(INSTALL_DIR ${CPACK_TEMPORARY_INSTALL_DIRECTORY})
 set(CODESIGN_IDENTITY @WITH_XC_CODESIGN_IDENTITY@)
 set(TIMESTAMP_URL @WITH_XC_CODESIGN_TIMESTAMP_URL@)
+set(CODESIGN_DLIB "@WITH_XC_CODESIGN_DLIB@")
+set(CODESIGN_METADATA "@WITH_XC_CODESIGN_METADATA@")
 
 if(CPACK_PACKAGE_FILES) 
     # This variable is set only during POST_BUILD, reset SIGN_FILES first
@@ -51,7 +53,13 @@ if(CODESIGN_IDENTITY AND SIGN_FILES)
     endif()
 
     # Check that a certificate thumbprint was provided or error out
-    if(CODESIGN_IDENTITY STREQUAL "auto")
+    if(CODESIGN_DLIB)
+        # A dlib such as Azure Artifact Signing's signs remotely; the metadata names the account and profile
+        message(STATUS "Signing with ${CODESIGN_DLIB}.")
+        file(TO_NATIVE_PATH "${CODESIGN_DLIB}" _dlib)
+        file(TO_NATIVE_PATH "${CODESIGN_METADATA}" _metadata)
+        set(CERT_OPTS /dlib "${_dlib}" /dmdf "${_metadata}")
+    elseif(CODESIGN_IDENTITY STREQUAL "auto")
         message(STATUS "Signing using best available certificate.")
         set(CERT_OPTS /a)
     else ()

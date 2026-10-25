@@ -48,6 +48,9 @@
 #ifdef KPXC_FEATURE_AUTOFILL
 #include "autofill/AutofillSettingsPage.h"
 #endif
+#ifdef KPXC_FEATURE_UPDATES
+#include "networking/UpdateFeed.h"
+#endif
 
 class ApplicationSettingsWidget::ExtraPage
 {
@@ -244,12 +247,18 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     }
 
 #ifdef KPXC_FEATURE_UPDATES
-    connect(m_generalUi->checkForUpdatesOnStartupCheckBox, SIGNAL(toggled(bool)), SLOT(checkUpdatesToggled(bool)));
-#else
-    m_generalUi->checkForUpdatesOnStartupCheckBox->setVisible(false);
-    m_generalUi->checkForUpdatesIncludeBetasCheckBox->setVisible(false);
-    m_generalUi->checkUpdatesSpacer->changeSize(0, 0, QSizePolicy::Fixed, QSizePolicy::Fixed);
+    m_generalUi->updateChannelComboBox->addItem(tr("Stable releases"), UpdateFeed::StableChannel);
+    m_generalUi->updateChannelComboBox->addItem(tr("Nightly builds (untested)"), UpdateFeed::NightlyChannel);
+    m_generalUi->updateChannelComboBox->installEventFilter(mouseWheelFilter);
+    // Builds outside every update channel, such as local snapshots, never update
+    if (!UpdateFeed::isEnabled())
 #endif
+    {
+        m_generalUi->checkForUpdatesOnStartupCheckBox->setVisible(false);
+        m_generalUi->updateChannelLabel->setVisible(false);
+        m_generalUi->updateChannelComboBox->setVisible(false);
+        m_generalUi->checkUpdatesSpacer->changeSize(0, 0, QSizePolicy::Fixed, QSizePolicy::Fixed);
+    }
 
 #ifndef KPXC_FEATURE_NETWORK
     m_secUi->privacy->setVisible(false);
@@ -274,8 +283,8 @@ void ApplicationSettingsWidget::buildVaultGeneralPage()
     recent->addHeaderControl(ui->rememberLastDatabasesSpinbox);
     recent->addToggle(ui->openPreviousDatabasesOnStartupCheckBox);
     recent->addToggle(ui->rememberLastKeyFilesCheckBox);
-    auto updates = startup->addToggle(ui->checkForUpdatesOnStartupCheckBox);
-    updates->addToggle(ui->checkForUpdatesIncludeBetasCheckBox);
+    startup->addToggle(ui->checkForUpdatesOnStartupCheckBox);
+    startup->addSetting(ui->updateChannelLabel, ui->updateChannelComboBox);
     auto expiring = startup->addToggle(ui->showExpiredEntriesOnDatabaseUnlockCheckBox);
     expiring->addHeaderControl(ui->showExpiredEntriesOnDatabaseUnlockOffsetSpinBox);
 
@@ -507,9 +516,10 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->minimizeOnCloseCheckBox->setChecked(config()->get(Config::GUI_MinimizeOnClose).toBool());
     m_generalUi->systrayMinimizeOnStartup->setChecked(config()->get(Config::GUI_MinimizeOnStartup).toBool());
     m_generalUi->checkForUpdatesOnStartupCheckBox->setChecked(config()->get(Config::GUI_CheckForUpdates).toBool());
-    checkUpdatesToggled(m_generalUi->checkForUpdatesOnStartupCheckBox->isChecked());
-    m_generalUi->checkForUpdatesIncludeBetasCheckBox->setChecked(
-        config()->get(Config::GUI_CheckForUpdatesIncludeBetas).toBool());
+#ifdef KPXC_FEATURE_UPDATES
+    m_generalUi->updateChannelComboBox->setCurrentIndex(
+        qMax(0, m_generalUi->updateChannelComboBox->findData(UpdateFeed::channel())));
+#endif
 
     m_generalUi->showExpiredEntriesOnDatabaseUnlockCheckBox->setChecked(
         config()->get(Config::GUI_ShowExpiredEntriesOnDatabaseUnlock).toBool());
@@ -674,8 +684,11 @@ void ApplicationSettingsWidget::saveSettings()
     config()->set(Config::GUI_MinimizeOnClose, m_generalUi->minimizeOnCloseCheckBox->isChecked());
     config()->set(Config::GUI_MinimizeOnStartup, m_generalUi->systrayMinimizeOnStartup->isChecked());
     config()->set(Config::GUI_CheckForUpdates, m_generalUi->checkForUpdatesOnStartupCheckBox->isChecked());
-    config()->set(Config::GUI_CheckForUpdatesIncludeBetas,
-                  m_generalUi->checkForUpdatesIncludeBetasCheckBox->isChecked());
+#ifdef KPXC_FEATURE_UPDATES
+    // Keeping the build's own channel stores nothing, so the setting follows the build if it is replaced
+    auto updateChannel = m_generalUi->updateChannelComboBox->currentData().toString();
+    config()->set(Config::GUI_UpdateChannel, updateChannel == UpdateFeed::buildChannel() ? QString() : updateChannel);
+#endif
 
     config()->set(Config::GUI_ShowExpiredEntriesOnDatabaseUnlock,
                   m_generalUi->showExpiredEntriesOnDatabaseUnlockCheckBox->isChecked());
@@ -850,10 +863,6 @@ void ApplicationSettingsWidget::rememberDatabasesToggled(bool checked)
     m_generalUi->openPreviousDatabasesOnStartupCheckBox->setEnabled(checked);
 }
 
-void ApplicationSettingsWidget::checkUpdatesToggled(bool checked)
-{
-    m_generalUi->checkForUpdatesIncludeBetasCheckBox->setEnabled(checked);
-}
 
 void ApplicationSettingsWidget::showExpiredEntriesOnDatabaseUnlockToggled(bool checked)
 {

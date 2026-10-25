@@ -19,6 +19,14 @@ on:
         description: "Build a snapshot from ref, shown as this version (empty for a tagged release build)"
         type: string
         default: ""
+      update-channel:
+        description: "Update channel the packages follow: stable or nightly"
+        type: string
+        default: stable
+      update-build:
+        description: "Build number of a nightly, appended to its update version"
+        type: string
+        default: ""
     secrets:
       MACOS_CERTIFICATE_P12:
         required: false
@@ -30,15 +38,41 @@ on:
         required: false
       APPLE_APP_PASSWORD:
         required: false
+      # Azure Artifact Signing, through an app registration with a federated credential for this repository
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        required: false
+      # Signing subkey without a passphrase; signs the AppImages
+      GPG_PRIVATE_KEY:
+        required: false
 
 permissions:
   contents: read
+
+# Pinned downloads; update the version and checksum together
+env:
+  SPARKLE_VERSION: "2.10.0"
+  SPARKLE_SHA256: c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+  WINSPARKLE_VERSION: "0.9.4"
+  WINSPARKLE_SHA256: 6037df37fc263bd1650a1c4949681a9d40ffe991d01f35892a406cb5d103c976
+  ARTIFACT_SIGNING_CLIENT_VERSION: "1.0.146"
+  ARTIFACT_SIGNING_CLIENT_SHA256: 7761e5d8f31e54b764da21d33cd8b0a2940e1b05526c7dfcb5e94b0431426f70
 
 jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 360
+    # One OIDC subject for nightlies and release tags alike, which Azure's federated credential matches;
+    # the environment's protection rules can also restrict which refs get signed
+    environment: signing
+    permissions:
+      contents: read
+      # Signs in to Azure with OIDC for Artifact Signing
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +112,10 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
       MACOSX_DEPLOYMENT_TARGET: "12.0"
       HAS_MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_ARTIFACT_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' && vars.ARTIFACT_SIGNING_ACCOUNT != '' }}
+      HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+      # The Ed25519 key that Sparkle and WinSparkle verify updates with; without it they are left out
+      UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
 
     steps:
       - name: Checkout repository
@@ -159,6 +197,68 @@ jobs:
             ${{ env.VCPKG_CACHE_PREFIX }}-
             vcpkg-${{ matrix.platform }}-${{ matrix.arch }}-
 
+      - name: Download Sparkle (macOS)
+        if: matrix.platform == 'macos' && env.UPDATE_PUBLIC_KEY != ''
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+          echo "$SPARKLE_SHA256  $RUNNER_TEMP/sparkle.tar.xz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/sparkle" && tar -xJf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          echo "UPDATER_CMAKE_OPT=-DSPARKLE_ROOT=$RUNNER_TEMP/sparkle" >> "$GITHUB_ENV"
+
+      - name: Download WinSparkle (Windows)
+        if: matrix.platform == 'windows' && env.UPDATE_PUBLIC_KEY != ''
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/winsparkle.zip" \
+            "https://github.com/vslavik/winsparkle/releases/download/v$WINSPARKLE_VERSION/WinSparkle-$WINSPARKLE_VERSION.zip"
+          echo "$WINSPARKLE_SHA256  $RUNNER_TEMP/winsparkle.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/winsparkle.zip" -d "$RUNNER_TEMP/winsparkle" -x '__MACOSX/*'
+          echo "UPDATER_CMAKE_OPT=-DWINSPARKLE_ROOT=$(cygpath -m "$RUNNER_TEMP/winsparkle/WinSparkle-$WINSPARKLE_VERSION")" >> "$GITHUB_ENV"
+
+      - name: Sign in to Azure (Windows)
+        if: matrix.platform == 'windows' && env.HAS_ARTIFACT_SIGNING == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Artifact Signing (Windows)
+        id: windows-signing
+        if: matrix.platform == 'windows' && env.HAS_ARTIFACT_SIGNING == 'true'
+        env:
+          ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          # SignTool's dlib for Artifact Signing; it signs with the Azure CLI login from the previous step
+          curl -fsSL -o "$RUNNER_TEMP/signing-client.nupkg" \
+            "https://api.nuget.org/v3-flatcontainer/microsoft.artifactsigning.client/$ARTIFACT_SIGNING_CLIENT_VERSION/microsoft.artifactsigning.client.$ARTIFACT_SIGNING_CLIENT_VERSION.nupkg"
+          echo "$ARTIFACT_SIGNING_CLIENT_SHA256  $RUNNER_TEMP/signing-client.nupkg" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/signing-client.nupkg" -d "$RUNNER_TEMP/signing-client"
+          python - "$RUNNER_TEMP/signing-metadata.json" <<'EOF'
+          import json, os, sys
+          excluded = ["EnvironmentCredential", "ManagedIdentityCredential", "WorkloadIdentityCredential",
+                      "SharedTokenCacheCredential", "VisualStudioCredential", "VisualStudioCodeCredential",
+                      "AzurePowerShellCredential", "AzureDeveloperCliCredential", "InteractiveBrowserCredential"]
+          json.dump({"Endpoint": os.environ["ENDPOINT"], "CodeSigningAccountName": os.environ["ACCOUNT"],
+                     "CertificateProfileName": os.environ["PROFILE"], "ExcludeCredentials": excluded},
+                    open(sys.argv[1], "w"), indent=2)
+          EOF
+          dlib=$(cygpath -m "$RUNNER_TEMP/signing-client/bin/x64/Azure.CodeSigning.Dlib.dll")
+          metadata=$(cygpath -m "$RUNNER_TEMP/signing-metadata.json")
+          echo "args=--sign --sign-dlib $dlib --sign-metadata $metadata" >> "$GITHUB_OUTPUT"
+
+      - name: Import GPG key (Linux)
+        id: linux-signing
+        if: matrix.platform == 'linux' && env.HAS_GPG_KEY == 'true'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          key=$(gpg --list-secret-keys --with-colons | awk -F: '$1 == "fpr" { print $10; exit }')
+          echo "args=--appimage-sign-key $key" >> "$GITHUB_OUTPUT"
+
       - name: Import signing certificate (macOS)
         id: macos-signing
         if: matrix.platform == 'macos' && env.HAS_MACOS_CERTIFICATE == 'true'
@@ -192,29 +292,43 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           SNAPSHOT_VERSION: ${{ inputs.snapshot-version }}
+          UPDATE_CHANNEL: ${{ inputs.update-channel }}
+          UPDATE_BUILD: ${{ inputs.update-build }}
         run: |
           args=(build "$VERSION" --yes --output-dir "$OUTPUT_DIR" --platform-target "${{ matrix.arch }}")
           if [ -n "$SNAPSHOT_VERSION" ]; then
             args+=(--snapshot --override-version "$SNAPSHOT_VERSION")
+          fi
+          # Update checks follow this build's channel; Sparkle and WinSparkle come with the public key
+          update_opts=(-DKPXC_FEATURE_UPDATES=ON "-DKPXC_UPDATE_CHANNEL=$UPDATE_CHANNEL"
+                       "-DKPXC_UPDATE_BUILD=$UPDATE_BUILD" "-DKPXC_UPDATE_PUBLIC_KEY=$UPDATE_PUBLIC_KEY")
+          if [ -n "$UPDATER_CMAKE_OPT" ]; then
+            update_opts+=("$UPDATER_CMAKE_OPT")
+          fi
+          appimage_tag=latest
+          if [ "$UPDATE_CHANNEL" = nightly ]; then
+            appimage_tag=nightly
           fi
           case "${{ matrix.platform }}" in
             macos)
               args+=(--build-qt ${{ steps.macos-signing.outputs.args }} --cmake-opts
                      -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
                      "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a"
-                     -DVCPKG_HOST_TRIPLET=${{ matrix.host-triplet }} -DVCPKG_INSTALL_OPTIONS=--clean-after-build)
+                     -DVCPKG_HOST_TRIPLET=${{ matrix.host-triplet }} -DVCPKG_INSTALL_OPTIONS=--clean-after-build
+                     "${update_opts[@]}")
               ;;
             linux)
-              args+=(--use-system-deps --appimage --cmake-opts
+              args+=(--use-system-deps --appimage --appimage-update-tag "$appimage_tag"
+                     ${{ steps.linux-signing.outputs.args }} --cmake-opts
                      -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
-                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a")
+                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a" "${update_opts[@]}")
               ;;
             windows)
               # Release-only triplets build Qt once instead of in debug and release; the host triplet
               # must match so that windeployqt comes from the same Qt
-              args+=(--build-qt --cmake-opts -DKPXC_FEATURE_ACCOUNTS=ON
+              args+=(--build-qt ${{ steps.windows-signing.outputs.args }} --cmake-opts -DKPXC_FEATURE_ACCOUNTS=ON
                      -DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_HOST_TRIPLET=x64-windows-release
-                     -DVCPKG_INSTALL_OPTIONS=--clean-after-build)
+                     -DVCPKG_INSTALL_OPTIONS=--clean-after-build "${update_opts[@]}")
               ;;
           esac
           # SODIUM_LIBRARY is named explicitly so a shared libsodium elsewhere on the runner is never linked.

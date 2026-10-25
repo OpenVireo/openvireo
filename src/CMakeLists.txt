@@ -351,9 +351,18 @@ if(KPXC_FEATURE_NETWORK)
             networking/HibpDownloader.cpp
             networking/NetworkManager.cpp
             networking/UpdateChecker.cpp
+            networking/UpdateFeed.cpp
             gui/UpdateCheckDialog.cpp
+            gui/osutils/AutoUpdater.cpp
             gui/IconDownloader.cpp
             gui/IconDownloaderDialog.cpp)
+endif()
+
+if(KPXC_SPARKLE)
+    list(APPEND gui_SOURCES gui/osutils/macutils/SparkleUpdater.mm)
+    set_source_files_properties(gui/osutils/macutils/SparkleUpdater.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+elseif(KPXC_WINSPARKLE)
+    list(APPEND gui_SOURCES gui/osutils/winutils/WinSparkleUpdater.cpp)
 endif()
 
 add_subdirectory(cli)
@@ -430,6 +439,14 @@ if(APPLE)
     if(Qt6MacExtras_FOUND)
         target_link_libraries(keepassxc_gui Qt6::MacExtras)
     endif()
+    if(KPXC_SPARKLE)
+        target_compile_options(keepassxc_gui PRIVATE "-F${SPARKLE_ROOT}")
+        target_link_libraries(keepassxc_gui "${SPARKLE_FRAMEWORK}")
+    endif()
+endif()
+if(KPXC_WINSPARKLE)
+    target_include_directories(keepassxc_gui SYSTEM PRIVATE "${WINSPARKLE_INCLUDE_DIR}")
+    target_link_libraries(keepassxc_gui "${WINSPARKLE_LIBRARY}")
 endif()
 if(HAIKU)
     target_link_libraries(keepassxc_gui network)
@@ -549,6 +566,24 @@ endif()
 install(TARGETS ${PROGNAME}
         BUNDLE DESTINATION . COMPONENT Runtime
         RUNTIME DESTINATION ${BIN_INSTALL_DIR} COMPONENT Runtime)
+
+if(KPXC_SPARKLE)
+    # Embed Sparkle before macdeployqt runs, so that it finds the framework in the bundle. The XPC services
+    # are only for sandboxed apps; without them, signing the bundle with --deep keeps Sparkle intact.
+    set_target_properties(${PROGNAME} PROPERTIES
+            BUILD_RPATH "${SPARKLE_ROOT}"
+            INSTALL_RPATH "@executable_path/../Frameworks")
+    install(DIRECTORY "${SPARKLE_FRAMEWORK}"
+            DESTINATION "${PROGNAME}.app/Contents/Frameworks"
+            COMPONENT Runtime
+            USE_SOURCE_PERMISSIONS
+            PATTERN "XPCServices" EXCLUDE)
+endif()
+if(KPXC_WINSPARKLE)
+    add_custom_command(TARGET ${PROGNAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${WINSPARKLE_DLL}" $<TARGET_FILE_DIR:${PROGNAME}>)
+    install(FILES "${WINSPARKLE_DLL}" DESTINATION "." COMPONENT Runtime)
+endif()
 
 # Windows Installer Definition
 if(WIN32)

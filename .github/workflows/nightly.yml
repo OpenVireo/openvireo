@@ -29,6 +29,7 @@ jobs:
       sha: ${{ steps.check.outputs.sha }}
       version: ${{ steps.check.outputs.version }}
       snapshot-version: ${{ steps.check.outputs.snapshot-version }}
+      update-build: ${{ steps.check.outputs.update-build }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,16 +53,23 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "snapshot-version=$version-nightly-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          # Updaters compare <version>.<build>; the hour keeps a forced second build of the day newer
+          echo "update-build=$(date -u +%y%m%d%H)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build
     needs: prepare
     if: needs.prepare.outputs.build == 'true'
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.prepare.outputs.sha }}
       version: ${{ needs.prepare.outputs.version }}
       snapshot-version: ${{ needs.prepare.outputs.snapshot-version }}
+      update-channel: nightly
+      update-build: ${{ needs.prepare.outputs.update-build }}
     secrets: inherit
 
   publish:
@@ -71,15 +79,51 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
           path: packages
           merge-multiple: true
 
+      - name: Write update feeds
+        env:
+          UPDATE_PRIVATE_KEY: ${{ secrets.UPDATE_PRIVATE_KEY }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot-version }}
+          UPDATE_BUILD: ${{ needs.prepare.outputs.update-build }}
+        run: |
+          if [ -z "$UPDATE_PRIVATE_KEY" ] || [ -z "$UPDATE_PUBLIC_KEY" ]; then
+            echo "::warning::UPDATE_PRIVATE_KEY or UPDATE_PUBLIC_KEY is not set; this nightly has no update feeds"
+            exit 0
+          fi
+          echo "Untested development build of $SHA from develop." > notes.txt
+          python3 .github/scripts/make-appcast.py packages --channel nightly \
+            --version "$SNAPSHOT_VERSION" --update-version "$VERSION.$UPDATE_BUILD" \
+            --download-url "https://github.com/$GITHUB_REPOSITORY/releases/download/nightly" \
+            --release-url "https://github.com/$GITHUB_REPOSITORY/releases/tag/nightly" \
+            --notes-file notes.txt --expect-public-key "$UPDATE_PUBLIC_KEY"
+
       - name: Write checksums
         working-directory: packages
         run: sha256sum * > SHA256SUMS.txt
+
+      - name: Sign checksums
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        working-directory: packages
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::warning::GPG_PRIVATE_KEY is not set; SHA256SUMS.txt is not signed"
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --armor --detach-sign --output SHA256SUMS.txt.asc SHA256SUMS.txt
 
       - name: Replace the nightly release
         env:
@@ -99,4 +143,4 @@ jobs:
             --prerelease \
             --latest=false \
             --title "Nightly build $VERSION" \
-            --notes "Untested development build of [\`${SHA:0:7}\`](https://github.com/$GH_REPO/commit/$SHA) from \`develop\`. It replaces the previous nightly build and may have bugs that corrupt databases, so keep backups. Check downloads against \`SHA256SUMS.txt\`."
+            --notes "Untested development build of [\`${SHA:0:7}\`](https://github.com/$GH_REPO/commit/$SHA) from \`develop\`. It replaces the previous nightly build and may have bugs that corrupt databases, so keep backups. Check downloads against \`SHA256SUMS.txt\` and its signature \`SHA256SUMS.txt.asc\`."

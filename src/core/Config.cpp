@@ -126,7 +126,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_VaultTagsCollapsed, {QS("GUI/VaultTagsCollapsed"), Roaming, false}},
     {Config::GUI_CheckForUpdates, {QS("GUI/CheckForUpdates"), Roaming, true}},
     {Config::GUI_CheckForUpdatesNextCheck, {QS("GUI/CheckForUpdatesNextCheck"), Local, 0}},
-    {Config::GUI_CheckForUpdatesIncludeBetas, {QS("GUI/CheckForUpdatesIncludeBetas"), Roaming, false}},
+    // Empty follows the channel the build was made for; see UpdateFeed::channel()
+    {Config::GUI_UpdateChannel, {QS("GUI/UpdateChannel"), Local, {}}},
     {Config::GUI_SearchWaitForEnter, {QS("GUI/SearchWaitForEnter"), Roaming, false}},
     {Config::GUI_ShowExpiredEntriesOnDatabaseUnlock, {QS("GUI/ShowExpiredEntriesOnDatabaseUnlock"), Roaming, true}},
     {Config::GUI_ShowExpiredEntriesOnDatabaseUnlockOffsetDays, {QS("GUI/ShowExpiredEntriesOnDatabaseUnlockOffsetDays"), Roaming, 3}},
