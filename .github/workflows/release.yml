@@ -42,10 +42,14 @@ jobs:
   build:
     name: Build
     needs: prepare
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: refs/tags/${{ needs.prepare.outputs.tag }}
       version: ${{ needs.prepare.outputs.tag }}
+      update-channel: stable
     secrets: inherit
 
   source:
@@ -85,9 +89,46 @@ jobs:
           path: packages
           merge-multiple: true
 
+      - name: Write release notes
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          # The release notes are this version's CHANGELOG.md section, without its heading
+          awk -v heading="## $TAG " 'index($0, heading) == 1 { found = 1; next } found && /^## / { exit } found' \
+            CHANGELOG.md > notes.md
+
+      # The feeds go live when the draft is published: releases/latest skips drafts
+      - name: Write update feeds
+        env:
+          UPDATE_PRIVATE_KEY: ${{ secrets.UPDATE_PRIVATE_KEY }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          if [ -z "$UPDATE_PRIVATE_KEY" ] || [ -z "$UPDATE_PUBLIC_KEY" ]; then
+            echo "::warning::UPDATE_PRIVATE_KEY or UPDATE_PUBLIC_KEY is not set; this release has no update feeds"
+            exit 0
+          fi
+          python3 .github/scripts/make-appcast.py packages --channel stable \
+            --version "$TAG" --update-version "$TAG" \
+            --download-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG" \
+            --release-url "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" \
+            --notes-file notes.md --expect-public-key "$UPDATE_PUBLIC_KEY"
+
       - name: Write checksums
         working-directory: packages
         run: sha256sum * > SHA256SUMS.txt
+
+      - name: Sign checksums
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        working-directory: packages
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::warning::GPG_PRIVATE_KEY is not set; SHA256SUMS.txt is not signed"
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --armor --detach-sign --output SHA256SUMS.txt.asc SHA256SUMS.txt
 
       - name: Create draft release
         env:
@@ -95,9 +136,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          # The release notes are this version's CHANGELOG.md section, without its heading
-          awk -v heading="## $TAG " 'index($0, heading) == 1 { found = 1; next } found && /^## / { exit } found' \
-            CHANGELOG.md > notes.md
           if gh release view "$TAG" > /dev/null 2>&1; then
             # Re-running for a tag replaces the packages and keeps any edits to the release text
             gh release upload "$TAG" packages/* --clobber

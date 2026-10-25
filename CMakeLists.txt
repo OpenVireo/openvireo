@@ -66,7 +66,7 @@ endif()
 
 # Minor Feature Flags
 option(KPXC_FEATURE_NETWORK "Include code that reaches out to external networks (e.g. downloading icons)" ON)
-# Off by default: the checker asks api.github.com for openvireo/openvireo releases, which do not exist yet
+# Off by default: the official packages turn it on in CI, with the channel and key their update feeds need
 option(KPXC_FEATURE_UPDATES "Include automatic update checks; disable for managed distributions" OFF)
 option(KPXC_FEATURE_DOCS "Build offline documentation; requires asciidoctor tool" ON)
 
@@ -165,6 +165,31 @@ else()
 endif()
 
 message(STATUS "Setting up build for KeePassXC v${KEEPASSXC_VERSION}\n")
+
+# Update channel, and the version that update feeds compare. A release is its own version; a nightly appends
+# its build number, so each nightly sorts above the last one and below the next release.
+set(KPXC_UPDATE_CHANNEL "" CACHE STRING "Update feed this build follows: stable, nightly, or empty for none (default: stable for releases)")
+set(KPXC_UPDATE_BUILD "" CACHE STRING "Build number of a nightly, appended to its update version (e.g. 26102503)")
+set(KPXC_UPDATE_FEED_BASE "https://github.com/openvireo/openvireo/releases" CACHE STRING "GitHub releases URL that serves the update feeds")
+set(KPXC_UPDATE_PUBLIC_KEY "" CACHE STRING "Base64 Ed25519 public key that Sparkle and WinSparkle verify updates with")
+if(NOT KPXC_UPDATE_CHANNEL AND KEEPASSXC_BUILD_TYPE_RELEASE)
+    set(KPXC_UPDATE_CHANNEL "stable")
+endif()
+set(KEEPASSXC_BUNDLE_VERSION "${KEEPASSXC_VERSION_MAJOR}.${KEEPASSXC_VERSION_MINOR}.${KEEPASSXC_VERSION_PATCH}")
+if(KPXC_UPDATE_CHANNEL STREQUAL "nightly")
+    if(NOT KPXC_UPDATE_BUILD MATCHES "^[0-9]+$")
+        message(FATAL_ERROR "A nightly build needs a numeric KPXC_UPDATE_BUILD, got '${KPXC_UPDATE_BUILD}'")
+    endif()
+    set(KEEPASSXC_UPDATE_VERSION "${KEEPASSXC_BUNDLE_VERSION}.${KPXC_UPDATE_BUILD}")
+    set(KEEPASSXC_BUNDLE_VERSION "${KEEPASSXC_UPDATE_VERSION}")
+elseif(KPXC_UPDATE_CHANNEL STREQUAL "stable")
+    set(KEEPASSXC_UPDATE_VERSION "${KEEPASSXC_BUNDLE_VERSION}")
+elseif(KPXC_UPDATE_CHANNEL)
+    message(FATAL_ERROR "Unknown KPXC_UPDATE_CHANNEL '${KPXC_UPDATE_CHANNEL}', expected stable or nightly")
+endif()
+if(KPXC_UPDATE_CHANNEL)
+    message(STATUS "Update channel: ${KPXC_UPDATE_CHANNEL}, update version ${KEEPASSXC_UPDATE_VERSION}\n")
+endif()
 
 # Distribution info
 set(KEEPASSXC_DIST_TYPE "Native" CACHE STRING "KeePassXC Distribution Type")
@@ -612,6 +637,41 @@ add_feature_info("Accounts" KPXC_FEATURE_ACCOUNTS "Sign in to OpenVireo accounts
 # The hosted account server offered on the start screen; clients find its sync server through
 # <server>/.well-known/openvireo-configuration
 set(KPXC_DEFAULT_ACCOUNT_SERVER "https://accounts.openvireo.com" CACHE STRING "Issuer URL of the default OpenVireo account server")
+
+# Sparkle (macOS) and WinSparkle (Windows) download, verify and install updates. Without them, and on Linux,
+# the update checker only reports new versions. Both take the unpacked binary release of the library.
+set(SPARKLE_ROOT "" CACHE PATH "Directory with Sparkle.framework from a Sparkle 2 release (macOS)")
+set(WINSPARKLE_ROOT "" CACHE PATH "Unpacked WinSparkle release, with include/ and x64/ or ARM64/ (Windows)")
+if(KPXC_FEATURE_UPDATES AND KPXC_UPDATE_CHANNEL)
+    if(APPLE AND WITH_APP_BUNDLE AND SPARKLE_ROOT)
+        set(SPARKLE_FRAMEWORK "${SPARKLE_ROOT}/Sparkle.framework")
+        if(NOT EXISTS "${SPARKLE_FRAMEWORK}/Headers/Sparkle.h")
+            message(FATAL_ERROR "SPARKLE_ROOT has no Sparkle.framework: ${SPARKLE_ROOT}")
+        endif()
+        set(KPXC_SPARKLE ON)
+    elseif(WIN32 AND WINSPARKLE_ROOT)
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
+            set(_winsparkle_arch ARM64)
+        else()
+            set(_winsparkle_arch x64)
+        endif()
+        find_path(WINSPARKLE_INCLUDE_DIR winsparkle.h PATHS "${WINSPARKLE_ROOT}/include" NO_DEFAULT_PATH)
+        find_library(WINSPARKLE_LIBRARY WinSparkle PATHS "${WINSPARKLE_ROOT}/${_winsparkle_arch}/Release" NO_DEFAULT_PATH)
+        find_file(WINSPARKLE_DLL WinSparkle.dll PATHS "${WINSPARKLE_ROOT}/${_winsparkle_arch}/Release" NO_DEFAULT_PATH)
+        if(NOT WINSPARKLE_INCLUDE_DIR OR NOT WINSPARKLE_LIBRARY OR NOT WINSPARKLE_DLL)
+            message(FATAL_ERROR "WINSPARKLE_ROOT has no ${_winsparkle_arch} WinSparkle build: ${WINSPARKLE_ROOT}")
+        endif()
+        set(KPXC_WINSPARKLE ON)
+    endif()
+    if((KPXC_SPARKLE OR KPXC_WINSPARKLE) AND NOT KPXC_UPDATE_PUBLIC_KEY)
+        message(FATAL_ERROR "Installing updates needs KPXC_UPDATE_PUBLIC_KEY, the key that verifies them")
+    endif()
+endif()
+if(APPLE)
+    add_feature_info("Sparkle" KPXC_SPARKLE "Download and install updates with Sparkle")
+elseif(WIN32)
+    add_feature_info("WinSparkle" KPXC_WINSPARKLE "Download and install updates with WinSparkle")
+endif()
 
 # Find zlib
 find_package(ZLIB REQUIRED)

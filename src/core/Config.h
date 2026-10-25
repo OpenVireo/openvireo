@@ -105,7 +105,7 @@ public:
         GUI_ApplicationTheme,
         GUI_VaultTagsCollapsed,
         GUI_CheckForUpdates,
-        GUI_CheckForUpdatesIncludeBetas,
+        GUI_UpdateChannel,
         GUI_SearchWaitForEnter,
         GUI_ShowExpiredEntriesOnDatabaseUnlock,
         GUI_ShowExpiredEntriesOnDatabaseUnlockOffsetDays,

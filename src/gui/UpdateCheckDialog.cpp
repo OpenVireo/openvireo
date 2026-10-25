@@ -51,10 +51,14 @@ void UpdateCheckDialog::showUpdateCheckResponse(bool hasUpdate, const QString& v
         m_ui->statusLabel->setText(
             tr("An error occurred when trying to retrieve update information, please try again later."));
     } else if (hasUpdate) {
-        m_ui->statusLabel->setText(
-            tr("<strong>A new version is available.</strong><br/>"
-               "OpenVireo %1 can be <a href=\"https://github.com/openvireo/openvireo/releases\">downloaded here</a>.")
-                .arg(version, KEEPASSXC_VERSION));
+        auto release = updateCheck()->latestRelease();
+        auto url = release.infoUrl.isValid() ? release.infoUrl : release.downloadUrl;
+        if (!url.isValid()) {
+            url = QUrl(QStringLiteral(KEEPASSXC_UPDATE_FEED_BASE));
+        }
+        m_ui->statusLabel->setText(tr("<strong>A new version is available.</strong><br/>"
+                                      "OpenVireo %1 can be <a href=\"%2\">downloaded here</a>.")
+                                       .arg(version.toHtmlEscaped(), url.toString(QUrl::FullyEncoded).toHtmlEscaped()));
     } else {
         m_ui->statusLabel->setText(tr("You have the latest version of OpenVireo"));
     }

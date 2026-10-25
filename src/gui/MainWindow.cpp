@@ -76,6 +76,7 @@
 
 #ifdef KPXC_FEATURE_UPDATES
 #include "gui/UpdateCheckDialog.h"
+#include "gui/osutils/AutoUpdater.h"
 #include "networking/UpdateChecker.h"
 #endif
 
@@ -605,15 +606,28 @@ MainWindow::MainWindow()
 #endif
 
 #ifdef KPXC_FEATURE_UPDATES
-    connect(m_ui->actionCheckForUpdates, SIGNAL(triggered()), SLOT(showUpdateCheckDialog()));
-    connect(UpdateChecker::instance(),
-            SIGNAL(updateCheckFinished(bool, QString, bool)),
-            SLOT(hasUpdateAvailable(bool, QString, bool)));
-    // Setup an update check every hour (checked only occur every 7 days)
-    connect(&m_updateCheckTimer, &QTimer::timeout, this, &MainWindow::performUpdateCheck);
-    m_updateCheckTimer.start(3.6e6);
-    // Perform the startup update check after 500 ms
-    QTimer::singleShot(500, this, SLOT(performUpdateCheck()));
+    // Builds outside every update channel, such as local snapshots, never update
+    m_ui->actionCheckForUpdates->setVisible(UpdateFeed::isEnabled());
+    if (UpdateFeed::isEnabled()) {
+        connect(m_ui->actionCheckForUpdates, SIGNAL(triggered()), SLOT(showUpdateCheckDialog()));
+        if (auto updater = AutoUpdater::instance()) {
+            // Sparkle and WinSparkle schedule their own checks
+            connect(config(), &Config::changed, updater, [updater](Config::ConfigKey key) {
+                if (key == Config::GUI_CheckForUpdates || key == Config::GUI_UpdateChannel) {
+                    updater->applySettings();
+                }
+            });
+        } else {
+            connect(UpdateChecker::instance(),
+                    SIGNAL(updateCheckFinished(bool, QString, bool)),
+                    SLOT(hasUpdateAvailable(bool, QString, bool)));
+            // Setup an update check every hour (checked only occur every 7 days)
+            connect(&m_updateCheckTimer, &QTimer::timeout, this, &MainWindow::performUpdateCheck);
+            m_updateCheckTimer.start(3.6e6);
+        }
+        // Perform the startup update check after 500 ms
+        QTimer::singleShot(500, this, SLOT(performUpdateCheck()));
+    }
 #else
     m_ui->actionCheckForUpdates->setVisible(false);
 #endif
@@ -1508,7 +1522,10 @@ void MainWindow::performUpdateCheck()
         config()->set(Config::UpdateCheckMessageShown, true);
     }
 
-    if (config()->get(Config::GUI_CheckForUpdates).toBool()) {
+    if (auto updater = AutoUpdater::instance()) {
+        // Starting the updater does not check by itself unless scheduled checks are on
+        updater->start();
+    } else if (config()->get(Config::GUI_CheckForUpdates).toBool()) {
         updateCheck()->checkForUpdates(false);
     }
 
@@ -1533,6 +1550,11 @@ void MainWindow::hasUpdateAvailable(bool hasUpdate, const QString& version, bool
 void MainWindow::showUpdateCheckDialog()
 {
 #ifdef KPXC_FEATURE_UPDATES
+    if (auto updater = AutoUpdater::instance()) {
+        updater->start();
+        updater->checkForUpdates();
+        return;
+    }
     updateCheck()->checkForUpdates(true);
     auto* updateCheckDialog = new UpdateCheckDialog(this);
     updateCheckDialog->show();
