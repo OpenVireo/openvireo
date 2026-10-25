@@ -125,7 +125,9 @@ bool VaultWindowFrame::eventFilter(QObject* watched, QEvent* event)
         case QEvent::ThemeChange:
         case QEvent::PaletteChange:
         case QEvent::StyleChange:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
         case QEvent::DevicePixelRatioChange:
+#endif
             // macOS lays the window controls out again after these, so align them afterwards
             scheduleSync();
             break;

@@ -65,7 +65,7 @@ namespace
             // Dividers between visible rows
             painter.setPen(QPen(p.divider, 1));
             QWidget* previous = nullptr;
-            for (auto* child : findChildren<VaultFieldRow*>(Qt::FindDirectChildrenOnly)) {
+            for (auto* child : findChildren<VaultFieldRow*>(QString(), Qt::FindDirectChildrenOnly)) {
                 if (!child->isVisible()) {
                     continue;
                 }

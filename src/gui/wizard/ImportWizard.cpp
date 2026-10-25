@@ -45,7 +45,7 @@ ImportWizard::ImportWizard(QWidget* parent)
         // The modal's footer has its own divider. Beside the frame holding the pages, the wizard has its ruler above
         // the buttons, which it shows again on each layout, so give it no height instead.
         auto pageFrame = m_pageSelect->parentWidget();
-        for (auto widget : pageFrame->parentWidget()->findChildren<QWidget*>(Qt::FindDirectChildrenOnly)) {
+        for (auto widget : pageFrame->parentWidget()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
             if (widget != pageFrame && !qobject_cast<QAbstractButton*>(widget)) {
                 widget->setFixedHeight(0);
             }

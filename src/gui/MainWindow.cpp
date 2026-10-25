@@ -746,10 +746,10 @@ void MainWindow::setupAccounts()
         m_accountMenu->addAction(tr("Sign In or Create Account…"), this, &MainWindow::showStartScreen);
     m_actionAccountUnlock = m_accountMenu->addAction(tr("&Unlock Account…"), this, &MainWindow::unlockAccount);
     m_actionAccountQuickUnlock = m_accountMenu->addAction(
-        tr("&Quick Unlock Account"), m_accountController, &AccountController::quickUnlockAccount);
+        tr("&Quick Unlock Account"), m_accountController.data(), &AccountController::quickUnlockAccount);
     m_actionAccountQuickUnlock->setToolTip(tr("Unlock with Touch ID, Windows Hello or your system password"));
     m_actionAccountLock =
-        m_accountMenu->addAction(tr("&Lock Account"), m_accountController, &AccountController::lockAccount);
+        m_accountMenu->addAction(tr("&Lock Account"), m_accountController.data(), &AccountController::lockAccount);
     m_accountMenu->addSeparator();
     m_actionAccountNewVault = m_accountMenu->addAction(tr("&New Vault…"), this, &MainWindow::createAccountVault);
     m_actionAccountShare = m_accountMenu->addAction(tr("&Share Vault…"), this, [this] { showShareVaultDialog(); });
@@ -768,7 +768,7 @@ void MainWindow::setupAccounts()
         }
     });
     m_actionAccountSignOut =
-        m_accountMenu->addAction(tr("Sign &Out"), m_accountController, &AccountController::signOut);
+        m_accountMenu->addAction(tr("Sign &Out"), m_accountController.data(), &AccountController::signOut);
     m_ui->menubar->insertMenu(m_ui->menuHelp->menuAction(), m_accountMenu);
 
     if (m_vaultHeader) {
