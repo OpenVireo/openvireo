@@ -396,7 +396,7 @@ uses these names:
 | Protocol | `ov v1`; every crypto label (§3–§8) starts `ov-` |
 | JWT audiences | `ov-api`, `ov-sync` |
 | Discovery | `/.well-known/openvireo-configuration` |
-| Tokens | `ov_rt_`, `ov_sa_`, `ov_inv_`, `ov_ct_`, `ov_ws_` |
+| Tokens | `ov_rt_`, `ov_sa_`, `ov_inv_`, `ov_ct_`, `ov_ws_`, `ov_rq_`, `ov_rc_` |
 | Secret references | `ov://` |
 | Environment variables | `OPENVIREO_*` (e.g. `OPENVIREO_SERVICE_ACCOUNT_TOKEN`, `OPENVIREO_INVITATION_URL`); the sync server's `SYNC_*` keep their names |
 | CLI command | `openvireo` (alias `ov`); masking text `<concealed by openvireo>` |
@@ -410,3 +410,128 @@ These keep their old names: the KeePassXC copyright and licence notices, KDBX da
 (`KeePassXC-Browser Settings`, `KeePassXC-Browser Passkeys`, `KPEX_PASSKEY_*`,
 `KPXC_REMOTE_SYNC_SETTINGS`) so databases still open in other KeePass clients, internal Qt symbols
 (`KPXC_FEATURE_*`, `KEEPASSXC_*`, namespaces, classes, file names) and links to upstream issues.
+
+## 18. Account recovery
+
+A user who has lost the master password or the Secret Key can get the **account** back (email,
+billing, org memberships) through a manual review on the hosted service. No server can decrypt
+vault data, so a reset starts the account with new keys. The old keys and vaults are kept for
+**30 days**, so someone who later finds their Emergency Kit and old password can restore their
+vaults into the new keys. Self-hosted deployments may leave recovery off (`OPENVIREO_RECOVERY=0`
+hides the form and answers 404 on every route below).
+
+**Tokens.** Both are random 32 bytes, base64url, and the server stores only `SHA-256(utf8(token))`
+hex, as with refresh tokens (§9):
+
+| Token | Use | Lifetime |
+|---|---|---|
+| `ov_rq_` | confirms that the requester controls the email; sent as a link to `{issuer}/recover/confirm?token=` | 1 hour, single use |
+| `ov_rc_` | the reset link `{web}/?view=recover#token=` (fragment, as in §12) | usable from `not_before` until 72 hours after approval, single use |
+
+A billing-only approval mails a link to `{issuer}/recover/claim?token=<ov_ws_…>`. That is the same
+`ov_ws_` code as in §16, but it lives 60 minutes instead of 60 seconds and signs the website in
+without any key change. Nothing on the website needs keys, so billing, locale and invoices work.
+
+### Request and review
+
+1. **Form** (`{issuer}/recover`, anonymous): email, outcome wanted (`billing` or `reset`),
+   optional evidence (name on the card, last 4 card digits, the date of the last invoice or of
+   sign-up) and free text. The answer is always the same page ("if an account exists, we've
+   emailed you"). Limits: 3 per hour per IP and 3 per day per email. An `ov_rq_` link is mailed
+   only when an active account with keys has that email. A new request replaces the account's
+   open one.
+2. **Confirm:** opening the link moves the request from `unconfirmed` to `pending`. Only pending
+   requests reach the admin queue.
+3. **Review** (`/admin/recovery`, role admin): the admin compares the evidence with what the server
+   holds, then **declines** (a reason that is mailed to the user), **approves billing only**, or
+   **approves a reset**. Every decision needs a note and writes an audit event. An admin can't
+   decide their own request. A request on an admin account needs two different admins to approve:
+   the first approval only records itself.
+4. **Reset approval:** the server sets `not_before = now + 24 h` (`OPENVIREO_RECOVERY_DELAY`,
+   seconds; tests use 0) and mails the account's address the reset link together with a notice.
+   The notice says when the link starts working, what will be archived, and has a **cancel** link
+   (`{issuer}/recover/cancel?token=<ov_rc_…>`) that sets the request to `cancelled`. The reset
+   link stays usable for 72 hours after approval.
+
+Request states: `unconfirmed → pending → declined | approved_billing | approved_reset →
+completed | cancelled | expired`, plus `awaiting_second_admin` between `pending` and the
+approvals for admin accounts.
+
+### Reset
+
+The web app (`?view=recover`) removes the fragment from the history before calling anything, then:
+
+1. `GET /auth/recover/{token}` shows the account email, `not_before`, `expires_at` and what will be
+   archived: the number of personal vaults, grants on vaults owned by others, and orgs whose only
+   confirmed owner/admin is this user. Before `not_before` the routes answer 409
+   `recovery_not_ready` with `not_before`. A cancelled, used or expired token gets 410
+   `recovery_cancelled` / `session_expired`.
+2. The client creates a new Secret Key, KDF salt and keyset exactly as at registration (§2–§5),
+   checks the user confirms the loss, then `POST /auth/recover/start {token, request}` (an OPAQUE
+   registration request under the account email) → `{session_id, response}`.
+3. `POST /auth/recover/finish {session_id, record, kdf, keyset, device}` → `Session` (signed in, as
+   register/finish). The client shows the new Emergency Kit.
+
+In one transaction, the server:
+
+- moves the old `opaque_record`, `kdf`, `keyset` and the email (the old `idU`) into a **recovery
+  archive** that expires 30 days later, then stores the new record, kdf and keyset;
+- turns TOTP off;
+- revokes every refresh token and deletes every device (other devices get 401 on their next
+  refresh and fall back to signing in);
+- **personal vaults** (no `org_id`, owned by the user) that nobody else has access to: marks them
+  archived. They leave every listing and JWT `vlt` claim, and auth routes answer 404 for them. The
+  sync server keeps the blobs, and with no grant no token reaches them. A personal vault the user
+  shared stays live for the other grantees and is treated like the next point;
+- moves every other `vault_access` row of the user (vaults shared with them, org vaults, their
+  shared personal vaults) into the archive, together with its `key_version` and role. Nothing is rotated: the old private keys exist
+  only wrapped with the old AUK;
+- sets each `confirmed` org membership to `accepted` and drops the user's SA master keys, so an
+  owner or admin confirms them again against the new keys (§12);
+- keeps the user id, the email, the Stripe customer, subscription and invoices;
+- sends `access` `revoked` for every affected vault (§11), records `account.recovered` and mails the
+  address "your account was reset", with the archive's expiry date.
+
+### Restore within 30 days
+
+While an archive exists, `GET /me/recovery` returns `{archived: true, expires_at, vaults, locked}`
+(`{archived: false}` otherwise), and the web Account page offers a restore. All restore routes need
+a user token issued in the last 5 minutes. They allow 5 attempts per hour, and 10 failed `verify`
+or `finish` calls lock the archive (403 `restore_locked`) until an admin unlocks it.
+
+1. `POST /me/recovery/restore/start {ke1}`: OPAQUE login against the **archived** record, with the
+   archived email as `idU` → `{session_id, ke2}`.
+2. `POST /me/recovery/restore/verify {session_id, auth_u}`: 401 for a wrong old password. Otherwise
+   → `{kdf, keyset, grants}`, the archived kdf and wrapped keyset plus every archived grant whose
+   vault still exists **and** is still at that key version, as
+   `VaultGrant` with the caller as `principal`. Grants on vaults rotated since the reset
+   are left out; an org admin grants those again. The session moves on to `finish` (5 minutes).
+3. The client derives the old AUK from the old password and the old Secret Key (the Emergency Kit),
+   unwraps the old keyset, unseals each grant (AAD `ov-vault-key|<vault>`) and seals the vault key
+   to the account's **current** `enc_pk` (§6).
+4. `POST /me/recovery/restore/finish {session_id, grants, proof}` with
+   `proof = Ed25519.sign(old sign_seed, "ov-restore-v1" ‖ utf8(user id) ‖ new enc_pk ‖ new sign_pk)`.
+   The user id is the 36-character uuid string, and "new" is the account's current public keys.
+   The server checks the proof against the archived `sign_pk` (400 `invalid_proof` otherwise). That
+   proves the person has the old Secret Key, which step 1 alone doesn't. `grants` must name only
+   vaults returned in step 2, at the same key versions, with the caller as `principal`; anything
+   else is 400. A grant whose vault was rotated or deleted between `verify` and `finish` is
+   skipped, not an error. Each grant gets its
+   archived role. The server then un-archives the personal vaults, deletes the archive, sends
+   `access` `granted`, records `account.restored` and mails a notice. Org memberships stay
+   `accepted`.
+
+The new password and Secret Key stay. Restoring merges the old vaults into the new keys and never
+swaps the old keys back.
+
+**Expiry.** A daily job deletes archives past `expires_at`, along with their archived grants and
+archived vaults (a shared personal vault that other grantees still use stays; its `owner_id`
+stays the user). The auth server deletes those vault blobs on the sync server through
+`DELETE {sync}/internal/vaults/{id}` (internal token, as `internal/notify`; 204 or 404). The same
+call is used whenever the auth server deletes a vault without a client. Unconfirmed requests expire
+after 1 hour, and reset approvals 72 hours after approval.
+
+**Audit events:** `account.recovery.requested`, `.declined`, `.approved_billing`,
+`.approved_reset`, `.cancelled`, `account.recovered`, `account.restored`,
+`account.restore_failed`, `account.restore_locked`. Recovery covers only an address the user can
+still read: changing the email of a locked-out account is out of scope for v1.

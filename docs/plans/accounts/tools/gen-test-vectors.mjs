@@ -141,6 +141,24 @@ vectors.jwt = {
   ],
 };
 
+// 8b. Restoring after an account reset (SPEC §18): alice's archived keyset proves itself to the new one,
+// and the archived vault key (seal[0]) is sealed again to the new keyset
+const userUuid = userClaims.sub.slice("user:".length), aliceNew = keyset("alice-after-reset");
+const proofMsg = cat(utf8("ov-restore-v1"), utf8(userUuid), aliceNew.encPk, aliceNew.signPk);
+const resealAad = `ov-vault-key|${vaultId}`;
+const resealed = seal(aliceNew.encPk, fixed("restore/reseal-eph", 32), fixed("restore/reseal-nonce", 24), vaultKey, resealAad).blob;
+if (hex(unseal(aliceNew.encSk, resealed, resealAad)) !== hex(vaultKey)) throw new Error("reseal roundtrip");
+vectors.restore_proof = {
+  user_id: userUuid, old_keyset: "keyset (archived; unwrap it with keyset.auk_hex)", old_sign_pk: b64u(alice.signPk),
+  new_enc_sk_hex: hex(aliceNew.encSk), new_sign_seed_hex: hex(aliceNew.signSeed), new_public: pub(aliceNew),
+  message_hex: hex(proofMsg), proof: b64u(ed25519.sign(proofMsg, alice.signSeed)),
+  reseal: { archived_sealed_key: vectors.seal[0].sealed, aad: resealAad, ephemeral_sk_hex: hex(fixed("restore/reseal-eph", 32)), nonce_hex: hex(fixed("restore/reseal-nonce", 24)), sealed: b64u(resealed) },
+  invalid: [
+    { case: "signed by the new keyset instead of the archived one", proof: b64u(ed25519.sign(proofMsg, aliceNew.signSeed)), expect: "invalid_proof" },
+    { case: "another user's id in the message", proof: b64u(ed25519.sign(cat(utf8("ov-restore-v1"), utf8("00000000-0000-4000-8000-000000000000"), aliceNew.encPk, aliceNew.signPk), alice.signSeed)), expect: "invalid_proof" },
+  ],
+};
+
 // 9. A vault .kdbx encrypted with the vault key as a raw 32-byte key file component
 kdbxweb.CryptoEngine.setArgon2Impl(async (password, salt, memory, iterations, length, parallelism, type) => {
   if (type !== kdbxweb.CryptoEngine.Argon2TypeArgon2id) throw new Error("expected argon2id");
