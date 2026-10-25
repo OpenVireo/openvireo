@@ -1,0 +1,106 @@
+name: "Release"
+
+# Builds the packages and source tarball for a release tag (as created by `release-tool.py tag`)
+# and attaches them to a draft GitHub release, which is published by hand after checking it.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build, e.g. 2.8.0"
+        type: string
+        required: true
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Check tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags must be version numbers like 2.8.0, got '$TAG'"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: refs/tags/${{ needs.prepare.outputs.tag }}
+      version: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
+
+  source:
+    name: Source tarball
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Build source tarball
+        run: python3 release-tool.py build-src "${{ needs.prepare.outputs.tag }}" --yes --output-dir release-out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-source
+          if-no-files-found: error
+          retention-days: 7
+          path: release-out/*.tar.xz
+
+  publish:
+    name: Publish draft
+    needs: [prepare, build, source]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.tag }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+
+      - name: Write checksums
+        working-directory: packages
+        run: sha256sum * > SHA256SUMS.txt
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          # The release notes are this version's CHANGELOG.md section, without its heading
+          awk -v heading="## $TAG " 'index($0, heading) == 1 { found = 1; next } found && /^## / { exit } found' \
+            CHANGELOG.md > notes.md
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # Re-running for a tag replaces the packages and keeps any edits to the release text
+            gh release upload "$TAG" packages/* --clobber
+          else
+            gh release create "$TAG" packages/* --draft --verify-tag --title "OpenVireo $TAG" --notes-file notes.md
+          fi
