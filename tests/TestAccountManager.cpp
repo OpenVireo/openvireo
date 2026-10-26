@@ -1182,3 +1182,19 @@ void TestAccountManager::testFollowsAnEmailChangedElsewhere()
     QCOMPARE(restored->email(), newEmail);
 }
 
+void TestAccountManager::testExplainsAPlanLimit()
+{
+    AuthClient::Response response;
+    response.status = 402;
+    response.body = QJsonDocument(QJsonObject{{"error", "The free plan allows 1 personal vaults"},
+                                              {"code", "plan_limit"},
+                                              {"upgrade_url", "https://accounts.example/subscription/pricing"}})
+                        .toJson(QJsonDocument::Compact);
+    QCOMPARE(AuthClient::errorMessage(response),
+             QString("The free plan allows 1 personal vaults. Change your plan at "
+                     "https://accounts.example/subscription/pricing"));
+
+    // Any other 402 is shown as it is
+    response.body = R"({"error":"nope","code":"invalid_request"})";
+    QCOMPARE(AuthClient::errorMessage(response), QString("The account server responded with HTTP 402: nope"));
+}

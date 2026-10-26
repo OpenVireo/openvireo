@@ -378,7 +378,18 @@ QString SyncServerClient::errorMessage(const Response& response)
     if (response.status >= 300 && response.status < 400) {
         return tr("The sync server responded with a redirect, check the server URL.");
     }
-    auto message = QJsonDocument::fromJson(response.body).object().value("error").toString();
+    const auto json = QJsonDocument::fromJson(response.body).object();
+    if (response.status == 413) {
+        // SPEC.md §19: quota_exceeded is the plan's limit on the vault, a bare 413 the server's own limit
+        if (json.value("code").toString() == "quota_exceeded") {
+            const auto megabytes = json.value("max").toDouble() / (1024 * 1024);
+            return tr("The database is larger than your plan allows for a vault (%1 MB). Remove large "
+                      "attachments, or change your plan on the account website.")
+                .arg(megabytes, 0, 'f', 0);
+        }
+        return tr("The database is larger than the sync server accepts.");
+    }
+    auto message = json.value("error").toString();
     if (message.isEmpty()) {
         message = tr("Unexpected response.");
     }
