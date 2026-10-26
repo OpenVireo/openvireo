@@ -14,7 +14,7 @@ info:
     - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
       `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`, `invalid_code`,
       `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`,
-      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`. (The sync server
+      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`, `plan_limit` (402, SPEC §19). (The sync server
       today sends only `error`; it adds `code` on the new routes.)
     - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
     - Binary fields are base64url without padding (`B64`). Ids are UUIDv4 strings.
@@ -295,6 +295,7 @@ paths:
                   kdf: { $ref: '#/components/schemas/Kdf' }
                   keyset: { $ref: '#/components/schemas/WrappedKeyset' }
                   mfa: { type: object, properties: { totp: { type: boolean } } }
+                  plan: { $ref: '#/components/schemas/Plan' }
                   orgs:
                     type: array
                     items:
@@ -304,6 +305,7 @@ paths:
                         name: { type: string }
                         role: { $ref: '#/components/schemas/OrgRole' }
                         status: { $ref: '#/components/schemas/MemberStatus' }
+                        plan: { $ref: '#/components/schemas/Plan' }
   /me/password/start:
     post:
       tags: [auth]
@@ -577,7 +579,9 @@ paths:
               properties:
                 grants: { type: array, items: { $ref: '#/components/schemas/VaultGrant' }, description: 'the org vaults the member gets (SPEC.md §12, Confirming members), each at its current key version' }
                 sa_master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
-      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Member' } } } }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (SPEC §19), body is PlanLimit' }
   /orgs/{org}/invitations:
     parameters: [ { $ref: '#/components/parameters/Org' } ]
     get:
@@ -595,7 +599,9 @@ paths:
       tags: [auth]
       summary: Invite by email (owner/admin). The email holds a single-use token valid for 7 days.
       requestBody: { content: { application/json: { schema: { type: object, required: [email, role], properties: { email: { type: string }, role: { $ref: '#/components/schemas/OrgRole' } } } } } }
-      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } } }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (SPEC §19), body is PlanLimit' }
   /orgs/{org}/invitations/{id}:
     parameters: [ { $ref: '#/components/parameters/Org' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     delete:
@@ -645,6 +651,7 @@ paths:
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Vault' } } } }
         '409': { $ref: '#/components/responses/Error', description: id taken }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (SPEC §19), body is PlanLimit' }
   /vaults/{vault}:
     parameters: [ { $ref: '#/components/parameters/Vault' } ]
     get:
@@ -693,6 +700,7 @@ paths:
       responses:
         '200': { description: updated }
         '409': { $ref: '#/components/responses/Error', description: key_version is not the current version }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (SPEC §19), body is PlanLimit' }
   /vaults/{vault}/keys:
     parameters: [ { $ref: '#/components/parameters/Vault' } ]
     post:
@@ -748,7 +756,9 @@ paths:
                 keyset: { $ref: '#/components/schemas/WrappedKeyset' }
                 master_keys: { type: array, items: { $ref: '#/components/schemas/SaMasterGrant' } }
                 secret: { $ref: '#/components/schemas/NewSaSecret' }
-      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (SPEC §19), body is PlanLimit' }
   /service-accounts/{sa}:
     parameters: [ { name: sa, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:
@@ -1011,7 +1021,32 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         role: { $ref: '#/components/schemas/OrgRole' }
+        plan: { $ref: '#/components/schemas/Plan' }
         created_at: { type: string, format: date-time }
+    Plan:
+      type: object
+      description: SPEC §19. id and every limit are null when billing is off; a null limit is unlimited.
+      required: [id, limits]
+      properties:
+        id: { type: [string, 'null'], enum: [free, premium, org_free, families, teams, business, null] }
+        limits:
+          type: object
+          additionalProperties: { type: [integer, 'null'] }
+          description: |
+            Users: personal_vaults, share_recipients, vault_bytes.
+            Orgs: members, org_vaults, service_accounts, audit_days, vault_bytes.
+    PlanLimit:
+      type: object
+      description: The 402 body (SPEC §19).
+      required: [error, code, limit, max, current, plan, upgrade_url]
+      properties:
+        error: { type: string }
+        code: { const: plan_limit }
+        limit: { type: string }
+        max: { type: integer }
+        current: { type: integer }
+        plan: { type: string }
+        upgrade_url: { type: string, format: uri }
     Member:
       type: object
       properties:
