@@ -177,7 +177,7 @@ removes a member without a new key version.
 | `sub` | `user:<uuid>` or `sa:<uuid>` |
 | `dev` | device uuid (users only) |
 | `org` | owning org uuid (SAs only) |
-| `vlt` | `[{"id": vault uuid, "r": "read"|"write"|"manage"}]`, every vault the principal can open |
+| `vlt` | `[{"id": vault uuid, "r": "read"|"write"|"manage", "q"?: bytes}]`, every vault the principal can open; `q` is the vault's sync quota (§19) |
 | `iat`, `nbf`, `exp` | `exp = iat + 600` |
 | `jti` | uuid |
 
@@ -536,3 +536,61 @@ after 1 hour, and reset approvals 72 hours after approval.
 `.approved_reset`, `.cancelled`, `account.recovered`, `account.restored`,
 `account.restore_failed`, `account.restore_locked`. Recovery covers only an address the user can
 still read: changing the email of a locked-out account is out of scope for v1.
+
+
+## 19. Plans and limits
+
+The hosted service sells plans; a self-hosted server has none (`OPENVIREO_BILLING=0`, the default).
+Plans pay for hosted storage, sharing and teams. Nothing local, nothing self-hosted and no security
+feature (MFA, recovery, Emergency Kit, devices, key rotation, export) is ever limited.
+
+**Plans.** A personal plan belongs to a user and covers the vaults they own (`owner_id`); an org plan
+belongs to an org and covers its vaults. A user without a subscription is on `free`, an org on
+`org_free`. `null` is unlimited.
+
+| Plan | Billed | `personal_vaults` | `share_recipients` | `members` | `org_vaults` | `service_accounts` | `audit_days` | `vault_bytes` |
+|---|---|---|---|---|---|---|---|---|
+| `free` | — | 1 | 0 | | | | | 25 MiB |
+| `premium` | user, $3/mo, $30/yr | null | 5 | | | | | 1 GiB |
+| `org_free` | — | | | 2 | 2 | 1 | 7 | 25 MiB |
+| `families` | org, $5/mo, $50/yr | | | 6 | null | 1 | 30 | 1 GiB |
+| `teams` | org, $4/member/mo, $40/yr | | | null | null | 10 | 90 | 1 GiB |
+| `business` | org, $8/member/mo, $80/yr | | | null | null | null | 365 | 5 GiB |
+
+The prices are the auth server's settings (`BILLING_PLANS`); clients read limits, not prices.
+
+**What each limit counts.**
+- `personal_vaults`: live vaults the user owns. Checked by `POST /vaults` without `org_id`.
+- `share_recipients`: other users with any grant on one personal vault, checked by `POST /vaults` and
+  `POST /vaults/{vault}/access` against the vault owner's plan. Re-sealing for someone who already
+  has access (rotation) is not a new recipient.
+- `members`: members in any status plus open invitations to other addresses, checked by
+  `POST /orgs/{org}/invitations` (re-inviting an address takes no new seat); confirmed members,
+  checked by `POST /orgs/{org}/members/{user}/confirm`. Per-member plans (`teams`, `business`) have
+  no cap: the org is billed for its confirmed members, updated as they are confirmed or removed.
+- `org_vaults`: the org's live vaults, checked by `POST /vaults` with `org_id`.
+- `service_accounts`: the org's SAs, checked by `POST /orgs/{org}/service-accounts`.
+- `audit_days`: `GET /orgs/{org}/audit` returns only events this many days old or newer.
+- `vault_bytes`: the largest database the sync server takes for the vault (below).
+
+**Over a limit.** Routes answer **402** `plan_limit`:
+`{"error", "code": "plan_limit", "limit": "<name>", "max": n, "current": n, "plan": "<plan>", "upgrade_url"}`.
+`upgrade_url` is the auth site's pricing page, or the org's billing page for an org limit. Clients
+show the message with an Upgrade link. Limits only stop *new* things: after a downgrade, or when a
+subscription ends, everything over the limit keeps working (vaults open, sync, members stay), and
+nothing is deleted.
+
+**Reading limits.** `GET /me` has `plan: {id, limits}` for the user and the same object on each
+entry of `orgs`; `GET /orgs/{id}` and `POST /orgs` have it as `plan`. `id` is `null` and every limit
+`null` when billing is off. Clients use it to grey out actions; the server's check is what counts.
+
+**Sync quota.** Each `vlt` entry of the access token (§9) has `q`, the vault's `vault_bytes`, when it
+is limited: `{"id", "r", "q": 26214400}`. The sync server answers a `PUT /vaults/{vault}` body
+larger than `q` with **413** `quota_exceeded` (`{"error", "code": "quota_exceeded", "max": q}`),
+before it stores anything. Without `q` only the server's own `SYNC_MAX_DB_BYTES` applies. A quota
+change reaches the sync server with the next token (at most `exp`, 10 minutes).
+
+**Billing.** Stripe Checkout starts a subscription and the Stripe Customer Portal changes or cancels
+it, both from the auth site (`/subscription/pricing`, `/subscription/orgs/{org}` for an org's
+owners). Stripe's webhook keeps the auth server's copy; a subscription is in force while Stripe
+says `active`, `trialing` or `past_due`. Deleting an org cancels its subscription.
