@@ -35,4 +35,16 @@ x = b(V["jwt"]["jwks"]["keys"][0]["x"])
 for t in V["jwt"]["valid"]:
     h, pl, sg = t["token"].split("."); s.crypto_sign_verify_detached(b(sg), f"{h}.{pl}".encode(), x)
     res.append(ok(json.loads(b(pl)) == t["claims"], "jwt " + t["claims"]["sub"][:3]))
+rp = V["restore_proof"]; npk = b(rp["new_public"]["enc_pk"]) + b(rp["new_public"]["sign_pk"]); msg = b"ov-restore-v1" + rp["user_id"].encode() + npk
+res.append(ok(msg.hex() == rp["message_hex"] and b(rp["old_sign_pk"]) == pk, "restore proof message"))
+s.crypto_sign_verify_detached(b(rp["proof"]), msg, b(rp["old_sign_pk"])); res.append(ok(True, "restore proof signature"))
+def bad_sig(sg):
+    try: s.crypto_sign_verify_detached(b(sg), msg, b(rp["old_sign_pk"])); return False
+    except ValueError: return True
+res.append(ok(all(bad_sig(x["proof"]) for x in rp["invalid"]), "restore proof negatives"))
+def unseal_b(blob, sk, aad):
+    e, n = blob[1:33], blob[33:57]; key = hkdf(s.crypto_scalarmult_curve25519(sk, e), e + s.crypto_scalarmult_curve25519_base(sk), b"ov-seal-v1")
+    return s.crypto_aead_xchacha20poly1305_ietf_decrypt(blob[57:], aad, n, key)
+rs = rp["reseal"]; old = unseal_b(b(rs["archived_sealed_key"]), H(ks["enc_sk_hex"]), rs["aad"].encode())
+res.append(ok(old == unseal_b(b(rs["sealed"]), H(rp["new_enc_sk_hex"]), rs["aad"].encode()) == H(V["vault_kdbx"]["vault_key_hex"]), "restore reseal"))
 print("ALL PASS" if all(res) else "SOME FAILED")
