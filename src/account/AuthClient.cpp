@@ -560,6 +560,14 @@ QString AuthClient::errorMessage(const Response& response)
         return tr("The account server responded with a redirect, check the server URL.");
     }
     auto message = response.json().value("error").toString();
+    if (response.status == 402 && response.errorCode() == "plan_limit" && !message.isEmpty()) {
+        // SPEC.md §19: the server's message names the limit, upgrade_url is where to change plan
+        const auto upgradeUrl = response.json().value("upgrade_url").toString();
+        if (upgradeUrl.isEmpty()) {
+            return tr("%1. Change your plan on the account website.").arg(message);
+        }
+        return tr("%1. Change your plan at %2").arg(message, upgradeUrl);
+    }
     if (message.isEmpty()) {
         message = tr("Unexpected response.");
     }

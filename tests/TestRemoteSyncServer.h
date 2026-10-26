@@ -39,6 +39,7 @@ private slots:
     void testSyncEngineTwoDevices();
     void testHistoryAndEvents();
     void testRecognisesPairingCodes();
+    void testExplainsAVaultOverItsQuota();
     void testPairsAnotherDevice();
 };
 
