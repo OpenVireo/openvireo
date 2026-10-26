@@ -2,9 +2,9 @@
 
 export PATH="$(dirname $0)/usr/bin:${PATH}"
 
-if [ "$1" == "cli" ] || [ "$(basename "$ARGV0")" == "openvireo-cli" ] || [ "$(basename "$ARGV0")" == "openvireo-cli.AppImage" ]; then
-    [ "$1" == "cli" ] && shift
-    exec openvireo-cli "$@"
+if [ "$1" == "kdbx" ] || [ "$1" == "cli" ] || [ "$(basename "$ARGV0")" == "openvireo-kdbx" ] || [ "$(basename "$ARGV0")" == "openvireo-kdbx.AppImage" ]; then
+    { [ "$1" == "kdbx" ] || [ "$1" == "cli" ]; } && shift
+    exec openvireo-kdbx "$@"
 elif [ "$1" == "proxy" ] || [ "$(basename "$ARGV0")" == "openvireo-proxy" ] || [ "$(basename "$ARGV0")" == "openvireo-proxy.AppImage" ]; then
     [ "$1" == "proxy" ] && shift
     exec openvireo-proxy "$@"
