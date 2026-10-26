@@ -32,8 +32,8 @@ readonly arg2='browser@openvireo.com'
 # Use =~ to account for minor variations in the chrome extension
 if [[ "$1" =~ "$arg1" || "$2" == "$arg2" ]]; then
     exec openvireo-proxy "$@"
-elif [[ "$1" == "cli" ]]; then
-    exec openvireo-cli "${@:2}"
+elif [[ "$1" == "kdbx" || "$1" == "cli" ]]; then
+    exec openvireo-kdbx "${@:2}"
 else
     # If no arguments are matched or browser integration is off, execute openvireo
     exec openvireo "$@"

@@ -15,7 +15,7 @@ OpenVireo is a C++17 / Qt 6 application. Cryptography comes from **Botan** (plus
 | `keepassxc_core` (static lib) | Data model, file formats, crypto, keys, streams, CLI helpers. No widgets. |
 | `keepassxc_gui` (static lib) | Everything under `src/gui`, plus the GUI-facing parts of the integrations |
 | `OpenVireo` / `openvireo` (executable) | [src/main.cpp](src/main.cpp), the desktop app |
-| `keepassxc-cli` target, built as `openvireo-cli` | [src/cli/keepassxc-cli.cpp](src/cli/keepassxc-cli.cpp), the command-line tool |
+| `keepassxc-cli` target, built as `openvireo-kdbx` | [src/cli/keepassxc-cli.cpp](src/cli/keepassxc-cli.cpp), the command-line tool for local `.kdbx` files |
 | `keepassxc-proxy` target, built as `openvireo-proxy` | [src/proxy/](src/proxy/), the native-messaging bridge between browser extensions and the app |
 
 Optional features are switched on and off by CMake options in [CMakeLists.txt](CMakeLists.txt) (`KPXC_FEATURE_BROWSER`, `KPXC_FEATURE_SSHAGENT`, `KPXC_FEATURE_FDOSECRETS`, `KPXC_FEATURE_NETWORK`, `KPXC_MINIMAL`, …). In the code, these show up as `#ifdef WITH_XC_*` guards.

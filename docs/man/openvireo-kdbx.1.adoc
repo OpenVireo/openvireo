@@ -14,7 +14,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-= openvireo-cli(1)
+= openvireo-kdbx(1)
 KeePassXC Team <team@keepassxc.org>
 :docdate: 2022-08-20
 :doctype: manpage
@@ -22,14 +22,15 @@ KeePassXC Team <team@keepassxc.org>
 :manmanual: General Commands Manual
 
 == NAME
-openvireo-cli - command line interface for the OpenVireo password manager
+openvireo-kdbx - command line interface for KeePass database files
 
 == SYNOPSIS
-*openvireo-cli* _command_ [_options_]
+*openvireo-kdbx* _command_ [_options_]
 
 == DESCRIPTION
-*openvireo-cli* is the command line interface for the *OpenVireo* password manager.
-It provides the ability to query and modify the entries of a KeePass database, directly from the command line.
+*openvireo-kdbx* is the command line interface for the *OpenVireo* password manager.
+It provides the ability to query and modify the entries of a KeePass database file, directly from the command line.
+It works on local *.kdbx* files only; to read and write vaults stored in an OpenVireo account from scripts and CI, use *openvireo* (alias *ov*) from the OpenVireo SDK.
 
 == COMMANDS
 *add* [_options_] <__database__> <__entry__>::
@@ -349,4 +350,4 @@ include::includes/section-reporting-bugs.adoc[]
 include::includes/section-copyright.adoc[]
 
 == SEE ALSO
-*openvireo*(1)
+*openvireo*(1), https://github.com/openvireo/openvireo-sdk/tree/develop/packages/cli[openvireo SDK CLI]
