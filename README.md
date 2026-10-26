@@ -37,7 +37,7 @@ OpenVireo has numerous features for novice and power users alike. Our goal is to
 * Field references between entries
 * File attachments and custom attributes
 * Entry history and data restoration
-* Command line interface (openvireo-cli)
+* Command line interface for database files (openvireo-kdbx)
 * SSH Agent integration
 * FreeDesktop.org Secret Service (replace Gnome keyring, etc.)
 * Additional encryption choices: Twofish and ChaCha20

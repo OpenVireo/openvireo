@@ -12,8 +12,8 @@ apps:
     extensions: [kde-neon]
     plugs: [home, unity7, network, network-bind, removable-media, raw-usb, password-manager-service, browser-native-messaging]
     autostart: com.openvireo.OpenVireo.desktop
-  cli:
-    command: usr/bin/openvireo-cli
+  kdbx:
+    command: usr/bin/openvireo-kdbx
     extensions: [kde-neon]
     plugs: [home, removable-media, raw-usb]
   proxy:

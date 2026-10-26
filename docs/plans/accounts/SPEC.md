@@ -400,7 +400,7 @@ uses these names:
 | Secret references | `ov://` |
 | Environment variables | `OPENVIREO_*` (e.g. `OPENVIREO_SERVICE_ACCOUNT_TOKEN`, `OPENVIREO_INVITATION_URL`); the sync server's `SYNC_*` keep their names |
 | CLI command | `openvireo` (alias `ov`); masking text `<concealed by openvireo>` |
-| Desktop | app `OpenVireo`, binaries `openvireo`, `openvireo-cli`, `openvireo-proxy`, app/bundle id `com.openvireo.OpenVireo`, URL scheme `openvireo://` |
+| Desktop | app `OpenVireo`, binaries `openvireo`, `openvireo-kdbx`, `openvireo-proxy`, app/bundle id `com.openvireo.OpenVireo`, URL scheme `openvireo://` |
 | Browser extension | `OpenVireo Browser`, native-messaging host `com.openvireo.browser` |
 | Keychain | sync token service `com.openvireo.SyncToken`; Secret Key `ov-account-secret-key:<idS>:<email>` |
 | Repos and packages | `openvireo-*` repos; npm `@openvireo/*` |
