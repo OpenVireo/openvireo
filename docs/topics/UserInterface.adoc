@@ -108,6 +108,6 @@ The following options can be set when running the Windows Installer MSI in an un
 Example: `msiexec.exe /q /i OpenVireo-Y.Y.Y-WinZZ.msi AUTOSTARTPROGRAM=0`
 
 == Command Line Tool
-OpenVireo comes with the command line tool *openvireo-cli* to access, view, and manipulate your database directly from a terminal window. The tool is documented through a separate man page, which can be shown using `man openvireo-cli`, or through the on-demand help using `openvireo-cli [command] -h`. An online version of the man page is https://github.com/openvireo/openvireo/blob/develop/docs/man/openvireo-cli.1.adoc[available on GitHub].
+OpenVireo comes with the command line tool *openvireo-kdbx* to access, view, and manipulate your database directly from a terminal window. The tool is documented through a separate man page, which can be shown using `man openvireo-kdbx`, or through the on-demand help using `openvireo-kdbx [command] -h`. An online version of the man page is https://github.com/openvireo/openvireo/blob/develop/docs/man/openvireo-kdbx.1.adoc[available on GitHub]. It works on local database files; for vaults stored in an OpenVireo account, use the `openvireo` command line tool from the https://github.com/openvireo/openvireo-sdk/tree/develop/packages/cli[OpenVireo SDK].
 // end::advanced[]
 // end::content[]
