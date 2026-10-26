@@ -51,6 +51,7 @@ paths:
         '201': { description: created }
         '403': { $ref: './openapi.yaml#/components/responses/Error' }
         '412': { $ref: './openapi.yaml#/components/responses/Error' }
+        '413': { $ref: './openapi.yaml#/components/responses/Error', description: 'quota_exceeded: larger than the token''s q for the vault (SPEC §19); the body also has max' }
         '428': { $ref: './openapi.yaml#/components/responses/Error' }
     delete:
       tags: [sync]
