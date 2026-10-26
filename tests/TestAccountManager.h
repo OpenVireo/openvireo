@@ -43,6 +43,7 @@ private slots:
     void testParsesAccountEvents();
     void testServerConfigWebUrl();
     void testFollowsAnEmailChangedElsewhere();
+    void testExplainsAPlanLimit();
 };
 
 #endif // KEEPASSXC_TESTACCOUNTMANAGER_H

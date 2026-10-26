@@ -553,6 +553,21 @@ void TestRemoteSyncServer::testRecognisesPairingCodes()
     QVERIFY(!SyncServerClient::isPairingCode({}));
 }
 
+void TestRemoteSyncServer::testExplainsAVaultOverItsQuota()
+{
+    SyncServerClient::Response quota;
+    quota.status = 413;
+    quota.body = R"({"error":"too big","code":"quota_exceeded","max":26214400})";
+    const auto message = SyncServerClient::errorMessage(quota);
+    QVERIFY2(message.contains("(25 MB)"), qPrintable(message));
+    QVERIFY(message.contains("change your plan"));
+
+    // drogon's own limit answers 413 without a body
+    SyncServerClient::Response bare;
+    bare.status = 413;
+    QCOMPARE(SyncServerClient::errorMessage(bare), QString("The database is larger than the sync server accepts."));
+}
+
 void TestRemoteSyncServer::testPairsAnotherDevice()
 {
     SKIP_WITHOUT_SERVER();
