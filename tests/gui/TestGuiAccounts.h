@@ -33,6 +33,10 @@ class TestGuiAccounts : public QObject
 {
     Q_OBJECT
 
+public slots:
+    // QDesktopServices URL handler, so tests see the links the app opens instead of a browser
+    void openUrl(const QUrl& url);
+
 private slots:
     void initTestCase();
     void init();
@@ -53,6 +57,7 @@ private slots:
     void testAcceptsAnInvitation();
     void testInvitesPromotesAndRemovesMembers();
     void testQuickUnlocksTheAccount();
+    void testLinksToAccountRecovery();
 
 private:
     void createWindow(const QString& mode);
@@ -63,6 +68,7 @@ private:
 
     QSharedPointer<FakeAccount::Server> m_server;
     QScopedPointer<MainWindow> m_mainWindow;
+    QList<QUrl> m_openedUrls;
 };
 
 #endif // KEEPASSXC_TESTGUIACCOUNTS_H

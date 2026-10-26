@@ -27,6 +27,7 @@
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAction>
+#include <QDesktopServices>
 #include <QFontDatabase>
 #include <QPainter>
 #include <QPainterPath>
@@ -221,6 +222,10 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
         m_ui->serverEdit->setFocus();
         m_ui->serverEdit->selectAll();
     });
+    // Lost password or Secret Key: the request form on the account server's website (SPEC §18)
+    connect(m_ui->recoverLink, &QLabel::linkActivated, this, [this] {
+        QDesktopServices::openUrl(AccountController::recoveryRequestUrl(m_ui->serverEdit->text()));
+    });
     connect(m_ui->createAccountButton, &QPushButton::clicked, this, &AccountStartWidget::createAccount);
     connect(m_ui->selfHostedButton, &QPushButton::clicked, this, &AccountStartWidget::showSelfHosted);
     connect(m_ui->localButton, &QPushButton::clicked, this, &AccountStartWidget::useWithoutAccount);
@@ -301,6 +306,8 @@ void AccountStartWidget::applyTheme()
 
     Vault::styleLabel(m_ui->secretKeyLink, Typography::FontRole::Body, p.accentText);
     m_ui->secretKeyLink->setText(linkHtml(tr("First time on this device? Enter your Secret Key"), p.accentText));
+    Vault::styleLabel(m_ui->recoverLink, Typography::FontRole::Caption, p.accentText);
+    m_ui->recoverLink->setText(linkHtml(tr("Can't sign in? Lost your password or Emergency Kit"), p.accentText));
     Vault::styleLabel(m_ui->serverLabel, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_ui->serverValueLabel, Typography::FontRole::Caption, p.textSecondary);
     const auto caption = Vault::font(Typography::FontRole::Caption);

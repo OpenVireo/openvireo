@@ -173,6 +173,18 @@ QString AccountController::hostedServerUrl()
     return url.isEmpty() ? QStringLiteral(KPXC_DEFAULT_ACCOUNT_SERVER) : url;
 }
 
+QUrl AccountController::recoveryRequestUrl(const QString& issuerUrl)
+{
+    auto issuer = issuerUrl.trimmed();
+    if (issuer.isEmpty()) {
+        issuer = hostedServerUrl();
+    }
+    while (issuer.endsWith('/')) {
+        issuer.chop(1);
+    }
+    return QUrl(issuer + QStringLiteral("/recover"));
+}
+
 void AccountController::setHostedServerUrl(const QString& url)
 {
     auto trimmed = url.trimmed();

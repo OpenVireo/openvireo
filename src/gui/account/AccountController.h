@@ -25,6 +25,7 @@
 #include <QPointer>
 #include <QSet>
 #include <QSharedPointer>
+#include <QUrl>
 
 #include <functional>
 
@@ -87,6 +88,8 @@ public:
     // The hosted account server: the built-in default (KPXC_DEFAULT_ACCOUNT_SERVER) unless changed
     static QString hostedServerUrl();
     static void setHostedServerUrl(const QString& url);
+    // The account recovery request form on that server's website (SPEC §18); empty means the hosted server
+    static QUrl recoveryRequestUrl(const QString& issuerUrl);
     // Ask the account server at `issuerUrl` for its configuration, unless the account already uses it
     void ensureServer(const QString& issuerUrl, Done done);
 
