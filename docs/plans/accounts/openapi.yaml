@@ -13,7 +13,8 @@ info:
     Conventions:
     - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
       `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`, `invalid_code`,
-      `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`. (The sync server
+      `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`,
+      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`. (The sync server
       today sends only `error`; it adds `code` on the new routes.)
     - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
     - Binary fields are base64url without padding (`B64`). Ids are UUIDv4 strings.
@@ -221,6 +222,60 @@ paths:
                   keyset: { $ref: '#/components/schemas/WrappedKeyset', description: wrapped with the SA master key }
         '401': { $ref: '#/components/responses/Error', description: 'unknown, revoked or expired secret' }
 
+  # ---------------------------------------------------------------- auth server: account recovery (SPEC.md §18)
+  /auth/recover/{token}:
+    parameters: [ { name: token, in: path, required: true, schema: { type: string, description: 'ov_rc_ + base64url(32 bytes)' } } ]
+    get:
+      tags: [auth]
+      security: []
+      summary: What an approved reset will do. 404 for an unknown token; the website form and admin review are HTML routes, not part of this API.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryReset' } } } }
+        '409': { $ref: '#/components/responses/Error', description: 'recovery_not_ready; the body also has not_before' }
+        '410': { $ref: '#/components/responses/Error', description: recovery_cancelled, or session_expired when used or past expires_at }
+  /auth/recover/start:
+    post:
+      tags: [auth]
+      security: []
+      summary: Reset, step 1 (5/min/IP). An OPAQUE registration request under the account email, for a new password, Secret Key and keyset.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [token, request], properties: { token: { type: string }, request: { $ref: '#/components/schemas/B64' } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [session_id, response], properties: { session_id: { type: string, description: expires in 5 minutes }, response: { $ref: '#/components/schemas/B64' } } }
+        '409': { $ref: '#/components/responses/Error', description: recovery_not_ready }
+        '410': { $ref: '#/components/responses/Error', description: recovery_cancelled or session_expired }
+  /auth/recover/finish:
+    post:
+      tags: [auth]
+      security: []
+      summary: |
+        Reset, step 2. Archives the old record, kdf, keyset, personal vaults and grants for 30 days, stores the new ones, turns TOTP off,
+        signs every device out, sets confirmed org memberships to accepted, consumes the token and signs this device in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, record, kdf, keyset, device]
+              properties:
+                session_id: { type: string }
+                record: { $ref: '#/components/schemas/B64' }
+                kdf: { $ref: '#/components/schemas/Kdf' }
+                keyset: { $ref: '#/components/schemas/WrappedKeyset', description: new public keys, wrapped with the new AUK }
+                device: { $ref: '#/components/schemas/DeviceInfo' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error', description: recovery_cancelled or session_expired }
+
   # ---------------------------------------------------------------- auth server: me, keys, devices
   /me:
     get:
@@ -341,6 +396,74 @@ paths:
       tags: [auth]
       requestBody: { content: { application/json: { schema: { type: object, required: [totp], properties: { totp: { type: string } } } } } }
       responses: { '204': { description: disabled } }
+  /me/recovery:
+    get:
+      tags: [auth]
+      summary: Whether a recovery archive from a reset exists (SPEC.md §18)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryArchive' } } } }
+  /me/recovery/restore/start:
+    post:
+      tags: [auth]
+      summary: Restore, step 1. OPAQUE login against the archived record (idU = the archived email). Needs a token issued in the last 5 minutes.
+      requestBody: { content: { application/json: { schema: { type: object, required: [ke1], properties: { ke1: { $ref: '#/components/schemas/B64' } } } } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [session_id, ke2, email], properties: { session_id: { type: string }, ke2: { $ref: '#/components/schemas/B64' }, email: { type: string, description: the archived email; finish OPAQUE with it as idU } } }
+        '403': { $ref: '#/components/responses/Error', description: forbidden (token too old), or restore_locked }
+        '404': { $ref: '#/components/responses/Error', description: no archive }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/recovery/restore/verify:
+    post:
+      tags: [auth]
+      summary: Restore, step 2. Checks the old password and returns the archived keys. Counts towards the lockout when it fails.
+      requestBody: { content: { application/json: { schema: { type: object, required: [session_id, auth_u], properties: { session_id: { type: string }, auth_u: { $ref: '#/components/schemas/B64' } } } } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, kdf, keyset, grants]
+                properties:
+                  session_id: { type: string, description: the same session, now valid for finish for 5 minutes }
+                  kdf: { $ref: '#/components/schemas/Kdf' }
+                  keyset: { $ref: '#/components/schemas/WrappedKeyset', description: the archived keyset, wrapped with the old AUK }
+                  grants:
+                    type: array
+                    description: archived grants (principal = the caller) whose vault still exists at that key_version
+                    items: { $ref: '#/components/schemas/VaultGrant' }
+        '401': { $ref: '#/components/responses/Error', description: wrong old password }
+        '403': { $ref: '#/components/responses/Error', description: restore_locked }
+        '410': { $ref: '#/components/responses/Error', description: session_expired }
+  /me/recovery/restore/finish:
+    post:
+      tags: [auth]
+      summary: |
+        Restore, step 3. Stores the vault keys re-sealed to the current keyset with their archived roles, un-archives the personal vaults
+        and deletes the archive. proof = Ed25519.sign(old sign_seed, "ov-restore-v1" ‖ utf8(user id) ‖ current enc_pk ‖ current sign_pk).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, grants, proof]
+              properties:
+                session_id: { type: string }
+                grants:
+                  type: array
+                  description: only vaults returned by verify, at the same key_version; role is ignored (the archived one is kept)
+                  items: { $ref: '#/components/schemas/VaultGrant' }
+                proof: { $ref: '#/components/schemas/B64' }
+      responses:
+        '204': { description: restored }
+        '400': { $ref: '#/components/responses/Error', description: invalid_proof, or a grant that verify didn't return }
+        '403': { $ref: '#/components/responses/Error', description: restore_locked }
+        '410': { $ref: '#/components/responses/Error', description: session_expired }
   /users/lookup:
     get:
       tags: [auth]
@@ -407,7 +530,7 @@ paths:
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
     delete:
       tags: [auth]
-      summary: Delete the org and its vaults' access rows (owner only). Clients delete the blobs from the sync server first.
+      summary: Delete the org, its vaults and their access rows (owner only). The auth server deletes the vault blobs on the sync server afterwards (DELETE {sync}/internal/vaults/{id}, SPEC.md §18), retrying failures.
       responses: { '204': { description: deleted } }
   /orgs/{org}/members:
     parameters: [ { $ref: '#/components/parameters/Org' } ]
@@ -851,6 +974,29 @@ components:
               key_version: { type: integer }
               sealed_key: { $ref: '#/components/schemas/B64' }
         created_at: { type: string, format: date-time }
+    RecoveryReset:
+      type: object
+      required: [email, not_before, expires_at, archive_days, archives]
+      properties:
+        email: { type: string }
+        not_before: { type: string, format: date-time, description: the link works from this time (24 hours after approval) }
+        expires_at: { type: string, format: date-time, description: 72 hours after approval }
+        archive_days: { type: integer, const: 30 }
+        archives:
+          type: object
+          properties:
+            personal_vaults: { type: integer }
+            shared_grants: { type: integer, description: grants on vaults the user doesn't own, including org vaults }
+            sole_admin_orgs: { type: array, items: { type: string }, description: names of orgs whose only confirmed owner/admin is this user }
+    RecoveryArchive:
+      type: object
+      required: [archived]
+      properties:
+        archived: { type: boolean }
+        email: { type: string, description: 'the archived email: the idU for the restore OPAQUE login' }
+        expires_at: { type: string, format: date-time }
+        vaults: { type: integer, description: archived personal vaults plus archived grants }
+        locked: { type: boolean, description: too many failed attempts; an admin unlocks it }
     BlobMeta:
       type: object
       properties:

@@ -108,6 +108,17 @@ paths:
                     vault: { type: [string, 'null'], format: uuid }
                     change: { enum: [granted, revoked, rotating, rotated, org] }
       responses: { '204': { description: delivered (best effort) } }
+  /internal/vaults/{vault}:
+    parameters: [ { $ref: './openapi.yaml#/components/parameters/Vault' } ]
+    delete:
+      tags: [sync]
+      security: [ { internal: [] } ]
+      summary: |
+        The auth server deletes a vault blob and its history when no client does it, e.g. when a recovery archive expires (SPEC.md §18).
+        Publishes event `vault` with deleted:true. 404 when SYNC_INTERNAL_TOKEN is unset.
+      responses:
+        '204': { description: deleted }
+        '404': { $ref: './openapi.yaml#/components/responses/Error', description: no such blob (callers treat it as done) }
 components:
   securitySchemes:
     bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: an access token with aud ov-sync; in `both` mode a device token works on the legacy routes }
