@@ -296,7 +296,7 @@ under a user) and vault blobs (`vaults/{id}`) never share storage keys.
 ## 14. Secret references
 
 `ov://<vault>/[<group>/…]<entry>/<field>` names one field; without `/<field>` it names a whole entry
-(an *item*, for `openvireo item` and `openvireo connect`).
+(an *item*, for `ov item` and `ov connect`).
 
 - Segments are split on `/` and then percent-decoded (UTF-8), so a `/` inside a name is `%2F`. An
   empty segment is an error (`invalid_reference`).
@@ -307,12 +307,12 @@ under a user) and vault blobs (`vaults/{id}`) never share storage keys.
   that must match exactly one entry under that group, recursively, outside the Recycle Bin.
 - `<field>` is a field name: an exact match first, then the aliases `title`, `username`/`user`,
   `password`, `url`, `notes` (any case) for the standard fields, then a case-insensitive match.
-- In templates (`openvireo inject`) a bare reference runs up to whitespace, a quote, a backtick or `}`;
+- In templates (`ov inject`) a bare reference runs up to whitespace, a quote, a backtick or `}`;
   `{{ ov://… }}` (any spacing inside the braces) delimits one followed by other text.
 
 ## 15. Service-account tools
 
-**`openvireo run --env-file`** reads a `.env` file: `KEY=value` lines, an optional `export ` prefix, `#`
+**`ov run --env-file`** reads a `.env` file: `KEY=value` lines, an optional `export ` prefix, `#`
 comments, `"double quotes"` (escapes `\n`, `\t`, `\"`, `\\`; may span lines) and `'single quotes'`
 (literal). A value that is a reference, or contains `{{ … }}` references, is resolved. Variables
 already in the environment are resolved the same way. The child never receives
@@ -322,7 +322,7 @@ already in the environment are resolved the same way. The child never receives
 replaced by `<concealed by openvireo>` in the child's stdout and stderr, including when a value is split
 across writes.
 
-**`openvireo connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
+**`ov connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
 sync API and lives in `openvireo-sdk/packages/connect`.
 
 - Its bearer tokens are `ov_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
@@ -399,7 +399,7 @@ uses these names:
 | Tokens | `ov_rt_`, `ov_sa_`, `ov_inv_`, `ov_ct_`, `ov_ws_`, `ov_rq_`, `ov_rc_` |
 | Secret references | `ov://` |
 | Environment variables | `OPENVIREO_*` (e.g. `OPENVIREO_SERVICE_ACCOUNT_TOKEN`, `OPENVIREO_INVITATION_URL`); the sync server's `SYNC_*` keep their names |
-| CLI command | `openvireo` (alias `ov`); masking text `<concealed by openvireo>` |
+| CLI command | `ov` (not `openvireo`, which is the desktop app's binary on Linux); masking text `<concealed by openvireo>` |
 | Desktop | app `OpenVireo`, binaries `openvireo`, `openvireo-kdbx`, `openvireo-proxy`, app/bundle id `com.openvireo.OpenVireo`, URL scheme `openvireo://` |
 | Browser extension | `OpenVireo Browser`, native-messaging host `com.openvireo.browser` |
 | Keychain | sync token service `com.openvireo.SyncToken`; Secret Key `ov-account-secret-key:<idS>:<email>` |
