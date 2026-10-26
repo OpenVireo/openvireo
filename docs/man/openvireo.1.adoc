@@ -74,4 +74,4 @@ include::includes/section-reporting-bugs.adoc[]
 include::includes/section-copyright.adoc[]
 
 == SEE ALSO
-*openvireo-cli*(1)
+*openvireo-kdbx*(1)
