@@ -1,3 +1,6 @@
+# Superseded: the sync server's whole API, these routes included, is described in
+# https://github.com/openvireo/openvireo-sync-server/blob/develop/docs/openapi.yaml, which is the contract
+# now. This file stays as the JWT routes were frozen for the accounts rollout (SPEC.md §11, §13).
 openapi: 3.1.0
 info:
   title: OpenVireo sync server JWT routes (ov v1)

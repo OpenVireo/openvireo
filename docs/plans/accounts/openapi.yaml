@@ -22,7 +22,7 @@ info:
     - Auth server JSON routes are CSRF-exempt and use only bearer auth; they don't read cookies.
 servers:
   - url: https://accounts.openvireo.com/api/v1
-    description: auth server ({api}); the sync server's JWT routes are in sync-openapi.yaml
+    description: auth server ({api}); the sync server's routes are in openvireo-sync-server's docs/openapi.yaml
 tags:
   - name: auth
   - name: sync
