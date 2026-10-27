@@ -29,6 +29,7 @@
 #include <components/foundation/FluentElement.h>
 
 class AccountController;
+class QHBoxLayout;
 class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
@@ -269,11 +270,14 @@ public:
     VaultSyncChip* syncChip() const;
     VaultAccountButton* accountButton() const;
     void setAccountController(AccountController* controller);
+    // Add a widget to the status group on the right, before another one of its widgets
+    void insertStatusWidget(QWidget* widget, QWidget* before);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    QHBoxLayout* m_statusLayout;
     VaultDatabasePicker* m_databasePicker;
     VaultSyncChip* m_syncChip;
     VaultAccountButton* m_accountButton;

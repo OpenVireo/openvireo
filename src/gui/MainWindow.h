@@ -45,6 +45,10 @@ class VaultModal;
 class VaultSettingsModal;
 class VaultWindowFrame;
 class MainWindowEventFilter;
+class NotificationButton;
+class NotificationCenter;
+class NotificationFlyout;
+class NotificationPeek;
 
 class MainWindow : public QMainWindow
 {
@@ -66,6 +70,7 @@ public:
     // Whether the start screen shows in place of the welcome screen
     bool isStartScreenShown() const;
     void setAllowScreenCapture(bool state);
+    NotificationCenter* notificationCenter() const;
 
     enum StackedWidgetIndex
     {
@@ -95,6 +100,8 @@ public slots:
                            bool showClosebutton = true,
                            int autoHideTimeout = MessageWidget::DefaultAutoHideTimeout);
     void hideGlobalMessage();
+    // Open the notification list, with one entry focused, or the newest when focusId is 0
+    void showNotifications(quint64 focusId = 0);
     void showYubiKeyPopup();
     void hideYubiKeyPopup();
     void hide();
@@ -130,6 +137,8 @@ protected:
     bool focusNextPrevChild(bool next) override;
 
 private slots:
+    // Pin the pre-release notice to the notification list, unless dismissed for this version
+    void postPreReleaseNotice();
     void updateMenuActionState();
     void updateToolbarSeparatorVisibility();
     void updateWindowTitle();
@@ -184,6 +193,10 @@ private slots:
 
 private:
     void setupAccounts();
+    void setupNotifications();
+    // Where the notification list and the error peek open: the visible bell, else the toolbar's
+    QWidget* notificationAnchor() const;
+    void updateNotificationChrome();
     void setupVaultPasswordGenerator();
     void closeVaultModals();
     static const QString BaseWindowTitle;
@@ -221,6 +234,16 @@ private:
     QPointer<VaultSettingsModal> m_settingsModal;
     QPointer<VaultModal> m_passwordGeneratorModal;
     bool m_vaultLayout = false;
+    // Global messages go to the notification center behind the bell; blocking prompts show in the prompt bar
+    QPointer<NotificationCenter> m_notifications;
+    QPointer<NotificationButton> m_notificationButton;
+    // The bell and build pill on screens without the header, such as the welcome screen
+    QPointer<QWidget> m_cornerBar;
+    QPointer<NotificationButton> m_cornerNotificationButton;
+    QPointer<NotificationFlyout> m_notificationFlyout;
+    QPointer<NotificationPeek> m_notificationPeek;
+    QPointer<MessageWidget> m_promptBar;
+    quint64 m_preReleaseNotice = 0;
     QPointer<AccountController> m_accountController;
     AccountStartWidget* m_startScreen = nullptr;
     AccountVaultsPane* m_accountPane = nullptr;

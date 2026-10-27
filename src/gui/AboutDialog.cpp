@@ -20,9 +20,11 @@
 #include "ui_AboutDialog.h"
 
 #include "config-keepassx.h"
+#include "core/BuildInfo.h"
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
 #include "gui/Icons.h"
+#include "gui/notifications/NotificationWidgets.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
@@ -172,7 +174,21 @@ void AboutDialog::setupVaultHero()
     texts->setSpacing(2);
     texts->addStretch();
     texts->addWidget(ui->nameLabel);
-    texts->addWidget(version);
+    if (BuildInfo::isStable()) {
+        texts->addWidget(version);
+    } else {
+        // The build pill next to a pre-release's version; here it only labels, it doesn't open anything
+        auto badge = new BuildBadge(hero);
+        badge->setAttribute(Qt::WA_TransparentForMouseEvents);
+        badge->setFocusPolicy(Qt::NoFocus);
+        badge->setCursor(Qt::ArrowCursor);
+        auto versionRow = new QHBoxLayout();
+        versionRow->setSpacing(8);
+        versionRow->addWidget(version);
+        versionRow->addWidget(badge, 0, Qt::AlignVCenter);
+        versionRow->addStretch();
+        texts->addLayout(versionRow);
+    }
     texts->addWidget(tagline);
     texts->addStretch();
 
