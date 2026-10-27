@@ -1054,12 +1054,12 @@ VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, Q
     center->addWidget(searchWidget, 100);
     center->addStretch(1);
     layout->addLayout(center, 0, 1);
-    auto* end = new QHBoxLayout();
-    end->setSpacing(8);
-    end->addStretch(1);
-    end->addWidget(m_syncChip, 0, Qt::AlignVCenter);
-    end->addWidget(m_accountButton, 0, Qt::AlignVCenter);
-    layout->addLayout(end, 0, 2);
+    m_statusLayout = new QHBoxLayout();
+    m_statusLayout->setSpacing(8);
+    m_statusLayout->addStretch(1);
+    m_statusLayout->addWidget(m_syncChip, 0, Qt::AlignVCenter);
+    m_statusLayout->addWidget(m_accountButton, 0, Qt::AlignVCenter);
+    layout->addLayout(m_statusLayout, 0, 2);
 
     layout->setColumnStretch(0, 1);
     layout->setColumnStretch(1, 3);
@@ -1070,6 +1070,13 @@ void VaultHeaderBar::setAccountController(AccountController* controller)
 {
     m_databasePicker->setAccountController(controller);
     m_accountButton->setAccountController(controller);
+}
+
+void VaultHeaderBar::insertStatusWidget(QWidget* widget, QWidget* before)
+{
+    widget->setParent(this);
+    const int index = m_statusLayout->indexOf(before);
+    m_statusLayout->insertWidget(index < 0 ? m_statusLayout->count() : index, widget, 0, Qt::AlignVCenter);
 }
 
 VaultDatabasePicker* VaultHeaderBar::databasePicker() const

@@ -43,16 +43,6 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="MessageWidget" name="globalMessageWidget" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="Line" name="toolbarSeparator">
       <property name="frameShadow">
        <enum>QFrame::Plain</enum>
@@ -388,6 +378,8 @@
      <addaction name="actionThemeDark"/>
      <addaction name="actionThemeClassic"/>
     </widget>
+    <addaction name="actionNotifications"/>
+    <addaction name="separator"/>
     <addaction name="menuTheme"/>
     <addaction name="actionAlwaysOnTop"/>
     <addaction name="actionAllowScreenCapture"/>
@@ -1218,6 +1210,17 @@
     <string>Toggle Show Preview Panel</string>
    </property>
   </action>
+  <action name="actionNotifications">
+   <property name="text">
+    <string>Notifications</string>
+   </property>
+   <property name="toolTip">
+    <string>Show notifications</string>
+   </property>
+   <property name="shortcut">
+    <string notr="true">Ctrl+Shift+N</string>
+   </property>
+  </action>
   <action name="actionAlwaysOnTop">
    <property name="checkable">
     <bool>true</bool>
@@ -1361,12 +1364,6 @@
    <class>VaultMenu</class>
    <extends>QMenu</extends>
    <header>gui/vault/VaultControls.h</header>
-  </customwidget>
-  <customwidget>
-   <class>MessageWidget</class>
-   <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
-   <container>1</container>
   </customwidget>
   <customwidget>
    <class>PasswordGeneratorWidget</class>

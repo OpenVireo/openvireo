@@ -21,6 +21,7 @@ set(core_SOURCES
         core/AutoTypeAssociations.cpp
         core/Base32.cpp
         core/Bootstrap.cpp
+        core/BuildInfo.cpp
         core/Clock.cpp
         core/Config.cpp
         core/CustomData.cpp
@@ -131,6 +132,8 @@ set(gui_SOURCES
         gui/MergeDialog.cpp
         gui/MessageBox.cpp
         gui/MessageWidget.cpp
+        gui/notifications/NotificationCenter.cpp
+        gui/notifications/NotificationWidgets.cpp
         gui/PasswordWidget.cpp
         gui/PasswordGeneratorWidget.cpp
         gui/ApplicationSettingsWidget.cpp
