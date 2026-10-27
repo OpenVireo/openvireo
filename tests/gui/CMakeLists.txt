@@ -19,6 +19,7 @@ add_unit_test(NAME testgui SOURCES TestGui.cpp ../util/TemporaryFile.cpp ../mock
 add_unit_test(NAME testguipixmaps SOURCES TestGuiPixmaps.cpp LIBS ${TEST_LIBRARIES})
 add_unit_test(NAME testguivault SOURCES TestGuiVault.cpp ../util/TemporaryFile.cpp LIBS ${TEST_LIBRARIES})
 add_unit_test(NAME testguiautosync SOURCES TestGuiAutoSync.cpp ../util/TemporaryFile.cpp ../util/FakeAccountServer.cpp LIBS ${TEST_LIBRARIES})
+add_unit_test(NAME testnotifications SOURCES TestNotifications.cpp ../util/TemporaryFile.cpp LIBS ${TEST_LIBRARIES})
 add_unit_test(NAME testguiaccounts SOURCES TestGuiAccounts.cpp ../util/TemporaryFile.cpp ../util/FakeAccountServer.cpp LIBS ${TEST_LIBRARIES})
 
 # Regenerates docs/images from the Vault Index layout. As a test it skips itself; build the

@@ -21,12 +21,14 @@
 #include <QKeyEvent>
 
 #include "config-keepassx.h"
+#include "core/BuildInfo.h"
 #include "core/Config.h"
 #include "gui/Icons.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
+#include <QBoxLayout>
 #include <QDir>
 #include <QFileInfo>
 #include <QPainter>
@@ -104,7 +106,18 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
 {
     m_ui->setupUi(this);
 
-    m_ui->welcomeLabel->setText(tr("Welcome to OpenVireo %1").arg(KEEPASSXC_VERSION));
+    // A pre-release's long version string goes on a line of its own under a short title
+    QLabel* versionLabel = nullptr;
+    if (BuildInfo::isStable()) {
+        m_ui->welcomeLabel->setText(tr("Welcome to OpenVireo %1").arg(KEEPASSXC_VERSION));
+    } else {
+        m_ui->welcomeLabel->setText(tr("Welcome to OpenVireo"));
+        versionLabel = new QLabel(tr("%1 · %2").arg(BuildInfo::shortLabel(), BuildInfo::version()), this);
+        versionLabel->setObjectName("welcomeVersionLabel");
+        versionLabel->setAlignment(Qt::AlignCenter);
+        versionLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_ui->welcomeLabel) + 1, versionLabel);
+    }
     QFont welcomeLabelFont = m_ui->welcomeLabel->font();
     welcomeLabelFont.setBold(true);
     welcomeLabelFont.setPointSize(welcomeLabelFont.pointSize() + 4);
@@ -120,6 +133,11 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
 
     if (FluentTheme::vaultLayoutEnabled()) {
         setupVaultStyle();
+        if (versionLabel) {
+            Vault::followTheme(versionLabel, [versionLabel] {
+                Vault::styleLabel(versionLabel, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
+            });
+        }
     }
 
     refreshLastDatabases();

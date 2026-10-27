@@ -44,6 +44,7 @@
 #include "Clipboard.h"
 #include "account/AccountManager.h"
 #include "autotype/AutoType.h"
+#include "core/BuildInfo.h"
 #include "core/InactivityTimer.h"
 #include "core/Resources.h"
 #include "core/Tools.h"
@@ -59,6 +60,8 @@
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/entry/EntryView.h"
+#include "gui/notifications/NotificationCenter.h"
+#include "gui/notifications/NotificationWidgets.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/styles/FluentTheme.h"
@@ -74,10 +77,14 @@
 #include "keys/drivers/YubiKey.h"
 #include <components/layout/Card.h>
 
+#include <QAccessible>
+#include <QTextDocumentFragment>
+
 #ifdef KPXC_FEATURE_UPDATES
 #include "gui/UpdateCheckDialog.h"
 #include "gui/osutils/AutoUpdater.h"
 #include "networking/UpdateChecker.h"
+#include "networking/UpdateFeed.h"
 #endif
 
 #ifdef KPXC_FEATURE_SSHAGENT
@@ -101,6 +108,15 @@
 #include "mainwindowadaptor.h"
 #endif
 
+namespace
+{
+    // Identifies who posted a global message, so the same sender can take it back
+    QString messageSource(const QObject* sender)
+    {
+        return sender ? QString::number(reinterpret_cast<quintptr>(sender), 16) : QString();
+    }
+} // namespace
+
 const QString MainWindow::BaseWindowTitle = "OpenVireo";
 
 MainWindow* g_MainWindow = nullptr;
@@ -115,6 +131,8 @@ MainWindow::MainWindow()
     g_MainWindow = this;
 
     m_ui->setupUi(this);
+    // Before anything that can post a global message
+    m_notifications = new NotificationCenter(this);
 
 #ifdef Q_OS_MACOS
     macUtils()->configureWindowAndHelpMenus(this, m_ui->menuHelp);
@@ -291,8 +309,6 @@ MainWindow::MainWindow()
     connect(YubiKey::instance(), SIGNAL(challengeCompleted()), SLOT(hideYubiKeyPopup()), Qt::QueuedConnection);
 
     setWindowIcon(icons()->applicationIcon());
-    m_ui->globalMessageWidget->hideMessage();
-    connect(m_ui->globalMessageWidget, &MessageWidget::linkActivated, &MessageWidget::openHttpUrl);
 
     m_clearHistoryAction = new QAction(tr("Clear history"), m_ui->menuFile);
     m_lastDatabasesActions = new QActionGroup(m_ui->menuRecentDatabases);
@@ -661,36 +677,13 @@ MainWindow::MainWindow()
     connect(&m_trayIconTriggerTimer, SIGNAL(timeout()), SLOT(processTrayIconTrigger()));
 
     if (config()->hasAccessError()) {
-        m_ui->globalMessageWidget->showMessage(tr("Access error for config file %1").arg(config()->getFileName()),
-                                               MessageWidget::Error);
+        displayGlobalMessage(tr("Access error for config file %1").arg(config()->getFileName()), MessageWidget::Error);
     }
 
     // Properly shutdown on logoff, restart, and shutdown
     connect(qApp, &QGuiApplication::commitDataRequest, this, [this] { m_appExitCalled = true; });
 
-#ifdef KEEPASSXC_BUILD_TYPE_SNAPSHOT
-    auto* hidePreRelWarn = new QAction(tr("Don't show again for this version"), m_ui->globalMessageWidget);
-    m_ui->globalMessageWidget->addAction(hidePreRelWarn);
-    auto hidePreRelWarnConn = QSharedPointer<QMetaObject::Connection>::create();
-    *hidePreRelWarnConn = connect(
-        m_ui->globalMessageWidget, &KMessageWidget::hideAnimationFinished, [this, hidePreRelWarn, hidePreRelWarnConn] {
-            m_ui->globalMessageWidget->removeAction(hidePreRelWarn);
-            disconnect(*hidePreRelWarnConn);
-            hidePreRelWarn->deleteLater();
-        });
-    connect(hidePreRelWarn, &QAction::triggered, [this] {
-        m_ui->globalMessageWidget->animatedHide();
-        config()->set(Config::Messages_HidePreReleaseWarning, KEEPASSXC_VERSION);
-    });
-
-    if (config()->get(Config::Messages_HidePreReleaseWarning) != KEEPASSXC_VERSION) {
-        m_ui->globalMessageWidget->showMessage(tr("WARNING: You are using a development snapshot build of OpenVireo.\n"
-                                                  "Maintain a backup of your databases in the event of unknown bugs.\n"
-                                                  "This version is not meant for production use."),
-                                               MessageWidget::Warning,
-                                               -1);
-    }
-#endif
+    setupNotifications();
 
     connect(qApp, SIGNAL(anotherInstanceStarted()), this, SLOT(bringToFront()));
     connect(qApp, SIGNAL(applicationActivated()), this, SLOT(bringToFront()));
@@ -1090,7 +1083,7 @@ QList<DatabaseWidget*> MainWindow::getOpenDatabases()
 
 void MainWindow::showErrorMessage(const QString& message)
 {
-    m_ui->globalMessageWidget->showMessage(message, MessageWidget::Error);
+    displayGlobalMessage(message, MessageWidget::Error);
 }
 
 void MainWindow::appExit()
@@ -1416,6 +1409,7 @@ void MainWindow::updateMenuActionState()
                                   && m_accountController->account()->state() != AccountManager::State::SignedOut
                                   && currentIndex == WelcomeScreen && !isStartScreenShown();
         m_vaultHeader->setVisible(shownDbWidget != nullptr || accountShown);
+        updateNotificationChrome();
     }
 }
 
@@ -2330,8 +2324,10 @@ void MainWindow::displayGlobalMessage(const QString& text,
                                       bool showClosebutton,
                                       int autoHideTimeout)
 {
-    m_ui->globalMessageWidget->setCloseButtonVisible(showClosebutton);
-    m_ui->globalMessageWidget->showMessage(text, type, autoHideTimeout);
+    // Global messages stay in the notification list until dismissed or cleared, so these no longer apply
+    Q_UNUSED(showClosebutton)
+    Q_UNUSED(autoHideTimeout)
+    m_notifications->post(text, type, messageSource(sender()));
 }
 
 void MainWindow::displayTabMessage(const QString& text,
@@ -2344,21 +2340,170 @@ void MainWindow::displayTabMessage(const QString& text,
 
 void MainWindow::hideGlobalMessage()
 {
-    m_ui->globalMessageWidget->hideMessage();
+    // Take back the latest message from whoever is asking, such as an error that no longer applies
+    m_notifications->dismissLatestFrom(messageSource(sender()));
+}
+
+NotificationCenter* MainWindow::notificationCenter() const
+{
+    return m_notifications;
+}
+
+void MainWindow::setupNotifications()
+{
+    m_notificationFlyout = new NotificationFlyout(m_notifications, this);
+    m_notificationPeek = new NotificationPeek(this);
+    connect(m_notificationPeek, &NotificationPeek::showAllRequested, this, [this] { showNotifications(); });
+    connect(m_ui->actionNotifications, &QAction::triggered, this, [this] { showNotifications(); });
+
+    if (m_vaultLayout) {
+        // Build pill and bell in the header's status group, and in a bar of their own on screens without it
+        auto* buildBadge = new BuildBadge();
+        connect(buildBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
+        m_vaultHeader->insertStatusWidget(buildBadge, m_vaultHeader->syncChip());
+        m_notificationButton = new NotificationButton(m_notifications);
+        connect(m_notificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
+        m_vaultHeader->insertStatusWidget(m_notificationButton, m_vaultHeader->accountButton());
+
+        m_cornerBar = new QWidget(m_ui->centralwidget);
+        m_cornerBar->setObjectName("notificationCornerBar");
+        auto* cornerLayout = new QHBoxLayout(m_cornerBar);
+        cornerLayout->setContentsMargins(12, 8, 12, 0);
+        cornerLayout->setSpacing(8);
+        cornerLayout->addStretch();
+        auto* cornerBadge = new BuildBadge(m_cornerBar);
+        connect(cornerBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
+        cornerLayout->addWidget(cornerBadge);
+        m_cornerNotificationButton = new NotificationButton(m_notifications, m_cornerBar);
+        connect(m_cornerNotificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
+        cornerLayout->addWidget(m_cornerNotificationButton);
+        Vault::paintCanvas(m_cornerBar);
+        m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_vaultFrame->widget()) + 1, m_cornerBar);
+    } else {
+        // The classic layout has no header, so the bell goes on the toolbar
+        m_ui->toolBar->addAction(m_ui->actionNotifications);
+        Vault::followTheme(m_ui->actionNotifications, [this] { updateNotificationChrome(); });
+    }
+
+    // Prompts that block the window until acted on, such as touching a hardware key, stay inline. A message bar
+    // keeps its colors while the window is disabled, so the prompt stays readable.
+    auto* promptHost = new QWidget(m_ui->centralwidget);
+    auto* promptLayout = new QVBoxLayout(promptHost);
+    promptLayout->setContentsMargins(m_vaultLayout ? 12 : 0, 4, m_vaultLayout ? 12 : 0, 4);
+    m_promptBar = new MessageWidget(promptHost);
+    m_promptBar->setObjectName("promptBar");
+    m_promptBar->setCloseButtonVisible(false);
+    m_promptBar->hideMessage();
+    promptLayout->addWidget(m_promptBar);
+    promptHost->setVisible(false);
+    if (m_vaultLayout) {
+        Vault::paintCanvas(promptHost);
+    }
+    m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_ui->toolbarSeparator), promptHost);
+
+    connect(m_notifications, &NotificationCenter::changed, this, &MainWindow::updateNotificationChrome);
+    connect(m_notifications, &NotificationCenter::posted, this, [this](quint64 id) {
+        const auto notification = m_notifications->find(id);
+        if (!notification) {
+            return;
+        }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        // Screen readers hear every message; errors interrupt, the rest wait their turn
+        const auto text = Qt::mightBeRichText(notification->text)
+                              ? QTextDocumentFragment::fromHtml(notification->text).toPlainText()
+                              : notification->text;
+        QAccessibleAnnouncementEvent announcement(this, text);
+        announcement.setPoliteness(notification->type == MessageWidget::Error
+                                       ? QAccessible::AnnouncementPoliteness::Assertive
+                                       : QAccessible::AnnouncementPoliteness::Polite);
+        QAccessible::updateAccessibility(&announcement);
+#endif
+        // An error also peeks out from the bell for a moment, so it isn't missed behind it
+        if (notification->type == MessageWidget::Error && !m_notificationFlyout->isOpen()) {
+            if (auto* anchor = notificationAnchor()) {
+                m_notificationPeek->peek(anchor, *notification);
+            }
+        }
+    });
+
+    postPreReleaseNotice();
+    updateNotificationChrome();
+}
+
+void MainWindow::postPreReleaseNotice()
+{
+    if (BuildInfo::isStable() || config()->get(Config::Messages_HidePreReleaseWarning).toString() == KEEPASSXC_VERSION
+        || (m_preReleaseNotice && m_notifications->find(m_preReleaseNotice))) {
+        return;
+    }
+
+    NotificationCenter::Notification notice;
+    notice.type = MessageWidget::Warning;
+    notice.title = BuildInfo::noticeTitle();
+    notice.text = BuildInfo::noticeMessage();
+    notice.pinned = true;
+    notice.actions.append(
+        {tr("Report a problem"), [this] { customOpenUrl("https://github.com/openvireo/openvireo/issues"); }});
+#ifdef KPXC_FEATURE_UPDATES
+    if (BuildInfo::kind() == BuildInfo::Kind::Nightly && UpdateFeed::isEnabled()) {
+        notice.actions.append({tr("Use stable releases…"), [this] { m_ui->actionSettings->trigger(); }});
+    }
+#endif
+    // Dismissed for this version: it comes back with the next one
+    notice.onDismiss = [this] {
+        config()->set(Config::Messages_HidePreReleaseWarning, KEEPASSXC_VERSION);
+        m_preReleaseNotice = 0;
+    };
+    m_preReleaseNotice = m_notifications->add(notice);
+}
+
+QWidget* MainWindow::notificationAnchor() const
+{
+    for (QWidget* bell :
+         {static_cast<QWidget*>(m_notificationButton), static_cast<QWidget*>(m_cornerNotificationButton)}) {
+        if (bell && bell->isVisible()) {
+            return bell;
+        }
+    }
+    if (!m_vaultLayout && m_ui->toolBar->isVisible()) {
+        return m_ui->toolBar->widgetForAction(m_ui->actionNotifications);
+    }
+    return nullptr;
+}
+
+void MainWindow::showNotifications(quint64 focusId)
+{
+    // Without a visible bell, such as with the toolbar hidden, the list opens in the middle of the window
+    auto* anchor = notificationAnchor();
+    m_notificationPeek->close();
+    m_notificationFlyout->setPlacement(anchor ? fluent::dialogs_flyouts::Flyout::Auto
+                                              : fluent::dialogs_flyouts::Flyout::Full);
+    m_notificationFlyout->showFor(anchor ? anchor : m_ui->centralwidget, focusId);
+}
+
+void MainWindow::updateNotificationChrome()
+{
+    if (m_cornerBar) {
+        // Only where the header is hidden, and only with something to show
+        const bool headerShown = m_vaultHeader && !m_vaultHeader->isHidden();
+        m_cornerBar->setVisible(!headerShown && (!BuildInfo::isStable() || !m_notifications->isEmpty()));
+    }
+    m_ui->actionNotifications->setIcon(NotificationButton::icon(m_notifications));
 }
 
 void MainWindow::showYubiKeyPopup()
 {
-    displayGlobalMessage(tr("Please present or touch your YubiKey to continue…"),
-                         MessageWidget::Information,
-                         false,
-                         MessageWidget::DisableAutoHide);
+    m_promptBar->parentWidget()->setVisible(true);
+    m_promptBar->showMessage(tr("Please present or touch your YubiKey to continue…"),
+                             MessageWidget::Information,
+                             MessageWidget::DisableAutoHide);
     setEnabled(false);
 }
 
 void MainWindow::hideYubiKeyPopup()
 {
-    hideGlobalMessage();
+    m_promptBar->hideMessage();
+    m_promptBar->parentWidget()->setVisible(false);
     setEnabled(true);
 }
 
@@ -2626,6 +2771,7 @@ void MainWindow::initActionCollection()
                     m_ui->actionClearSSHAgent,
                     m_ui->actionSettings,
                     // View Menu
+                    m_ui->actionNotifications,
                     m_ui->actionThemeAuto,
                     m_ui->actionThemeLight,
                     m_ui->actionThemeDark,

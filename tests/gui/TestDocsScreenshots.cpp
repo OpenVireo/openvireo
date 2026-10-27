@@ -19,6 +19,7 @@
 
 #include "config-keepassx-tests.h"
 #include "config-keepassx.h"
+#include "core/BuildInfo.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Group.h"
@@ -183,7 +184,8 @@ void TestDocsScreenshots::initTestCase()
     config()->set(Config::UpdateCheckMessageShown, true);
     config()->set(Config::Security_QuickUnlock, false);
     config()->set(Config::GUI_ShowExpiredEntriesOnDatabaseUnlock, false);
-    // Development builds show a pre-release banner that has no place in the docs
+    // Development builds show a build pill and a pre-release notice that have no place in the docs
+    BuildInfo::setKindForTests(BuildInfo::Kind::Stable);
     config()->set(Config::Messages_HidePreReleaseWarning, KEEPASSXC_VERSION);
     kpxcApp->applyTheme();
 

@@ -53,6 +53,9 @@ namespace Tools
         QString debugInfo = "OpenVireo - ";
         debugInfo.append(QObject::tr("Version %1").arg(KEEPASSXC_VERSION).append("\n"));
         debugInfo.append(QObject::tr("Build Type: %1").arg(KEEPASSXC_BUILD_TYPE).append("\n"));
+        const QString channel = QStringLiteral(KEEPASSXC_UPDATE_CHANNEL);
+        debugInfo.append(
+            QObject::tr("Channel: %1").arg(channel.isEmpty() ? QObject::tr("none") : channel).append("\n"));
 
         QString commitHash;
         if (!QString(GIT_HEAD).isEmpty()) {
