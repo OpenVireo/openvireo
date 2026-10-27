@@ -24,6 +24,7 @@
 #include <QFrame>
 
 class KMessageWidgetPrivate;
+class QPainter;
 
 /**
  * @short A widget to provide feedback or propose opportunistic interactions.
@@ -203,7 +204,13 @@ public:
      * @since 4.11
      */
     QIcon icon() const;
-    
+
+    /**
+     * Paint the round status badge shown at the start of a message of @p type,
+     * in Fluent theme colors, into @p rect (16 px for a message).
+     */
+    static void paintStatusBadge(QPainter& painter, const QRectF& rect, MessageType type);
+
     /**
      * Check whether the hide animation started by calling animatedHide()
      * is still running. If animations are disabled, this function always
