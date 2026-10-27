@@ -67,12 +67,15 @@ namespace FluentTheme
         QColor accent;
         QColor accentText;
         QColor accentSubtle;
+        // Text and glyphs on an accent or status fill
+        QColor onAccent;
         QColor critical;
         QColor criticalBg;
         QColor caution;
         QColor cautionBg;
         QColor success;
         QColor successBg;
+        QColor infoBg;
     };
     Palette palette();
     // True while Fluent-Qt uses its dark appearance

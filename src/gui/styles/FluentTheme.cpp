@@ -122,12 +122,14 @@ FluentTheme::Palette FluentTheme::palette()
     p.accentText = c.textAccentPrimary;
     // Selected rows get a quiet accent tint rather than a solid fill
     p.accentSubtle = withAlpha(c.accentDefault, dark ? 46 : 36);
+    p.onAccent = c.textOnAccent;
     p.critical = c.systemCritical;
     p.criticalBg = c.systemCriticalBg;
     p.caution = c.systemCaution;
     p.cautionBg = c.systemCautionBg;
     p.success = c.systemSuccess;
     p.successBg = c.systemSuccessBg;
+    p.infoBg = c.systemInfoBg;
     return p;
 }
 
