@@ -22,6 +22,11 @@
 
 #include "core/Global.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultWidgets.h"
+
+#include <design/IconCatalog.h>
+#include <design/Typography.h>
 
 #include <QAction>
 #include <QBoxLayout>
@@ -55,6 +60,7 @@ public:
     QPixmap contentSnapShot;
 
     void createLayout();
+    void updateSeverityIcon();
     void updateSnapShot();
     void updateLayout();
     void slotTimeLineChanged(qreal);
@@ -100,7 +106,9 @@ void KMessageWidgetPrivate::init(KMessageWidget *q_ptr)
     closeButton->setDefaultAction(closeAction);
     closeButtonPixmap = QPixmap(closeButton->icon().pixmap(closeButton->icon().actualSize(QSize(16, 16))));
 
-    q->setMessageType(KMessageWidget::Information);
+    // Restyle with the new theme's colors when it changes
+    messageType = KMessageWidget::Information;
+    Vault::followTheme(q, [this] { q->setMessageType(messageType); });
 }
 
 void KMessageWidgetPrivate::createLayout()
@@ -165,6 +173,25 @@ void KMessageWidgetPrivate::updateLayout()
     if (content->layout()) {
         createLayout();
     }
+}
+
+void KMessageWidgetPrivate::updateSeverityIcon()
+{
+    // A custom icon replaces the status badge
+    if (!icon.isNull()) {
+        return;
+    }
+
+    const qreal dpr = q->devicePixelRatioF();
+    QPixmap pixmap(QSize(16, 16) * dpr);
+    pixmap.setDevicePixelRatio(dpr);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    KMessageWidget::paintStatusBadge(painter, QRectF(0, 0, 16, 16), messageType);
+    painter.end();
+
+    iconLabel->setPixmap(pixmap);
+    iconLabel->show();
 }
 
 void KMessageWidgetPrivate::updateSnapShot()
@@ -250,74 +277,102 @@ KMessageWidget::MessageType KMessageWidget::messageType() const
     return d->messageType;
 }
 
-void KMessageWidget::setMessageType(KMessageWidget::MessageType type)
+void KMessageWidget::paintStatusBadge(QPainter& painter, const QRectF& rect, KMessageWidget::MessageType type)
 {
-    d->messageType = type;
-    QColor bg0, bg1, bg2, border;
-    QColor fg = QColor(238, 238, 238);
+    const auto p = FluentTheme::palette();
+    QColor badge = p.accent;
+    QString glyph = Typography::Icons::AsteriskBadge12;
     switch (type) {
     case Positive:
-        bg1.setRgb(37, 163, 83);
+        badge = p.success;
+        glyph = Typography::Icons::CheckmarkBadge12;
         break;
     case Information:
-        bg1.setRgb(24, 187, 242);
         break;
     case Warning:
-        bg1.setRgb(252, 193, 57);
-        fg = QColor(48, 48, 48);
+        badge = p.caution;
+        glyph = Typography::Icons::ImportantBadge12;
         break;
     case Error:
-        bg1.setRgb(198, 69, 21);
+        badge = p.critical;
+        glyph = Typography::Icons::ErrorBadge12;
         break;
     }
 
-    // Colors
-    bg0 = bg1.lighter(105);
-    bg2 = bg1.darker(105);
-    border = bg1.darker(115);
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(badge);
+    painter.drawEllipse(rect.adjusted(1, 1, -1, -1));
+    // Through Fluent-Qt's compact variants, as InfoBar does: the plain glyphs draw a second ring inside the badge
+    painter.setPen(p.onAccent);
+    Typography::Icons::paintGlyph(painter, rect, glyph, qRound(rect.height() * 10 / 16));
+    painter.restore();
+}
+
+void KMessageWidget::setMessageType(KMessageWidget::MessageType type)
+{
+    d->messageType = type;
+
+    // The Fluent InfoBar look: a flat status fill, a hairline card stroke and a status badge, all from theme tokens
+    const auto p = FluentTheme::palette();
+    QColor bg = p.infoBg;
+    switch (type) {
+    case Positive:
+        bg = p.successBg;
+        break;
+    case Information:
+        break;
+    case Warning:
+        bg = p.cautionBg;
+        break;
+    case Error:
+        bg = p.criticalBg;
+        break;
+    }
+    QColor stroke = p.stroke;
+    if (stroke.alpha() < 15) {
+        stroke.setAlpha(15);
+    }
+    const QColor fg = p.text;
+    const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
 
     // Tint close icon
     auto closeButtonPixmap = d->closeButtonPixmap;
     QPainter painter;
     painter.begin(&closeButtonPixmap);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     painter.setRenderHints(QPainter::Antialiasing);
-#else
-    painter.setRenderHints(QPainter::HighQualityAntialiasing);
-#endif
     painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
     painter.fillRect(QRect(0, 0, 16, 16), fg);
     painter.end();
     d->closeButton->setIcon(closeButtonPixmap);
     d->closeButton->setStyleSheet(QStringLiteral("QToolButton {"
-                                  "  background: transparent;"
-                                  "  border-radius: 2px;"
-                                  "  border: none; }"
-                                  "QToolButton:hover, QToolButton:focus {"
-                                  "  border: 1px solid %1; }").arg(fg.name()));
+                                                 "  background: transparent;"
+                                                 "  border-radius: 4px;"
+                                                 "  border: 1px solid transparent;"
+                                                 "  padding: 4px; }"
+                                                 "QToolButton:hover { background: %1; }"
+                                                 "QToolButton:pressed { background: %2; }"
+                                                 "QToolButton:focus { border: 1px solid %3; }")
+                                      .arg(argb(p.subtleHover), argb(p.subtlePressed), argb(fg)));
 
     d->content->setStyleSheet(
         QStringLiteral(".QFrame {"
-        "background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-        "    stop: 0 %1,"
-        "    stop: 0.1 %2,"
-        "    stop: 1.0 %3);"
-        "    border-radius: 2px;"
-        "    border: 1px solid %4;"
-        "    margin: %5px;"
-        "    padding: 5px;"
-        "}"
-        ".QLabel { color: %6; }"
-        )
-        .arg(bg0.name(),
-             bg1.name(),
-             bg2.name(),
-             border.name())
-        // DefaultFrameWidth returns the size of the external margin + border width. We know our border is 1px,
-        // so we subtract this from the frame normal QStyle FrameWidth to get our margin
-        .arg(style()->pixelMetric(QStyle::PM_DefaultFrameWidth, nullptr, this) - 1)
-        .arg(fg.name())
-    );
+                       "    background-color: %1;"
+                       "    border-radius: 4px;"
+                       "    border: 1px solid %2;"
+                       "    margin: %3px;"
+                       "    padding: 4px 4px 4px 12px;"
+                       "}"
+                       // Same color when disabled: a prompt shows while the window waits for the user, disabled
+                       ".QLabel, .QLabel:disabled { color: %4; }")
+            .arg(argb(bg), argb(stroke))
+            // DefaultFrameWidth returns the size of the external margin + border width. We know our border is 1px,
+            // so we subtract this from the frame normal QStyle FrameWidth to get our margin
+            .arg(style()->pixelMetric(QStyle::PM_DefaultFrameWidth, nullptr, this) - 1)
+            .arg(argb(fg)));
+
+    d->updateSeverityIcon();
 }
 
 QSize KMessageWidget::sizeHint() const
@@ -477,7 +532,7 @@ void KMessageWidget::setIcon(const QIcon &icon)
 {
     d->icon = icon;
     if (d->icon.isNull()) {
-        d->iconLabel->hide();
+        d->updateSeverityIcon();
     } else {
         const int size = style()->pixelMetric(QStyle::PM_ToolBarIconSize);
         d->iconLabel->setPixmap(d->icon.pixmap(size));
