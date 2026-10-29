@@ -361,6 +361,19 @@ void TestNotifications::testStableBuild()
     BuildInfo::setKindForTests(BuildInfo::Kind::Nightly);
 }
 
+void TestNotifications::testBetaBuild()
+{
+    BuildInfo::setKindForTests(BuildInfo::Kind::Beta);
+    BuildBadge badge;
+    QVERIFY(!badge.isHidden());
+    QCOMPARE(badge.text(), QString("Beta"));
+    QCOMPARE(badge.accessibleName(), QString("Beta build"));
+    QCOMPARE(BuildInfo::noticeTitle(), QString("You're using a beta"));
+    QVERIFY(BuildInfo::noticeMessage().contains(KEEPASSXC_VERSION));
+
+    BuildInfo::setKindForTests(BuildInfo::Kind::Nightly);
+}
+
 void TestNotifications::testMessageWidgetKeepsApi()
 {
     // Restyled with Fluent colors, but callers use it as before

@@ -327,7 +327,9 @@ void AboutDialog::setupVaultContributorsPage()
                          hyperlink(tr("See contributions on GitHub"),
                                    QStringLiteral("https://github.com/keepassxreboot/keepassxc/graphs/contributors"),
                                    this),
-                         tr("OpenVireo includes the work of everyone who contributed code and translations upstream"));
+                         tr("OpenVireo %1 is based on KeePassXC %2 and includes the work of everyone who "
+                            "contributed code and translations upstream")
+                             .arg(KEEPASSXC_VERSION, KEEPASSXC_UPSTREAM_VERSION));
 
     page.finish();
     scrollCards(ui->contribTab);

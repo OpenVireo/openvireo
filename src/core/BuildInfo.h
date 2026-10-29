@@ -37,6 +37,8 @@ public:
     enum class Kind
     {
         Stable,
+        // A release before 1.0
+        Beta,
         Nightly,
         Preview,
         Development
