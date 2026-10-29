@@ -42,7 +42,7 @@ To cut a release, set the version in `CMakeLists.txt` and `vcpkg.json`, add its 
 
 ```sh
 git switch -c release/0.9.x            # or switch to the existing release branch
-python3 release-tool.py tag 0.9.0 --skip-translations --no-latest -k 23F6403E9392E946475E7FD3B55683A43E98C11C
+python3 release-tool.py tag 0.9.0 --skip-translations --no-latest -k FE2778BF074705E0994BBAF9FEBA35562DE104CB
 git push origin release/0.9.x && git push origin tag 0.9.0
 ```
 
@@ -81,7 +81,7 @@ gpg --armor --export-secret-subkeys <subkey fingerprint>! > ci-signing-subkey.as
 
 - Secret `GPG_PRIVATE_KEY`: the contents of `ci-signing-subkey.asc`
 
-The current key is `23F6 403E 9392 E946 475E 7FD3 B556 83A4 3E98 C11C`, published at
+The current key is `FE27 78BF 0747 05E0 994B BAF9 FEBA 3556 2DE1 04CB`, published at
 `https://openvireo.com/openvireo-release.asc` (`openvireo-site/static/`), on keys.openpgp.org and on the
 website's "Verifying Signatures" page. Update both places when the key or its expiry changes.
 
