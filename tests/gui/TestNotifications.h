@@ -48,6 +48,7 @@ private slots:
     void testYubiKeyPromptStaysInline();
     void testDismissNoticeForThisVersion();
     void testStableBuild();
+    void testBetaBuild();
 
 private:
     MainWindow* window();

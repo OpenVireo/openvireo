@@ -115,19 +115,37 @@ else()       # POST_BUILD: Notarize DMG
         endif()
         message(STATUS "DMG bundle notarized successfully.")
 
-        # Staple tickets
+        # Staple tickets. Fetching the ticket from Apple sometimes loses the connection, so try a few times.
         message(STATUS "Stapling notarization ticket...")
+        foreach(STAPLE_ATTEMPT RANGE 1 3)
+            execute_process(
+                    COMMAND xcrun stapler staple "${DMG_FILE}"
+                    RESULT_VARIABLE STAPLE_RESULT
+                    OUTPUT_VARIABLE STAPLE_OUTPUT
+                    ERROR_VARIABLE STAPLE_ERROR
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_STRIP_TRAILING_WHITESPACE
+                    ECHO_OUTPUT_VARIABLE
+            )
+            if (STAPLE_RESULT EQUAL 0)
+                break()
+            endif()
+            if (STAPLE_ATTEMPT LESS 3)
+                message(STATUS "Stapling failed, trying again in 30 seconds...")
+                execute_process(COMMAND sleep 30)
+            endif()
+        endforeach()
+        if (NOT STAPLE_RESULT EQUAL 0)
+            message(FATAL_ERROR "Stapling failed: ${STAPLE_ERROR}")
+        endif()
         execute_process(
-                COMMAND xcrun stapler staple "${DMG_FILE}" && xcrun stapler validate "${DMG_FILE}"
+                COMMAND xcrun stapler validate "${DMG_FILE}"
                 RESULT_VARIABLE STAPLE_RESULT
-                OUTPUT_VARIABLE STAPLE_OUTPUT
                 ERROR_VARIABLE STAPLE_ERROR
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_STRIP_TRAILING_WHITESPACE
                 ECHO_OUTPUT_VARIABLE
         )
         if (NOT STAPLE_RESULT EQUAL 0)
-            message(FATAL_ERROR "Stapling failed: ${STAPLE_ERROR}")
+            message(FATAL_ERROR "Stapled ticket does not validate: ${STAPLE_ERROR}")
         endif()
         message(STATUS "DMG bundle notarization ticket stapled successfully.")
     endforeach()

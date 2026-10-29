@@ -22,9 +22,32 @@ Settings → General. Each channel has one Sparkle appcast per platform, attache
 - nightly: `https://github.com/openvireo/openvireo/releases/download/nightly/appcast-<platform>-<arch>.xml`
 
 `releases/latest` skips drafts and pre-releases, so a release's feeds go live when its draft is published.
-The updaters compare `KEEPASSXC_UPDATE_VERSION`: a release is its own version (`2.8.0`), a nightly appends
-a build number from the UTC date and hour (`2.8.0.26102503`), so nightlies sort above the release they
+The updaters compare `KEEPASSXC_UPDATE_VERSION`: a release is its own version (`0.9.0`), a nightly appends
+a build number from the UTC date and hour (`0.9.0.26102503`), so nightlies sort above the release they
 were built from and below the next one. Local and other snapshot builds follow no channel and never update.
+
+## Versions and releases
+
+OpenVireo has its own version number, separate from KeePassXC's. `KEEPASSXC_UPSTREAM_VERSION` in
+`CMakeLists.txt` records the KeePassXC release it is based on; the About dialog and the debug info show
+it, and the browser extension is sent it, since the extension enables features by KeePassXC version.
+
+Versions are plain `X.Y.Z`: the release tooling, the MSI and the update feeds accept nothing else. Releases
+before 1.0 are betas: the app shows a Beta pill and notice and the GitHub release is titled "beta", but
+it is a full release rather than a pre-release, so the stable feeds serve it. `develop` keeps the version
+of the last release until the next one is prepared.
+
+To cut a release, set the version in `CMakeLists.txt` and `vcpkg.json`, add its `CHANGELOG.md` section
+(the release notes) and its `<release>` in `share/linux/com.openvireo.OpenVireo.appdata.xml`, then:
+
+```sh
+git switch -c release/0.9.x            # or switch to the existing release branch
+python3 release-tool.py tag 0.9.0 --skip-translations --no-latest -k 23F6403E9392E946475E7FD3B55683A43E98C11C
+git push origin release/0.9.x && git push origin tag 0.9.0
+```
+
+The tag starts the Release workflow, which builds and signs the packages and creates a draft release
+with its update feeds. Check the draft, then publish it.
 
 ## One-time setup
 

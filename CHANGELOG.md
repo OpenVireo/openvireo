@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.0 (2026-10-29)
+
+The first public beta of OpenVireo. It is based on KeePassXC 2.8.0-beta1 and includes most of the fixes from KeePassXC 2.8.0. OpenVireo uses its own settings and keychain entries, so it does not pick up KeePassXC's; your databases open as before. This is a beta: keep a backup of your databases and report problems at https://github.com/openvireo/openvireo/issues.
+
+### New Features
+- Create an OpenVireo account and keep vaults in it, encrypted on your devices before they are uploaded
+- Sync vaults automatically in the background, merging entries changed on two devices field by field
+- Pair a new device with a one-time code, and open older versions of a vault
+- Share vaults with other people, and run organizations with members, roles and organization vaults
+- Recover an account with a recovery request when you lose access
+- Unlock your account with Quick Unlock (Touch ID, Windows Hello, Polkit)
+- macOS: Fill passwords and passkeys in other apps with AutoFill
+- Install updates from inside the app (Sparkle on macOS, WinSparkle on Windows, update notices for the AppImage)
+
+### Changes
+- New look based on Fluent design, with a notification centre behind the bell in the header
+- Packages are signed: Developer ID and notarized on macOS, Azure Artifact Signing on Windows, GnuPG for the AppImage and checksums
+- The command-line tool for local database files is now called openvireo-kdbx
+
+## KeePassXC history
+
+The entries below are from KeePassXC, which OpenVireo is based on.
+
 ## 2.8.0-beta1 (2026-09-23)
 
 ### New Features
