@@ -52,6 +52,7 @@ namespace Tools
     {
         QString debugInfo = "OpenVireo - ";
         debugInfo.append(QObject::tr("Version %1").arg(KEEPASSXC_VERSION).append("\n"));
+        debugInfo.append(QObject::tr("Based on KeePassXC %1").arg(KEEPASSXC_UPSTREAM_VERSION).append("\n"));
         debugInfo.append(QObject::tr("Build Type: %1").arg(KEEPASSXC_BUILD_TYPE).append("\n"));
         const QString channel = QStringLiteral(KEEPASSXC_UPDATE_CHANNEL);
         debugInfo.append(

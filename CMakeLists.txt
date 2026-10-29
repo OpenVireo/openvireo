@@ -16,11 +16,13 @@
 
 cmake_minimum_required(VERSION 3.16.0)
 
-# Version Number
-set(KEEPASSXC_VERSION_MAJOR "2")
-set(KEEPASSXC_VERSION_MINOR "8")
+# Version Number. OpenVireo has its own version; 0.x releases are betas.
+set(KEEPASSXC_VERSION_MAJOR "0")
+set(KEEPASSXC_VERSION_MINOR "9")
 set(KEEPASSXC_VERSION_PATCH "0")
 set(KEEPASSXC_VERSION "${KEEPASSXC_VERSION_MAJOR}.${KEEPASSXC_VERSION_MINOR}.${KEEPASSXC_VERSION_PATCH}")
+# The KeePassXC release this is based on. The browser extension checks its features against this version.
+set(KEEPASSXC_UPSTREAM_VERSION "2.8.0-beta1")
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
 
@@ -164,7 +166,7 @@ else()
     endif()
 endif()
 
-message(STATUS "Setting up build for KeePassXC v${KEEPASSXC_VERSION}\n")
+message(STATUS "Setting up build for OpenVireo v${KEEPASSXC_VERSION} (based on KeePassXC ${KEEPASSXC_UPSTREAM_VERSION})\n")
 
 # Update channel, and the version that update feeds compare. A release is its own version; a nightly appends
 # its build number, so each nightly sorts above the last one and below the next release.

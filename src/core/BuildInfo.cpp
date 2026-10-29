@@ -29,7 +29,10 @@ namespace
     BuildInfo::Kind detectKind()
     {
 #if defined(KEEPASSXC_BUILD_TYPE_RELEASE)
-        return BuildInfo::isDebug() ? BuildInfo::Kind::Development : BuildInfo::Kind::Stable;
+        if (BuildInfo::isDebug()) {
+            return BuildInfo::Kind::Development;
+        }
+        return BuildInfo::version().startsWith(QLatin1String("0.")) ? BuildInfo::Kind::Beta : BuildInfo::Kind::Stable;
 #else
         if (BuildInfo::isDebug()) {
             return BuildInfo::Kind::Development;
@@ -83,6 +86,8 @@ QString BuildInfo::channel()
 QString BuildInfo::shortLabel()
 {
     switch (kind()) {
+    case Kind::Beta:
+        return tr("Beta");
     case Kind::Nightly:
         return tr("Nightly");
     case Kind::Preview:
@@ -102,6 +107,8 @@ QString BuildInfo::shortLabel()
 QString BuildInfo::accessibleName()
 {
     switch (kind()) {
+    case Kind::Beta:
+        return tr("Beta build");
     case Kind::Nightly:
         return tr("Nightly build");
     case Kind::Preview:
@@ -117,6 +124,8 @@ QString BuildInfo::accessibleName()
 QString BuildInfo::noticeTitle()
 {
     switch (kind()) {
+    case Kind::Beta:
+        return tr("You're using a beta");
     case Kind::Nightly:
         return tr("You're using a nightly build");
     case Kind::Preview:
@@ -132,6 +141,10 @@ QString BuildInfo::noticeTitle()
 QString BuildInfo::noticeMessage()
 {
     switch (kind()) {
+    case Kind::Beta:
+        return tr("OpenVireo %1 is a beta and may still have bugs. Keep a backup of your databases, and report any "
+                  "problems you find.")
+            .arg(version());
     case Kind::Nightly:
         return tr("OpenVireo %1 is an untested weekly build. Keep a backup of your databases, and report any problems "
                   "you find.")
