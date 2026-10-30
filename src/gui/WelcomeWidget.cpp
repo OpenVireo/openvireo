@@ -131,6 +131,11 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
     m_ui->buttonImport->setIcon(icons()->icon("document-import"));
     m_ui->buttonImport->setStyleSheet("text-align:center;");
 
+    m_ui->signInLink->setContentsMargins(0, 12, 0, 0);
+    m_ui->signInLink->setCursor(Qt::PointingHandCursor);
+    m_ui->signInLink->setText(
+        QStringLiteral("<a href=\"#\">%1</a>").arg(tr("Sign in or create an account").toHtmlEscaped()));
+
     if (FluentTheme::vaultLayoutEnabled()) {
         setupVaultStyle();
         if (versionLabel) {
@@ -149,6 +154,7 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
             SIGNAL(itemActivated(QListWidgetItem*)),
             this,
             SLOT(openDatabaseFromFile(QListWidgetItem*)));
+    connect(m_ui->signInLink, &QLabel::linkActivated, this, &WelcomeWidget::signInRequested);
 }
 
 WelcomeWidget::~WelcomeWidget() = default;
@@ -183,12 +189,20 @@ void WelcomeWidget::setupVaultStyle()
         Vault::styleLabel(m_ui->welcomeLabel, Typography::FontRole::Title, p.text);
         Vault::styleLabel(m_ui->startLabel, Typography::FontRole::Body, p.textSecondary);
         Vault::styleLabel(m_ui->recentLabel, Typography::FontRole::BodyStrong, p.text);
+        Vault::styleLabel(m_ui->signInLink, Typography::FontRole::Body, p.accentText);
+        m_ui->signInLink->setText(QStringLiteral("<a href=\"#\" style=\"color: %1; text-decoration: underline\">%2</a>")
+                                      .arg(p.accentText.name(), tr("Sign in or create an account").toHtmlEscaped()));
         // The recent databases sit on a card
         m_ui->recentListWidget->setStyleSheet(
             QStringLiteral("QListWidget { background-color: %1; border: 1px solid %2; border-radius: 8px;"
                            " padding: 4px; }")
                 .arg(p.layer.name(QColor::HexArgb), p.stroke.name(QColor::HexArgb)));
     });
+}
+
+void WelcomeWidget::setSignInLinkVisible(bool visible)
+{
+    m_ui->signInLink->setVisible(visible);
 }
 
 void WelcomeWidget::openDatabaseFromFile(QListWidgetItem* item)

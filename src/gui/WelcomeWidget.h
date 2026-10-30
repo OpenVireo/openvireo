@@ -34,12 +34,15 @@ public:
     explicit WelcomeWidget(QWidget* parent = nullptr);
     ~WelcomeWidget() override;
     void refreshLastDatabases();
+    // The link back to the start screen, for when no account is signed in
+    void setSignInLinkVisible(bool visible);
 
 signals:
     void newDatabase();
     void openDatabase();
     void openDatabaseFile(QString);
     void importFile();
+    void signInRequested();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

@@ -236,6 +236,15 @@ void TestGuiAccounts::testStartScreenShowsUntilAModeIsChosen()
     QVERIFY(!welcome->isHidden());
     QCOMPARE(config()->get(Config::Account_StartMode).toString(), QString("local"));
 
+    // The welcome screen links back to signing in
+    auto* signInLink = child<QLabel>(welcome, "signInLink");
+    QVERIFY(signInLink->isVisible());
+    emit signInLink->linkActivated("#");
+    QVERIFY(m_mainWindow->isStartScreenShown());
+    QCOMPARE(m_mainWindow->startScreen()->currentPage(), AccountStartWidget::Page::SignIn);
+    QTest::mouseClick(child<QPushButton>(m_mainWindow->startScreen(), "localButton"), Qt::LeftButton);
+    QVERIFY(!m_mainWindow->isStartScreenShown());
+
     // The choice is remembered: the next launch goes straight to the welcome screen
     DatabaseTabWidget tabs;
     AccountController nextLaunch(&tabs);
@@ -711,6 +720,8 @@ void TestGuiAccounts::testSignOutReturnsToTheStartScreen()
     createWindow({});
     signIn(Email, secretKey);
     QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    // Signed in, the welcome screen has no link back to signing in
+    QVERIFY(child<QLabel>(m_mainWindow.data(), "signInLink")->isHidden());
     auto* controller = m_mainWindow->accountController();
     auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
     controller->createVault("Personal");
