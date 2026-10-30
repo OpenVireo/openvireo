@@ -52,6 +52,7 @@ public:
         IMPORT_KEEPASS1,
         IMPORT_REMOTE,
         IMPORT_SYNC_SERVER,
+        IMPORT_KEEPASS2,
     };
 
     enum ImportIntoType
@@ -59,11 +60,17 @@ public:
         NEW_DATABASE = 1,
         EXISTING_DATABASE,
         TEMPORARY_DATABASE,
+        // A new vault of the signed-in account
+        NEW_VAULT,
     };
 
     ImportWizard::ImportType importType();
     ImportWizard::ImportIntoType importIntoType();
     QPair<QUuid, QUuid> importInto();
+    // A .kdbx into an existing database: copies with fresh UUIDs under the chosen group instead of a UUID merge
+    bool importAsCopies() const;
+    // NEW_VAULT: the org the vault belongs to, empty for a personal one
+    QString vaultOrgId() const;
 
 private:
     QSharedPointer<Database> m_db;
