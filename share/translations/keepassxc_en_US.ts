@@ -5038,6 +5038,17 @@ The command has to exit. In case of `sftp` as last commend `exit` has to be sent
     </message>
 </context>
 <context>
+    <name>KdbxImport</name>
+    <message numerus="yes">
+        <source>Imported %n entry(s) into &quot;%1&quot; as copies.</source>
+        <translation><numerusform>Imported %n entry into &quot;%1&quot; as copies.</numerusform><numerusform>Imported %n entries into &quot;%1&quot; as copies.</numerusform></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n new entry(s)</source>
+        <translation><numerusform>%n new entry</numerusform><numerusform>%n new entries</numerusform></translation>
+    </message>
+</context>
+<context>
     <name>KMessageWidget</name>
     <message>
         <source>&amp;Close</source>

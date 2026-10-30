@@ -577,6 +577,22 @@ void VaultSharing::moveToAccount(const QSharedPointer<Database>& source, const Q
     createFromDatabase(copy, name, {}, done);
 }
 
+void VaultSharing::importAsVault(const QSharedPointer<Database>& db,
+                                 const QString& name,
+                                 const QString& orgId,
+                                 VaultCallback done)
+{
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked || m_account->isServiceAccount()) {
+        done({}, {}, tr("Unlock your account first."));
+        return;
+    }
+    if (!db) {
+        done({}, {}, tr("Nothing to import."));
+        return;
+    }
+    createFromDatabase(db, name, orgId, done);
+}
+
 void VaultSharing::createVault(const QString& name, VaultCallback done)
 {
     createVault(name, {}, std::move(done));

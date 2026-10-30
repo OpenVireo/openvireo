@@ -22,6 +22,7 @@
 #include <QTabBar>
 
 #include "autotype/AutoType.h"
+#include "core/KdbxImport.h"
 #include "core/Merger.h"
 #include "core/Tools.h"
 #include "format/CsvExporter.h"
@@ -318,6 +319,16 @@ void DatabaseTabWidget::importFile()
                 auto dbWidget = databaseWidgetFromIndex(i);
                 if (!dbWidget->isLocked() && dbWidget->database()->uuid() == importInto.first) {
                     auto group = dbWidget->database()->rootGroup()->findGroupByUuid(importInto.second);
+                    if (group && m_importWizard->importType() == ImportWizard::IMPORT_KEEPASS2) {
+                        // A .kdbx: a UUID merge into the whole database, or copies with fresh UUIDs
+                        const bool copies = m_importWizard->importAsCopies();
+                        const auto summary = copies ? KdbxImport::addAsCopies(db.data(), group)
+                                                    : KdbxImport::mergeInto(db.data(), dbWidget->database().data());
+                        setCurrentIndex(i);
+                        dbWidget->showMessage(KdbxImport::summaryText(dbWidget->displayName(), copies, summary),
+                                              MessageWidget::Positive);
+                        return;
+                    }
                     if (group) {
                         // Extract the root group from the import database
                         auto importGroup = db->setRootGroup(new Group());
@@ -328,6 +339,24 @@ void DatabaseTabWidget::importFile()
                 }
             }
             break;
+        case ImportWizard::NEW_VAULT: {
+            auto controller = AccountController::instance();
+            if (!controller) {
+                return;
+            }
+            // A .kdbx keeps its own name (its root group's); anything else is named after the imported file
+            auto name = m_importWizard->importType() == ImportWizard::IMPORT_KEEPASS2
+                            ? db->rootGroup()->name().trimmed()
+                            : QString();
+            if (name.isEmpty()) {
+                name = QFileInfo(m_importWizard->field("ImportFile").toString()).completeBaseName();
+            }
+            if (name.isEmpty()) {
+                name = tr("Imported");
+            }
+            controller->importAsVault(db, name, m_importWizard->vaultOrgId());
+            return;
+        }
         case ImportWizard::TEMPORARY_DATABASE: {
             // Use the already created database as temporary database
             auto dbWidget = new DatabaseWidget(db, this);

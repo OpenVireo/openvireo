@@ -124,6 +124,8 @@ public slots:
     void acceptInvitation(const QString& linkOrToken);
     // Re-key a copy of the database to a fresh vault key, upload it as a new vault and open that in its place
     void moveToAccount(DatabaseWidget* dbWidget, const QString& name);
+    // Make a vault of a database the import wizard made, and open it: a personal one, or one of the org `orgId`
+    void importAsVault(const QSharedPointer<Database>& db, const QString& name, const QString& orgId = {});
 
 signals:
     void modeChanged(AccountController::Mode mode);
