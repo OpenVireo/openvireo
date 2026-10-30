@@ -31,6 +31,15 @@
 #warning "OpenVireo is being compiled without sized deallocation support. Deletes may be slow."
 #endif
 
+namespace
+{
+    void secureFree(void* ptr, std::size_t size) noexcept
+    {
+        Botan::secure_scrub_memory(ptr, size);
+        std::free(ptr);
+    }
+} // namespace
+
 /**
  * Custom sized delete operator which securely zeroes out allocated
  * memory before freeing it (requires C++14 sized deallocation support).
@@ -41,8 +50,7 @@ void operator delete(void* ptr, std::size_t size) noexcept
         return;
     }
 
-    Botan::secure_scrub_memory(ptr, size);
-    std::free(ptr);
+    secureFree(ptr, size);
 }
 
 void operator delete[](void* ptr, std::size_t size) noexcept
@@ -60,12 +68,16 @@ void operator delete(void* ptr) noexcept
         return;
     }
 
+    // Query the allocation size before handing the pointer off to be freed
 #if defined(Q_OS_WIN)
-    ::operator delete(ptr, _msize(ptr));
+    const std::size_t size = _msize(ptr);
+    secureFree(ptr, size);
 #elif defined(Q_OS_MACOS)
-    ::operator delete(ptr, malloc_size(ptr));
+    const std::size_t size = malloc_size(ptr);
+    secureFree(ptr, size);
 #elif defined(HAVE_MALLOC_USABLE_SIZE)
-    ::operator delete(ptr, malloc_usable_size(ptr));
+    const std::size_t size = malloc_usable_size(ptr);
+    secureFree(ptr, size);
 #else
     // whatever OS this is, give up and simply free stuff
     std::free(ptr);
