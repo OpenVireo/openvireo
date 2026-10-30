@@ -145,6 +145,19 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="signInLink">
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::RichText</enum>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
