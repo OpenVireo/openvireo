@@ -48,6 +48,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
+#include "gui/wizard/ImportWizard.h"
 #include "keys/PasswordKey.h"
 #include "quickunlock/QuickUnlockInterface.h"
 
@@ -58,6 +59,8 @@
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
+#include <QRadioButton>
+#include <QListWidget>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
@@ -1269,4 +1272,115 @@ void TestGuiAccounts::testLinksToAccountRecovery()
     QCOMPARE(AccountController::recoveryRequestUrl(" http://localhost:8000// "), QUrl("http://localhost:8000/recover"));
     QCOMPARE(AccountController::recoveryRequestUrl({}).toString(),
              AccountController::hostedServerUrl() + QStringLiteral("/recover"));
+}
+
+void TestGuiAccounts::testImportsAKdbxFile()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    controller->createVault("Mine");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+    auto* vaultWidget = tabs->currentDatabaseWidget();
+    QTRY_VERIFY(!vaultWidget->isLocked());
+    QVERIFY(controller->isAccountVault(vaultWidget));
+
+    QTemporaryDir dir;
+    const auto path = dir.filePath("home.kdbx");
+    {
+        auto db = QSharedPointer<Database>::create();
+        auto kdf = QSharedPointer<AesKdf>::create();
+        kdf->setRounds(1);
+        db->setKdf(kdf);
+        auto key = QSharedPointer<CompositeKey>::create();
+        key->addKey(QSharedPointer<PasswordKey>::create("file"));
+        db->setKey(key);
+        db->rootGroup()->setName("Home");
+        addEntry(db.data(), "Mail");
+        addEntry(db.data(), "Bank");
+        QVERIFY(db->saveAs(path));
+    }
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const auto originalBytes = file.readAll();
+    file.close();
+
+    // Opens the wizard on the KeePass 2 source with the file and its password filled in
+    auto openWizard = [&]() -> ImportWizard* {
+        m_mainWindow->findChild<QAction*>("actionImport")->trigger();
+        // Each import makes a new wizard; earlier ones stay hidden
+        auto visibleWizard = [this]() -> ImportWizard* {
+            for (auto* w : m_mainWindow->findChildren<ImportWizard*>()) {
+                if (w->isVisible()) {
+                    return w;
+                }
+            }
+            return nullptr;
+        };
+        ImportWizard* wizard = nullptr;
+        [&] { QTRY_VERIFY((wizard = visibleWizard())); }();
+        if (!wizard) {
+            return nullptr;
+        }
+        auto* sources = wizard->findChild<QListWidget*>("importTypeList");
+        for (int i = 0; i < sources->count(); ++i) {
+            if (sources->item(i)->data(Qt::UserRole) == ImportWizard::IMPORT_KEEPASS2) {
+                sources->setCurrentRow(i);
+            }
+        }
+        wizard->setField("ImportFile", path);
+        wizard->setField("ImportPassword", "file");
+        return wizard;
+    };
+    auto finish = [](ImportWizard* wizard) {
+        wizard->next();
+        QTRY_COMPARE(wizard->currentId(), 1);
+        wizard->button(QWizard::FinishButton)->click();
+    };
+
+    // Merge into the vault; signed in, the wizard also offers a new vault
+    auto* wizard = openWizard();
+    QVERIFY(wizard);
+    auto* newVault = wizard->findChild<QRadioButton*>("newVaultRadio");
+    QVERIFY(newVault && newVault->isVisible());
+    auto* modes = wizard->findChild<QWidget*>("importKdbxModes");
+    QVERIFY(!modes->isVisible());
+    wizard->findChild<QRadioButton*>("existingDatabaseRadio")->setChecked(true);
+    QVERIFY(modes->isVisible());
+    QVERIFY(wizard->findChild<QRadioButton*>("importMergeRadio")->isChecked());
+    finish(wizard);
+    QTRY_COMPARE(titles(vaultWidget->database().data()), (QStringList{"Bank", "Mail"}));
+    QCOMPARE(vaultWidget->database()->rootGroup()->name(), QString("Mine"));
+    QVERIFY(vaultWidget->database()->isModified());
+
+    // The same file again changes nothing
+    wizard = openWizard();
+    QVERIFY(wizard);
+    wizard->findChild<QRadioButton*>("existingDatabaseRadio")->setChecked(true);
+    finish(wizard);
+    QTRY_VERIFY(!wizard->isVisible());
+    QCOMPARE(titles(vaultWidget->database().data()), (QStringList{"Bank", "Mail"}));
+
+    // As a new vault of the account, named after the file's root group
+    const auto vaultsBefore = m_server->vaults.size();
+    wizard = openWizard();
+    QVERIFY(wizard);
+    wizard->findChild<QRadioButton*>("newVaultRadio")->setChecked(true);
+    finish(wizard);
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
+    auto* imported = tabs->currentDatabaseWidget();
+    QVERIFY(controller->isAccountVault(imported));
+    QCOMPARE(imported->database()->rootGroup()->name(), QString("Home"));
+    QCOMPARE(titles(imported->database().data()), (QStringList{"Bank", "Mail"}));
+    QCOMPARE(m_server->vaults.size(), vaultsBefore + 1);
+    const auto vaultId = controller->vaultIdOf(imported);
+    QVERIFY(VaultKeyring::readVault(m_server->blobs.value(vaultId).data,
+                                    controller->account()->keyring().compositeKey(vaultId)));
+
+    // The file is unchanged
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), originalBytes);
 }

@@ -36,6 +36,7 @@ set(core_SOURCES
         core/Group.cpp
         core/HibpOffline.cpp
         core/InactivityTimer.cpp
+        core/KdbxImport.cpp
         core/Merger.cpp
         core/Metadata.cpp
         core/ModifiableObject.cpp

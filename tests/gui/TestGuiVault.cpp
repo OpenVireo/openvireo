@@ -22,6 +22,7 @@
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Group.h"
+#include "core/KdbxImport.h"
 #include "core/Metadata.h"
 #include "core/Totp.h"
 #include "crypto/Crypto.h"
@@ -1645,6 +1646,49 @@ void TestGuiVault::testImportModal()
     QTRY_VERIFY(!m_mainWindow->findChild<VaultImportModal*>());
     QCOMPARE(m_tabWidget->count(), tabsBefore);
     QCOMPARE(m_db->rootGroup()->entriesRecursive().size(), entriesBefore + 4);
+
+    // A .kdbx into an existing database: Merge or Add as copies; without an account there is no new vault
+    importAction->trigger();
+    modal = m_mainWindow->findChild<VaultImportModal*>("vaultImportModal");
+    QVERIFY(modal && modal->isOpen());
+    next = modal->findChild<QPushButton*>("vaultImportContinue");
+    sources = modal->findChild<QListWidget*>("importTypeList");
+    for (int i = 0; i < sources->count(); ++i) {
+        if (sources->item(i)->data(Qt::UserRole) == ImportWizard::IMPORT_KEEPASS2) {
+            sources->setCurrentRow(i);
+        }
+    }
+    QTest::keyClick(sources, Qt::Key_Enter);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::DetailsStep));
+    QVERIFY(modal->findChild<QLineEdit*>("keyFileEdit")->isVisible());
+    QVERIFY(!modal->findChild<QRadioButton*>("newVaultRadio")->isVisible());
+    auto* kdbxModes = modal->findChild<QWidget*>("importKdbxModes");
+    QVERIFY(!kdbxModes->isVisible());
+    QTest::mouseClick(modal->findChild<QRadioButton*>("existingDatabaseRadio"), Qt::LeftButton);
+    QVERIFY(kdbxModes->isVisible());
+    const auto kdbxPath = QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath("MergeDatabase.kdbx");
+    modal->findChild<QLineEdit*>("importFileEdit")->setText(kdbxPath);
+    modal->findChild<ImportWizard*>()->setField("ImportPassword", "a");
+    QTest::mouseClick(modal->findChild<QRadioButton*>("importCopiesRadio"), Qt::LeftButton);
+    // The card holding the choices grows to show both
+    QTRY_VERIFY(kdbxModes->height() >= kdbxModes->sizeHint().height());
+    for (auto* scroll = kdbxModes->parentWidget(); scroll; scroll = scroll->parentWidget()) {
+        if (auto* area = qobject_cast<QScrollArea*>(scroll)) {
+            area->ensureWidgetVisible(kdbxModes);
+            break;
+        }
+    }
+    screenshot("vault-import-kdbx.png");
+    QTest::mouseClick(next, Qt::LeftButton);
+    QCOMPARE(modal->currentStep(), int(VaultImportModal::ReviewStep));
+    QTRY_VERIFY(next->isEnabled());
+    QString readError;
+    const auto kdbxEntries = KdbxImport::read(kdbxPath, "a", {}, &readError)->rootGroup()->entriesRecursive().size();
+    const auto entriesNow = m_db->rootGroup()->entriesRecursive().size();
+    QTest::mouseClick(next, Qt::LeftButton);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultImportModal*>());
+    QVERIFY(kdbxEntries > 0);
+    QCOMPARE(m_db->rootGroup()->entriesRecursive().size(), entriesNow + kdbxEntries);
 
     // Leave the database as the other tests expect it
     for (auto group : m_db->rootGroup()->children()) {

@@ -106,6 +106,16 @@ QPair<QUuid, QUuid> ImportWizard::importInto()
     return {};
 }
 
+bool ImportWizard::importAsCopies() const
+{
+    return m_pageSelect && m_pageSelect->importAsCopies();
+}
+
+QString ImportWizard::vaultOrgId() const
+{
+    return m_pageSelect ? m_pageSelect->vaultOrgId() : QString();
+}
+
 QSharedPointer<Database> ImportWizard::database()
 {
     return m_db;
