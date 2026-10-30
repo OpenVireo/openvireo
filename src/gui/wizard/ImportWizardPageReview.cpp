@@ -20,6 +20,7 @@
 
 #include "core/Database.h"
 #include "core/Group.h"
+#include "core/KdbxImport.h"
 #include "format/BitwardenReader.h"
 #include "format/KeePass1Reader.h"
 #include "format/OPUXReader.h"
@@ -90,6 +91,14 @@ void ImportWizardPageReview::initializePage()
     case ImportWizard::IMPORT_KEEPASS1:
         m_db = importKeePass1(filename, field("ImportPassword").toString(), field("ImportKeyFile").toString());
         break;
+    case ImportWizard::IMPORT_KEEPASS2: {
+        QString error;
+        m_db = KdbxImport::read(filename, field("ImportPassword").toString(), field("ImportKeyFile").toString(), &error);
+        if (!m_db) {
+            showError(error);
+        }
+        break;
+    }
     case ImportWizard::IMPORT_BITWARDEN:
         m_db = importBitwarden(filename, field("ImportPassword").toString());
         break;
