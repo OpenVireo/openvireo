@@ -20,14 +20,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Project Maintainers:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Special thanks from the KeePassXC team go to debfx for creating the original KeePassX.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Contributors</source>
         <translation type="unfinished"></translation>
     </message>
@@ -45,6 +37,126 @@
     </message>
     <message>
         <source>Copy to clipboard</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo is a fork of &lt;a href=&quot;https://keepassxc.org/&quot; style=&quot;text-decoration: underline;&quot;&gt;KeePassXC&lt;/a&gt;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Maintainers:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo is an independent project, not affiliated with or endorsed by the KeePassXC Team.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copied</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Version %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cross-Platform Password Manager</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About pages</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Links</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Website</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>News, documentation and downloads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Report a bug</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub issues</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Include the debug info when you report a bug</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Contribute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Contributing guide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Code, translations and bug reports are welcome</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>License</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNU General Public License</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read the license</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Maintainers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The OpenVireo maintainers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (retired)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Everyone who contributed code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>See contributions on GitHub</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo is built by its community</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Based on KeePassXC</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePassXC and KeePassX contributors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo %1 is based on KeePassXC %2 and includes the work of everyone who contributed code and translations upstream</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System information</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -111,6 +223,426 @@
     </message>
 </context>
 <context>
+    <name>AccountController</name>
+    <message>
+        <source>Enter a valid server URL starting with http:// or https://.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the pairing code from another device or from the server&apos;s admin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No OpenVireo sync server answers at %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not pair this device: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You no longer have access to &quot;%1&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock your account first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The local copy of &quot;%1&quot; is under an older key and was kept as %2. The vault is downloaded again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading &quot;%1&quot;…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing was uploaded to &quot;%1&quot; yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not download &quot;%1&quot;: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not open &quot;%1&quot;: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not save a local copy of &quot;%1&quot;: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invitation accepted. An owner or admin of the organization has to confirm you before you can open its vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Imported as the vault &quot;%1&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open and unlock the database to move first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; is now a vault of your account. The original file %2 wasn&apos;t changed; you can delete it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AccountManager</name>
+    <message>
+        <source>The server isn&apos;t an OpenVireo account server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose an account server first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not start the registration.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This build of OpenVireo can&apos;t sign in to accounts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>An account with this email address already exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The account server sent an invalid registration response.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The registration took too long. Try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your Secret Key: this device hasn&apos;t signed in to this account before.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The Secret Key isn&apos;t valid. It looks like K1-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not start signing in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The email address or the master password is wrong.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The code is wrong or has expired.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The account server sent unsafe key derivation settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The Secret Key or the master password is wrong.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device no longer has the account&apos;s Secret Key. Sign in again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to authenticate with Quick Unlock: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Quick Unlock no longer opens this account, e.g. because its master password changed. Unlock it with the master password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your session was ended because its sign-in token was used twice. Sign in again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your session has ended. Sign in again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This isn&apos;t a valid service account token.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The service account token was rejected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The service account&apos;s keys could not be decrypted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo account (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock your account first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AccountStartWidget</name>
+    <message>
+        <source>Start screen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your passwords, encrypted on this device</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vaults sync between OpenVireo on your computers and OpenVireo Web.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Secret Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>K1-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device hasn&apos;t signed in to this account before. Your Secret Key is in your Emergency Kit.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your Secret Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Create account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can&apos;t sign in? Request account recovery</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Two-step verification</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the 6-digit code from your authenticator app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Authentication code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>123456</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Verify</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use my own sync server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync your databases with your own OpenVireo sync server. Enter its URL and a pairing code from another device or from the server&apos;s admin. Your databases keep their master passwords.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>https://sync.example.com</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pairing code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use without an account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only encrypted blobs and sealed keys leave this device. Without an account, nothing leaves it at all.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>First time on this device? Enter your Secret Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can&apos;t sign in? Lost your password or Emergency Kit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your email address and master password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Signing in…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the 6 digits shown by your authenticator app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking the code…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Connecting to the sync server…</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AccountVaultsPane</name>
+    <message>
+        <source>Unlock account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Quick Unlock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Service accounts…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock with Touch ID, Windows Hello or your system password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account vaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Organization</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (waiting for confirmation)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>An owner or admin of %1 has to confirm you before you can open its vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A member was removed: rotate the key from the Share dialog.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocking…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>AgentSettingsWidget</name>
     <message>
         <source>Enable SSH Agent integration</source>
@@ -146,6 +678,14 @@
     </message>
     <message>
         <source>SSH_SK_PROVIDER override</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SSH Agent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Environment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -191,7 +731,51 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>This setting cannot be enabled when minimize on unlock is enabled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Stable releases</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nightly builds (untested)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saving method</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes effect after restarting OpenVireo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manage Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move your settings to another computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Return every setting to its default value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote Desktop</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -216,6 +800,22 @@
     </message>
     <message>
         <source>Follow style</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatic (follow system)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Classic</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -292,11 +892,108 @@
     </message>
 </context>
 <context>
-    <name>ApplicationSettingsWidgetGeneral</name>
+    <name>ApplicationSettingsWidgetAutoType</name>
     <message>
-        <source>Basic Settings</source>
+        <source>Use entry title to match windows for global Auto-Type</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Use entry URL to match windows for global Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Always ask before performing Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Skip confirmation for main window Auto-Type actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide expired entries from Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Re-lock previously locked database after performing Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Experimental: Prefer desktop portals (Wayland implementation)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep remote desktop connection open after performing Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use remote desktop for clipboard access</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-type start delay milliseconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source> ms</source>
+        <comment>Milliseconds</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-Type start delay:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote desktop mode:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-Type typing delay:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-type character typing delay milliseconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global Auto-Type shortcut:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Never remember session</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember session until exit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember session until revoked by desktop</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember last typed entry for:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global auto-type shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Configure...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source> sec</source>
+        <comment>Seconds</comment>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ApplicationSettingsWidgetGeneral</name>
     <message>
         <source>Startup</source>
         <translation type="unfinished"></translation>
@@ -335,10 +1032,6 @@
     </message>
     <message>
         <source>Check for updates at application startup once per week</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Include beta releases when checking for updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -479,63 +1172,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Use entry title to match windows for global Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Use entry URL to match windows for global Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Always ask before performing Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Hide expired entries from Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Re-lock previously locked database after performing Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Auto-Type start delay:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Global Auto-Type shortcut:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Auto-type start delay milliseconds</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source> ms</source>
-        <comment>Milliseconds</comment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Auto-Type typing delay:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Global auto-type shortcut</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Auto-type character typing delay milliseconds</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Remember last typed entry for:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>On database unlock, show entries that will expire within</source>
         <translation type="unfinished"></translation>
     </message>
@@ -597,10 +1233,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Skip confirmation for main window Auto-Type actions</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Double-click action for URL:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -625,43 +1257,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Keep remote desktop connection open after performing Auto-Type</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Remote desktop mode:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Never remember session</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Remember session until exit</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Remember session until revoked by desktop</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>None</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Configure...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Use remote desktop for clipboard access</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Experimental: Prefer desktop portals (Wayland implementation)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Show autocomplete suggestions for username and additional attributes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update channel:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Theme:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Theme selection</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -762,6 +1374,45 @@
     </message>
     <message>
         <source>Unknown attachment type</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AuthClient</name>
+    <message>
+        <source>Invalid account server URL: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This build of OpenVireo was compiled without network support.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not reach the account server: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Too many attempts. Wait a minute and try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The account server responded with a redirect, check the server URL.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1. Change your plan on the account website.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1. Change your plan at %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unexpected response.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The account server responded with HTTP %1: %2</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -971,6 +1622,65 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
     </message>
 </context>
 <context>
+    <name>AutofillSettingsWidget</name>
+    <message>
+        <source>Fill passwords, passkeys and one-time codes in Safari and other apps</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep suggesting usernames while a database is locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open AutoFill Settings…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Databases to fill from:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AutoFill</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Also turn OpenVireo on in System Settings under General, AutoFill &amp; Passwords.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Suggestions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Usernames stay in the QuickType bar; filling one still asks you to unlock.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock a database to choose whether AutoFill uses it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AutoFill needs macOS 11 or later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This build of OpenVireo is not signed for AutoFill, so AutoFill stays off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo is turned on as an AutoFill provider in System Settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo is not turned on in System Settings yet. Open AutoFill Settings and turn it on under AutoFill From.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>BinaryStream</name>
     <message>
         <source>Failed to read string data: %1</source>
@@ -1009,6 +1719,22 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
     </message>
     <message>
         <source>Deny All</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Entries</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Allow the checked entries and deny the others for this site without asking again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Allow access?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Allow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1062,6 +1788,14 @@ Please select the correct database for saving credentials.</source>
         <source>Register</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Authenticate passkey</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose the passkey to sign in to this site with.</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message numerus="yes">
         <source>Timeout in &lt;b&gt;%n&lt;/b&gt; seconds...</source>
         <translation type="unfinished">
@@ -1091,7 +1825,35 @@ Do you want to register a new passkey for:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Relying party</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Passkeys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Select the existing passkey and press Update to replace it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Existing passkey found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Do you want to register a new passkey for this site?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Register passkey</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Do you want to register a passkey for this site?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1382,6 +2144,22 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Browser Integration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Browsers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Behavior</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Proxy location</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Executable Files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1435,6 +2213,77 @@ Do you want to overwrite the passkey in %1 - %2?</source>
     </message>
     <message>
         <source>Browsers installed using Snap or Flatpak are not supported with exception to Firefox installed using Snap.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>BuildInfo</name>
+    <message>
+        <source>Beta</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nightly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Debug</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dev build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Beta build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nightly build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preview build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Development build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You&apos;re using a beta</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You&apos;re using a nightly build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You&apos;re using a preview</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You&apos;re using a development build</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo %1 is a beta and may still have bugs. Keep a backup of your databases, and report any problems you find.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo %1 is an untested weekly build. Keep a backup of your databases, and report any problems you find.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo %1 is a preview of the next release and may contain bugs. Keep a backup of your databases.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This build of OpenVireo (%1, revision %2) is for testing changes and isn&apos;t meant for everyday use. Keep a backup of your databases.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1779,6 +2628,14 @@ To prevent this error from appearing, you must go to &quot;Database Settings / S
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Key file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>All files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1966,6 +2823,30 @@ This may prevent connection to the browser plugin.</source>
     </message>
     <message>
         <source>Enable Browser Integration to access these settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove the encryption keys shared with the browser extension. Each browser will need to connect again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forget</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Revoke the permissions given to browsers to access entries, and the site-specific settings on them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only needed if this database is a copy of another and the browser extension cannot connect.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2174,6 +3055,14 @@ Are you sure you want to continue without a password?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Encryption Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Encryption settings mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Number of rounds too high</source>
         <comment>Key transformation rounds</comment>
         <translation type="unfinished"></translation>
@@ -2186,10 +3075,6 @@ If you keep this number, your database may take hours, days, or even longer to o
     </message>
     <message>
         <source>Understood, keep number</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2318,6 +3203,10 @@ If you keep this number, your database will not be protected from brute force at
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Publicly visible icon used on the unlock dialog</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Delete Recycle Bin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2431,6 +3320,10 @@ removed from the database.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No groups of this database are shared. A group is shared from the KeeShare settings of the group.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Breadcrumb</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2472,6 +3365,18 @@ removed from the database.</source>
     </message>
     <message>
         <source>Purge unused icons</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This database has no custom icons.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Purge</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2524,15 +3429,7 @@ removed from the database.</source>
 <context>
     <name>DatabaseSettingsWidgetRemote</name>
     <message>
-        <source>Sync Commands</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Remove</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Command Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2592,11 +3489,55 @@ removed from the database.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Enter a valid server URL starting with https://.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database ID and access token cannot be empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Warning: the access token will be sent unencrypted. Use https:// for servers other than localhost.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not pair this device: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paired this device as &quot;%1&quot;. Its access token is stored on this device only.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the server URL and this device&apos;s access token first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create a pairing code: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pair Device</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;On the other device, enter this code where it asks for the sync server&apos;s access token, in this database&apos;s Remote Sync settings or when importing from the sync server:&lt;/p&gt;&lt;p style=&quot;font-size: x-large; font-family: monospace;&quot;&gt;&lt;b&gt;%1&lt;/b&gt;&lt;/p&gt;&lt;p&gt;It adds one device and works until %2.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Download command cannot be empty.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Server URL and database ID cannot be empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Download failed with error: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Connected to the sync server. The database does not exist there yet and will be uploaded on the first sync.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2609,6 +3550,10 @@ removed from the database.</source>
     </message>
     <message>
         <source>Save Remote Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Stored on this device only, in %1. Each device needs its own token: enter a pairing code from Pair Device… on another device, or from openvireo-sync-server devices pair &lt;user&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2641,6 +3586,86 @@ The command has to exit. In case of `sftp` as last command `exit` has to be sent
     </message>
     <message>
         <source> seconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync Configurations</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote sync type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Commands (scp, sftp, …)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo Sync Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server URL:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server URL field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>e.g.: https://sync.example.com</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database ID:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server database ID field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name of the database on the server, e.g.: personal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access token:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server access token field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Stored on this device only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Test Connection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show a one-time code that adds another of your devices to this server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pair Device…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync after each save, when the database is unlocked, and every minute while it is open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync automatically</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2677,6 +3702,10 @@ This is definitely a bug, please report it to the developers.</source>
     </message>
     <message>
         <source>Merge database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Imported</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2757,7 +3786,90 @@ This is definitely a bug, please report it to the developers.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Tags</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Do you really want to move the group &quot;%1&quot; to the recycle bin?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New Entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database Reports</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit Group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New Group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database must be saved before it can be uploaded.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in to your OpenVireo account to sync %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device has no access token for %1 yet. Enter one in the Remote Sync settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check the sync server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+
+This can happen when the server was restored from a backup, but it can also mean someone is tampering with it. Syncing merges the server&apos;s copy into this database and uploads the result; nothing on this device is lost.
+
+Sync anyway?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>(untitled)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>These entries were changed both here and on another device: %1. The newer change was kept; the other is in each entry&apos;s history.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>These entries were deleted on one device and changed on another: %1. Check that they are as you expect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3002,11 +4114,55 @@ Disable safe saves and try again?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No additional attributes. Add one to keep extra fields with this entry, such as a PIN or the answer to a security question.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Text color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Color of the entry&apos;s title in the list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Background color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Color behind the entry in the list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Icon</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type the username and password into another window with a global shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sequence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No window associations. Add one to type this entry only into windows with a matching title, or to use a different sequence for them.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4031,6 +5187,57 @@ This may cause the affected plugins to malfunction.</source>
     </message>
 </context>
 <context>
+    <name>EmergencyKit</name>
+    <message>
+        <source>OpenVireo Emergency Kit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Created %1. Print it or keep it somewhere safe, away from your devices.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Secret Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Why you need it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Signing in on a new device takes your master password and this Secret Key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vaults are encrypted with both, on your devices. The server has neither and can&apos;t reset them: if you lose both this kit and every signed-in device, your vaults can&apos;t be recovered.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Write your master password on the line by hand if you want to; OpenVireo never stores it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Never share this kit or enter the Secret Key anywhere but in OpenVireo.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not write %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Entry</name>
     <message>
         <source>%1 - Clone</source>
@@ -4292,6 +5499,124 @@ Would you like to overwrite the existing attachment?</source>
     </message>
 </context>
 <context>
+    <name>EntryDetailCard</name>
+    <message>
+        <source>Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>One-time code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy TOTP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show TOTP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This group has no entries yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select an entry to see its details.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No entry selected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>modified %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide TOTP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1   %2 s left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tags: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expired %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expires %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expires never</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Attachment: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n attachment(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Hide notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>EntryHistoryModel</name>
     <message>
         <source>Current (%1)</source>
@@ -4311,6 +5636,17 @@ Would you like to overwrite the existing attachment?</source>
     </message>
     <message>
         <source>Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>EntryListItemDelegate</name>
+    <message>
+        <source>Expired</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Weak</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4826,6 +6162,17 @@ You can enable the DuckDuckGo website icon service in the security section of th
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Import failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n entries to import</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
         <source>Entry count: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4847,6 +6194,22 @@ You can enable the DuckDuckGo website icon service in the security section of th
     </message>
     <message>
         <source>Url</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database &apos;%1&apos; does not exist on the sync server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not open the database from the sync server. Password or key file may be incorrect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync Server (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync Server (%1) %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4905,7 +6268,23 @@ You can enable the DuckDuckGo website icon service in the security section of th
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>CSV File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Comma separated values (.csv)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>1Password Export (.1pux)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Export file (.1pux)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4913,11 +6292,111 @@ You can enable the DuckDuckGo website icon service in the security section of th
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Vault folder (.opvault)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Bitwarden (.json)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Bitwarden</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>JSON export (.json)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Proton Pass</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote Database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Command download (.kdbx)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo Sync Server (.kdbx)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass 2 Database (.kdbx)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass 2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass or OpenVireo database (.kdbx)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>KeePass 1 Database (.kdb)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass 1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass 1 database (.kdb)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Merge, matching entries by their ID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A newer version of an entry replaces the older one, which goes into its history. Nothing is deleted, so importing the same file again changes nothing.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add as copies under the selected group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The file&apos;s groups and entries are added as new copies. Nothing is matched, so importing again adds another copy.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New vault in my account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Import source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Location</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Credentials</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Import into</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Existing database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Temporary database</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4941,6 +6420,30 @@ You can enable the DuckDuckGo website icon service in the security section of th
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Local copy (keeps the server database&apos;s credentials)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local Copy (keeps the server database&apos;s credentials)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the server URL and access token first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>There are no databases on the server yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not pair this device: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Comma Separated Values</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4950,6 +6453,10 @@ You can enable the DuckDuckGo website icon service in the security section of th
     </message>
     <message>
         <source>Bitwarden JSON Export</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>KeePass 2 Database</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4996,6 +6503,46 @@ The command has to exit. In case of `sftp` as last commend `exit` has to be sent
     </message>
     <message>
         <source>Remote Database (.kdbx)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server URL:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server URL field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>e.g.: https://sync.example.com</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access token:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server access token field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access token, or a pairing code from another device</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database ID:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync server database ID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>List the databases stored on the server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Load</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5212,6 +6759,51 @@ If this reoccurs, then your database file may be corrupt.</source>
     <message>
         <source>Failed to serialize KDF parameters variant map</source>
         <extracomment>Translation comment: variant map = data structure for storing meta data</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>KdbxImport</name>
+    <message>
+        <source>Could not load the key file: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not open %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Wrong password or key file, or not a KeePass 2 database (%1). If the file is protected with a hardware key, open it with File &gt; Open and use Database &gt; Merge From Database… instead.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>Imported %n entry(s) into &quot;%1&quot; as copies.</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Nothing to import: &quot;%1&quot; already has everything in this file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n new entry(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1 updated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 unchanged</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Imported into &quot;%1&quot;: %2.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -6048,10 +7640,6 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Compact Mode</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Automatic</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6108,10 +7696,6 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Don&apos;t show again for this version</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>No Tags</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6127,6 +7711,128 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>&amp;Account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign In or Create Account…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Unlock Account…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Quick Unlock Account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock with Touch ID, Windows Hello or your system password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Lock Account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;New Vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Share Vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Move Database to Account…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Organizations, Service Accounts and Audit Log…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accept &amp;Invitation…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Manage Account…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign &amp;Out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select a vault of your account to share.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name of the new vault:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Personal vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A vault of an organization opens for all of its owners and admins; share it with other members afterwards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Belongs to:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accept invitation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paste the link or the invitation code from the email:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open and unlock the database to move first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in to your OpenVireo account and unlock it first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move to account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A copy of this database becomes a vault of your account, encrypted with a new vault key instead of its master password, and syncs with your account from now on. The file itself isn&apos;t changed.
+
+Name of the vault:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password for %1:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Check for updates on startup?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6139,6 +7845,10 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Versions on %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Toggle window</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6146,12 +7856,13 @@ Are you sure you want to continue with this file?</source>
         <source>Quit OpenVireo</source>
         <translation type="unfinished"></translation>
     </message>
-    <message numerus="yes">
-        <source>%1 Entry(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
+    <message>
+        <source>Report a problem</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use stable releases…</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Please present or touch your YubiKey to continue…</source>
@@ -6390,10 +8101,6 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Toggle Compact Mode</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Set Theme: Automatic</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6454,12 +8161,6 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>WARNING: You are using a development snapshot build of OpenVireo.
-Maintain a backup of your databases in the event of unknown bugs.
-This version is not meant for production use.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Clear SSH Agent</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6504,6 +8205,14 @@ This version is not meant for production use.</source>
             <numerusform></numerusform>
             <numerusform></numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Notifications</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show notifications</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -6734,6 +8443,61 @@ This version is not meant for production use.</source>
     </message>
     <message>
         <source>Could not register global shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>NotificationButton</name>
+    <message>
+        <source>Notifications</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>Notifications, %n unread</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>NotificationFlyout</name>
+    <message>
+        <source>Just now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n min ago</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Notifications</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear all</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No notifications</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pinned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>NotificationPeek</name>
+    <message>
+        <source>Show all</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -7336,6 +9100,18 @@ The following data is missing:
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Generator type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Advanced options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>More character groups, and characters to add or leave out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Entropy: %1 bit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7449,6 +9225,10 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Warning: Caps Lock enabled!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source></source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7760,6 +9540,10 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Password for &apos;%1&apos; has been leaked!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source></source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8834,6 +10618,18 @@ Kernel: %3 %4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Based on KeePassXC %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Channel: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Quick Unlock</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9514,6 +11310,30 @@ This option is deprecated, use --set-key-file instead.</source>
         <source>Confirm Replace Entry References</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>First secret</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This account holds no key for the vault.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AutoFill</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can manage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read only</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QtIOCompressor</name>
@@ -9592,6 +11412,22 @@ This option is deprecated, use --set-key-file instead.</source>
     </message>
     <message>
         <source>Invalid database pointer or upload parameters provided.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to write downloaded database to %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to read database %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database on the sync server was changed by another device during the sync. Your local changes are saved, sync again to merge them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to upload merged database. %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -9755,6 +11591,10 @@ This option is deprecated, use --set-key-file instead.</source>
     </message>
     <message>
         <source>Score</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source></source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -10242,6 +12082,527 @@ This option is deprecated, use --set-key-file instead.</source>
         <source>Press Enter to search</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Search options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save search</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search tips</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ServiceAccountAdmin</name>
+    <message>
+        <source>Unlock your account first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Give the organization a name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not signed in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The public keys of %1 don&apos;t carry a valid signature. Nothing was sealed to them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unknown role: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>An organization needs at least one owner.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The role changed, but not every vault could be shared: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the email address to send the invitation to.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>That account is already a member of the organization.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This isn&apos;t an invitation link or code. Paste the link from the invitation email.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The invitation was already used or has expired. Ask for a new one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The invitation is for another email address. Sign in with that account to accept it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You are already a member of this organization.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Give the service account a name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You don&apos;t hold this service account&apos;s master key. Ask another owner or admin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Service accounts can read or write a vault, but not manage it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ServiceAccountsDialog</name>
+    <message>
+        <source>Organizations</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Organization:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New organization…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Service accounts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expires:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Never</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Secrets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Starts with</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Last used</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expires</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Issue secret…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change expiry…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Revoke</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Give it access to a vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grant</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Members</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Members who accepted an invitation get their keys once an owner or admin confirms them here. Owners and admins get every vault of the organization; for other members, pick the vaults. Removing a member gives the vaults they could open a new key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Role</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fingerprint</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change role…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirm…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pending invitations</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel invitation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invite…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Audit log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Who</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Target</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>IP address</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Load more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Owner</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Member</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Loading organizations…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Service accounts and members belong to an organization. Create one, or ask an owner or admin of yours to make you an admin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (disabled)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select a service account, or create one for a CI job, a server or a Kubernetes cluster.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;b&gt;%1&lt;/b&gt;&lt;br&gt;Created %2&lt;br&gt;Fingerprint: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>(unnamed)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>never</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New service account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name, e.g. the job or server that uses it:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Creating %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Token for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Issue a secret</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name, e.g. where it will be used:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Issuing a secret…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New token for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Revoke this secret?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Anything that uses a token with this secret stops working at once.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Revoking…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change expiry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The secret keeps its token; only the time it stops working changes. A time that has passed stops it at once.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Never expires</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saving…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Granting access…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 can now open &quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enabling…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disabling…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Its secrets stop working and it loses access to every vault. Those vaults should get a new key afterwards (Share, then Rotate key).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleting…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>invalid signature</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Leave…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change the role of %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Owners and admins get every vault of the organization with manage access and can issue secrets for its service accounts; members only get the vaults shared with them. A member who is made an admin keeps the vaults they already have.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changing the role of %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is now %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Leave the organization?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove %1?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You lose access to the organization&apos;s vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 loses access to every vault of the organization. The vaults they could open get a new key, so the keys they had open nothing that is saved from now on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Removing %1 and rotating the keys of their vaults…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 was removed, but these vaults still need a new key (Share, then Rotate key): %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 was removed. %n vault(s) got a new key.</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>New organization</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name of the organization:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is created, with you as its owner.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invite to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The invitation is sent by email and is valid for 7 days. Once they accept it, confirm them here to give them their keys.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email address</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invite</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inviting %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>An invitation is on its way to %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancelling the invitation…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirm %1?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>As %1 of the organization, %2 gets every vault with manage access and can issue secrets for its service accounts. Check that their fingerprint is %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirm %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose the vaults %1 can open. Check that their fingerprint is %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can manage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirming %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is confirmed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy this token now and store it where it will be used, e.g. as a CI secret named OPENVIREO_SERVICE_ACCOUNT_TOKEN. It is shown only once and can&apos;t be recovered; issue a new secret if it is lost.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>SettingsClientModel</name>
@@ -10394,6 +12755,14 @@ This option is deprecated, use --set-key-file instead.</source>
         <source>Fingerprint</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>KeeShare</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replaces the signer and fingerprint with a new certificate</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ShareExport</name>
@@ -10441,6 +12810,494 @@ This option is deprecated, use --set-key-file instead.</source>
     </message>
     <message>
         <source>Export to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ShareVaultDialog</name>
+    <message>
+        <source>Share vault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A member was removed without a new key. Rotate the key so that what they kept can&apos;t open the vault&apos;s future versions.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rotate key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Members</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Member</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fingerprint</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share with someone</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email of the person to share with</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email address</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Look up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can manage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share &quot;%1&quot;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Members open &quot;%1&quot; with their own account; its key is sealed to each of them on this device. Removing someone gives the vault a new key, so the copy they kept can&apos;t open what changes afterwards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your fingerprint: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (service account)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (you)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>invalid signature</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compare this with the fingerprint the member sees in their own app</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Looking up %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The public keys of %1 don&apos;t carry a valid signature. Don&apos;t share with this account.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+Fingerprint: %2
+Check that %1 sees the same fingerprint before you share.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sharing with %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Shared with %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changing access…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Access changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove %1?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 loses access to this vault. The vault gets a new key, which is sealed to the remaining members, and is re-encrypted with it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Removing %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 was removed and the vault has a new key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rotating the key…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The vault has a new key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SignUpWizard</name>
+    <message>
+        <source>Create an OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your account keeps your vaults in sync on all your devices and lets you share them. Everything is encrypted on your devices with your master password and a Secret Key that only you have.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirm password:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirm master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nobody can reset your master password, not even the server&apos;s operators. Choose one you will remember.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This is your Secret Key. You need it, with your master password, to sign in on a new device. It is shown only now: save your Emergency Kit and keep it safe.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save Emergency Kit…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>I have saved or printed my Emergency Kit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Create account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your email address.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a master password of at least %1 characters.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The passwords don&apos;t match.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Creating your account…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Finish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save Emergency Kit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PDF files (*.pdf)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Emergency Kit saved to %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close without the Emergency Kit?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your Secret Key won&apos;t be shown again. Without it you can&apos;t sign in on another device. Close anyway?</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SyncEngine</name>
+    <message>
+        <source>Failed to read database %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>attachment %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expiry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Icon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Colors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to create a temporary folder for the sync: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync was cancelled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server no longer has this database, although this device synced it before. It may have been deleted or the server reset.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database must be saved before it can be uploaded.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to write downloaded database to %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Syncing...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The databases could not be merged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server returned a copy of the database that is older than one this device has already synced (sync generation %1, expected at least %2).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote database unlock cancelled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Uploading...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database on the sync server was changed by another device during the sync. Your local changes are saved, sync again to merge them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to upload merged database. %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server returned an older version of the database (revision %1) than this device has already synced (revision %2).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Combined the changes made on both devices</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SyncHistoryDialog</name>
+    <message>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Versions on %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server keeps the latest versions of &quot;%1&quot;. Opening one shows it in its own tab, where you can copy entries from it or merge it into this database. Nothing on the server changes.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (current)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The server has no versions of this database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading version %1…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (version %2).kdbx</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not save the downloaded version: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SyncServerClient</name>
+    <message>
+        <source>Invalid sync server URL: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This build of OpenVireo was compiled without network support.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not reach the sync server: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server rejected the access token.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server responded with a redirect, check the server URL.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database is larger than your plan allows for a vault (%1 MB). Remove large attachments, or change your plan on the account website.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database is larger than the sync server accepts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unexpected response.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The sync server responded with HTTP %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SyncTokenStore</name>
+    <message>
+        <source>OpenVireo sync server access token</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the system keyring</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>memory</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>a file only you can read, next to the settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the Keychain</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the Windows Credential Manager</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -10602,7 +13459,27 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Secret key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Base32 key, such as JBSWY3DPEHPK3PXP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Code type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Custom settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Invalid TOTP Secret</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The secret key must be in Base32 format, such as JBSWY3DPEHPK3PXP.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -10653,11 +13530,640 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;https://github.com/openvireo/openvireo/releases&quot;&gt;downloaded here&lt;/a&gt;.</source>
+        <source>&lt;strong&gt;A new version is available.&lt;/strong&gt;&lt;br/&gt;OpenVireo %1 can be &lt;a href=&quot;%2&quot;&gt;downloaded here&lt;/a&gt;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>You have the latest version of OpenVireo</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultAccountButton</name>
+    <message>
+        <source>Account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultCommandBar</name>
+    <message>
+        <source>New Entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Perform Auto-Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lock database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>More commands</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n entries</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultDatabasePicker</name>
+    <message>
+        <source>No database open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n entries</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1
+%n databases open</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Databases</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account vaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock your account to open its vaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultEntryEditCard</name>
+    <message>
+        <source>Attributes, attachments and colors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose an icon or use the site&apos;s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sequences and window associations</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Site access and extra URLs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keys to add to the agent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dates, UUID and plugin data</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Earlier versions of this entry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change icon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expiry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 · Earlier version, read-only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New entry in %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 · Editing</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultImportModal</name>
+    <message>
+        <source>Import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Where are the passwords you want to import?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose what to import and where its entries go.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Match the columns of the file to the fields of the entries.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check the entries before they are imported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultModal</name>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Steps</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Step %1 of %2: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultNavPane</name>
+    <message>
+        <source>Groups</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Password Generator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database Reports</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultNewDatabaseModal</name>
+    <message>
+        <source>New Database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>General</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please fill in the display name and an optional description for your new database:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Encryption</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Here you can adjust the database encryption settings. Don&apos;t worry, you can change them later in the database settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Database Credentials</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A set of credentials known only to you that protects your database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Create Database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Root</source>
+        <comment>Root group</comment>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultSearchHelp</name>
+    <message>
+        <source>Search for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search tips</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every term must match. Quote terms that contain spaces.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search in a field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Insert %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Insert %1 (also %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use _name: for a custom attribute.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refine a term</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>exclude</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>exact match</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>regular expression</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>any characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>one character</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>either side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Put -, + or * before a term, and wildcards inside it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Try an example</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alice&apos;s logins on GitHub</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Work entries outside Archive</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Titles with bank or card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Four-digit PINs in notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultSettingsCard</name>
+    <message>
+        <source>Hide options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show options</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultSettingsModal</name>
+    <message>
+        <source>%1 categories</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultSharing</name>
+    <message>
+        <source>Not signed in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>There is no OpenVireo account with this email address.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock your account first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unknown role: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The public keys of %1 don&apos;t carry a valid signature. Nothing was shared.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device doesn&apos;t hold the vault&apos;s current key. Reload the vaults and try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The vault&apos;s key changed in the meantime. Reload and try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You can&apos;t remove yourself from a vault you manage.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking the vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only members who manage a vault can change who has access.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Another member is rotating this vault&apos;s key. Try again once they are done, or after 24 hours.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device doesn&apos;t hold the vault&apos;s key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sealing a new key for the remaining members…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The public keys of %1 don&apos;t carry a valid signature, so no new key was sealed for them. Nothing was changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The vault&apos;s members or key changed in the meantime. Try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Re-encrypting the vault with the new key…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The new key is stored but the vault wasn&apos;t re-encrypted: %1. Rotate it again to finish.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The vault on the server could not be opened: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Activating the new key…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock the database first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copying the database…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing to import.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Creating the vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The public keys of %1 don&apos;t carry a valid signature, so the vault wasn&apos;t created.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Uploading the vault…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The vault was created, but its first upload failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultSyncChip</name>
+    <message>
+        <source>Syncs automatically. </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync with %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Syncing…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Syncing with %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Synced</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Synced with %1 just now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>Synced with %1 %n min ago.</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Click to sync again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+Click to try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Offline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+Retrying automatically. Click to try now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The database on the server uses a different password or key file. Click to unlock it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Token needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+Click to open the Remote Sync settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1
+Syncing is paused. Click to review.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -10677,6 +14183,18 @@ Example: JBSWY3DPEHPK3PXP</source>
     </message>
     <message>
         <source>Welcome to OpenVireo %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Welcome to OpenVireo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in or create an account</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
