@@ -729,6 +729,7 @@ void MainWindow::setupAccounts()
     m_ui->verticalLayout_5->insertWidget(0, m_startScreen, 1);
     connect(m_startScreen, &AccountStartWidget::finished, this, &MainWindow::finishStartScreen);
     connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
+    connect(m_ui->welcomeWidget, &WelcomeWidget::signInRequested, this, &MainWindow::showStartScreen);
 
     // The account's vaults beside the databases; the Vault Index layout lists them in the header's database picker
     if (!m_vaultLayout) {
@@ -1015,6 +1016,7 @@ void MainWindow::updateAccountActions()
     auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
     const bool locked = signedIn && state == AccountManager::State::Locked;
     m_actionAccountSignIn->setEnabled(!isStartScreenShown());
+    m_ui->welcomeWidget->setSignInLinkVisible(!signedIn);
     m_actionAccountUnlock->setEnabled(locked);
     // Quick Unlock only once the password unlocked the account in this session, as for databases
     m_actionAccountQuickUnlock->setEnabled(locked && account->canQuickUnlock());
