@@ -234,11 +234,12 @@ void TestKdbxImport::testSummaryText()
     s.added = 12;
     s.updated = 3;
     s.unchanged = 40;
+    // The source texts; English singular and plural forms come from keepassxc_en_US.ts
     QCOMPARE(KdbxImport::summaryText("Work", false, s),
-             QString("Imported into \"Work\": 12 new entries, 3 updated, 40 unchanged."));
+             QString("Imported into \"Work\": 12 new entry(s), 3 updated, 40 unchanged."));
     QCOMPARE(KdbxImport::summaryText("Work", false, {}),
              QString("Nothing to import: \"Work\" already has everything in this file."));
     KdbxImport::Summary copies;
     copies.added = 1;
-    QCOMPARE(KdbxImport::summaryText("Work", true, copies), QString("Imported 1 entries into \"Work\" as copies."));
+    QCOMPARE(KdbxImport::summaryText("Work", true, copies), QString("Imported 1 entry(s) into \"Work\" as copies."));
 }
