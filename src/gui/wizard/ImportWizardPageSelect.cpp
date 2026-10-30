@@ -381,8 +381,18 @@ void ImportWizardPageSelect::updateImportChoices()
     }
     m_newVaultRadio->setVisible(signedIn);
     m_vaultOrgChoice->setVisible(signedIn && m_vaultOrgChoice->count() > 1);
-    m_kdbxModes->setVisible(field("ImportType").toInt() == ImportWizard::IMPORT_KEEPASS2
-                            && m_ui->existingDatabaseRadio->isChecked());
+    const bool showModes =
+        field("ImportType").toInt() == ImportWizard::IMPORT_KEEPASS2 && m_ui->existingDatabaseRadio->isChecked();
+    if (m_kdbxModes->isHidden() == showModes) {
+        m_kdbxModes->setVisible(showModes);
+        // The settings card around the choices sizes itself from its contents only when asked to
+        for (auto widget = m_kdbxModes->parentWidget(); widget && widget != this; widget = widget->parentWidget()) {
+            if (widget->layout()) {
+                widget->layout()->invalidate();
+            }
+            widget->updateGeometry();
+        }
+    }
 }
 
 bool ImportWizardPageSelect::importAsCopies() const
