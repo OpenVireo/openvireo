@@ -186,14 +186,14 @@ namespace KdbxImport
     QString summaryText(const QString& into, bool copies, const Summary& s)
     {
         if (copies) {
-            return tr("Imported %n entries into \"%1\" as copies.", nullptr, s.added).arg(into);
+            return tr("Imported %n entry(s) into \"%1\" as copies.", nullptr, s.added).arg(into);
         }
         if (s.added == 0 && s.updated == 0) {
             return tr("Nothing to import: \"%1\" already has everything in this file.").arg(into);
         }
-        auto text = tr("%n new entries", nullptr, s.added) + ", " + tr("%n updated", nullptr, s.updated);
+        auto text = tr("%n new entry(s)", nullptr, s.added) + ", " + tr("%1 updated").arg(s.updated);
         if (s.unchanged > 0) {
-            text += ", " + tr("%n unchanged", nullptr, s.unchanged);
+            text += ", " + tr("%1 unchanged").arg(s.unchanged);
         }
         return tr("Imported into \"%1\": %2.").arg(into, text);
     }
