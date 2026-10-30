@@ -1106,12 +1106,17 @@ void TestGuiVault::testFluentMessageBox()
     QCOMPARE(answer, MessageBox::Cancel);
     QTRY_VERIFY(!m_mainWindow->findChild<ContentDialog*>());
 
+    // The dialog shows a standard button's label without its mnemonic (Qt 6.11 gives "&Yes", for one)
+    auto standardText = [](QMessageBox::StandardButton button) {
+        return QMessageBox().addButton(button)->text().remove('&');
+    };
+
     // Primary and secondary commands answer with their buttons
     QTimer::singleShot(0, this, [&] {
         auto* dialog = m_mainWindow->findChild<ContentDialog*>();
         QVERIFY(dialog);
-        QCOMPARE(dialog->primaryButtonText(), QMessageBox().addButton(QMessageBox::Yes)->text());
-        QCOMPARE(dialog->secondaryButtonText(), QMessageBox().addButton(QMessageBox::No)->text());
+        QCOMPARE(dialog->primaryButtonText(), standardText(QMessageBox::Yes));
+        QCOMPARE(dialog->secondaryButtonText(), standardText(QMessageBox::No));
         emit dialog->secondaryButtonClicked();
         dialog->done(ContentDialog::ResultSecondary);
     });
@@ -1143,7 +1148,7 @@ void TestGuiVault::testFluentMessageBox()
         defaultCommand = dialog->defaultButton();
         QPushButton* ignore = nullptr;
         for (auto* button : dialog->findChildren<QPushButton*>()) {
-            if (button->text() == QMessageBox().addButton(QMessageBox::Ignore)->text()) {
+            if (button->text() == standardText(QMessageBox::Ignore)) {
                 ignore = button;
             }
         }
@@ -1190,7 +1195,7 @@ void TestGuiVault::testFluentMessageBox()
         }
     });
     MessageBox::warning(m_dbWidget, "Warning", "Something happened.");
-    QCOMPARE(primaryText, QMessageBox().addButton(QMessageBox::Ok)->text());
+    QCOMPARE(primaryText, standardText(QMessageBox::Ok));
 }
 
 void TestGuiVault::testPasskeyConfirmationDialog()
