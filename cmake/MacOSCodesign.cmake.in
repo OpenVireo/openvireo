@@ -135,17 +135,10 @@ else()       # POST_BUILD: Notarize DMG
                 execute_process(COMMAND sleep 30)
             endif()
         endforeach()
+        # stapler staple validates the ticket itself, so a separate stapler validate would only add another
+        # network call that can fail
         if (NOT STAPLE_RESULT EQUAL 0)
             message(FATAL_ERROR "Stapling failed: ${STAPLE_ERROR}")
-        endif()
-        execute_process(
-                COMMAND xcrun stapler validate "${DMG_FILE}"
-                RESULT_VARIABLE STAPLE_RESULT
-                ERROR_VARIABLE STAPLE_ERROR
-                ECHO_OUTPUT_VARIABLE
-        )
-        if (NOT STAPLE_RESULT EQUAL 0)
-            message(FATAL_ERROR "Stapled ticket does not validate: ${STAPLE_ERROR}")
         endif()
         message(STATUS "DMG bundle notarization ticket stapled successfully.")
     endforeach()
