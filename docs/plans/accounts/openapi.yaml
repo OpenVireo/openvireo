@@ -870,7 +870,7 @@ components:
     OrgRole: { enum: [owner, admin, member] }
     MemberStatus: { enum: [invited, accepted, confirmed] }
     VaultRole: { enum: [read, write, manage] }
-    Platform: { enum: [qt-linux, qt-macos, qt-windows, web, cli, connect] }
+    Platform: { enum: [qt-linux, qt-macos, qt-windows, web, cli, connect, ios] }
     Kdf:
       type: object
       required: [alg, salt, m, t, p]
