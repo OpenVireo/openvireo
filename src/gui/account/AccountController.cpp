@@ -656,6 +656,32 @@ void AccountController::createVault(const QString& name, const QString& orgId)
                            });
 }
 
+void AccountController::importAsVault(const QSharedPointer<Database>& db, const QString& name, const QString& orgId)
+{
+    QPointer<AccountController> guard(this);
+    m_sharing->importAsVault(
+        db, name, orgId, [guard](const QString& vaultId, const QSharedPointer<Database>& vaultDb, const QString& error) {
+            if (!guard) {
+                return;
+            }
+            emit guard->busyChanged({});
+            if (!error.isEmpty()) {
+                emit guard->message(error, MessageWidget::Error);
+                return;
+            }
+            const auto path = guard->vaultFilePath(vaultId);
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QString saveError;
+            if (!vaultDb->saveAs(path, Database::Atomic, {}, &saveError)) {
+                emit guard->message(saveError, MessageWidget::Error);
+                return;
+            }
+            guard->addVaultTab(vaultId, vaultDb, 1, false);
+            emit guard->message(tr("Imported as the vault \"%1\".").arg(vaultDb->rootGroup()->name()),
+                                MessageWidget::Positive);
+        });
+}
+
 void AccountController::moveToAccount(DatabaseWidget* dbWidget, const QString& name)
 {
     if (!dbWidget || dbWidget->isLocked() || isAccountVault(dbWidget)) {

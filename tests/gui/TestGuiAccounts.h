@@ -58,6 +58,7 @@ private slots:
     void testInvitesPromotesAndRemovesMembers();
     void testQuickUnlocksTheAccount();
     void testLinksToAccountRecovery();
+    void testImportsAKdbxFile();
 
 private:
     void createWindow(const QString& mode);

@@ -22,6 +22,8 @@
 #include <QWizardPage>
 
 class QListWidgetItem;
+class VaultComboBox;
+class VaultRadioButton;
 
 namespace Ui
 {
@@ -45,6 +47,9 @@ public:
     void setSourceStep(bool sourceStep);
     QString sourceName() const;
 
+    bool importAsCopies() const;
+    QString vaultOrgId() const;
+
 signals:
     // A source was double-clicked, which moves on to the next step
     void sourceActivated();
@@ -64,11 +69,20 @@ private:
     void setCredentialState(bool passwordEnabled, bool keyFileEnable = false);
     void setDownloadCommand(bool downloadCommandEnabled);
     void setSyncServer(bool syncServerEnabled);
+    // "New vault in my account", and Merge / Add as copies for a .kdbx going into an existing database
+    void setupImportChoices();
+    void updateImportChoices();
 
     QScopedPointer<Ui::ImportWizardPageSelect> m_ui;
     bool m_vaultLayout = false;
     // The cards below the choice of source in the Vault Index layout
     QWidget* m_details = nullptr;
+    QWidget* m_newVaultRow = nullptr;
+    VaultRadioButton* m_newVaultRadio = nullptr;
+    VaultComboBox* m_vaultOrgChoice = nullptr;
+    QWidget* m_kdbxModes = nullptr;
+    VaultRadioButton* m_mergeRadio = nullptr;
+    VaultRadioButton* m_copiesRadio = nullptr;
 };
 
 #endif

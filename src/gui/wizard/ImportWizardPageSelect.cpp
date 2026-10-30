@@ -20,6 +20,7 @@
 
 #include "ImportWizard.h"
 
+#include "account/AccountManager.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/Icons.h"
@@ -28,7 +29,9 @@
 #include "gui/remote/RemoteHandler.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncServerClient.h"
+#include "gui/account/AccountController.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -238,6 +241,11 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
          tr("Sync Server"),
          tr("OpenVireo Sync Server (.kdbx)"),
          ImportWizard::IMPORT_SYNC_SERVER},
+        {"database-merge",
+         tr("KeePass 2 Database (.kdbx)"),
+         tr("KeePass 2"),
+         tr("KeePass or OpenVireo database (.kdbx)"),
+         ImportWizard::IMPORT_KEEPASS2},
         {"object-locked",
          tr("KeePass 1 Database (.kdb)"),
          tr("KeePass 1"),
@@ -291,6 +299,110 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     if (m_vaultLayout) {
         setupVaultLayout();
     }
+    setupImportChoices();
+    connect(m_ui->existingDatabaseRadio, &QRadioButton::toggled, this, &ImportWizardPageSelect::updateImportChoices);
+}
+
+void ImportWizardPageSelect::setupImportChoices()
+{
+    // Beside the other destinations, so the radio buttons stay exclusive: they share a parent
+    auto parent = m_ui->newDatabaseRadio->parentWidget();
+    auto layout = qobject_cast<QBoxLayout*>(parent->layout());
+    Q_ASSERT(layout);
+    auto rowOf = [layout](QWidget* widget) {
+        for (int i = 0; i < layout->count(); ++i) {
+            auto item = layout->itemAt(i);
+            if (item->widget() == widget || (item->layout() && item->layout()->indexOf(widget) >= 0)) {
+                return i;
+            }
+        }
+        return layout->count() - 1;
+    };
+
+    // Merge or copies, for a .kdbx going into an existing database; a parent of their own keeps them a pair
+    m_kdbxModes = new QWidget(parent);
+    m_kdbxModes->setObjectName("importKdbxModes");
+    auto modes = new QVBoxLayout(m_kdbxModes);
+    modes->setContentsMargins(28, 0, 0, 0);
+    modes->setSpacing(6);
+    m_mergeRadio = new VaultRadioButton(tr("Merge, matching entries by their ID"), m_kdbxModes);
+    m_mergeRadio->setObjectName("importMergeRadio");
+    m_mergeRadio->setToolTip(tr("A newer version of an entry replaces the older one, which goes into its history. "
+                                "Nothing is deleted, so importing the same file again changes nothing."));
+    m_mergeRadio->setChecked(true);
+    m_copiesRadio = new VaultRadioButton(tr("Add as copies under the selected group"), m_kdbxModes);
+    m_copiesRadio->setObjectName("importCopiesRadio");
+    m_copiesRadio->setToolTip(tr("The file's groups and entries are added as new copies. Nothing is matched, so "
+                                 "importing again adds another copy."));
+    modes->addWidget(m_mergeRadio);
+    modes->addWidget(m_copiesRadio);
+    layout->insertWidget(rowOf(m_ui->existingDatabaseRadio) + 1, m_kdbxModes);
+
+    m_newVaultRadio = new VaultRadioButton(tr("New vault in my account"), parent);
+    m_newVaultRadio->setObjectName("newVaultRadio");
+    m_vaultOrgChoice = new VaultComboBox(parent);
+    m_vaultOrgChoice->setObjectName("newVaultOrgChoice");
+    m_vaultOrgChoice->setEnabled(false);
+    auto vaultRow = new QHBoxLayout();
+    vaultRow->setSpacing(12);
+    vaultRow->addWidget(m_newVaultRadio);
+    vaultRow->addWidget(m_vaultOrgChoice, 1);
+    layout->insertLayout(rowOf(m_ui->newDatabaseRadio) + 1, vaultRow);
+    connect(m_newVaultRadio, &QRadioButton::toggled, m_vaultOrgChoice, &QWidget::setEnabled);
+
+    updateImportChoices();
+}
+
+void ImportWizardPageSelect::updateImportChoices()
+{
+    if (!m_newVaultRadio) {
+        return;
+    }
+    auto controller = AccountController::instance();
+    auto account = controller ? controller->account() : nullptr;
+    const bool signedIn =
+        account && account->state() == AccountManager::State::Unlocked && !account->isServiceAccount();
+
+    // Owners and admins can also create a vault in their org
+    const auto selected = m_vaultOrgChoice->currentData().toString();
+    m_vaultOrgChoice->clear();
+    m_vaultOrgChoice->addItem(tr("Personal vault"), QString());
+    if (signedIn) {
+        for (const auto& org : account->orgs()) {
+            if (org.canAdminister()) {
+                m_vaultOrgChoice->addItem(org.name, org.id);
+            }
+        }
+    }
+    m_vaultOrgChoice->setCurrentIndex(qMax(0, m_vaultOrgChoice->findData(selected)));
+
+    if (!signedIn && m_newVaultRadio->isChecked()) {
+        m_ui->newDatabaseRadio->setChecked(true);
+    }
+    m_newVaultRadio->setVisible(signedIn);
+    m_vaultOrgChoice->setVisible(signedIn && m_vaultOrgChoice->count() > 1);
+    const bool showModes =
+        field("ImportType").toInt() == ImportWizard::IMPORT_KEEPASS2 && m_ui->existingDatabaseRadio->isChecked();
+    if (m_kdbxModes->isHidden() == showModes) {
+        m_kdbxModes->setVisible(showModes);
+        // The settings card around the choices sizes itself from its contents only when asked to
+        for (auto widget = m_kdbxModes->parentWidget(); widget && widget != this; widget = widget->parentWidget()) {
+            if (widget->layout()) {
+                widget->layout()->invalidate();
+            }
+            widget->updateGeometry();
+        }
+    }
+}
+
+bool ImportWizardPageSelect::importAsCopies() const
+{
+    return m_copiesRadio && m_copiesRadio->isChecked() && field("ImportType").toInt() == ImportWizard::IMPORT_KEEPASS2;
+}
+
+QString ImportWizardPageSelect::vaultOrgId() const
+{
+    return m_vaultOrgChoice ? m_vaultOrgChoice->currentData().toString() : QString();
 }
 
 // In the Vault Index layout, the page is the content of a modal, which names its steps. The sources show as tiles,
@@ -409,6 +521,7 @@ ImportWizardPageSelect::~ImportWizardPageSelect()
 void ImportWizardPageSelect::initializePage()
 {
     setField("ImportType", m_ui->importTypeList->currentItem()->data(Qt::UserRole).toInt());
+    updateImportChoices();
     if (!m_vaultLayout) {
         adjustSize();
     }
@@ -425,6 +538,9 @@ bool ImportWizardPageSelect::validatePage()
         }
         setField("ImportIntoType", ImportWizard::EXISTING_DATABASE);
         setField("ImportInto", m_ui->existingDatabaseChoice->currentData());
+    } else if (m_newVaultRadio && m_newVaultRadio->isChecked()) {
+        setField("ImportIntoType", ImportWizard::NEW_VAULT);
+        setField("ImportInto", {});
     } else if (m_ui->temporaryDatabaseRadio->isChecked()) {
         setField("ImportIntoType", ImportWizard::TEMPORARY_DATABASE);
         setField("ImportInto", {});
@@ -465,6 +581,7 @@ void ImportWizardPageSelect::itemSelected(QListWidgetItem* current, QListWidgetI
     auto type = current->data(Qt::UserRole).toInt();
     setField("ImportType", type);
     setSyncServer(false);
+    updateImportChoices();
     switch (type) {
     // Unencrypted types
     case ImportWizard::IMPORT_CSV:
@@ -481,6 +598,7 @@ void ImportWizardPageSelect::itemSelected(QListWidgetItem* current, QListWidgetI
         break;
     // Password and/or Key File may be required
     case ImportWizard::IMPORT_KEEPASS1:
+    case ImportWizard::IMPORT_KEEPASS2:
         setCredentialState(true, true);
         setDownloadCommand(false);
         break;
@@ -730,6 +848,8 @@ QString ImportWizardPageSelect::importFileFilter()
         return QString("%1 (*.opvault)").arg(tr("1Password Vault"));
     case ImportWizard::IMPORT_KEEPASS1:
         return QString("%1 (*.kdb)").arg(tr("KeePass1 Database"));
+    case ImportWizard::IMPORT_KEEPASS2:
+        return QString("%1 (*.kdbx);;%2 (*)").arg(tr("KeePass 2 Database"), tr("All files"));
     default:
         return {};
     }

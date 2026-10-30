@@ -117,6 +117,9 @@ public:
     // Create a vault (key version 1, sealed to this account) from a copy of `source` re-keyed to a fresh
     // vault key, upload it and hand back the vault database. `source` itself isn't changed.
     void moveToAccount(const QSharedPointer<Database>& source, const QString& name, VaultCallback done);
+    // Create a vault from `db`, a database made by an import, which is re-keyed in place (no copy): a personal
+    // vault, or one of the org `orgId`. Its sync server remotes are replaced by the account's.
+    void importAsVault(const QSharedPointer<Database>& db, const QString& name, const QString& orgId, VaultCallback done);
     // Create an empty vault and upload it: a personal one, or one of the org `orgId` (owners and admins only)
     void createVault(const QString& name, VaultCallback done);
     void createVault(const QString& name, const QString& orgId, VaultCallback done);
