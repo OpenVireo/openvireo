@@ -594,3 +594,43 @@ change reaches the sync server with the next token (at most `exp`, 10 minutes).
 it, both from the auth site (`/subscription/pricing`, `/subscription/orgs/{org}` for an org's
 owners). Stripe's webhook keeps the auth server's copy; a subscription is in force while Stripe
 says `active`, `trialing` or `past_due`. Deleting an org cancels its subscription.
+
+## 20. Offline cache
+
+A client may keep what it needs to unlock and open vaults while the servers can't be reached. It
+caches only what the server already hands out under the account's keys, and nothing in clear:
+
+- the discovery document (§10) and the server URLs;
+- the **wrapped keyset and its `kdf`** as `GET /me` returned them (§3, §5);
+- the **vault list as `GET /vaults` returned it**: encrypted names and sealed vault keys (§6, §7);
+- per vault, the server's encrypted `.kdbx` at the last sync and local edits not yet uploaded, as a
+  `.kdbx` encrypted with the vault key;
+- optionally the org list from `GET /me` (ids, names, roles, plan), which is not secret.
+
+The refresh token stays in the keychain (§9) and the Secret Key stays where §2 puts it; neither is
+written into the cache.
+
+**Writing.** After every unlock and every `GET /me` / `GET /vaults` that succeeded, the client
+replaces the cached copy, so a password change, email change or key rotation reaches the cache with
+the next online call.
+
+**Falling back.** Only when the server is **unreachable**: no HTTP response, or 502/503/504. Any
+other answer (401, 403, `invalid_*`, other 4xx) is acted on as without a cache: a client never
+unlocks from the cache because the server refused. A wrong password fails as online, because the
+cached keyset doesn't unwrap. While working from the cache the client says it is offline, keeps
+edits locally, and turns off actions that need the server (new vaults, sharing, orgs, invitations).
+
+**Reconnecting.** The client retries in the background. Once `GET /me` and `GET /vaults` succeed
+again it refreshes the cache, drops vaults that are no longer listed (with their local copies), and
+uploads local edits.
+
+**Wiping.** Ending the session (sign-out, revoked or reused refresh token, §9) deletes the cache.
+Locking keeps it. Clients offer a setting to not keep a cache (Qt: "Allow unlocking without a
+connection", on by default); turning it off deletes the cache.
+
+**Trade-offs.** These are the usual costs of offline unlock; 1Password's model is the same, and
+Bitwarden's is the same except that its disk copy alone allows password guessing.
+- Guessing the password offline needs the cache **and** the Secret Key, which together derive the
+  AUK (§3). With both, guesses are slowed only by the KDF, not by the server's rate limits.
+- A revoked device (§11), or one whose user changed the password on another device, keeps working
+  from its cache, with the old password, until it reconnects.
