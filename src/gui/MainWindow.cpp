@@ -55,6 +55,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/account/AccountController.h"
+#include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareVaultDialog.h"
@@ -727,6 +728,17 @@ void MainWindow::setupAccounts()
     // It fills the page and centers its own column, rather than taking only its preferred width between the
     // welcome screen's spacers
     m_ui->verticalLayout_5->insertWidget(0, m_startScreen, 1);
+    // The lock screen of a signed-in account takes the same place while the account is locked
+    m_lockScreen = new AccountLockWidget(m_ui->welcomeWidget->parentWidget());
+    m_lockScreen->setObjectName("accountLockScreen");
+    m_lockScreen->setController(m_accountController);
+    m_lockScreen->setVisible(false);
+    m_ui->verticalLayout_5->insertWidget(1, m_lockScreen, 1);
+    connect(m_lockScreen, &AccountLockWidget::dismissRequested, this, [this] {
+        m_lockScreenDismissed = true;
+        updateHomeScreen();
+        switchToDatabases();
+    });
     connect(m_startScreen, &AccountStartWidget::finished, this, &MainWindow::finishStartScreen);
     connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
     connect(m_ui->welcomeWidget, &WelcomeWidget::signInRequested, this, &MainWindow::showStartScreen);
@@ -753,8 +765,11 @@ void MainWindow::setupAccounts()
     m_actionAccountSignIn =
         m_accountMenu->addAction(tr("Sign In or Create Account…"), this, &MainWindow::showStartScreen);
     m_actionAccountUnlock = m_accountMenu->addAction(tr("&Unlock Account…"), this, &MainWindow::unlockAccount);
-    m_actionAccountQuickUnlock = m_accountMenu->addAction(
-        tr("&Quick Unlock Account"), m_accountController.data(), &AccountController::quickUnlockAccount);
+    m_actionAccountQuickUnlock = m_accountMenu->addAction(tr("&Quick Unlock Account"), this, [this] {
+        // On the lock screen, so the prompt's outcome has somewhere to show
+        showAccountLockScreen();
+        m_accountController->quickUnlockAccount();
+    });
     m_actionAccountQuickUnlock->setToolTip(tr("Unlock with Touch ID, Windows Hello or your system password"));
     m_actionAccountLock =
         m_accountMenu->addAction(tr("&Lock Account"), m_accountController.data(), &AccountController::lockAccount);
@@ -799,12 +814,45 @@ void MainWindow::setupAccounts()
     if (!m_accountPane) {
         // Without the sidebar's unlock form, failed unlocks show above the window
         connect(account, &AccountManager::error, this, [this](const QString& message) {
-            if (m_accountController->account()->state() == AccountManager::State::Locked) {
+            // The lock screen shows unlock errors on its card
+            if (m_accountController->account()->state() == AccountManager::State::Locked
+                && !isAccountLockScreenShown()) {
                 displayGlobalMessage(message, MessageWidget::Error);
             }
         });
     }
     connect(account, &AccountManager::stateChanged, this, &MainWindow::updateAccountActions);
+    connect(account, &AccountManager::stateChanged, this, &MainWindow::handleAccountStateChanged);
+    connect(account, &AccountManager::offlineChanged, this, &MainWindow::updateAccountActions);
+    connect(account, &AccountManager::offlineChanged, this, [this](bool offline) {
+        // One pinned entry while offline, gone once the servers answer again
+        if (m_offlineNotice) {
+            m_notifications->dismiss(m_offlineNotice);
+            m_offlineNotice = 0;
+        }
+        if (offline) {
+            NotificationCenter::Notification notice;
+            notice.type = MessageWidget::Warning;
+            notice.title = tr("Working offline");
+            notice.text = tr("Your account unlocked with this device's copy. Changes are saved here and sync when "
+                             "OpenVireo can reach %1 again.")
+                              .arg(QUrl(m_accountController->account()->server().issuer).host());
+            notice.source = QStringLiteral("account-offline");
+            notice.pinned = true;
+            m_offlineNotice = m_notifications->add(notice);
+        }
+    });
+    connect(m_accountController, &AccountController::unlockScreenRequested, this, &MainWindow::showAccountLockScreen);
+    connect(m_accountController, &AccountController::modeChanged, this, &MainWindow::updateHomeScreen);
+    connect(m_ui->tabWidget, &DatabaseTabWidget::activeDatabaseChanged, this, &MainWindow::updateHomeScreen);
+    connect(m_ui->stackedWidget, &QStackedWidget::currentChanged, this, &MainWindow::updateHomeScreen);
+    connect(m_ui->tabWidget, &DatabaseTabWidget::unlockRequestedWithoutDatabase, this,
+            &MainWindow::handleUnlockWithoutDatabase);
+    if (m_vaultHeader) {
+        connect(m_vaultHeader->databasePicker(), &VaultDatabasePicker::databaseChosen, this, [this] {
+            switchToDatabases();
+        });
+    }
     connect(account, &AccountManager::vaultsChanged, this, &MainWindow::updateAccountActions);
     connect(m_accountController, &AccountController::modeChanged, this, &MainWindow::updateAccountActions);
     connect(m_ui->tabWidget, &DatabaseTabWidget::activeDatabaseChanged, this, &MainWindow::updateAccountActions);
@@ -829,9 +877,11 @@ void MainWindow::setupAccounts()
 
     // An account session from the last run comes back locked; nothing goes out on the network before unlocking
     m_accountController->restore();
+    m_lastAccountState = static_cast<int>(account->state());
     if (m_accountController->needsStartScreen()) {
         showStartScreen();
     }
+    updateHomeScreen();
     updateAccountActions();
 }
 
@@ -855,6 +905,87 @@ bool MainWindow::isStartScreenShown() const
     return m_startScreen && !m_startScreen->isHidden();
 }
 
+AccountLockWidget* MainWindow::accountLockScreen() const
+{
+    return m_lockScreen;
+}
+
+bool MainWindow::isAccountLockScreenShown() const
+{
+    return m_lockScreen && !m_lockScreen->isHidden() && m_ui->stackedWidget->currentIndex() == WelcomeScreen;
+}
+
+bool MainWindow::wantsAccountLockScreen() const
+{
+    if (!m_lockScreen || !m_accountController || isStartScreenShown() || m_lockScreenDismissed
+        || m_accountController->mode() != AccountController::Mode::Account) {
+        return false;
+    }
+    auto* account = m_accountController->account();
+    const auto state = account->state();
+    return !account->isServiceAccount()
+           && (state == AccountManager::State::Locked || state == AccountManager::State::SigningIn);
+}
+
+void MainWindow::updateHomeScreen()
+{
+    if (!m_lockScreen) {
+        return;
+    }
+    // One of three in the welcome screen's place: the start screen, the account's lock screen, or the welcome
+    // screen itself
+    const bool lock = wantsAccountLockScreen();
+    m_lockScreen->setDatabasesOpen(m_ui->tabWidget->count() > 0);
+    m_lockScreen->setVisible(lock);
+    m_ui->welcomeWidget->setVisible(!lock && !isStartScreenShown());
+    if (m_vaultHeader) {
+        m_vaultHeader->databasePicker()->setLockScreenShown(lock
+                                                            && m_ui->stackedWidget->currentIndex() == WelcomeScreen);
+    }
+}
+
+void MainWindow::showAccountLockScreen()
+{
+    m_lockScreenDismissed = false;
+    if (!wantsAccountLockScreen()) {
+        return;
+    }
+    closeVaultModals();
+    m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
+    statusBar()->setAutoFillBackground(false);
+    updateHomeScreen();
+    m_lockScreen->reset();
+    updateAccountActions();
+}
+
+void MainWindow::handleAccountStateChanged()
+{
+    const auto state = m_accountController->account()->state();
+    const bool locked = state == AccountManager::State::Locked
+                        && m_lastAccountState == static_cast<int>(AccountManager::State::Unlocked);
+    m_lastAccountState = static_cast<int>(state);
+    if (state == AccountManager::State::Unlocked) {
+        m_lockScreenDismissed = false;
+    }
+    if (locked) {
+        // Locking a vault locks the account: its lock screen comes to the front, other databases stay behind it
+        showAccountLockScreen();
+    } else {
+        updateHomeScreen();
+    }
+}
+
+void MainWindow::handleUnlockWithoutDatabase()
+{
+    // The browser extension or Auto-Type wants entries, and only the locked account could have them
+    if (!m_accountController || m_accountController->mode() != AccountController::Mode::Account
+        || m_accountController->account()->state() != AccountManager::State::Locked) {
+        return;
+    }
+    bringToFront();
+    showAccountLockScreen();
+}
+
 void MainWindow::showStartScreen()
 {
     if (!m_startScreen) {
@@ -862,8 +993,8 @@ void MainWindow::showStartScreen()
     }
     closeVaultModals();
     m_startScreen->reset();
-    m_ui->welcomeWidget->setVisible(false);
     m_startScreen->setVisible(true);
+    updateHomeScreen();
     m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
     statusBar()->setAutoFillBackground(false);
     updateAccountActions();
@@ -872,7 +1003,7 @@ void MainWindow::showStartScreen()
 void MainWindow::finishStartScreen()
 {
     m_startScreen->setVisible(false);
-    m_ui->welcomeWidget->setVisible(true);
+    updateHomeScreen();
     m_ui->welcomeWidget->refreshLastDatabases();
     switchToDatabases();
     updateAccountActions();
@@ -1022,30 +1153,31 @@ void MainWindow::updateAccountActions()
     m_actionAccountQuickUnlock->setEnabled(locked && account->canQuickUnlock());
     m_actionAccountLock->setEnabled(unlocked);
     m_actionAccountSignOut->setEnabled(signedIn);
-    m_actionAccountManage->setEnabled(signedIn && !account->isServiceAccount()
+    // Working from the offline cache: what needs the servers waits until they answer again (SPEC §20)
+    const bool online = !account->isOffline();
+    const auto offlineTip = online ? QString() : tr("Not available while offline");
+    m_actionAccountManage->setEnabled(signedIn && online && !account->isServiceAccount()
                                       && account->server().accountSettingsUrl().isValid());
-    m_actionAccountNewVault->setEnabled(unlocked);
-    m_actionAccountShare->setEnabled(unlocked);
-    m_actionAccountServiceAccounts->setEnabled(unlocked);
-    m_actionAccountAcceptInvitation->setEnabled(unlocked);
-    m_actionAccountMove->setEnabled(unlocked && dbWidget && !dbWidget->isLocked()
+    m_actionAccountNewVault->setEnabled(unlocked && online);
+    m_actionAccountShare->setEnabled(unlocked && online);
+    m_actionAccountServiceAccounts->setEnabled(unlocked && online);
+    m_actionAccountAcceptInvitation->setEnabled(unlocked && online);
+    m_actionAccountMove->setEnabled(unlocked && online && dbWidget && !dbWidget->isLocked()
                                     && !m_accountController->isAccountVault(dbWidget));
+    for (auto* action : {m_actionAccountManage.data(),
+                         m_actionAccountNewVault.data(),
+                         m_actionAccountShare.data(),
+                         m_actionAccountServiceAccounts.data(),
+                         m_actionAccountAcceptInvitation.data(),
+                         m_actionAccountMove.data()}) {
+        action->setToolTip(offlineTip);
+    }
     updateMenuActionState();
 }
 
 void MainWindow::unlockAccount()
 {
-    auto* account = m_accountController->account();
-    bool ok = false;
-    const auto password = QInputDialog::getText(this,
-                                                tr("Unlock account"),
-                                                tr("Master password for %1:").arg(account->email()),
-                                                QLineEdit::Password,
-                                                {},
-                                                &ok);
-    if (ok && !password.isEmpty()) {
-        m_accountController->unlockAccount(password);
-    }
+    showAccountLockScreen();
 }
 
 MainWindow::~MainWindow()
@@ -1071,6 +1203,10 @@ void MainWindow::restoreConfigState()
         if (!lastActiveFile.isEmpty() && !AccountController::isAccountVaultPath(lastActiveFile)) {
             openDatabase(lastActiveFile);
         }
+    }
+    // A locked account's lock screen stays in front of the databases opened again
+    if (wantsAccountLockScreen()) {
+        showAccountLockScreen();
     }
 }
 

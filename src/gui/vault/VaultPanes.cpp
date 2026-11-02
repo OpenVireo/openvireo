@@ -656,8 +656,26 @@ void VaultDatabasePicker::setDatabaseWidget(DatabaseWidget* dbWidget)
     refresh();
 }
 
+void VaultDatabasePicker::setLockScreenShown(bool shown)
+{
+    if (m_lockScreenShown != shown) {
+        m_lockScreenShown = shown;
+        refresh();
+    }
+}
+
 void VaultDatabasePicker::refresh()
 {
+    if (m_lockScreenShown && m_accountController) {
+        // The account's lock screen is in front, even with other databases open behind it
+        setText(tr("OpenVireo account"));
+        m_detail = tr("Locked");
+        m_locked = true;
+        setToolTip(m_accountController->account()->email());
+        updateGeometry();
+        update();
+        return;
+    }
     if (!m_dbWidget || !m_dbWidget->database()) {
         // Shown while signed in to a locked account, to reach its vaults and the open commands
         setText(tr("No database open"));
@@ -711,7 +729,7 @@ void VaultDatabasePicker::showDatabaseMenu()
         }
         auto* action = menu.addAction(Tools::escapeAccelerators(m_tabs->tabName(i)));
         action->setCheckable(true);
-        action->setChecked(i == m_tabs->currentIndex());
+        action->setChecked(!m_lockScreenShown && i == m_tabs->currentIndex());
         if (dbWidget && dbWidget->isLocked()) {
             action->setIcon(icons()->icon("database-lock"));
         }
@@ -719,6 +737,7 @@ void VaultDatabasePicker::showDatabaseMenu()
         connect(action, &QAction::triggered, this, [this, i] {
             if (m_tabs) {
                 m_tabs->setCurrentIndex(i);
+                emit databaseChosen();
             }
         });
     }
@@ -772,8 +791,16 @@ void VaultDatabasePicker::addAccountVaults(QMenu* menu)
     menu->addSeparator();
     if (state != AccountManager::State::Unlocked) {
         addHeading(tr("Account vaults"));
-        auto* locked = menu->addAction(icons()->icon("database-lock"), tr("Unlock your account to open its vaults"));
-        locked->setEnabled(false);
+        auto* locked = menu->addAction(icons()->icon("database-lock"), tr("Unlock your account…"));
+        locked->setObjectName("pickerUnlockAccount");
+        locked->setCheckable(true);
+        locked->setChecked(m_lockScreenShown);
+        locked->setToolTip(tr("Unlock your account to open its vaults"));
+        connect(locked, &QAction::triggered, this, [this] {
+            if (m_accountController) {
+                m_accountController->requestUnlockScreen();
+            }
+        });
         return;
     }
 
@@ -909,6 +936,7 @@ void VaultAccountButton::setAccountController(AccountController* controller)
         auto* account = m_controller->account();
         connect(account, &AccountManager::stateChanged, this, &VaultAccountButton::refresh);
         connect(account, &AccountManager::emailChanged, this, &VaultAccountButton::refresh);
+        connect(account, &AccountManager::offlineChanged, this, &VaultAccountButton::refresh);
         connect(m_controller, &AccountController::modeChanged, this, &VaultAccountButton::refresh);
     }
     refresh();
@@ -932,7 +960,10 @@ void VaultAccountButton::refresh()
     const auto state = account->state();
     setVisible(m_controller->mode() == AccountController::Mode::Account && state != AccountManager::State::SignedOut);
     m_locked = state != AccountManager::State::Unlocked;
-    setToolTip(QStringLiteral("%1\n%2").arg(account->email(), m_locked ? tr("Account locked") : tr("Account unlocked")));
+    m_offline = !m_locked && account->isOffline();
+    const auto status = m_locked ? tr("Account locked") : m_offline ? tr("Offline: changes sync when back online")
+                                                                    : tr("Account unlocked");
+    setToolTip(QStringLiteral("%1\n%2").arg(account->email(), status));
     update();
 }
 
@@ -949,7 +980,7 @@ void VaultAccountButton::showAccountMenu()
     auto font = email->font();
     font.setBold(true);
     email->setFont(font);
-    menu.addAction(m_locked ? tr("Locked") : tr("Unlocked"))->setEnabled(false);
+    menu.addAction(m_locked ? tr("Locked") : m_offline ? tr("Unlocked, offline") : tr("Unlocked"))->setEnabled(false);
     menu.addSeparator();
     // Only what can be done now: unlock while locked, lock and the org commands while unlocked
     for (const auto& action : m_actions) {
@@ -1028,6 +1059,14 @@ void VaultAccountButton::paintEvent(QPaintEvent* event)
         painter.setFont(glyphFont);
         painter.setPen(p.caution);
         painter.drawText(badge, Qt::AlignCenter, Typography::Icons::Lock);
+    } else if (m_offline) {
+        // A caution dot while working from the offline cache
+        const QRectF badge(r.right() - 11, r.bottom() - 11, 10, 10);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(p.canvas);
+        painter.drawEllipse(badge);
+        painter.setBrush(p.caution);
+        painter.drawEllipse(badge.adjusted(2, 2, -2, -2));
     }
 }
 

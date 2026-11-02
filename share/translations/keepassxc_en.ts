@@ -257,6 +257,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>&quot;%1&quot; hasn&apos;t been downloaded to this device yet. It opens once OpenVireo is back online.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Downloading &quot;%1&quot;…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -290,6 +294,69 @@
     </message>
     <message>
         <source>&quot;%1&quot; is now a vault of your account. The original file %2 wasn&apos;t changed; you can delete it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AccountLockWidget</name>
+    <message>
+        <source>Your account is locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>or use your master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocking…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock with Touch ID, Windows Hello or your system password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forgot your password?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Go to open databases</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open a local database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign out of %1?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This device forgets the account&apos;s session and offline copy. Your vaults stay safe on the server; signing in again downloads them.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -364,6 +431,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Can&apos;t reach %1, and this device hasn&apos;t kept a copy to unlock offline yet. Check your connection and try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can&apos;t reach %1. Check your connection and try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Your session was ended because its sign-in token was used twice. Sign in again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -381,6 +456,10 @@
     </message>
     <message>
         <source>The service account&apos;s keys could not be decrypted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your account&apos;s keys changed on another device. Unlock it again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -631,6 +710,10 @@
     </message>
     <message>
         <source>Unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocked, offline</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1363,6 +1446,14 @@
     </message>
     <message>
         <source>Hide notes in the entry preview panel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keeps your account&apos;s encrypted keys on this device, so it unlocks with your master password and Secret Key while the servers can&apos;t be reached</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Allow unlocking your OpenVireo account without a connection</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -7696,6 +7787,10 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Not available while offline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Tags</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7763,6 +7858,14 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Working offline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your account unlocked with this device&apos;s copy. Changes are saved here and sync when OpenVireo can reach %1 again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Select a vault of your account to share.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7818,14 +7921,6 @@ Are you sure you want to continue with this file?</source>
         <source>A copy of this database becomes a vault of your account, encrypted with a new vault key instead of its master password, and syncs with your account from now on. The file itself isn&apos;t changed.
 
 Name of the vault:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Unlock account</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Master password for %1:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -11334,6 +11429,14 @@ This option is deprecated, use --set-key-file instead.</source>
         <source>Read only</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Unlock with Touch ID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock with Windows Hello</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QtIOCompressor</name>
@@ -13549,6 +13652,10 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Offline: changes sync when back online</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Account unlocked</source>
         <translation type="unfinished"></translation>
     </message>
@@ -13558,6 +13665,10 @@ Example: JBSWY3DPEHPK3PXP</source>
     </message>
     <message>
         <source>Unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlocked, offline</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -13617,6 +13728,10 @@ Example: JBSWY3DPEHPK3PXP</source>
         <source>Locked</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message numerus="yes">
         <source>%n entries</source>
         <translation type="unfinished">
@@ -13638,6 +13753,10 @@ Example: JBSWY3DPEHPK3PXP</source>
     </message>
     <message>
         <source>Account vaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock your account…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
