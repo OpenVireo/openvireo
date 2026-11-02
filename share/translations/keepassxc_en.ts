@@ -7787,6 +7787,10 @@ Are you sure you want to continue with this file?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>OpenVireo can&apos;t reach %1, so your account works from this device&apos;s copy. Changes are saved here and sync once it can reach the server again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Not available while offline</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7859,10 +7863,6 @@ Are you sure you want to continue with this file?</source>
     </message>
     <message>
         <source>Working offline</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Your account unlocked with this device&apos;s copy. Changes are saved here and sync when OpenVireo can reach %1 again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
