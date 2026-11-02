@@ -171,6 +171,7 @@ set(gui_SOURCES
         gui/entry/EntryView.cpp
         gui/entry/EntryListItemDelegate.cpp
         gui/account/AccountController.cpp
+        gui/account/AccountLockWidget.cpp
         gui/account/AccountStartWidget.cpp
         gui/account/EmergencyKit.cpp
         gui/account/ServiceAccountsDialog.cpp

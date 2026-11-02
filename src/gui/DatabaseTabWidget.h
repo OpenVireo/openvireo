@@ -97,6 +97,8 @@ public slots:
     void performBrowserUnlock();
 
 signals:
+    // The browser extension or global Auto-Type asked for an unlock, but no open database is locked
+    void unlockRequestedWithoutDatabase();
     void databaseOpened(DatabaseWidget* dbWidget);
     void databaseClosed(const QString& filePath);
     void databaseUnlocked(DatabaseWidget* dbWidget);

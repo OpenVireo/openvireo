@@ -118,6 +118,7 @@ public slots:
     // Open (or show) a vault in a tab, downloading it the first time
     void openVault(const QString& vaultId, bool inBackground = false);
     void openAllVaults();
+    void requestUnlockScreen();
     // Create an empty vault and open it: a personal one, or one of the org `orgId`
     void createVault(const QString& name, const QString& orgId = {});
     // Join an org from the invitation link or code; an owner or admin confirms the membership afterwards
@@ -131,6 +132,8 @@ signals:
     void modeChanged(AccountController::Mode mode);
     // Signed out, or the session ended on the server: show the start screen
     void startScreenRequested();
+    // Show the account's lock screen, e.g. from the database picker's locked vaults
+    void unlockScreenRequested();
     void vaultOpened(const QString& vaultId, DatabaseWidget* dbWidget);
     void moveFinished(bool ok, const QString& error);
     void message(const QString& text, MessageWidget::MessageType type);
@@ -154,6 +157,8 @@ private:
     Mode m_mode = Mode::Unset;
     bool m_openOnUnlock = false;
     bool m_locking = false;
+    // The vault that was the current tab when the account locked; it is current again after unlocking
+    QString m_lastActiveVault;
     QHash<QString, QPointer<DatabaseWidget>> m_vaultWidgets;
     // The key version each open vault is under
     QHash<QString, int> m_vaultVersions;

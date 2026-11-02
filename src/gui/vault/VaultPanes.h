@@ -192,6 +192,14 @@ public:
     void setAccountController(AccountController* controller);
     // Vault commands listed under the account's vaults (New Vault, Share Vault, ...)
     void setAccountActions(const QList<QAction*>& actions);
+    // The account's lock screen is shown in place of the open databases: the picker names the account
+    void setLockScreenShown(bool shown);
+
+signals:
+    // A database was picked from the menu, also the one already current: show the databases
+    void databaseChosen();
+
+public:
 
     QSize sizeHint() const override;
     void onThemeUpdated() override;
@@ -215,6 +223,7 @@ private:
     QList<QPointer<QAction>> m_accountActions;
     QString m_detail;
     bool m_locked = false;
+    bool m_lockScreenShown = false;
     bool m_hovered = false;
     bool m_menuOpen = false;
 };
@@ -251,6 +260,7 @@ private:
     QPointer<AccountController> m_controller;
     QList<QPointer<QAction>> m_actions;
     bool m_locked = false;
+    bool m_offline = false;
     bool m_hovered = false;
     bool m_menuOpen = false;
 };

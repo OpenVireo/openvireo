@@ -21,6 +21,7 @@
 #include "../util/TemporaryFile.h"
 
 #include "account/AccountManager.h"
+#include "account/AccountOfflineCache.h"
 #include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
 #include "account/VaultSharing.h"
@@ -37,6 +38,7 @@
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/account/AccountController.h"
+#include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKit.h"
 #include "gui/account/ServiceAccountsDialog.h"
@@ -46,8 +48,10 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "gui/notifications/NotificationCenter.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/wizard/ImportWizard.h"
 #include "keys/PasswordKey.h"
 #include "quickunlock/QuickUnlockInterface.h"
@@ -63,6 +67,7 @@
 #include <QListWidget>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMenu>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QStackedWidget>
@@ -1172,6 +1177,11 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     QTRY_COMPARE(tabs->count(), 0);
     QVERIFY(account->canQuickUnlock());
     QVERIFY(!quickButton->isHidden());
+    // The lock screen offers it first, and doesn't prompt until asked
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    auto* lockScreen = m_mainWindow->accountLockScreen();
+    QVERIFY(!child<QPushButton>(lockScreen, "accountLockQuickUnlock")->isHidden());
+    QCOMPARE(quickUnlock.prompts, 0);
     QVERIFY(!child<QWidget>(pane, "accountVaultsPassword")->isHidden());
 
     // Cancelling the prompt leaves the account locked and says nothing
@@ -1383,4 +1393,246 @@ void TestGuiAccounts::testImportsAKdbxFile()
     // The file is unchanged
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), originalBytes);
+}
+
+namespace
+{
+    QLineEdit* lockPassword(MainWindow* window)
+    {
+        return child<QLineEdit>(window->accountLockScreen(), "accountLockPassword");
+    }
+
+    void clickUnlock(MainWindow* window)
+    {
+        QTest::mouseClick(child<QPushButton>(window->accountLockScreen(), "accountLockUnlock"), Qt::LeftButton);
+    }
+
+    bool hasNotification(MainWindow* window, const QString& text)
+    {
+        for (const auto& notification : window->notificationCenter()->notifications()) {
+            if (notification.text.contains(text) || notification.title.contains(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    QAction* accountAction(MainWindow* window, const QString& text)
+    {
+        auto* menu = window->findChild<QMenu*>("menuAccount");
+        for (auto* action : menu ? menu->actions() : QList<QAction*>()) {
+            if (action->text() == text) {
+                return action;
+            }
+        }
+        qWarning("No account action %s", qPrintable(text));
+        return nullptr;
+    }
+} // namespace
+
+void TestGuiAccounts::testLockScreenUnlocksTheAccount()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    for (const auto& name : {QString("Personal"), QString("Work")}) {
+        const auto before = tabs->count();
+        controller->createVault(name);
+        QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), before + 1, 10000);
+    }
+    QVERIFY(!m_mainWindow->isAccountLockScreenShown());
+    QInputDialog* noDialog = nullptr;
+
+    // Locking the vault in front (e.g. the inactivity timer) shows the account's lock screen
+    auto* work = tabs->currentDatabaseWidget();
+    const auto workId = controller->vaultIdOf(work);
+    QVERIFY(!workId.isEmpty());
+    tabs->setCurrentIndex(0);
+    tabs->setCurrentWidget(work);
+    work->lock();
+    QTRY_COMPARE(account->state(), AccountManager::State::Locked);
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QCOMPARE(tabs->count(), 0);
+    auto* lockScreen = m_mainWindow->accountLockScreen();
+    QVERIFY(m_mainWindow->findChild<QWidget*>("welcomeWidget")->isHidden());
+    QCOMPARE(child<QLabel>(lockScreen, "accountLockEmail")->text(), Email);
+    QCOMPARE(child<QLabel>(lockScreen, "accountLockServer")->text(), QUrl(Issuer).host());
+
+    // A wrong password shows on the card, not in the notification centre
+    const auto notifications = m_mainWindow->notificationCenter()->notifications().size();
+    lockPassword(m_mainWindow.data())->setText("wrong");
+    clickUnlock(m_mainWindow.data());
+    auto* message = child<QWidget>(lockScreen, "accountLockMessage");
+    QTRY_VERIFY_WITH_TIMEOUT(message->isVisible(), 10000);
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+    QVERIFY(lockPassword(m_mainWindow.data())->text().isEmpty());
+    QCOMPARE(m_mainWindow->notificationCenter()->notifications().size(), notifications);
+
+    // The right one unlocks, reopens both vaults and puts the one that was in front back in front
+    lockPassword(m_mainWindow.data())->setText(Password);
+    clickUnlock(m_mainWindow.data());
+    QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
+    QVERIFY(!m_mainWindow->isAccountLockScreenShown());
+    QTRY_COMPARE(controller->vaultIdOf(tabs->currentDatabaseWidget()), workId);
+    QCOMPARE(m_mainWindow->findChild<QStackedWidget*>("stackedWidget")->currentIndex(),
+             static_cast<int>(MainWindow::DatabaseTabScreen));
+
+    // Account > Unlock Account… goes to the lock screen; there is no password dialog any more
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QMetaObject::invokeMethod(lockScreen, "dismissRequested");
+    QTRY_VERIFY(!m_mainWindow->isAccountLockScreenShown());
+    QVERIFY(!m_mainWindow->findChild<QWidget*>("welcomeWidget")->isHidden());
+    accountAction(m_mainWindow.data(), tr("&Unlock Account…"))->trigger();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QVERIFY(!(noDialog = m_mainWindow->findChild<QInputDialog*>()));
+}
+
+void TestGuiAccounts::testLockScreenStaysInFrontOfLocalDatabases()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    auto* stack = m_mainWindow->findChild<QStackedWidget*>("stackedWidget");
+    controller->createVault("Personal");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+
+    QTemporaryDir dir;
+    const auto path = dir.filePath("local.kdbx");
+    {
+        auto db = QSharedPointer<Database>::create();
+        auto kdf = QSharedPointer<AesKdf>::create();
+        kdf->setRounds(1);
+        db->setKdf(kdf);
+        auto key = QSharedPointer<CompositeKey>::create();
+        key->addKey(QSharedPointer<PasswordKey>::create("a"));
+        db->setKey(key);
+        QVERIFY(db->saveAs(path));
+    }
+    m_mainWindow->openDatabase(path, "a");
+    QTRY_COMPARE(tabs->count(), 2);
+    QTRY_VERIFY(!tabs->currentDatabaseWidget()->isLocked());
+    auto* local = tabs->currentDatabaseWidget();
+    QVERIFY(!controller->isAccountVault(local));
+
+    // The lock screen comes to the front; the local database stays open behind it
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QCOMPARE(tabs->count(), 1);
+    QCOMPARE(tabs->currentDatabaseWidget(), local);
+    QCOMPARE(stack->currentIndex(), static_cast<int>(MainWindow::WelcomeScreen));
+    auto* dismiss = child<QLabel>(m_mainWindow->accountLockScreen(), "accountLockDismiss");
+    QVERIFY(dismiss->text().contains(tr("Go to open databases")));
+
+    // Going to the databases leaves the account locked
+    QMetaObject::invokeMethod(m_mainWindow->accountLockScreen(), "dismissRequested");
+    QTRY_COMPARE(stack->currentIndex(), static_cast<int>(MainWindow::DatabaseTabScreen));
+    QVERIFY(!m_mainWindow->isAccountLockScreenShown());
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+
+    // With the local database closed, the browser extension asking for an unlock brings the lock screen back
+    local->database()->markAsClean();
+    tabs->closeAllDatabaseTabs();
+    QTRY_COMPARE(tabs->count(), 0);
+    QVERIFY(!m_mainWindow->isAccountLockScreenShown());
+    tabs->performBrowserUnlock();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+}
+
+void TestGuiAccounts::testLockScreenAtStartup()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+
+    // What the next launch does: the session comes back locked and the last local database opens again,
+    // behind the lock screen
+    QTemporaryDir dir;
+    const auto path = dir.filePath("local.kdbx");
+    {
+        auto db = QSharedPointer<Database>::create();
+        auto kdf = QSharedPointer<AesKdf>::create();
+        kdf->setRounds(1);
+        db->setKdf(kdf);
+        auto key = QSharedPointer<CompositeKey>::create();
+        key->addKey(QSharedPointer<PasswordKey>::create("a"));
+        db->setKey(key);
+        QVERIFY(db->saveAs(path));
+    }
+    config()->set(Config::OpenPreviousDatabasesOnStartup, true);
+    config()->set(Config::LastOpenedDatabases, QStringList{path});
+    m_mainWindow->restoreConfigState();
+    QTRY_COMPARE(tabs->count(), 1);
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QCOMPARE(account->state(), AccountManager::State::Locked);
+    tabs->closeAllDatabaseTabs();
+
+    // Without the Secret Key on this device the card offers to sign in again
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    m_mainWindow->accountLockScreen()->reset();
+    auto* unlock = child<QPushButton>(m_mainWindow->accountLockScreen(), "accountLockUnlock");
+    QVERIFY(VaultButton::withoutMnemonic(unlock->text()).contains(tr("Sign in again")));
+    QVERIFY(lockPassword(m_mainWindow.data())->isHidden());
+    QTest::mouseClick(unlock, Qt::LeftButton);
+    QTRY_VERIFY(m_mainWindow->isStartScreenShown());
+    QCOMPARE(child<QLineEdit>(m_mainWindow->startScreen(), "emailEdit")->text(), Email);
+}
+
+void TestGuiAccounts::testUnlocksOfflineFromTheLockScreen()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* account = controller->account();
+    auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+    controller->createVault("Personal");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+    QTRY_COMPARE(account->keyring().vaults().size(), 1);
+    QTRY_VERIFY(account->hasOfflineCache());
+
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+
+    // No network: the password unlocks from this device's copy and the vault opens from its local file
+    m_server->unreachable = true;
+    lockPassword(m_mainWindow.data())->setText(Password);
+    clickUnlock(m_mainWindow.data());
+    QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
+    QVERIFY(account->isOffline());
+    QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
+    QVERIFY(!tabs->currentDatabaseWidget()->isLocked());
+    QVERIFY(hasNotification(m_mainWindow.data(), tr("Working offline")));
+    QVERIFY(!accountAction(m_mainWindow.data(), tr("&New Vault…"))->isEnabled());
+    QVERIFY(!accountAction(m_mainWindow.data(), tr("&Share Vault…"))->isEnabled());
+    QVERIFY(accountAction(m_mainWindow.data(), tr("&Lock Account"))->isEnabled());
+
+    // Back online: the badge and the notice go, and the server commands come back
+    m_server->unreachable = false;
+    account->reconnect();
+    QTRY_VERIFY_WITH_TIMEOUT(!account->isOffline(), 10000);
+    QVERIFY(!hasNotification(m_mainWindow.data(), tr("Working offline")));
+    QTRY_VERIFY(accountAction(m_mainWindow.data(), tr("&New Vault…"))->isEnabled());
+
+    // Signing out wipes the offline copy
+    const auto accountId = account->accountId();
+    controller->signOut();
+    QVERIFY(!QFile::exists(AccountOfflineCache::path(accountId)));
 }

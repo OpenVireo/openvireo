@@ -147,6 +147,7 @@ AccountVaultsPane::AccountVaultsPane(AccountController* controller, QWidget* par
         connect(account, &AccountManager::vaultsChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::orgsChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::emailChanged, this, &AccountVaultsPane::refresh);
+        connect(account, &AccountManager::offlineChanged, this, &AccountVaultsPane::refresh);
         connect(account, &AccountManager::error, this, [this](const QString& message) {
             if (m_controller && m_controller->account()->state() == AccountManager::State::Locked) {
                 m_errorLabel->setText(message);
@@ -242,7 +243,9 @@ void AccountVaultsPane::refresh()
 
     const bool unlocked = state == AccountManager::State::Unlocked;
     const bool busy = state == AccountManager::State::SigningIn;
-    m_stateLabel->setText(unlocked ? tr("Unlocked") : busy ? tr("Unlocking…") : tr("Locked"));
+    m_stateLabel->setText(unlocked ? (account->isOffline() ? tr("Unlocked, offline") : tr("Unlocked"))
+                                   : busy   ? tr("Unlocking…")
+                                            : tr("Locked"));
     m_unlockBox->setVisible(!unlocked);
     m_unlockBox->setEnabled(!busy);
     if (unlocked) {
@@ -287,9 +290,11 @@ void AccountVaultsPane::updateButtons()
 {
     const bool unlocked = m_controller && m_controller->account()->state() == AccountManager::State::Unlocked;
     const bool serviceAccount = m_controller && m_controller->account()->isServiceAccount();
-    m_newVaultButton->setEnabled(unlocked && !serviceAccount);
-    m_shareButton->setEnabled(unlocked && !selectedVault().isEmpty());
-    m_serviceAccountsButton->setEnabled(unlocked && !serviceAccount);
+    // These need the servers, which don't answer while the account works offline
+    const bool online = unlocked && !m_controller->account()->isOffline();
+    m_newVaultButton->setEnabled(online && !serviceAccount);
+    m_shareButton->setEnabled(online && !selectedVault().isEmpty());
+    m_serviceAccountsButton->setEnabled(online && !serviceAccount);
     m_lockButton->setEnabled(unlocked);
 }
 

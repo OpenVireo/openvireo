@@ -1011,7 +1011,8 @@ void DatabaseTabWidget::performGlobalAutoType(const QString& search)
 {
     auto currentDbWidget = currentDatabaseWidget();
     if (!currentDbWidget) {
-        // No open databases, nothing to do
+        // No open databases: a locked account may still have the entries
+        emit unlockRequestedWithoutDatabase();
         return;
     } else if (currentDbWidget->isLocked()) {
         // Current database tab is locked, match behavior of browser unlock - prompt with
@@ -1040,9 +1041,12 @@ void DatabaseTabWidget::performBrowserUnlock()
         return;
     }
 
-    m_databaseOpenInProgress = true;
     auto dbWidget = currentDatabaseWidget();
     if (dbWidget && dbWidget->isLocked()) {
+        m_databaseOpenInProgress = true;
         unlockAnyDatabaseInDialog(DatabaseOpenDialog::Intent::Browser);
+    } else if (!dbWidget) {
+        // e.g. only a locked account could answer; nothing here waits for a dialog
+        emit unlockRequestedWithoutDatabase();
     }
 }
