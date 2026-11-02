@@ -60,6 +60,11 @@ public:
         QJsonObject json() const;
         // The machine readable error code, e.g. token_reused
         QString errorCode() const;
+        // No answer, or a gateway's: the server can't be reached, as opposed to refusing (SPEC §20)
+        bool isUnreachable() const
+        {
+            return status == 0 || status == 502 || status == 503 || status == 504;
+        }
     };
     using Callback = std::function<void(const Response&)>;
     using Headers = QList<QPair<QByteArray, QByteArray>>;

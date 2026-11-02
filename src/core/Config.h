@@ -190,6 +190,7 @@ public:
         Account_StartMode,
         Account_ServerUrl,
         Account_SelfHostedServerUrl,
+        Account_AllowOfflineUnlock,
 
         KeeShare_QuietSuccess,
         KeeShare_Own,

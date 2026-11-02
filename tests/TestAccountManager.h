@@ -44,6 +44,12 @@ private slots:
     void testServerConfigWebUrl();
     void testFollowsAnEmailChangedElsewhere();
     void testExplainsAPlanLimit();
+    void testOfflineUnlockFromCache();
+    void testOfflineUnlockNeedsACache();
+    void testRefusedUnlockNeverUsesTheCache();
+    void testGoesOfflineAndDropsRevokedVaultsOnReconnect();
+    void testSessionEndWipesTheOfflineCache();
+    void testOfflineUnlockCanBeTurnedOff();
 };
 
 #endif // KEEPASSXC_TESTACCOUNTMANAGER_H

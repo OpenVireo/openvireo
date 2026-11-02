@@ -30,17 +30,21 @@
 #include "gui/remote/SyncEventStream.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "account/AccountOfflineCache.h"
+#include "core/Config.h"
 
 #ifdef KPXC_FEATURE_ACCOUNTS
 #include "account/OpaqueCore.h"
 #endif
 
 #include <QBuffer>
+#include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTest>
 #include <QUuid>
 
@@ -246,6 +250,8 @@ namespace
         int accessExpiresIn = 600;
         int counter = 0;
         QJsonArray vaults;
+        // No server answers: every request fails as if the network were down
+        bool unreachable = false;
         QStringList requests;
         QStringList bearers;
 
@@ -296,6 +302,12 @@ namespace
                   Callback callback) override
         {
             auto& server = *m_server;
+            if (server.unreachable) {
+                Response response;
+                response.networkError = QStringLiteral("Connection refused");
+                deliverLater(response, std::move(callback));
+                return;
+            }
             const auto path = url.path().mid(QString("/api/v1/").size());
             server.requests << QString::fromLatin1(verb) + " " + path;
             const auto json = QJsonDocument::fromJson(body).object();
@@ -526,12 +538,16 @@ namespace
 void TestAccountManager::initTestCase()
 {
     QVERIFY(Crypto::init());
+    // The offline cache goes under AppDataLocation
+    QStandardPaths::setTestModeEnabled(true);
 }
 
 void TestAccountManager::init()
 {
     // Never touch the real Keychain
     SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    config()->set(Config::Account_AllowOfflineUnlock, true);
+    QDir(AccountOfflineCache::accountsRoot()).removeRecursively();
 }
 
 void TestAccountManager::testRegisterAndSignIn()
@@ -1197,4 +1213,196 @@ void TestAccountManager::testExplainsAPlanLimit()
     // Any other 402 is shown as it is
     response.body = R"({"error":"nope","code":"invalid_request"})";
     QCOMPARE(AuthClient::errorMessage(response), QString("The account server responded with HTTP 402: nope"));
+}
+
+namespace
+{
+    // Alice signed in with one vault, as listed by GET /vaults, then locked
+    struct OfflineSetup
+    {
+        AccountManager* manager = nullptr;
+        QString vaultId;
+    };
+
+    OfflineSetup signInWithVault(Fixture& fixture, QObject* parent)
+    {
+        OfflineSetup setup;
+        if (registerAlice(fixture, parent).isEmpty()) {
+            return setup;
+        }
+        auto* manager = fixture.manager(parent);
+        manager->signIn(Email, Password);
+        if (!waitForState(manager, AccountManager::State::Unlocked)) {
+            return setup;
+        }
+        setup.vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const auto key = generateVaultKey();
+        fixture.server->vaults = {vaultJson(setup.vaultId,
+                                            key,
+                                            "Mine",
+                                            {{1, seal(manager->keyset().publicKeys.encPk, key, vaultKeyAad(setup.vaultId))}},
+                                            1)};
+        manager->reloadVaults();
+        QElapsedTimer timer;
+        timer.start();
+        while (!manager->keyring().contains(setup.vaultId) && timer.elapsed() < 5000) {
+            QTest::qWait(10);
+        }
+        setup.manager = manager;
+        return setup;
+    }
+} // namespace
+
+void TestAccountManager::testOfflineUnlockFromCache()
+{
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+    QVERIFY(manager->keyring().contains(setup.vaultId));
+
+    // The cache holds what the server sent, nothing in clear
+    QFile file(AccountOfflineCache::path(manager->accountId()));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const auto cached = file.readAll();
+    file.close();
+    QVERIFY(cached.contains("\"keyset\""));
+    QVERIFY(cached.contains("\"kdf\""));
+    QVERIFY(cached.contains(setup.vaultId.toUtf8()));
+    QVERIFY(!cached.contains("Mine"));
+    QVERIFY(!cached.contains(toBase64Url(manager->keyset().encSk).toUtf8()));
+    QVERIFY(!cached.contains(AccountManager::storedSecretKey(ServerId, Email).toUtf8()));
+    QVERIFY(!(file.permissions() & (QFileDevice::ReadOther | QFileDevice::ReadGroup)));
+    QVERIFY(manager->hasOfflineCache());
+    QVERIFY(!manager->isOffline());
+
+    manager->lock();
+    fixture.server->unreachable = true;
+    QSignalSpy offlineChanged(manager, &AccountManager::offlineChanged);
+    QSignalSpy errors(manager, &AccountManager::error);
+
+    // A wrong password fails as it does online
+    manager->unlock("wrong");
+    QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
+    QCOMPARE(manager->state(), AccountManager::State::Locked);
+    QVERIFY(!manager->isOffline());
+
+    manager->unlock(Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QVERIFY(manager->isOffline());
+    QCOMPARE(offlineChanged.count(), 1);
+    QVERIFY(manager->keyring().contains(setup.vaultId));
+    QCOMPARE(manager->keyring().vault(setup.vaultId).name, QString("Mine"));
+    QCOMPARE(errors.count(), 1);
+
+    // Back online once GET /vaults answers
+    fixture.server->unreachable = false;
+    manager->reconnect();
+    QTRY_VERIFY(!manager->isOffline());
+    QCOMPARE(offlineChanged.count(), 2);
+    QVERIFY(manager->keyring().contains(setup.vaultId));
+}
+
+void TestAccountManager::testOfflineUnlockNeedsACache()
+{
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+    manager->lock();
+    AccountOfflineCache::clear(manager->accountId());
+    QVERIFY(!manager->hasOfflineCache());
+
+    fixture.server->unreachable = true;
+    QSignalSpy errors(manager, &AccountManager::error);
+    manager->unlock(Password);
+    QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
+    QCOMPARE(manager->state(), AccountManager::State::Locked);
+    QVERIFY(!manager->isOffline());
+    QVERIFY(errors.first().first().toString().contains("accounts.openvireo.example"));
+}
+
+void TestAccountManager::testRefusedUnlockNeverUsesTheCache()
+{
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+    manager->lock();
+    QVERIFY(manager->hasOfflineCache());
+
+    // The server answers, and says no: that's not offline
+    fixture.server->accessTokens.clear();
+    QSignalSpy errors(manager, &AccountManager::error);
+    manager->unlock(Password);
+    QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
+    QCOMPARE(manager->state(), AccountManager::State::Locked);
+    QVERIFY(!manager->isOffline());
+}
+
+void TestAccountManager::testGoesOfflineAndDropsRevokedVaultsOnReconnect()
+{
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+
+    // The network goes away while unlocked
+    fixture.server->unreachable = true;
+    QSignalSpy errors(manager, &AccountManager::error);
+    manager->reloadVaults();
+    QTRY_VERIFY(manager->isOffline());
+    QCOMPARE(errors.count(), 0);
+    QVERIFY(manager->keyring().contains(setup.vaultId));
+
+    // Access was revoked meanwhile
+    fixture.server->vaults = {};
+    fixture.server->unreachable = false;
+    manager->reconnect();
+    QTRY_VERIFY(!manager->isOffline());
+    QTRY_VERIFY(!manager->keyring().contains(setup.vaultId));
+    const auto cache = AccountOfflineCache::load(manager->accountId());
+    QVERIFY(cache.value("vaults").toArray().isEmpty());
+}
+
+void TestAccountManager::testSessionEndWipesTheOfflineCache()
+{
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+    const auto accountId = manager->accountId();
+    QVERIFY(QFile::exists(AccountOfflineCache::path(accountId)));
+
+    // Locking keeps it
+    manager->lock();
+    QVERIFY(QFile::exists(AccountOfflineCache::path(accountId)));
+
+    manager->signOut();
+    QVERIFY(!QFile::exists(AccountOfflineCache::path(accountId)));
+}
+
+void TestAccountManager::testOfflineUnlockCanBeTurnedOff()
+{
+    config()->set(Config::Account_AllowOfflineUnlock, false);
+    Fixture fixture;
+    auto setup = signInWithVault(fixture, this);
+    auto* manager = setup.manager;
+    QVERIFY(manager);
+    QVERIFY(!QFile::exists(AccountOfflineCache::path(manager->accountId())));
+    QVERIFY(!manager->hasOfflineCache());
+
+    manager->lock();
+    fixture.server->unreachable = true;
+    QSignalSpy errors(manager, &AccountManager::error);
+    manager->unlock(Password);
+    QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
+    QCOMPARE(manager->state(), AccountManager::State::Locked);
+
+    // Turning it off removes what an earlier session kept
+    config()->set(Config::Account_AllowOfflineUnlock, true);
+    AccountOfflineCache::saveVaults(manager->accountId(), {});
+    QVERIFY(QFile::exists(AccountOfflineCache::path(manager->accountId())));
+    AccountOfflineCache::clearAll();
+    QVERIFY(!QFile::exists(AccountOfflineCache::path(manager->accountId())));
 }
