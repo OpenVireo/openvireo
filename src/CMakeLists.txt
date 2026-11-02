@@ -221,6 +221,7 @@ set(gui_SOURCES
         gui/remote/SyncTokenStore.cpp
         account/AccountCrypto.cpp
         account/AccountManager.cpp
+        account/AccountOfflineCache.cpp
         account/AuthClient.cpp
         account/OpaqueClient.cpp
         account/ServiceAccountAdmin.cpp

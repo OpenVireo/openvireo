@@ -38,6 +38,8 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultSettingsPage.h"
+
+#include "account/AccountOfflineCache.h"
 #include "quickunlock/QuickUnlockInterface.h"
 
 #include "FileDialog.h"
@@ -343,6 +345,7 @@ void ApplicationSettingsWidget::buildVaultSecurityPage()
 
     auto locking = page.addSection(ui->lockOptionsGroup);
     locking->addToggle(ui->quickUnlockCheckBox);
+    locking->addToggle(ui->allowOfflineUnlockCheckBox);
     locking->addToggle(ui->lockDatabaseOnScreenLockCheckBox);
     locking->addToggle(ui->lockDatabasesOnUserSwitchCheckBox);
     locking->addToggle(ui->lockDatabaseMinimizeCheckBox);
@@ -590,6 +593,7 @@ void ApplicationSettingsWidget::loadSettings()
 
     m_secUi->quickUnlockCheckBox->setEnabled(getQuickUnlock()->isAvailable());
     m_secUi->quickUnlockCheckBox->setChecked(config()->get(Config::Security_QuickUnlock).toBool());
+    m_secUi->allowOfflineUnlockCheckBox->setChecked(config()->get(Config::Account_AllowOfflineUnlock).toBool());
 
     for (const ExtraPage& page : asConst(m_extraPages)) {
         page.loadSettings();
@@ -732,6 +736,11 @@ void ApplicationSettingsWidget::saveSettings()
 
     if (m_secUi->quickUnlockCheckBox->isEnabled()) {
         config()->set(Config::Security_QuickUnlock, m_secUi->quickUnlockCheckBox->isChecked());
+    }
+    config()->set(Config::Account_AllowOfflineUnlock, m_secUi->allowOfflineUnlockCheckBox->isChecked());
+    if (!m_secUi->allowOfflineUnlockCheckBox->isChecked()) {
+        // SPEC §20: turning it off deletes what was kept
+        AccountOfflineCache::clearAll();
     }
 
     // Security: clear storage if related settings are disabled

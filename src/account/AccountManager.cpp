@@ -17,6 +17,7 @@
 
 #include "AccountManager.h"
 
+#include "account/AccountOfflineCache.h"
 #include "core/AsyncTask.h"
 #include "core/Config.h"
 #include "core/Database.h"
@@ -28,6 +29,9 @@
 
 #include <QDateTime>
 #include <QJsonDocument>
+#ifdef KPXC_FEATURE_NETWORK
+#include <QNetworkInformation>
+#endif
 #include <QThread>
 #include <QUrl>
 #include <QUuid>
@@ -65,6 +69,23 @@ namespace
 
     // Quick Unlock entries of accounts live beside those of databases, keyed by a name-based uuid
     const QUuid QuickUnlockNamespace("8c0d3f4e-5a6b-4c7d-9e8f-0a1b2c3d4e5f");
+
+    // While offline the servers are tried again after this long, doubling up to the maximum
+    constexpr int FirstReconnectDelaySec = 15;
+    constexpr int MaxReconnectDelaySec = 5 * 60;
+
+    QList<AccountManager::Org> parseOrgs(const QJsonArray& array)
+    {
+        QList<AccountManager::Org> orgs;
+        for (const auto& value : array) {
+            const auto json = value.toObject();
+            orgs << AccountManager::Org{json.value("id").toString(),
+                                        json.value("name").toString(),
+                                        json.value("role").toString(),
+                                        json.value("status").toString()};
+        }
+        return orgs;
+    }
 } // namespace
 
 QString AccountManager::ServerConfig::serverId() const
@@ -127,6 +148,26 @@ AccountManager::AccountManager(AuthClient* client, std::unique_ptr<OpaqueClient>
     m_client->setTokenProvider(tokenProvider());
     m_refreshTimer.setSingleShot(true);
     connect(&m_refreshTimer, &QTimer::timeout, this, &AccountManager::refreshAccessToken);
+    m_reconnectTimer.setSingleShot(true);
+    connect(&m_reconnectTimer, &QTimer::timeout, this, &AccountManager::reconnect);
+
+#ifdef KPXC_FEATURE_NETWORK
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+    QNetworkInformation::loadBackendByFeatures(QNetworkInformation::Feature::Reachability);
+#else
+    QNetworkInformation::load(QNetworkInformation::Feature::Reachability);
+#endif
+    if (auto* network = QNetworkInformation::instance()) {
+        connect(network,
+                &QNetworkInformation::reachabilityChanged,
+                this,
+                [this](QNetworkInformation::Reachability reachability) {
+                    if (reachability == QNetworkInformation::Reachability::Online && m_offline) {
+                        reconnect();
+                    }
+                });
+    }
+#endif
 }
 
 AccountManager::~AccountManager()
@@ -232,6 +273,16 @@ AuthClient* AccountManager::client() const
 QList<AccountManager::Org> AccountManager::orgs() const
 {
     return m_orgs;
+}
+
+bool AccountManager::isOffline() const
+{
+    return m_offline;
+}
+
+bool AccountManager::hasOfflineCache() const
+{
+    return !m_serviceAccount && AccountOfflineCache::hasProfile(m_accountId);
 }
 
 AccountManager::Org AccountManager::org(const QString& orgId) const
@@ -536,7 +587,7 @@ void AccountManager::finishLogin(const QJsonObject& session)
               session.value("expires_in").toInt());
 
     deriveKeyset(
-        session.value("kdf").toObject(), session.value("keyset").toObject(), [this](bool ok, const QString& message) {
+        session.value("kdf").toObject(), session.value("keyset").toObject(), [this, session](bool ok, const QString& message) {
             if (!ok) {
                 // The server accepted the password, so the Secret Key is the likely culprit.
                 // Don't leave the session the server just opened behind.
@@ -553,6 +604,9 @@ void AccountManager::finishLogin(const QJsonObject& session)
             m_pending.reset();
             saveSession();
             SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
+            AccountOfflineCache::saveProfile(m_accountId, session.value("kdf").toObject(),
+                                             session.value("keyset").toObject(), {});
+            setOffline(false);
             setState(State::Unlocked);
             if (registering) {
                 emit registered(secretKey);
@@ -627,27 +681,37 @@ void AccountManager::unlock(const QString& password)
         return;
     }
     setState(State::SigningIn);
-    // The keyset and its KDF settings come from the server; reading them needs a valid access token
+    // The keyset and its KDF settings come from the server; reading them needs a valid access token. When
+    // the server can't be reached, the copy this device kept at its last unlock stands in (SPEC §20).
     m_client->me([this](const AuthClient::Response& response) {
         if (!m_pending) {
             return;
         }
-        if (!response.isSuccess()) {
-            fail(AuthClient::errorMessage(response));
+        QJsonObject profile;
+        const bool offline = !response.isSuccess();
+        if (response.isSuccess()) {
+            profile = response.json();
+            followEmail(profile.value("email").toString());
+        } else if (response.isUnreachable() && hasOfflineCache()) {
+            profile = AccountOfflineCache::load(m_accountId);
+        } else {
+            fail(unreachableMessage(response));
             return;
         }
-        const auto json = response.json();
-        followEmail(json.value("email").toString());
-        deriveKeyset(
-            json.value("kdf").toObject(), json.value("keyset").toObject(), [this](bool ok, const QString& message) {
-                m_pending.reset();
-                if (!ok) {
-                    setState(State::Locked);
-                    emit error(message);
-                    return;
-                }
-                finishUnlock();
-            });
+        deriveKeyset(profile.value("kdf").toObject(),
+                     profile.value("keyset").toObject(),
+                     [this, profile, offline](bool ok, const QString& message) {
+                         m_pending.reset();
+                         if (!ok) {
+                             setState(State::Locked);
+                             emit error(message);
+                             return;
+                         }
+                         if (!offline) {
+                             takeProfile(profile);
+                         }
+                         finishUnlock(offline);
+                     });
     });
 }
 
@@ -676,14 +740,20 @@ void AccountManager::quickUnlock()
         if (!m_pending) {
             return;
         }
-        if (!response.isSuccess()) {
-            fail(AuthClient::errorMessage(response));
+        QJsonObject profile;
+        const bool offline = !response.isSuccess();
+        if (response.isSuccess()) {
+            profile = response.json();
+            followEmail(profile.value("email").toString());
+        } else if (response.isUnreachable() && hasOfflineCache()) {
+            profile = AccountOfflineCache::load(m_accountId);
+        } else {
+            fail(unreachableMessage(response));
             return;
         }
         m_pending.reset();
-        followEmail(response.json().value("email").toString());
         Keyset keyset;
-        if (!unwrapKeyset(auk, response.json().value("keyset").toObject(), &keyset)) {
+        if (!unwrapKeyset(auk, profile.value("keyset").toObject(), &keyset)) {
             // The keyset was wrapped again, e.g. the master password changed on another device
             forgetAuk();
             setState(State::Locked);
@@ -692,19 +762,87 @@ void AccountManager::quickUnlock()
             return;
         }
         m_keyset = keyset;
-        finishUnlock();
+        if (!offline) {
+            takeProfile(profile);
+        }
+        finishUnlock(offline);
     });
 }
 
-void AccountManager::finishUnlock()
+void AccountManager::finishUnlock(bool offline)
 {
+    if (!offline) {
+        setOffline(false);
+        setState(State::Unlocked);
+        reloadVaults();
+        startEvents();
+        return;
+    }
+    // The vault keys as GET /vaults last listed them; nothing goes out until the servers answer again
+    const auto cache = AccountOfflineCache::load(m_accountId);
+    m_orgs = parseOrgs(cache.value("orgs").toArray());
+    m_keyring.setVaults(cache.value("vaults").toArray(), m_keyset.encSk);
+    setOffline(true);
     setState(State::Unlocked);
+    emit orgsChanged();
+    emit vaultsChanged();
+}
+
+void AccountManager::setOffline(bool offline)
+{
+    if (offline) {
+        scheduleReconnect();
+    } else {
+        m_reconnectTimer.stop();
+        m_reconnectDelaySec = 0;
+    }
+    if (m_offline != offline) {
+        m_offline = offline;
+        emit offlineChanged(offline);
+    }
+}
+
+void AccountManager::scheduleReconnect()
+{
+    m_reconnectDelaySec = m_reconnectDelaySec == 0 ? FirstReconnectDelaySec
+                                                   : qMin(m_reconnectDelaySec * 2, MaxReconnectDelaySec);
+    m_reconnectTimer.start(m_reconnectDelaySec * 1000);
+}
+
+void AccountManager::reconnect()
+{
+    if (m_state != State::Unlocked || !m_offline) {
+        return;
+    }
+    m_reconnectTimer.stop();
+    // Back online once GET /vaults answers; reloadOrgs() refreshes the cached keyset on the way
     reloadVaults();
-    startEvents();
+}
+
+void AccountManager::takeProfile(const QJsonObject& me)
+{
+    m_orgs = parseOrgs(me.value("orgs").toArray());
+    AccountOfflineCache::saveProfile(
+        m_accountId, me.value("kdf").toObject(), me.value("keyset").toObject(), me.value("orgs").toArray());
+}
+
+QString AccountManager::unreachableMessage(const AuthClient::Response& response) const
+{
+    if (!response.isUnreachable()) {
+        return AuthClient::errorMessage(response);
+    }
+    const auto host = hostOf(m_config.issuer.isEmpty() ? m_config.api : m_config.issuer);
+    if (AccountOfflineCache::isEnabled()) {
+        return tr("Can't reach %1, and this device hasn't kept a copy to unlock offline yet. Check your "
+                  "connection and try again.")
+            .arg(host);
+    }
+    return tr("Can't reach %1. Check your connection and try again.").arg(host);
 }
 
 void AccountManager::lock()
 {
+    setOffline(false);
     m_pending.reset();
     m_keyring.clear();
     m_keyset.clear();
@@ -738,10 +876,13 @@ void AccountManager::endSession(const QString& reason)
     // Like closing a database: its Quick Unlock goes with the session
     forgetAuk();
     m_orgs.clear();
+    setOffline(false);
     if (!m_accountId.isEmpty()) {
         SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);
         if (!m_serviceAccount) {
             SyncTokenStore::remove(sessionKey(m_accountId));
+            // The offline cache goes with the session (SPEC §20)
+            AccountOfflineCache::clear(m_accountId);
         }
     }
     m_accessToken.clear();
@@ -998,10 +1139,27 @@ void AccountManager::reloadVaults()
             return;
         }
         if (!response.isSuccess()) {
+            if (response.isUnreachable() && !m_serviceAccount) {
+                // Work from what is open and cached until the servers answer again
+                if (m_offline) {
+                    scheduleReconnect();
+                } else {
+                    setOffline(true);
+                }
+                return;
+            }
             emit error(AuthClient::errorMessage(response));
             return;
         }
-        m_keyring.setVaults(response.json().value("vaults").toArray(), m_keyset.encSk);
+        const auto vaults = response.json().value("vaults").toArray();
+        if (!m_serviceAccount) {
+            AccountOfflineCache::saveVaults(m_accountId, vaults);
+        }
+        m_keyring.setVaults(vaults, m_keyset.encSk);
+        if (m_offline) {
+            setOffline(false);
+            startEvents();
+        }
         emit vaultsChanged();
     });
     reloadOrgs();
@@ -1017,16 +1175,16 @@ void AccountManager::reloadOrgs()
         if (m_state != State::Unlocked || !response.isSuccess()) {
             return;
         }
-        followEmail(response.json().value("email").toString());
-        QList<Org> orgs;
-        for (const auto& value : response.json().value("orgs").toArray()) {
-            const auto json = value.toObject();
-            orgs << Org{json.value("id").toString(),
-                        json.value("name").toString(),
-                        json.value("role").toString(),
-                        json.value("status").toString()};
+        const auto json = response.json();
+        followEmail(json.value("email").toString());
+        const auto encPk = fromBase64Url(json.value("keyset").toObject().value("enc_pk").toString());
+        if (!encPk.isEmpty() && encPk != m_keyset.publicKeys.encPk) {
+            // A new keyset (account recovery): the vault keys in memory are sealed to the old one
+            lock();
+            emit error(tr("Your account's keys changed on another device. Unlock it again."));
+            return;
         }
-        m_orgs = orgs;
+        takeProfile(json);
         emit orgsChanged();
     });
 }

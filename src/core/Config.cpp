@@ -219,6 +219,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     // The hosted account server (its issuer URL), when it isn't the built-in default
     {Config::Account_ServerUrl, {QS("Account/ServerUrl"), Local, {}}},
     {Config::Account_SelfHostedServerUrl, {QS("Account/SelfHostedServerUrl"), Local, {}}},
+    // Keep the wrapped keyset and vault list so the account unlocks without a connection (SPEC §20)
+    {Config::Account_AllowOfflineUnlock, {QS("Account/AllowOfflineUnlock"), Local, true}},
 
     {Config::KeeShare_QuietSuccess, {QS("KeeShare/QuietSuccess"), Roaming, false}},
     {Config::KeeShare_Own, {QS("KeeShare/Own"), Roaming, {}}},

@@ -160,6 +160,11 @@ public:
     AuthClient* client() const;
     // The orgs this account belongs to, as of the last reloadVaults(); empty while locked
     QList<Org> orgs() const;
+    // Unlocked from this device's offline cache because the servers couldn't be reached (SPEC §20).
+    // Reconnecting goes on in the background until GET /vaults answers again.
+    bool isOffline() const;
+    // This device can unlock the account without a connection
+    bool hasOfflineCache() const;
     Org org(const QString& orgId) const;
 
     // The Quick Unlock provider; tests set a mock, the default is the platform's (getQuickUnlock())
@@ -205,6 +210,8 @@ public slots:
     void signOut();
     void refreshAccessToken();
     void reloadVaults();
+    // While offline: try the servers again now instead of waiting for the next retry
+    void reconnect();
     // An `access` event from the sync server: refresh the token for its new claims, reload the vaults
     // and reconnect the event stream
     void handleAccessEvent(const SyncEventStream::Event& event);
@@ -223,6 +230,7 @@ signals:
     void orgsChanged();
     // The account's email changed, e.g. in the web app (SPEC §16)
     void emailChanged();
+    void offlineChanged(bool offline);
     // A vault's blob changed on the sync server
     void vaultChanged(const SyncEventStream::Event& event);
     void error(const QString& message);
@@ -236,7 +244,12 @@ private:
     void deriveKeyset(const QJsonObject& kdfJson,
                       const QJsonObject& wrappedKeyset,
                       std::function<void(bool ok, const QString& error)> done);
-    void finishUnlock();
+    void finishUnlock(bool offline);
+    void setOffline(bool offline);
+    void scheduleReconnect();
+    // GET /me's kdf, keyset and orgs into the offline cache, and the orgs into orgs()
+    void takeProfile(const QJsonObject& me);
+    QString unreachableMessage(const AuthClient::Response& response) const;
     void followEmail(const QString& email);
     void reloadOrgs();
     QUuid quickUnlockId() const;
@@ -283,6 +296,10 @@ private:
     QList<Org> m_orgs;
     QuickUnlockInterface* m_quickUnlock = nullptr;
     QPointer<SyncEventStream> m_events;
+
+    bool m_offline = false;
+    QTimer m_reconnectTimer;
+    int m_reconnectDelaySec = 0;
 };
 
 #endif // KEEPASSXC_ACCOUNTMANAGER_H
