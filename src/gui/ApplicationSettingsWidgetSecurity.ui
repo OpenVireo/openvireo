@@ -173,6 +173,16 @@
        </widget>
       </item>
       <item>
+       <widget class="VaultCheckBox" name="allowOfflineUnlockCheckBox">
+        <property name="toolTip">
+         <string>Keeps your account's encrypted keys on this device, so it unlocks with your master password and Secret Key while the servers can't be reached</string>
+        </property>
+        <property name="text">
+         <string>Allow unlocking your OpenVireo account without a connection</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="VaultCheckBox" name="lockDatabaseOnScreenLockCheckBox">
         <property name="text">
          <string>Lock databases when session is locked or lid is closed</string>
@@ -289,6 +299,7 @@
   <tabstop>clearSearchCheckBox</tabstop>
   <tabstop>clearSearchSpinBox</tabstop>
   <tabstop>quickUnlockCheckBox</tabstop>
+  <tabstop>allowOfflineUnlockCheckBox</tabstop>
   <tabstop>lockDatabaseOnScreenLockCheckBox</tabstop>
   <tabstop>lockDatabasesOnUserSwitchCheckBox</tabstop>
   <tabstop>lockDatabaseMinimizeCheckBox</tabstop>

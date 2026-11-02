@@ -20,6 +20,7 @@
 #include "config-keepassx.h"
 
 #include "account/AccountManager.h"
+#include "account/AccountOfflineCache.h"
 #include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
 #include "account/VaultSharing.h"
@@ -39,7 +40,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
-#include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 
@@ -64,7 +64,7 @@ namespace
 
     QString accountsRoot()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/accounts";
+        return AccountOfflineCache::accountsRoot();
     }
 } // namespace
 
