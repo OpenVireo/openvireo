@@ -60,6 +60,8 @@ QJsonObject BrowserMessageBuilder::buildMessage(const QString& nonce) const
     QJsonObject message;
     // The extension enables features by KeePassXC version, so it gets the release this is based on, not ours
     message["version"] = QStringLiteral(KEEPASSXC_UPSTREAM_VERSION).section('-', 0, 0);
+    // OpenVireo's own version, which the extension compares with OpenVireo's releases for its update notice
+    message["appVersion"] = QStringLiteral(KEEPASSXC_VERSION);
     message["success"] = TRUE_STR;
     message["nonce"] = nonce;
     return message;
