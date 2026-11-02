@@ -834,8 +834,8 @@ void MainWindow::setupAccounts()
             NotificationCenter::Notification notice;
             notice.type = MessageWidget::Warning;
             notice.title = tr("Working offline");
-            notice.text = tr("Your account unlocked with this device's copy. Changes are saved here and sync when "
-                             "OpenVireo can reach %1 again.")
+            notice.text = tr("OpenVireo can't reach %1, so your account works from this device's copy. Changes "
+                             "are saved here and sync once it can reach the server again.")
                               .arg(QUrl(m_accountController->account()->server().issuer).host());
             notice.source = QStringLiteral("account-offline");
             notice.pinned = true;
