@@ -18,6 +18,7 @@
 #include "SyncEventStream.h"
 
 #include "SyncServerClient.h"
+#include "core/Tools.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -128,7 +129,12 @@ void SyncEventStream::openConnection(const QString& token)
         connectionEnded();
         return;
     }
-    QNetworkRequest request(SyncServerClient::endpoint(m_params, "events"));
+    const auto url = SyncServerClient::endpoint(m_params, "events");
+    if (!Tools::isSecureServerUrl(url)) {
+        // SyncServerClient refuses the same server and reports it; there are no live events without https
+        return;
+    }
+    QNetworkRequest request(url);
     request.setRawHeader("Authorization", "Bearer " + token.trimmed().toUtf8());
     request.setRawHeader("User-Agent", "OpenVireo");
     request.setRawHeader("Accept", "text/event-stream");

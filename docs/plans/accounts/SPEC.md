@@ -17,9 +17,13 @@ spec is wrong, report it; don't change one implementation on its own.
 - **AEAD** is XChaCha20-Poly1305 (24-byte nonce, 16-byte tag), the libsodium
   `crypto_aead_xchacha20poly1305_ietf` construction. Nonces are random for every encryption.
 - **Constant time:** compare MACs, hashes and tokens with constant-time functions.
-- **Transport:** v1 clients accept `http://` as well as `https://` issuer, API and sync URLs (decided
-  2026-10-17, for local and self-hosted setups); hosted deployments use https. Requiring https is
-  left for a later version.
+- **Transport:** clients require `https://` for the issuer, every URL in `openvireo-configuration`
+  (`api`, `sync`, `jwks_uri`, `web`) and self-hosted sync servers, and check each URL on its own, so an
+  https issuer can't send clients to a plain-http sync server. Plain `http://` is allowed only for this
+  computer: `localhost`, `*.localhost`, `127.0.0.0/8` and `[::1]`, for local development and the
+  workspace stack. A refused URL fails before anything is sent (SDK code `insecure_url`). Server-to-server
+  traffic (the sync server's JWKS fetch, `SYNC_INTERNAL_URL`) is the operator's choice. (Decided
+  2026-11-02, replacing the v1 rule of 2026-10-17 that accepted any `http://` URL.)
 - **Zeroing:** clients clear private keys, the AUK and vault keys from memory when they lock
   (Qt: `Botan::secure_vector`/`SecureVector`; TS: `.fill(0)` once done, best effort).
 

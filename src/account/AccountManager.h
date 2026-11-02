@@ -100,6 +100,8 @@ public:
             return !api.isEmpty();
         }
         QString serverId() const;
+        // The first issuer, API, sync or web URL that is neither https:// nor http:// to this computer (SPEC §1)
+        QString insecureUrl() const;
         // The web app's Account page (password, two-step verification, devices); invalid without `web`
         QUrl accountSettingsUrl() const;
         static ServerConfig fromJson(const QJsonObject& json);

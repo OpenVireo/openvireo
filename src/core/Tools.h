@@ -29,6 +29,7 @@
 
 class QIODevice;
 class QRegularExpression;
+class QUrl;
 
 namespace Tools
 {
@@ -45,6 +46,8 @@ namespace Tools
     QString uuidToHex(const QUuid& uuid);
     QUuid hexToUuid(const QString& uuid);
     bool isValidUuid(const QString& uuidStr);
+    bool isLoopbackHost(const QString& host);
+    bool isSecureServerUrl(const QUrl& url);
     QString envSubstitute(const QString& filepath,
                           QProcessEnvironment environment = QProcessEnvironment::systemEnvironment());
     QString cleanFilename(QString filename);
