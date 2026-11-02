@@ -18,6 +18,7 @@
 #include "AuthClient.h"
 
 #include "AccountCrypto.h"
+#include "core/Tools.h"
 
 #include <QJsonDocument>
 #include <QPointer>
@@ -507,6 +508,13 @@ void AuthClient::send(const QByteArray& verb,
 #ifdef KPXC_FEATURE_NETWORK
     if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
         response.networkError = tr("Invalid account server URL: %1").arg(url.toString());
+        deliverLater(response, std::move(callback));
+        return;
+    }
+    if (!Tools::isSecureServerUrl(url)) {
+        response.networkError =
+            tr("The account server must use https:// (plain http:// is only allowed for this computer): %1")
+                .arg(url.toString(QUrl::RemovePath | QUrl::RemoveQuery));
         deliverLater(response, std::move(callback));
         return;
     }

@@ -1161,6 +1161,18 @@ void TestAccountManager::testServerConfigWebUrl()
     QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
     json["web"] = "javascript:alert(1)";
     QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
+    json["web"] = "http://app.example.com";
+    QVERIFY(!AccountManager::ServerConfig::fromJson(json).accountSettingsUrl().isValid());
+
+    // Plain http:// only for this computer (SPEC §1): an https issuer can't hand out an http sync URL
+    json.remove("web");
+    QVERIFY(AccountManager::ServerConfig::fromJson(json).insecureUrl().isEmpty());
+    json = QJsonObject{{"issuer", "https://accounts.example.com"},
+                       {"api", "https://accounts.example.com/api/v1"},
+                       {"sync", "http://sync.example.com/api/v1"}};
+    QCOMPARE(AccountManager::ServerConfig::fromJson(json).insecureUrl(), QString("http://sync.example.com/api/v1"));
+    json["sync"] = "https://sync.example.com/api/v1";
+    QVERIFY(AccountManager::ServerConfig::fromJson(json).insecureUrl().isEmpty());
 }
 
 void TestAccountManager::testFollowsAnEmailChangedElsewhere()

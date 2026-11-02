@@ -17,6 +17,8 @@
 
 #include "SyncServerClient.h"
 
+#include "core/Tools.h"
+
 #include <QCryptographicHash>
 #include <QHash>
 #include <QJsonDocument>
@@ -320,6 +322,13 @@ void SyncServerClient::send(const QByteArray& verb,
 #ifdef KPXC_FEATURE_NETWORK
     if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
         response.networkError = tr("Invalid sync server URL: %1").arg(m_params.serverUrl);
+        deliverLater(response, std::move(callback));
+        return;
+    }
+    if (!Tools::isSecureServerUrl(url)) {
+        response.networkError =
+            tr("The sync server must use https:// (plain http:// is only allowed for this computer): %1")
+                .arg(m_params.serverUrl);
         deliverLater(response, std::move(callback));
         return;
     }
