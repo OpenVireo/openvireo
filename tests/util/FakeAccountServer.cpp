@@ -270,6 +270,11 @@ namespace FakeAccount
     {
         auto& server = *m_server;
         Response response;
+        if (server.unreachable) {
+            response.networkError = QStringLiteral("Connection refused");
+            deliverLater(response, std::move(callback));
+            return;
+        }
         const auto reply = [&](int status, const QJsonObject& object = {}) {
             response.status = status;
             response.body = status == 204 ? QByteArray() : QJsonDocument(object).toJson(QJsonDocument::Compact);
@@ -1097,6 +1102,12 @@ namespace FakeAccount
                               Callback callback)
     {
         auto& server = *m_server;
+        if (server.unreachable) {
+            Response response;
+            response.networkError = QStringLiteral("Connection refused");
+            deliverLater(response, std::move(callback));
+            return;
+        }
         auto path = url.path();
         path = path.mid(path.indexOf("/api/v1/") + QString("/api/v1/").size());
         server.requests << "sync " + QString::fromLatin1(verb) + " " + path;

@@ -172,6 +172,8 @@ namespace FakeAccount
         QHash<QString, QString> pairingCodes;
         QSet<QString> deviceTokens;
         QHash<QString, Blob> databases;
+        // Neither server answers, as with the network down
+        bool unreachable = false;
         int counter = 0;
         // Every request, "VERB path" without the API prefix, auth and sync server alike
         QStringList requests;

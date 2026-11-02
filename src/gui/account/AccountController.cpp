@@ -90,6 +90,14 @@ AccountController::AccountController(DatabaseTabWidget* tabs, AccountManager* ac
             emit startScreenRequested();
         }
     });
+    // Vaults that weren't on this device during an offline unlock open once the servers answer again
+    connect(m_account, &AccountManager::offlineChanged, this, [this](bool offline) {
+        if (!offline && m_account->state() == AccountManager::State::Unlocked) {
+            for (const auto& vault : m_account->keyring().vaults()) {
+                openVault(vault.id, true);
+            }
+        }
+    });
     connect(m_sharing, &VaultSharing::progress, this, &AccountController::busyChanged);
     if (m_tabs) {
         connect(m_tabs, &DatabaseTabWidget::databaseLocked, this, &AccountController::handleDatabaseLocked);
@@ -411,11 +419,25 @@ void AccountController::handleVaultsChanged()
 
 void AccountController::openAllVaults()
 {
-    bool first = true;
-    for (const auto& vault : m_account->keyring().vaults()) {
-        openVault(vault.id, !first);
-        first = false;
+    // The vault that was in front when the account locked comes back in front, else the first one
+    const auto& keyring = m_account->keyring();
+    const auto front = keyring.contains(m_lastActiveVault) || keyring.vaults().isEmpty()
+                           ? m_lastActiveVault
+                           : keyring.vaults().first().id;
+    m_lastActiveVault.clear();
+    for (const auto& vault : keyring.vaults()) {
+        if (vault.id != front) {
+            openVault(vault.id, true);
+        }
     }
+    if (!front.isEmpty()) {
+        openVault(front, false);
+    }
+}
+
+void AccountController::requestUnlockScreen()
+{
+    emit unlockScreenRequested();
 }
 
 bool AccountController::ensureAccountRemote(const QSharedPointer<Database>& db, const QString& vaultId) const
@@ -473,6 +495,16 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
                      MessageWidget::Warning);
     }
 
+    if (m_account->isOffline()) {
+        // Opening every vault after an offline unlock says nothing about each; it retries once back online
+        if (inBackground) {
+            return;
+        }
+        emit message(tr("\"%1\" hasn't been downloaded to this device yet. It opens once OpenVireo is back online.")
+                         .arg(keyring.vault(vaultId).name),
+                     MessageWidget::Information);
+        return;
+    }
     m_opening.insert(vaultId);
     emit busyChanged(tr("Downloading \"%1\"…").arg(keyring.vault(vaultId).name));
     auto* client = SyncServerClient::create(m_account->vaultRemoteParams(vaultId), this);
@@ -567,6 +599,12 @@ void AccountController::closeVaultTabs()
         return;
     }
     m_locking = true;
+    if (m_tabs) {
+        const auto current = vaultIdOf(m_tabs->currentDatabaseWidget());
+        if (!current.isEmpty()) {
+            m_lastActiveVault = current;
+        }
+    }
     for (const auto& vaultId : m_vaultWidgets.keys()) {
         auto widget = m_vaultWidgets.take(vaultId);
         if (!widget || !m_tabs) {
@@ -607,6 +645,7 @@ void AccountController::handleDatabaseLocked(DatabaseWidget* dbWidget)
 void AccountController::signOut()
 {
     closeVaultTabs();
+    m_lastActiveVault.clear();
     m_account->signOut();
     setMode(Mode::Unset);
     emit startScreenRequested();

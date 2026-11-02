@@ -36,6 +36,7 @@ namespace Ui
 }
 
 class AccountController;
+class AccountLockWidget;
 class AccountStartWidget;
 class AccountVaultsPane;
 class InactivityTimer;
@@ -69,6 +70,9 @@ public:
     AccountVaultsPane* accountVaultsPane() const;
     // Whether the start screen shows in place of the welcome screen
     bool isStartScreenShown() const;
+    AccountLockWidget* accountLockScreen() const;
+    // Whether the locked account's lock screen shows in place of the welcome screen
+    bool isAccountLockScreenShown() const;
     void setAllowScreenCapture(bool state);
     NotificationCenter* notificationCenter() const;
 
@@ -122,6 +126,7 @@ public slots:
     void showShareVaultDialog(const QString& vaultId = {});
     void showServiceAccounts();
     void createAccountVault();
+    // The account's lock screen, in front of any open databases
     void unlockAccount();
     // Paste the link or code from an org invitation email
     void acceptAccountInvitation();
@@ -190,9 +195,14 @@ private slots:
 private slots:
     void finishStartScreen();
     void updateAccountActions();
+    void showAccountLockScreen();
+    void handleAccountStateChanged();
+    void handleUnlockWithoutDatabase();
+    void updateHomeScreen();
 
 private:
     void setupAccounts();
+    bool wantsAccountLockScreen() const;
     void setupNotifications();
     // Where the notification list and the error peek open: the visible bell, else the toolbar's
     QWidget* notificationAnchor() const;
@@ -246,6 +256,12 @@ private:
     quint64 m_preReleaseNotice = 0;
     QPointer<AccountController> m_accountController;
     AccountStartWidget* m_startScreen = nullptr;
+    AccountLockWidget* m_lockScreen = nullptr;
+    // "Open a local database" left the lock screen; it shows again the next time the account locks
+    bool m_lockScreenDismissed = false;
+    int m_lastAccountState = -1;
+    // The pinned "Working offline" entry while the account works from its offline cache
+    quint64 m_offlineNotice = 0;
     AccountVaultsPane* m_accountPane = nullptr;
     QPointer<QMenu> m_accountMenu;
     QPointer<QAction> m_actionAccountSignIn;

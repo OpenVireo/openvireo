@@ -59,6 +59,10 @@ private slots:
     void testQuickUnlocksTheAccount();
     void testLinksToAccountRecovery();
     void testImportsAKdbxFile();
+    void testLockScreenUnlocksTheAccount();
+    void testLockScreenStaysInFrontOfLocalDatabases();
+    void testLockScreenAtStartup();
+    void testUnlocksOfflineFromTheLockScreen();
 
 private:
     void createWindow(const QString& mode);
