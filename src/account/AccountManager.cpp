@@ -21,6 +21,7 @@
 #include "core/AsyncTask.h"
 #include "core/Config.h"
 #include "core/Database.h"
+#include "core/Tools.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
 #include "quickunlock/QuickUnlockInterface.h"
@@ -74,6 +75,13 @@ namespace
     constexpr int FirstReconnectDelaySec = 15;
     constexpr int MaxReconnectDelaySec = 5 * 60;
 
+    QString insecureServerMessage(const QString& url)
+    {
+        return AccountManager::tr("The server sent an address that doesn't use https://: %1. Plain http:// is only "
+                                  "allowed for this computer.")
+            .arg(url);
+    }
+
     QList<AccountManager::Org> parseOrgs(const QJsonArray& array)
     {
         QList<AccountManager::Org> orgs;
@@ -96,7 +104,7 @@ QString AccountManager::ServerConfig::serverId() const
 QUrl AccountManager::ServerConfig::accountSettingsUrl() const
 {
     QUrl url(web);
-    if (web.isEmpty() || !url.isValid() || (url.scheme() != "https" && url.scheme() != "http")) {
+    if (web.isEmpty() || !Tools::isSecureServerUrl(url)) {
         return {};
     }
     if (url.path().isEmpty()) {
@@ -104,6 +112,16 @@ QUrl AccountManager::ServerConfig::accountSettingsUrl() const
     }
     url.setQuery("view=account");
     return url;
+}
+
+QString AccountManager::ServerConfig::insecureUrl() const
+{
+    for (const auto& url : {issuer, api, sync, web}) {
+        if (!url.isEmpty() && !Tools::isSecureServerUrl(QUrl(url))) {
+            return url;
+        }
+    }
+    return {};
 }
 
 AccountManager::ServerConfig AccountManager::ServerConfig::fromJson(const QJsonObject& json)
@@ -198,6 +216,10 @@ void AccountManager::discover(const QString& issuerUrl)
         if (!response.isSuccess() || !config.isValid()) {
             emit error(response.isSuccess() ? tr("The server isn't an OpenVireo account server.")
                                             : AuthClient::errorMessage(response));
+            return;
+        }
+        if (const auto insecure = config.insecureUrl(); !insecure.isEmpty()) {
+            emit error(insecureServerMessage(insecure));
             return;
         }
         setServer(config);
@@ -1072,6 +1094,11 @@ void AccountManager::signInServiceAccount(const QString& token)
             if (!response.isSuccess() || !config.isValid()) {
                 endSession({});
                 emit error(AuthClient::errorMessage(response));
+                return;
+            }
+            if (const auto insecure = config.insecureUrl(); !insecure.isEmpty()) {
+                endSession({});
+                emit error(insecureServerMessage(insecure));
                 return;
             }
             setServer(config);

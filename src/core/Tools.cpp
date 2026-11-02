@@ -377,6 +377,29 @@ namespace Tools
         return true;
     }
 
+    // localhost, *.localhost, 127.0.0.0/8 and ::1: the only hosts plain http:// is allowed for (SPEC.md §1)
+    bool isLoopbackHost(const QString& host)
+    {
+        auto h = host.toLower();
+        if (h.endsWith('.')) {
+            h.chop(1);
+        }
+        if (h.startsWith('[') && h.endsWith(']')) {
+            h = h.mid(1, h.length() - 2);
+        }
+        static const QRegularExpression ipv4Loopback(QStringLiteral("^127(\\.\\d{1,3}){3}$"));
+        return h == "localhost" || h.endsWith(".localhost") || h == "::1" || ipv4Loopback.match(h).hasMatch();
+    }
+
+    // An account or sync server URL a client may talk to: https://, or http:// to this computer
+    bool isSecureServerUrl(const QUrl& url)
+    {
+        if (!url.isValid() || url.host().isEmpty()) {
+            return false;
+        }
+        return url.scheme() == "https" || (url.scheme() == "http" && isLoopbackHost(url.host()));
+    }
+
     QString envSubstitute(const QString& filepath, QProcessEnvironment environment)
     {
         QString subbed = filepath;

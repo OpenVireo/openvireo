@@ -24,6 +24,7 @@
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QTest>
+#include <QUrl>
 #include <QUuid>
 
 QTEST_GUILESS_MAIN(TestTools)
@@ -478,4 +479,28 @@ void TestTools::testEscapeAccelerators()
     QCOMPARE(Tools::escapeAccelerators("Accel&erator&"), "Accel&&erator&&");
     QCOMPARE(Tools::escapeAccelerators("Accel&&erator"), "Accel&&&&erator");
     QCOMPARE(Tools::escapeAccelerators("Some & text"), "Some && text");
+}
+
+void TestTools::testIsSecureServerUrl()
+{
+    for (const auto* url : {"https://accounts.openvireo.com",
+                            "https://10.0.0.2:8000/api/v1",
+                            "http://localhost:8000",
+                            "http://LOCALHOST",
+                            "http://app.localhost:3000",
+                            "http://127.0.0.1:8787/api/v1",
+                            "http://127.1.2.3",
+                            "http://[::1]:8000"}) {
+        QVERIFY2(Tools::isSecureServerUrl(QUrl(url)), url);
+    }
+    for (const auto* url : {"http://accounts.openvireo.com",
+                            "http://localhost.example.com",
+                            "http://128.0.0.1",
+                            "http://192.168.1.5:8787",
+                            "http://[::2]",
+                            "ftp://localhost",
+                            "https://",
+                            ""}) {
+        QVERIFY2(!Tools::isSecureServerUrl(QUrl(url)), url);
+    }
 }
