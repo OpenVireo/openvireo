@@ -460,10 +460,12 @@ namespace
         }
         const Database* winner = !remoteBin ? local : !localBin ? remote : nullptr;
         if (!winner) {
-            const auto localTime = local->metadata()->recycleBinChanged();
-            const auto remoteTime = remote->metadata()->recycleBinChanged();
-            winner = localTime != remoteTime ? (localTime > remoteTime ? local : remote)
-                                             : (localBin->uuid() < remoteBin->uuid() ? local : remote);
+            // Whole seconds, as the files keep them; the UUIDs' bytes break a tie
+            const auto localTime = local->metadata()->recycleBinChanged().toSecsSinceEpoch();
+            const auto remoteTime = remote->metadata()->recycleBinChanged().toSecsSinceEpoch();
+            winner = localTime != remoteTime
+                         ? (localTime > remoteTime ? local : remote)
+                         : (localBin->uuid().toRfc4122() < remoteBin->uuid().toRfc4122() ? local : remote);
         }
         const auto binUuid = winner->metadata()->recycleBin()->uuid();
         const auto binChanged = winner->metadata()->recycleBinChanged();
