@@ -55,9 +55,11 @@ Notes for a port:
   `Password`, `URL`, `Notes`, a custom attribute's key, `attachment <name>`, `Tags`, `Expiry`, `Icon`,
   `Colors`.
 - `history_count` comes from KeePassXC's `Merger` and is informative; a port may compare it loosely.
-- Case 05 records current behaviour, not necessarily the intended one: `Merger` only applies
-  deletions in the `Synchronize` merge mode, which sync doesn't set, so an entry deleted on one side
-  and unchanged on the other comes back (and the deletion record stays).
+- With a base, deletions are decided against it after `Merger` has run both ways (`Merger` itself only
+  applies deletions in the `Synchronize` merge mode, which sync doesn't set): an entry deleted on one
+  side goes from both only when both copies still match the base (same fields, same group). Otherwise
+  the deletion record is dropped and the entry stays. Deletion and modification times play no part, so
+  a wrong clock can't decide (cases 05, 09, 10). Without a base nothing is deleted.
 
 Regenerate the expected results after an intended change to the merge with
 `KPXC_UPDATE_MERGE_FIXTURES=1 ./tests/testmergefixtures`, then review the diff.

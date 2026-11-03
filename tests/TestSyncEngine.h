@@ -54,6 +54,10 @@ private slots:
     void testMergesWithoutABase();
     void testKeepsAnEditFromTheSameSecondAsTheSync();
     void testTakesAnotherDevicesEditFromTheSameSecond();
+    void testDeletesAGroupFromTheRecycleBinOnEveryDevice();
+    void testKeepsAnEntryEditedAfterADeletionWhateverTheClock();
+    void testKeepsADeletedGroupThatGainedAnEntry();
+    void testMergesRecycleBinsMadeOnTwoDevices();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H
