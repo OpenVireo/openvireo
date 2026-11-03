@@ -294,12 +294,231 @@ namespace
     }
 
     /*
-     * Whether merging needs the common base: an entry both sides changed, or one side changed but
+     * The deletions `from` made that `into` hasn't applied: recorded in `from`, gone there, still in `into`.
+     * The root group is never deleted.
+     */
+    QHash<QUuid, DeletedObject> pendingDeletions(const Database* from, const Database* into)
+    {
+        QSet<QUuid> present;
+        for (const auto* entry : from->rootGroup()->entriesRecursive()) {
+            present.insert(entry->uuid());
+        }
+        for (const auto* group : from->rootGroup()->groupsRecursive(true)) {
+            present.insert(group->uuid());
+        }
+        QSet<QUuid> theirs;
+        for (const auto* entry : into->rootGroup()->entriesRecursive()) {
+            theirs.insert(entry->uuid());
+        }
+        for (const auto* group : into->rootGroup()->groupsRecursive(false)) {
+            theirs.insert(group->uuid());
+        }
+
+        QHash<QUuid, DeletedObject> pending;
+        for (const auto& object : from->deletedObjects()) {
+            if (!present.contains(object.uuid) && theirs.contains(object.uuid) && !pending.contains(object.uuid)) {
+                pending.insert(object.uuid, object);
+            }
+        }
+        return pending;
+    }
+
+    bool sameGroup(const Group* a, const Group* b)
+    {
+        return a->name() == b->name() && a->notes() == b->notes() && a->iconNumber() == b->iconNumber()
+               && a->iconUuid() == b->iconUuid() && a->parentGroup()->uuid() == b->parentGroup()->uuid();
+    }
+
+    int depthOf(const Group* group)
+    {
+        int depth = 0;
+        for (auto* parent = group->parentGroup(); parent; parent = parent->parentGroup()) {
+            ++depth;
+        }
+        return depth;
+    }
+
+    // Deletes without touching the parent's times; the deletion is recorded by the caller
+    template <class T> void erase(T* item, Group* parent)
+    {
+        const bool updateTimeinfo = parent->canUpdateTimeinfo();
+        parent->setUpdateTimeinfo(false);
+        delete item;
+        parent->setUpdateTimeinfo(updateTimeinfo);
+    }
+
+    void setDeletion(Database* db, const QUuid& uuid, const DeletedObject* object)
+    {
+        QList<DeletedObject> deletions;
+        for (const auto& existing : db->deletedObjects()) {
+            if (existing.uuid != uuid) {
+                deletions << existing;
+            }
+        }
+        if (object) {
+            deletions << *object;
+        }
+        db->setDeletedObjects(deletions);
+    }
+
+    /*
+     * Applies the deletions either side made since the last sync (`pending`, found before Merger ran and
+     * brought the items back) to both. Whether to delete is decided by the base, not by deletion and
+     * modification times, so a device with a wrong clock can't delete what another device changed: an
+     * item goes only when both copies still match the base (same fields, or for a group the same name,
+     * notes and icon; in the same parent group) and, for a group, nothing is left in it. A deletion held
+     * back is dropped, so the item stays on both.
+     */
+    Merger::ChangeList
+    applyDeletions(Database* local, Database* remote, const Database* base, const QHash<QUuid, DeletedObject>& pending)
+    {
+        Merger::ChangeList changes;
+        const QList<Database*> both = {local, remote};
+
+        for (auto it = pending.begin(); it != pending.end(); ++it) {
+            const auto* baseEntry = base->rootGroup()->findEntryByUuid(it.key());
+            QList<Entry*> copies;
+            bool unchanged = baseEntry != nullptr;
+            for (auto* db : both) {
+                auto* entry = db->rootGroup()->findEntryByUuid(it.key());
+                if (entry) {
+                    copies << entry;
+                    unchanged = unchanged && entry->group()->uuid() == baseEntry->group()->uuid()
+                                && sameFields(entry, baseEntry);
+                }
+            }
+            if (copies.isEmpty()) {
+                continue;
+            }
+            if (unchanged) {
+                changes << Merger::Change(
+                    Merger::Change::Type::Deleted, *copies.first(), SyncEngine::tr("Deleted on another device"));
+                for (auto* entry : copies) {
+                    erase(entry, entry->group());
+                }
+            }
+            for (auto* db : both) {
+                setDeletion(db, it.key(), unchanged ? &it.value() : nullptr);
+            }
+        }
+
+        // Deepest first, so a group's deleted subgroups are gone before it is looked at
+        QList<Group*> groups;
+        for (auto it = pending.begin(); it != pending.end(); ++it) {
+            if (auto* group = local->rootGroup()->findGroupByUuid(it.key())) {
+                if (group != local->rootGroup()) {
+                    groups << group;
+                }
+            }
+        }
+        std::stable_sort(
+            groups.begin(), groups.end(), [](const Group* a, const Group* b) { return depthOf(a) > depthOf(b); });
+        for (auto* localGroup : groups) {
+            const auto uuid = localGroup->uuid();
+            const auto object = pending.value(uuid);
+            const auto* baseGroup = base->rootGroup()->findGroupByUuid(uuid);
+            QList<Group*> copies;
+            bool unchanged = baseGroup != nullptr && baseGroup != base->rootGroup();
+            for (auto* db : both) {
+                auto* group = db->rootGroup()->findGroupByUuid(uuid);
+                if (group) {
+                    copies << group;
+                    unchanged = unchanged && group->entries().isEmpty() && group->children().isEmpty()
+                                && sameGroup(group, baseGroup);
+                }
+            }
+            if (unchanged) {
+                changes << Merger::Change(
+                    Merger::Change::Type::Deleted, *localGroup, SyncEngine::tr("Deleted on another device"));
+                for (auto* group : copies) {
+                    erase(group, group->parentGroup());
+                }
+            }
+            for (auto* db : both) {
+                setDeletion(db, uuid, unchanged ? &object : nullptr);
+            }
+        }
+        return changes;
+    }
+
+    /*
+     * Merger doesn't carry the Recycle Bin (KeePassXC's "missing handling of recycle bin"), so a bin made
+     * on one device was a plain group on the others, and deleting from it there moved things into a bin
+     * of their own. As in KeePass, the bin changed last wins on both sides; another bin is emptied into it
+     * and deleted.
+     */
+    Merger::ChangeList mergeRecycleBins(Database* local, Database* remote)
+    {
+        Merger::ChangeList changes;
+        const auto* localBin = local->metadata()->recycleBin();
+        const auto* remoteBin = remote->metadata()->recycleBin();
+        if (!localBin && !remoteBin) {
+            return changes;
+        }
+        if (localBin && remoteBin && localBin->uuid() == remoteBin->uuid()) {
+            return changes;
+        }
+        const Database* winner = !remoteBin ? local : !localBin ? remote : nullptr;
+        if (!winner) {
+            const auto localTime = local->metadata()->recycleBinChanged();
+            const auto remoteTime = remote->metadata()->recycleBinChanged();
+            winner = localTime != remoteTime ? (localTime > remoteTime ? local : remote)
+                                             : (localBin->uuid() < remoteBin->uuid() ? local : remote);
+        }
+        const auto binUuid = winner->metadata()->recycleBin()->uuid();
+        const auto binChanged = winner->metadata()->recycleBinChanged();
+        QSet<QUuid> others;
+        for (const auto* bin : {localBin, remoteBin}) {
+            if (bin && bin->uuid() != binUuid) {
+                others.insert(bin->uuid());
+            }
+        }
+
+        for (auto* db : {local, remote}) {
+            auto* bin = db->rootGroup()->findGroupByUuid(binUuid);
+            if (!bin) {
+                continue;
+            }
+            for (const auto& uuid : others) {
+                auto* other = db->rootGroup()->findGroupByUuid(uuid);
+                if (!other || other == bin || other->findGroupByUuid(binUuid)) {
+                    continue;
+                }
+                for (auto* entry : other->entries()) {
+                    entry->setGroup(bin);
+                }
+                for (auto* child : other->children()) {
+                    child->setParent(bin);
+                }
+                // Recorded, so the devices that sync next delete it too
+                delete other;
+            }
+            if (db->metadata()->recycleBin() != bin) {
+                db->metadata()->setRecycleBin(bin);
+                db->metadata()->setRecycleBinChanged(binChanged);
+                if (db == local) {
+                    changes << Merger::Change(Merger::Change::Type::Metadata,
+                                              SyncEngine::tr("Recycle Bin set from another device"));
+                }
+            }
+        }
+        if (changes.isEmpty() && !others.isEmpty()) {
+            changes << Merger::Change(Merger::Change::Type::Metadata,
+                                      SyncEngine::tr("Recycle Bin set from another device"));
+        }
+        return changes;
+    }
+
+    /*
+     * Whether merging needs the common base: deletions to apply, an entry both sides changed, or one side changed but
      * doesn't look newer (a device whose clock is behind, or an edit in the same second as the last
      * sync). Merger alone keeps the newer-looking copy in those cases.
      */
     bool needsCommonBase(const Database* local, const Database* remote, const QHash<QUuid, QDateTime>& snapshot)
     {
+        if (!pendingDeletions(local, remote).isEmpty() || !pendingDeletions(remote, local).isEmpty()) {
+            return true;
+        }
         for (auto it = snapshot.begin(); it != snapshot.end(); ++it) {
             const auto* localEntry = local->rootGroup()->findEntryByUuid(it.key());
             const auto* remoteEntry = remote->rootGroup()->findEntryByUuid(it.key());
@@ -545,8 +764,8 @@ void SyncEngine::mergeDownload()
 
     auto conflicts = findConflicts(m_db.data(), m_remoteDb.data(), m_syncState.entries);
 
-    // The copy both sides last synced from tells which fields each side changed. Opening it costs another
-    // key derivation, so only when an entry changed on both sides needs it.
+    // The copy both sides last synced from tells which fields each side changed, and which deletions to
+    // apply. Opening it costs another key derivation, so only when merging needs it.
     const bool editedOnBoth = std::any_of(conflicts.begin(), conflicts.end(), [](const SyncConflict& conflict) {
         return conflict.kind == SyncConflict::Kind::EditedOnBoth;
     });
@@ -799,9 +1018,20 @@ Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote,
         }
     }
 
+    // Found before Merger brings the deleted items back from the other side
+    QHash<QUuid, DeletedObject> pending;
+    if (base) {
+        pending = pendingDeletions(local, remote);
+        pending.insert(pendingDeletions(remote, local));
+    }
+
     Merger firstMerge(local, remote);
     Merger secondMerge(remote, local);
     changes += firstMerge.merge() + secondMerge.merge();
+    if (!pending.isEmpty()) {
+        changes += applyDeletions(local, remote, base, pending);
+    }
+    changes += mergeRecycleBins(local, remote);
     if (!changes.isEmpty()) {
         const auto generation = QString::number(qMax(generationOf(local), generationOf(remote)) + 1);
         local->metadata()->customData()->set(CustomData::SyncGeneration, generation);

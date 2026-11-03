@@ -1152,3 +1152,182 @@ void TestSyncEngine::testTakesAnotherDevicesEditFromTheSameSecond()
     QVERIFY(serverCopy);
     QCOMPARE(findEntry(serverCopy.data(), "Shared")->notes(), QString("changed elsewhere"));
 }
+
+namespace
+{
+    Group* findGroup(Database* db, const QString& name)
+    {
+        for (auto* group : db->rootGroup()->groupsRecursive(false)) {
+            if (group->name() == name) {
+                return group;
+            }
+        }
+        return nullptr;
+    }
+
+    // Two devices on one server, both with a "Work" group holding "In Work", both synced
+    bool twoDevicesWithWork(Fixture& first, QScopedPointer<Fixture>& second, MockClock* clock)
+    {
+        auto* work = new Group();
+        work->setUuid(QUuid::createUuid());
+        work->setName("Work");
+        work->setParent(first.local->rootGroup());
+        auto* entry = new Entry();
+        entry->setUuid(QUuid::createUuid());
+        entry->setTitle("In Work");
+        entry->setGroup(work);
+        if (!first.sync().value(0).toBool()) {
+            return false;
+        }
+        clock->advanceMinute(1);
+        second.reset(new Fixture("second", &first));
+        // The first sync gives the second device its base
+        return second->local && second->sync().value(0).toBool();
+    }
+} // namespace
+
+void TestSyncEngine::testDeletesAGroupFromTheRecycleBinOnEveryDevice()
+{
+    // Each step a minute apart, as on real devices; a file keeps whole seconds
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+    Fixture first("first");
+    QVERIFY(first.local);
+    QScopedPointer<Fixture> second;
+    QVERIFY(twoDevicesWithWork(first, second, clock));
+
+    first.local->recycleGroup(findGroup(first.local.data(), "Work"));
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(second->sync().value(0).toBool());
+    auto* binned = findGroup(second->local.data(), "Work");
+    QVERIFY(binned);
+    QVERIFY(binned->isRecycled());
+
+    // Deleted for good from the Recycle Bin on the second device
+    delete findGroup(second->local.data(), "Work");
+    clock->advanceMinute(1);
+    QVERIFY(second->sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    for (auto* db : {first.local.data(), second->local.data()}) {
+        QVERIFY(!findGroup(db, "Work"));
+        QVERIFY(titles(db).isEmpty());
+    }
+    auto serverCopy = openServerCopy(first.server, first.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    QVERIFY(!findGroup(serverCopy.data(), "Work"));
+
+    // And it stays deleted
+    clock->advanceMinute(1);
+    QVERIFY(second->sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    QVERIFY(!findGroup(first.local.data(), "Work"));
+}
+
+void TestSyncEngine::testKeepsAnEntryEditedAfterADeletionWhateverTheClock()
+{
+    // Each step a minute apart, as on real devices; a file keeps whole seconds
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+    Fixture first("first");
+    QVERIFY(first.local);
+    QScopedPointer<Fixture> second;
+    QVERIFY(twoDevicesWithWork(first, second, clock));
+
+    // The first device, its clock a year ahead, deletes the entry; its deletion looks newer than any edit
+    delete findEntry(first.local.data(), "In Work");
+    auto deletions = first.local->deletedObjects();
+    QCOMPARE(deletions.size(), 1);
+    deletions[0].deletionTime = Clock::currentDateTimeUtc().addYears(1);
+    first.local->setDeletedObjects(deletions);
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+
+    // The second device edits it before it has synced
+    editEntry(findEntry(second->local.data(), "In Work"), "still needed", Clock::currentDateTimeUtc());
+    clock->advanceMinute(1);
+    QVERIFY(second->sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    for (auto* db : {first.local.data(), second->local.data()}) {
+        auto* entry = findEntry(db, "In Work");
+        QVERIFY(entry);
+        QCOMPARE(entry->notes(), QString("still needed"));
+    }
+    QVERIFY(first.local->deletedObjects().isEmpty());
+}
+
+void TestSyncEngine::testKeepsADeletedGroupThatGainedAnEntry()
+{
+    // Each step a minute apart, as on real devices; a file keeps whole seconds
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+    Fixture first("first");
+    QVERIFY(first.local);
+    QScopedPointer<Fixture> second;
+    QVERIFY(twoDevicesWithWork(first, second, clock));
+
+    delete findGroup(first.local.data(), "Work");
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+    auto* entry = new Entry();
+    entry->setUuid(QUuid::createUuid());
+    entry->setTitle("New in Work");
+    entry->setGroup(findGroup(second->local.data(), "Work"));
+    clock->advanceMinute(1);
+    QVERIFY(second->sync().value(0).toBool());
+    clock->advanceMinute(1);
+    QVERIFY(first.sync().value(0).toBool());
+
+    // The entry deleted with the group goes; the group stays for the new one
+    for (auto* db : {first.local.data(), second->local.data()}) {
+        QVERIFY(findGroup(db, "Work"));
+        QCOMPARE(titles(db), QStringList({"New in Work"}));
+    }
+}
+
+void TestSyncEngine::testMergesRecycleBinsMadeOnTwoDevices()
+{
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+
+    Fixture first("first");
+    QVERIFY(first.local);
+    addEntry(first.local.data(), "Recycled first");
+    addEntry(first.local.data(), "Recycled second");
+    QScopedPointer<Fixture> second;
+    QVERIFY(twoDevicesWithWork(first, second, clock));
+
+    // Each device recycles something before seeing the other's bin, so each makes one
+    clock->advanceMinute(1);
+    first.local->recycleEntry(findEntry(first.local.data(), "Recycled first"));
+    clock->advanceMinute(1);
+    second->local->recycleEntry(findEntry(second->local.data(), "Recycled second"));
+    for (int i = 0; i < 2; ++i) {
+        clock->advanceMinute(1);
+        QVERIFY(first.sync().value(0).toBool());
+        clock->advanceMinute(1);
+        QVERIFY(second->sync().value(0).toBool());
+    }
+
+    // One bin, the one changed last, holding both
+    for (auto* db : {first.local.data(), second->local.data()}) {
+        auto* bin = db->metadata()->recycleBin();
+        QVERIFY(bin);
+        QCOMPARE(bin->uuid(), second->local->metadata()->recycleBin()->uuid());
+        QVERIFY(findEntry(db, "Recycled first")->isRecycled());
+        QVERIFY(findEntry(db, "Recycled second")->isRecycled());
+        int bins = 0;
+        for (const auto* group : db->rootGroup()->children()) {
+            bins += group->name() == bin->name() ? 1 : 0;
+        }
+        QCOMPARE(bins, 1);
+    }
+}
