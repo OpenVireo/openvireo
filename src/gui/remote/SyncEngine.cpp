@@ -694,6 +694,7 @@ void SyncEngine::startCheck()
     setState(State::Checking);
     emit progress(10, tr("Checking…"));
     m_client->check(m_syncState.etag, [this](const SyncServerClient::Response& response) {
+        noteServerTime(response);
         if (response.status == 304) {
             if (acceptRevision(response.revision)) {
                 succeed(m_syncState.etag, response.revision);
@@ -711,6 +712,7 @@ void SyncEngine::startDownload()
     setState(State::Downloading);
     emit progress(25, tr("Downloading..."));
     m_client->download([this](const SyncServerClient::Response& response) {
+        noteServerTime(response);
         if (response.status == 404) {
             if (!m_acceptServerState && m_syncState.revision > 0) {
                 needAttention(Attention::ServerLostDatabase,
@@ -881,6 +883,7 @@ void SyncEngine::startUpload(const QByteArray& data)
     emit progress(75, tr("Uploading..."));
     m_uploadData = data;
     m_client->upload(data, m_remoteEtag, [this](const SyncServerClient::Response& response) {
+        noteServerTime(response);
         if (response.status == 200 || response.status == 201) {
             succeed(response.etag, response.revision, m_uploadData);
             return;
@@ -930,6 +933,23 @@ void SyncEngine::succeed(const QString& etag, qint64 revision, const QByteArray&
     m_acceptServerState = false;
     setState(State::Idle);
     emit finished(true, {});
+}
+
+void SyncEngine::noteServerTime(const SyncServerClient::Response& response)
+{
+    if (response.serverTime.isValid()) {
+        m_clockOffsetMsec = response.serverTime.msecsTo(Clock::currentDateTimeUtc());
+    }
+}
+
+qint64 SyncEngine::clockOffsetMsec() const
+{
+    return m_clockOffsetMsec;
+}
+
+bool SyncEngine::isClockSkewed(qint64 offsetMsec)
+{
+    return qAbs(offsetMsec) > ClockSkewWarningMsec;
 }
 
 void SyncEngine::openBase()

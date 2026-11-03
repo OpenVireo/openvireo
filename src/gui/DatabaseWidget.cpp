@@ -57,6 +57,7 @@
 #include "gui/entry/EntryView.h"
 #include "gui/group/EditGroupWidget.h"
 #include "gui/group/GroupView.h"
+#include "gui/notifications/NotificationCenter.h"
 #include "gui/reports/ReportsDialog.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagView.h"
@@ -1772,6 +1773,9 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
             } else if (engine->state() == SyncEngine::State::NeedsAttention) {
                 failureState = SyncStatus::State::NeedsAttention;
             }
+            if (ok) {
+                updateClockWarning(engine->clockOffsetMsec());
+            }
             if (m_syncInteractive) {
                 RemoteHandler::RemoteResult result;
                 result.success = ok;
@@ -1784,6 +1788,53 @@ void DatabaseWidget::ensureSyncEngine(const RemoteParams& params)
         m_syncEngine = engine;
     }
     m_syncEngine->setRetryOnNetworkError(params.autoSync);
+}
+
+/*
+ * One notification while this computer's clock is off the sync server's, for every database: posted once
+ * per run (not again after the user dismisses it) and taken back once a sync finds the clock right.
+ */
+void DatabaseWidget::updateClockWarning(qint64 offsetMsec)
+{
+    static const QString source = QStringLiteral("sync-clock");
+    static bool posted = false;
+    auto* window = getMainWindow();
+    if (!window || !window->notificationCenter()) {
+        return;
+    }
+    auto* center = window->notificationCenter();
+    if (!SyncEngine::isClockSkewed(offsetMsec)) {
+        if (posted) {
+            center->dismissLatestFrom(source);
+            posted = false;
+        }
+        return;
+    }
+    if (posted) {
+        return;
+    }
+    posted = true;
+
+    const auto minutes = qAbs(offsetMsec) / 60000;
+    QString amount;
+    if (minutes < 120) {
+        amount = tr("%n minute(s)", nullptr, int(minutes));
+    } else if (minutes < 48 * 60) {
+        amount = tr("%n hour(s)", nullptr, int(minutes / 60));
+    } else {
+        amount = tr("%n day(s)", nullptr, int(minutes / (24 * 60)));
+    }
+    NotificationCenter::Notification notification;
+    notification.type = MessageWidget::Warning;
+    notification.title = tr("This computer's clock is off");
+    notification.text = (offsetMsec > 0 ? tr("This computer's clock is %1 ahead of the sync server's.")
+                                        : tr("This computer's clock is %1 behind the sync server's."))
+                            .arg(amount)
+                        + QStringLiteral(" ")
+                        + tr("Set the date and time in your system settings: entries get the wrong modification "
+                             "times, and TOTP codes won't work.");
+    notification.source = source;
+    center->add(notification);
 }
 
 QString DatabaseWidget::missingTokenMessage(const RemoteParams& params)

@@ -22,6 +22,7 @@
 
 #include "RemoteSettings.h"
 
+#include <QDateTime>
 #include <QObject>
 #include <QSet>
 #include <QUrl>
@@ -56,12 +57,17 @@ public:
         // X-Database-Revision, -1 when the server didn't send one
         qint64 revision = -1;
         QString networkError;
+        // The server's clock, from the Date header; invalid when it sent none
+        QDateTime serverTime;
     };
     using Callback = std::function<void(const Response&)>;
     using Headers = QList<QPair<QByteArray, QByteArray>>;
 
     explicit SyncServerClient(const RemoteParams& params, QObject* parent = nullptr);
     ~SyncServerClient() override;
+
+    // An HTTP Date header ("Mon, 02 Nov 2026 23:42:46 GMT"); invalid when it isn't one
+    static QDateTime parseHttpDate(const QByteArray& value);
 
     // A client for `params`, made by the factory tests can install
     static SyncServerClient* create(const RemoteParams& params, QObject* parent = nullptr);

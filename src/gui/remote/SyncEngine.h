@@ -163,6 +163,15 @@ public:
     static QList<SyncConflict>
     findConflicts(const Database* local, const Database* remote, const QHash<QUuid, QDateTime>& snapshot);
 
+    // How far off a clock may be before the user is warned (5 minutes), as the SDK and iOS app do
+    static constexpr qint64 ClockSkewWarningMsec = 5 * 60 * 1000;
+    // How far this computer's clock is ahead of the sync server's, in milliseconds (negative: behind), from
+    // the last response with a Date header; 0 until then
+    qint64 clockOffsetMsec() const;
+    // Whether the offset is enough to warn the user: sync doesn't depend on the clock, but entry times and
+    // TOTP codes do
+    static bool isClockSkewed(qint64 offsetMsec);
+
 public slots:
     // Start a sync, or run a scheduled retry now. Does nothing while a sync is running.
     void sync();
@@ -194,6 +203,7 @@ private:
     bool hasLocalChanges() const;
     bool acceptRevision(qint64 revision);
     void needAttention(Attention attention, const QString& message);
+    void noteServerTime(const SyncServerClient::Response& response);
     void startCheck();
     void startDownload();
     // Merges the downloaded copy once it is open, the base is open if needed and the gate is open
@@ -238,6 +248,7 @@ private:
 
     bool m_retryOnNetworkError = false;
     int m_backoffMsec = 0;
+    qint64 m_clockOffsetMsec = 0;
     QTimer m_backoffTimer;
 
     Q_DISABLE_COPY(SyncEngine)

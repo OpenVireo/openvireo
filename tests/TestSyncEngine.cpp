@@ -37,7 +37,9 @@
 #include <QThread>
 #include <QTimeZone>
 #include <QTimer>
+
 #include <functional>
+#include <optional>
 
 QTEST_GUILESS_MAIN(TestSyncEngine)
 
@@ -82,6 +84,8 @@ namespace
         QStringList requests;
         int networkErrors = 0;
         std::function<void()> beforePut;
+        // How far the server's clock is ahead of this computer's; unset sends no Date
+        std::optional<qint64> clockAheadMsec;
 
     protected:
         void send(const QByteArray& verb,
@@ -134,6 +138,11 @@ namespace
             if (!stored.isEmpty()) {
                 response.etag = etag;
                 response.revision = revision;
+            }
+            if (clockAheadMsec) {
+                // Whole seconds, as in a Date header
+                auto time = QDateTime::currentDateTimeUtc().addMSecs(*clockAheadMsec);
+                response.serverTime = QDateTime::fromSecsSinceEpoch(time.toSecsSinceEpoch(), QTimeZone::UTC);
             }
             deliverLater(response, std::move(callback));
         }
@@ -1330,4 +1339,31 @@ void TestSyncEngine::testMergesRecycleBinsMadeOnTwoDevices()
         }
         QCOMPARE(bins, 1);
     }
+}
+
+void TestSyncEngine::testMeasuresTheClockAgainstTheServer()
+{
+    // What SyncServerClient reads from a Date header
+    QCOMPARE(SyncServerClient::parseHttpDate("Mon, 02 Nov 2026 23:42:46 GMT"),
+             QDateTime(QDate(2026, 11, 2), QTime(23, 42, 46), QTimeZone::UTC));
+    QVERIFY(!SyncServerClient::parseHttpDate("").isValid());
+    QVERIFY(!SyncServerClient::parseHttpDate("yesterday").isValid());
+
+    Fixture f;
+    QVERIFY(f.local);
+    QVERIFY(f.sync().value(0).toBool());
+    QCOMPARE(f.engine->clockOffsetMsec(), qint64(0)); // no Date header
+
+    f.server->clockAheadMsec = 0;
+    addEntry(f.local.data(), "A");
+    QVERIFY(f.sync().value(0).toBool());
+    QVERIFY(qAbs(f.engine->clockOffsetMsec()) < 1500);
+    QVERIFY(!SyncEngine::isClockSkewed(f.engine->clockOffsetMsec()));
+
+    // This computer is ten minutes behind
+    f.server->clockAheadMsec = 10 * 60 * 1000;
+    addEntry(f.local.data(), "B");
+    QVERIFY(f.sync().value(0).toBool());
+    QVERIFY(qAbs(f.engine->clockOffsetMsec() + 10 * 60 * 1000) < 1500);
+    QVERIFY(SyncEngine::isClockSkewed(f.engine->clockOffsetMsec()));
 }

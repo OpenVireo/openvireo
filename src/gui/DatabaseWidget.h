@@ -338,6 +338,7 @@ private slots:
     void syncWithServer(const RemoteParams& params);
     void ensureSyncEngine(const RemoteParams& params);
     static QString missingTokenMessage(const RemoteParams& params);
+    static void updateClockWarning(qint64 offsetMsec);
     void unlockServerCopyForSync(const QString& filePath);
     void stopServerSync();
     void setSyncStatus(SyncStatus::State state, const QString& error = {});
