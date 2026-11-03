@@ -58,6 +58,7 @@ private slots:
     void testKeepsAnEntryEditedAfterADeletionWhateverTheClock();
     void testKeepsADeletedGroupThatGainedAnEntry();
     void testMergesRecycleBinsMadeOnTwoDevices();
+    void testMeasuresTheClockAgainstTheServer();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H
