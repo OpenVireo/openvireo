@@ -60,6 +60,16 @@ SyncServerClient::SyncServerClient(const RemoteParams& params, QObject* parent)
 {
 }
 
+QDateTime SyncServerClient::parseHttpDate(const QByteArray& value)
+{
+    // RFC 9110's IMF-fixdate is an RFC 2822 date in GMT, a zone name Qt's parser doesn't take
+    auto text = QString::fromLatin1(value).trimmed();
+    if (text.endsWith(QStringLiteral(" GMT"))) {
+        text = text.chopped(3) + QStringLiteral("+0000");
+    }
+    return QDateTime::fromString(text, Qt::RFC2822Date).toUTC();
+}
+
 SyncServerClient* SyncServerClient::create(const RemoteParams& params, QObject* parent)
 {
     auto* client = g_factory ? g_factory(params) : new SyncServerClient(params);
@@ -360,6 +370,7 @@ void SyncServerClient::send(const QByteArray& verb,
         if (ok) {
             response.revision = revision;
         }
+        response.serverTime = parseHttpDate(reply->rawHeader("Date"));
         if (response.status == 0) {
             response.networkError = reply->errorString();
         }
