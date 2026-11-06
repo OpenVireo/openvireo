@@ -163,7 +163,7 @@ paths:
     post:
       tags: [auth]
       security: []
-      summary: Rotate a refresh token. Reusing a rotated token revokes the device session (code token_reused).
+      summary: Rotate a refresh token. Reusing a rotated token revokes the device session (code token_reused), unless its replacement is unused and it was rotated within the last 60 seconds (SPEC §9).
       requestBody:
         required: true
         content:
