@@ -623,7 +623,8 @@ replaces the cached copy, so a password change, email change or key rotation rea
 the next online call.
 
 **Falling back.** Only when the server is **unreachable**: no HTTP response, no response within a
-client's deadline, or 502/503/504. A client may open from the cache after a short wait and check
+client's deadline, 502/503/504, or an error status without the server's `{error, code}` JSON (a CDN's
+or proxy's error page, so it can't end a session either). A client may open from the cache after a short wait and check
 with the server in the background, applying its answer when it comes; a refusal then ends the
 session as usual. Any
 other answer (401, 403, `invalid_*`, other 4xx) is acted on as without a cache: a client never
