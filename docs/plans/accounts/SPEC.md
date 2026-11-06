@@ -196,7 +196,11 @@ removes a member without a new key version.
 - `ov_rt_` + base64url(32 random bytes). The server stores `SHA-256(utf8(token))` hex. A refresh
   token is bound to one device, lives 30 days without use, and is replaced by every refresh.
 - **Reuse detection:** presenting a token that was already rotated revokes the whole family (the
-  device's session), and the user has to log in again.
+  device's session, code `token_reused`), and the user has to log in again.
+- **Grace period:** the response to a refresh can be lost, leaving the device with the rotated
+  token. For 60 seconds from its first rotation, a rotated token whose replacement nothing has used
+  is accepted: the server revokes that replacement and issues a new one. Retries don't extend the 60
+  seconds. A client doesn't cancel a refresh it has started, and retries one that got no response.
 
 ### Service account tokens
 
@@ -618,7 +622,10 @@ written into the cache.
 replaces the cached copy, so a password change, email change or key rotation reaches the cache with
 the next online call.
 
-**Falling back.** Only when the server is **unreachable**: no HTTP response, or 502/503/504. Any
+**Falling back.** Only when the server is **unreachable**: no HTTP response, no response within a
+client's deadline, or 502/503/504. A client may open from the cache after a short wait and check
+with the server in the background, applying its answer when it comes; a refusal then ends the
+session as usual. Any
 other answer (401, 403, `invalid_*`, other 4xx) is acted on as without a cache: a client never
 unlocks from the cache because the server refused. A wrong password fails as online, because the
 cached keyset doesn't unwrap. While working from the cache the client says it is offline, keeps
@@ -628,9 +635,12 @@ edits locally, and turns off actions that need the server (new vaults, sharing, 
 again it refreshes the cache, drops vaults that are no longer listed (with their local copies), and
 uploads local edits.
 
-**Wiping.** Ending the session (sign-out, revoked or reused refresh token, §9) deletes the cache.
-Locking keeps it. Clients offer a setting to not keep a cache (Qt: "Allow unlocking without a
-connection", on by default); turning it off deletes the cache.
+**Wiping.** Ending the session (sign-out, revoked refresh token, §9) deletes the cache. When the
+session ended by accident (`token_reused`, `session_expired`), a client may keep its encrypted local
+edits and merge them after the same user next signs in; everything else in the cache goes. Locking
+keeps it. Clients offer a setting to not keep a cache (Qt: "Allow unlocking without a connection",
+on by default); turning it off deletes the cache. iOS has no such setting, because its AutoFill
+extension reads the cache.
 
 **Trade-offs.** These are the usual costs of offline unlock; 1Password's model is the same, and
 Bitwarden's is the same except that its disk copy alone allows password guessing.
