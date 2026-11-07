@@ -415,6 +415,27 @@ void AuthClient::post(const QString& path, const QJsonObject& body, Callback cal
         "POST", endpoint(path), QJsonDocument(body).toJson(QJsonDocument::Compact), authenticated, std::move(callback));
 }
 
+void AuthClient::createShare(const QJsonObject& body, Callback callback)
+{
+    post("shares", body, std::move(callback), true);
+}
+
+void AuthClient::uploadShare(const QString& shareId, const QByteArray& ciphertext, const QString& ref, Callback callback)
+{
+    sendJson(
+        "PUT", "shares/" + encoded(shareId), {{"ct", AccountCrypto::toBase64Url(ciphertext)}, {"ref", ref}}, std::move(callback));
+}
+
+void AuthClient::listShares(Callback callback)
+{
+    get("shares", std::move(callback));
+}
+
+void AuthClient::revokeShare(const QString& shareId, Callback callback)
+{
+    request("DELETE", endpoint("shares/" + encoded(shareId)), {}, true, std::move(callback));
+}
+
 void AuthClient::get(const QString& path, Callback callback)
 {
     request("GET", endpoint(path), {}, true, std::move(callback));

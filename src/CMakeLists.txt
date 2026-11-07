@@ -176,6 +176,8 @@ set(gui_SOURCES
         gui/account/EmergencyKit.cpp
         gui/account/ServiceAccountsDialog.cpp
         gui/account/ShareVaultDialog.cpp
+        gui/account/ShareLinkDialog.cpp
+        gui/account/SharedLinksDialog.cpp
         gui/account/SignUpWizard.cpp
         gui/vault/AccountVaultsPane.cpp
         gui/vault/EntryDetailCard.cpp
@@ -228,6 +230,7 @@ set(gui_SOURCES
         account/ServiceAccountAdmin.cpp
         account/VaultKeyring.cpp
         account/VaultSharing.cpp
+        account/ItemShare.cpp
         gui/reports/ReportsWidget.cpp
         gui/reports/ReportsDialog.cpp
         gui/reports/ReportsWidgetHealthcheck.cpp

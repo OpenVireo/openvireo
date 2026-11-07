@@ -90,6 +90,8 @@ public:
         QString sync;
         // The web app, where account settings live (SPEC §16); empty when the server doesn't say
         QString web;
+        // The public share link page (SPEC §22); empty when the server doesn't say
+        QString share;
         // OPAQUE idS; the issuer host when the server doesn't say
         QString opaqueServerId;
         quint32 kdfMinMemoryKiB = AccountCrypto::KdfParams::MinMemoryKiB;
@@ -104,6 +106,8 @@ public:
         QString insecureUrl() const;
         // The web app's Account page (password, two-step verification, devices); invalid without `web`
         QUrl accountSettingsUrl() const;
+        // Where share links point: `share`, else `web` + "/s"; empty when neither is a secure URL
+        QString shareBase() const;
         static ServerConfig fromJson(const QJsonObject& json);
         QJsonObject toJson() const;
     };
@@ -117,6 +121,8 @@ public:
         QString role;
         // invited, accepted or confirmed
         QString status;
+        // Who may make share links from the org's vaults: on, managers or off (SPEC §22)
+        QString shareLinks = QStringLiteral("on");
 
         bool isConfirmed() const
         {
@@ -125,6 +131,10 @@ public:
         bool canAdminister() const
         {
             return isConfirmed() && (role == "owner" || role == "admin");
+        }
+        bool canShareLinks() const
+        {
+            return shareLinks == "on" || (shareLinks == "managers" && canAdminister());
         }
     };
 

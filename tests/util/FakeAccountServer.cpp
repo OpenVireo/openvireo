@@ -62,6 +62,7 @@ namespace FakeAccount
         config.api = Issuer + "/api/v1";
         config.sync = SyncUrl;
         config.opaqueServerId = QUrl(Issuer).host();
+        config.share = "https://share.example";
         return config;
     }
 
@@ -477,8 +478,11 @@ namespace FakeAccount
             for (const auto& org : server.orgs) {
                 for (const auto& member : org.members) {
                     if (member.userId == user.id) {
-                        orgs << QJsonObject{
-                            {"id", org.id}, {"name", org.name}, {"role", member.role}, {"status", member.status}};
+                        orgs << QJsonObject{{"id", org.id},
+                                            {"name", org.name},
+                                            {"role", member.role},
+                                            {"status", member.status},
+                                            {"item_share_links", org.shareLinks}};
                     }
                 }
             }
@@ -489,6 +493,58 @@ namespace FakeAccount
                    {"keyset", user.keyset},
                    {"mfa", QJsonObject{{"totp", user.mfa}}},
                    {"orgs", orgs}});
+        } else if (path == "shares" && verb == "POST") {
+            const auto vaultId = json.value("vault_id").toString();
+            if (!vaultId.isEmpty() && server.effectiveRole(vaultId, caller).isEmpty()) {
+                error(404, "not_found");
+            } else {
+                Server::Share share;
+                share.id = toBase64Url(randomSecure(16));
+                share.owner = caller;
+                share.vaultId = vaultId;
+                share.request = json;
+                server.shares.insert(share.id, share);
+                server.shareOrder.prepend(share.id);
+                reply(201,
+                      {{"id", share.id},
+                       {"status", "pending"},
+                       {"expires_at",
+                        QDateTime::currentDateTimeUtc().addSecs(json.value("expires_in").toInt()).toString(Qt::ISODate)}});
+            }
+        } else if (parts.value(0) == "shares" && parts.size() == 2 && verb == "PUT") {
+            auto& share = server.shares[parts.value(1)];
+            if (share.owner != caller) {
+                error(404, "not_found");
+            } else {
+                share.ct = b64("ct");
+                share.ref = json.value("ref").toString();
+                reply(200, {{"id", share.id}, {"status", "active"}});
+            }
+        } else if (path == "shares" && verb == "GET") {
+            QJsonArray list;
+            for (const auto& id : server.shareOrder) {
+                const auto& share = server.shares[id];
+                if (share.owner == caller && !share.ct.isEmpty()) {
+                    list << QJsonObject{{"id", share.id},
+                                        {"vault_id", share.vaultId.isEmpty() ? QJsonValue() : QJsonValue(share.vaultId)},
+                                        {"ref", share.ref},
+                                        {"passcode", share.request.contains("kdf")},
+                                        {"max_opens", share.request.value("max_opens")},
+                                        {"opens", 0},
+                                        {"opened_at", QJsonArray()},
+                                        {"status", share.revoked ? "ended" : "active"},
+                                        {"end_reason", share.revoked ? QJsonValue("revoked") : QJsonValue()}};
+                }
+            }
+            reply(200, {{"shares", list}});
+        } else if (parts.value(0) == "shares" && parts.size() == 2 && verb == "DELETE") {
+            auto& share = server.shares[parts.value(1)];
+            if (share.owner != caller) {
+                error(404, "not_found");
+            } else {
+                share.revoked = true;
+                reply(204);
+            }
         } else if (path == "users/lookup") {
             const auto email = QUrlQuery(url).queryItemValue("email", QUrl::FullyDecoded).toLower();
             const auto id = server.users.value(email).id;

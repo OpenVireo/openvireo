@@ -46,6 +46,8 @@ private slots:
     void testParsesInvitationLinks();
     void testPromotesAndDemotesMembers();
     void testRemovingAMemberRotatesTheirVaults();
+    void testMakesShareLinks();
+    void testShareLinksFollowTheOrgPolicy();
 };
 
 #endif // KEEPASSXC_TESTVAULTSHARING_H

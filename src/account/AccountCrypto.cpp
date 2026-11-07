@@ -693,6 +693,109 @@ namespace AccountCrypto
         return true;
     }
 
+    QByteArray shareAad(const QString& shareId)
+    {
+        return "ov-share-v1|" + shareId.toUtf8();
+    }
+
+    QByteArray shareRefAad(const QString& shareId)
+    {
+        return "ov-share-ref|" + shareId.toUtf8();
+    }
+
+    SecureBytes padShare(const SecureBytes& data)
+    {
+        const auto size = (data.size() / SharePad + 1) * SharePad;
+        SecureBytes padded(size, 0);
+        std::copy(data.begin(), data.end(), padded.begin());
+        padded[data.size()] = 0x80;
+        return padded;
+    }
+
+    bool unpadShare(const SecureBytes& padded, SecureBytes* data)
+    {
+        auto end = padded.size();
+        while (end > 0 && padded[end - 1] == 0) {
+            --end;
+        }
+        if (end == 0 || padded[end - 1] != 0x80) {
+            return false;
+        }
+        data->assign(padded.begin(), padded.begin() + static_cast<std::ptrdiff_t>(end - 1));
+        return true;
+    }
+
+    SecureBytes sharePasscodeKey(const QString& passcode, const KdfParams& kdf)
+    {
+        return stretchPassword(normalizePassword(passcode), kdf);
+    }
+
+    SecureBytes shareContentKey(const SecureBytes& linkKey, const SecureBytes& passcodeKey)
+    {
+        return hkdf(linkKey, fromSecure(passcodeKey), "ov-share-v1");
+    }
+
+    SecureBytes shareAuth(const SecureBytes& passcodeKey)
+    {
+        return hkdf(passcodeKey, {}, "ov-share-auth-v1");
+    }
+
+    QByteArray encryptSharePayload(const SecureBytes& linkKey,
+                                   const QString& shareId,
+                                   const QByteArray& payloadJson,
+                                   const SecureBytes& passcodeKey,
+                                   const QByteArray& nonce)
+    {
+        auto ct = wrap(shareContentKey(linkKey, passcodeKey), padShare(toSecure(payloadJson)), shareAad(shareId), nonce);
+        return ct.size() > ShareMaxCiphertext ? QByteArray() : ct;
+    }
+
+    bool decryptSharePayload(const SecureBytes& linkKey,
+                             const QString& shareId,
+                             const QByteArray& ciphertext,
+                             QByteArray* payloadJson,
+                             const SecureBytes& passcodeKey)
+    {
+        SecureBytes padded;
+        SecureBytes plain;
+        if (!unwrap(shareContentKey(linkKey, passcodeKey), ciphertext, shareAad(shareId), &padded)
+            || !unpadShare(padded, &plain)) {
+            return false;
+        }
+        *payloadJson = fromSecure(plain);
+        return true;
+    }
+
+    SecureBytes shareRefKey(const SecureBytes& encSk)
+    {
+        return hkdf(encSk, {}, "ov-share-ref-v1");
+    }
+
+    QByteArray
+    encryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& refJson, const QByteArray& nonce)
+    {
+        return wrap(shareRefKey(encSk), toSecure(refJson), shareRefAad(shareId), nonce);
+    }
+
+    bool decryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& ref, QByteArray* refJson)
+    {
+        SecureBytes plain;
+        if (!unwrap(shareRefKey(encSk), ref, shareRefAad(shareId), &plain)) {
+            return false;
+        }
+        *refJson = fromSecure(plain);
+        return true;
+    }
+
+    QString shareLink(const QString& base, const QString& shareId, const SecureBytes& linkKey)
+    {
+        auto trimmed = base;
+        while (trimmed.endsWith('/')) {
+            trimmed.chop(1);
+        }
+        return trimmed + "/" + shareId + "#" + toBase64Url(linkKey);
+    }
+
     QString refreshTokenHash(const QString& refreshToken)
     {
         return toHex(sha256(refreshToken.toUtf8()));

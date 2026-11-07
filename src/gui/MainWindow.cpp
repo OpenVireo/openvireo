@@ -58,7 +58,9 @@
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/ServiceAccountsDialog.h"
+#include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
+#include "gui/account/SharedLinksDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/entry/EntryView.h"
 #include "gui/notifications/NotificationCenter.h"
@@ -204,6 +206,13 @@ MainWindow::MainWindow()
     m_entryContextMenu->addAction(m_ui->menuEntryCopyAttribute->menuAction());
     m_entryContextMenu->addAction(m_ui->menuEntryTotp->menuAction());
     m_entryContextMenu->addAction(m_ui->menuTags->menuAction());
+    // Share links (SPEC §22), for entries of account vaults; enabled in updateMenuActionState()
+    m_actionEntryShareLink = new QAction(tr("Share &Link…"), this);
+    m_actionEntryShareLink->setObjectName("actionEntryShareLink");
+    m_actionEntryShareLink->setToolTip(tr("Make a link that opens a copy of this entry in any browser"));
+    connect(m_actionEntryShareLink, &QAction::triggered, this, &MainWindow::showShareLinkDialog);
+    m_entryContextMenu->addAction(m_actionEntryShareLink);
+    m_ui->menuEntries->insertAction(m_ui->menuTags->menuAction(), m_actionEntryShareLink);
     m_entryContextMenu->addSeparator();
     m_entryContextMenu->addAction(m_ui->actionEntryAutoType);
     m_entryContextMenu->addSeparator();
@@ -777,6 +786,7 @@ void MainWindow::setupAccounts()
     m_accountMenu->addSeparator();
     m_actionAccountNewVault = m_accountMenu->addAction(tr("&New Vault…"), this, &MainWindow::createAccountVault);
     m_actionAccountShare = m_accountMenu->addAction(tr("&Share Vault…"), this, [this] { showShareVaultDialog(); });
+    m_actionAccountSharedLinks = m_accountMenu->addAction(tr("Shared &Links…"), this, &MainWindow::showSharedLinks);
     m_actionAccountMove =
         m_accountMenu->addAction(tr("&Move Database to Account…"), this, &MainWindow::moveDatabaseToAccount);
     m_actionAccountServiceAccounts = m_accountMenu->addAction(
@@ -1038,6 +1048,28 @@ void MainWindow::showShareVaultDialog(const QString& vaultId)
     dialog->open();
 }
 
+void MainWindow::showShareLinkDialog()
+{
+    auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
+    auto* entry = dbWidget ? dbWidget->currentSelectedEntry() : nullptr;
+    const auto vaultId = m_accountController->vaultIdOf(dbWidget);
+    if (!entry || vaultId.isEmpty()) {
+        displayGlobalMessage(tr("Share links are made from entries of your account's vaults."),
+                             MessageWidget::Information);
+        return;
+    }
+    auto* dialog = new ShareLinkDialog(m_accountController->itemShare(), vaultId, entry, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
+void MainWindow::showSharedLinks()
+{
+    auto* dialog = new SharedLinksDialog(m_accountController->itemShare(), this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
 void MainWindow::showServiceAccounts()
 {
     auto* dialog = new ServiceAccountsDialog(m_accountController->account(), this);
@@ -1164,6 +1196,7 @@ void MainWindow::updateAccountActions()
                                       && account->server().accountSettingsUrl().isValid());
     m_actionAccountNewVault->setEnabled(unlocked && online);
     m_actionAccountShare->setEnabled(unlocked && online);
+    m_actionAccountSharedLinks->setEnabled(unlocked && online && !account->isServiceAccount());
     m_actionAccountServiceAccounts->setEnabled(unlocked && online);
     m_actionAccountAcceptInvitation->setEnabled(unlocked && online);
     m_actionAccountMove->setEnabled(unlocked && online && dbWidget && !dbWidget->isLocked()
@@ -1171,6 +1204,7 @@ void MainWindow::updateAccountActions()
     for (auto* action : {m_actionAccountManage.data(),
                          m_actionAccountNewVault.data(),
                          m_actionAccountShare.data(),
+                         m_actionAccountSharedLinks.data(),
                          m_actionAccountServiceAccounts.data(),
                          m_actionAccountAcceptInvitation.data(),
                          m_actionAccountMove.data()}) {
@@ -1459,6 +1493,13 @@ void MainWindow::updateMenuActionState()
     m_ui->actionEntryCopyNotes->setEnabled(singleEntryOrEditing && dbWidget->currentEntryHasNotes());
     m_ui->menuEntryCopyAttribute->setEnabled(singleEntryOrEditing);
     m_ui->menuEntryTotp->setEnabled(singleEntrySelected);
+    if (m_actionEntryShareLink) {
+        const auto* account = m_accountController ? m_accountController->account() : nullptr;
+        const bool accountVault = singleEntrySelected && m_accountController && m_accountController->isAccountVault(dbWidget);
+        m_actionEntryShareLink->setVisible(accountVault);
+        m_actionEntryShareLink->setEnabled(accountVault && account && account->state() == AccountManager::State::Unlocked
+                                           && !account->isOffline() && !account->isServiceAccount());
+    }
     m_ui->menuTags->setEnabled(multiEntrySelected);
     // Handle tear-off tags menu
     if (m_ui->menuTags->isTearOffMenuVisible()) {

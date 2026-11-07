@@ -342,6 +342,70 @@ void TestAccountCrypto::testVaultName()
     QVERIFY(!decryptVaultName(vaultKey, "00000000-0000-0000-0000-000000000000", encrypted, &name));
 }
 
+void TestAccountCrypto::testShareLinks()
+{
+    const auto share = m_vectors.value("share").toObject();
+    const auto cases = share.value("cases").toArray();
+    QCOMPARE(cases.size(), 2);
+    for (const auto& value : cases) {
+        const auto c = value.toObject();
+        const auto id = c.value("id").toString();
+        const auto key = toSecure(b64(c.value("key")));
+        SecureBytes passcodeKey;
+        if (c.contains("passcode")) {
+            // The vectors use m=1024, below what clients accept from a server; fine for the derivation itself
+            passcodeKey = sharePasscodeKey(c.value("passcode").toString(), kdfFrom(c.value("kdf").toObject()));
+            QCOMPARE(hexOf(passcodeKey), c.value("passcode_key_hex").toString());
+            const auto auth = shareAuth(passcodeKey);
+            QCOMPARE(toBase64Url(auth), c.value("auth").toString());
+            QCOMPARE(toHex(sha256(fromSecure(auth))), c.value("auth_sha256_hex").toString());
+        }
+        QCOMPARE(hexOf(shareContentKey(key, passcodeKey)), c.value("content_key_hex").toString());
+        const auto payload = c.value("payload").toString().toUtf8();
+        QCOMPARE(hexOf(padShare(toSecure(payload))), c.value("padded_hex").toString());
+        QCOMPARE(QString::fromUtf8(shareAad(id)), c.value("aad").toString());
+
+        const auto ct = encryptSharePayload(key, id, payload, passcodeKey, hex(c.value("nonce_hex")));
+        QCOMPARE(toBase64Url(ct), c.value("ct").toString());
+        QByteArray opened;
+        QVERIFY(decryptSharePayload(key, id, b64(c.value("ct")), &opened, passcodeKey));
+        QCOMPARE(opened, payload);
+        // Bound to its id, and to the passcode when it has one
+        QVERIFY(!decryptSharePayload(key, "AAAAAAAAAAAAAAAAAAAAAA", ct, &opened, passcodeKey));
+        if (!passcodeKey.empty()) {
+            QVERIFY(!decryptSharePayload(key, id, ct, &opened));
+        }
+        auto base = c.value("link").toString();
+        base.truncate(base.indexOf("/" + id));
+        QCOMPARE(shareLink(base + "/", id, key), c.value("link").toString());
+    }
+
+    const auto ref = share.value("ref").toObject();
+    const auto encSk = secureHex(ref.value("owner_enc_sk_hex"));
+    const auto shareId = ref.value("share_id").toString();
+    QCOMPARE(hexOf(shareRefKey(encSk)), ref.value("ref_key_hex").toString());
+    const auto plaintext = ref.value("plaintext").toString().toUtf8();
+    QCOMPARE(toBase64Url(encryptShareRef(encSk, shareId, plaintext, hex(ref.value("nonce_hex")))),
+             ref.value("ref").toString());
+    QByteArray refJson;
+    QVERIFY(decryptShareRef(encSk, shareId, b64(ref.value("ref")), &refJson));
+    QCOMPARE(refJson, plaintext);
+
+    // Padding
+    for (int n : {0, 1, 511, 512, 1000}) {
+        const SecureBytes data(static_cast<size_t>(n), 7);
+        const auto padded = padShare(data);
+        QCOMPARE(static_cast<int>(padded.size()) % SharePad, 0);
+        SecureBytes back;
+        QVERIFY(unpadShare(padded, &back));
+        QVERIFY(back == data);
+    }
+    SecureBytes out;
+    QVERIFY(!unpadShare(SecureBytes(512, 0), &out));
+    // Too much for one link
+    QVERIFY(encryptSharePayload(randomSecure(KeySize), "x", QByteArray(ShareMaxCiphertext, 'a')).isEmpty());
+}
+
 void TestAccountCrypto::testServiceAccount()
 {
     const auto vector = m_vectors.value("service_account").toObject();

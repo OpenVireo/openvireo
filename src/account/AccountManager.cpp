@@ -97,10 +97,12 @@ namespace
         QList<AccountManager::Org> orgs;
         for (const auto& value : array) {
             const auto json = value.toObject();
-            orgs << AccountManager::Org{json.value("id").toString(),
-                                        json.value("name").toString(),
-                                        json.value("role").toString(),
-                                        json.value("status").toString()};
+            AccountManager::Org org{json.value("id").toString(),
+                                    json.value("name").toString(),
+                                    json.value("role").toString(),
+                                    json.value("status").toString()};
+            org.shareLinks = json.value("item_share_links").toString("on");
+            orgs << org;
         }
         return orgs;
     }
@@ -124,9 +126,18 @@ QUrl AccountManager::ServerConfig::accountSettingsUrl() const
     return url;
 }
 
+QString AccountManager::ServerConfig::shareBase() const
+{
+    auto base = share.isEmpty() && !web.isEmpty() ? web + "/s" : share;
+    while (base.endsWith('/')) {
+        base.chop(1);
+    }
+    return base.isEmpty() || !Tools::isSecureServerUrl(QUrl(base)) ? QString() : base;
+}
+
 QString AccountManager::ServerConfig::insecureUrl() const
 {
-    for (const auto& url : {issuer, api, sync, web}) {
+    for (const auto& url : {issuer, api, sync, web, share}) {
         if (!url.isEmpty() && !Tools::isSecureServerUrl(QUrl(url))) {
             return url;
         }
@@ -141,6 +152,7 @@ AccountManager::ServerConfig AccountManager::ServerConfig::fromJson(const QJsonO
     config.api = json.value("api").toString();
     config.sync = json.value("sync").toString();
     config.web = json.value("web").toString();
+    config.share = json.value("share").toString();
     const auto opaque = json.value("opaque").toObject();
     config.opaqueServerId = opaque.value("ids").toString();
     const auto kdfMin = json.value("kdf_min").toObject();
@@ -157,6 +169,7 @@ QJsonObject AccountManager::ServerConfig::toJson() const
         {"api", api},
         {"sync", sync},
         {"web", web},
+        {"share", share},
         {"opaque", QJsonObject{{"ids", opaqueServerId}}},
         {"kdf_min",
          QJsonObject{{"m", static_cast<qint64>(kdfMinMemoryKiB)}, {"t", static_cast<qint64>(kdfMinIterations)}}}};
