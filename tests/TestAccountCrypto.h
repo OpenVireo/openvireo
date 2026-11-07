@@ -37,6 +37,7 @@ private slots:
     void testSealNegative();
     void testSealRoundTrip();
     void testVaultName();
+    void testShareLinks();
     void testServiceAccount();
     void testRefreshTokenHash();
     void testJwtClaims();

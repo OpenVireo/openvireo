@@ -114,6 +114,19 @@ namespace FakeAccount
             QString id;
             QString name;
             QList<OrgMember> members;
+            // item_share_links (SPEC §22)
+            QString shareLinks = "on";
+        };
+        // A share link (SPEC §22): what the client uploaded, as the server keeps it
+        struct Share
+        {
+            QString id;
+            QString owner;
+            QString vaultId;
+            QJsonObject request;
+            QByteArray ct;
+            QString ref;
+            bool revoked = false;
         };
         struct Invitation
         {
@@ -162,6 +175,8 @@ namespace FakeAccount
         QHash<QString, Vault> vaults;
         QHash<QString, Blob> blobs;
         QHash<QString, Org> orgs;
+        QHash<QString, Share> shares;
+        QStringList shareOrder;
         QHash<QString, ServiceAccount> serviceAccounts;
         QHash<QString, SaSecret> secrets;
         QHash<QString, Invitation> invitations;

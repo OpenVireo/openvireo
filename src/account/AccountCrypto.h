@@ -196,6 +196,38 @@ namespace AccountCrypto
     bool
     decryptVaultName(const SecureBytes& vaultKey, const QString& vaultId, const QByteArray& encrypted, QString* name);
 
+    // §22 Share links. K (32 bytes) is the link key and lives only in the link's fragment.
+    constexpr int SharePad = 512;
+    constexpr int ShareMaxCiphertext = 64 * 1024;
+    QByteArray shareAad(const QString& shareId);
+    QByteArray shareRefAad(const QString& shareId);
+    // 0x80, then zero bytes up to the next multiple of 512; false from unpad for anything else
+    SecureBytes padShare(const SecureBytes& data);
+    bool unpadShare(const SecureBytes& padded, SecureBytes* data);
+    // P = Argon2id(NFKC(passcode), kdf); content = HKDF(K, salt = P or empty, "ov-share-v1")
+    SecureBytes sharePasscodeKey(const QString& passcode, const KdfParams& kdf);
+    SecureBytes shareContentKey(const SecureBytes& linkKey, const SecureBytes& passcodeKey = {});
+    // auth = HKDF(P, empty, "ov-share-auth-v1"); the server keeps its SHA-256
+    SecureBytes shareAuth(const SecureBytes& passcodeKey);
+    // wrap(content, pad(payload JSON), "ov-share-v1|<id>"); empty when over ShareMaxCiphertext
+    QByteArray encryptSharePayload(const SecureBytes& linkKey,
+                                   const QString& shareId,
+                                   const QByteArray& payloadJson,
+                                   const SecureBytes& passcodeKey = {},
+                                   const QByteArray& nonce = {});
+    bool decryptSharePayload(const SecureBytes& linkKey,
+                             const QString& shareId,
+                             const QByteArray& ciphertext,
+                             QByteArray* payloadJson,
+                             const SecureBytes& passcodeKey = {});
+    // ref = wrap(HKDF(enc_sk, empty, "ov-share-ref-v1"), {"vault","entry","title"} JSON, "ov-share-ref|<id>")
+    SecureBytes shareRefKey(const SecureBytes& encSk);
+    QByteArray
+    encryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& refJson, const QByteArray& nonce = {});
+    bool decryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& ref, QByteArray* refJson);
+    // <base>/<id>#<base64url K>
+    QString shareLink(const QString& base, const QString& shareId, const SecureBytes& linkKey);
+
     // §9 Tokens
     // SHA-256 hex of the token's UTF-8, which is what the server stores
     QString refreshTokenHash(const QString& refreshToken);

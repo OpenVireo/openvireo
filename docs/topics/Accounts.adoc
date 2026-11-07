@@ -62,6 +62,18 @@ Select a vault, then _Account_ -> _Share Vault…_:
 
 To change someone's access select them and click _Change_. Removing a member gives the vault a new key, sealed only to the remaining members, so that what the removed member kept can't open the vault's future versions.
 
+==== Sharing an Entry with a Link
+A share link gives a copy of an entry to anyone, who opens it in a browser without an account. Right-click an entry of an account vault and choose _Share Link…_:
+
+1. Tick the fields to include. Username, password and website are ticked; notes, the one-time code and custom fields are not. Sharing the one-time code shares its secret, so whoever opens the link can make codes for that account even after the link ends.
+2. Choose when the link expires (1 hour to 30 days; 7 days at most on the free plan) and how often it can be opened (any number of times, once, or 5 times).
+3. Optionally tick _Require a passcode_ and send the passcode another way than the link.
+4. Click _Make Link_, then _Copy Link_ or show the QR code.
+
+The entry is encrypted on your computer with a new key that is only in the link, after the `#`, which browsers don't send to any server, so OpenVireo can't read what you shared. The link holds a copy: editing or deleting the entry later doesn't change it. Nothing is shown until the person clicks _Reveal_, so a chat app's link preview doesn't use up a one-time link.
+
+_Account_ -> _Shared Links…_ lists your links with how often each was opened, revokes a link at once, and shares some text that isn't in a vault (_Share Text…_). A link also stops working when it expires, has been opened as often as allowed, after five wrong passcodes, when you lose access to its vault, or when your organization turns share links off.
+
 === Organizations
 _Account_ -> _Organizations, Service Accounts and Audit Log…_ opens the organization settings. Click _New organization…_ to create one; you become its owner. For each organization you can manage:
 

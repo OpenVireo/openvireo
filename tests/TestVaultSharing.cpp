@@ -20,6 +20,7 @@
 #include "util/FakeAccountServer.h"
 
 #include "account/AccountManager.h"
+#include "account/ItemShare.h"
 #include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
 #include "account/VaultSharing.h"
@@ -34,6 +35,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 
+#include <QJsonDocument>
 #include <QSignalSpy>
 #include <QTest>
 
@@ -1230,4 +1232,144 @@ void TestVaultSharing::testRemovingAMemberRotatesTheirVaults()
     });
     QTRY_VERIFY(finished);
     QVERIFY2(error.contains("at least one owner"), qPrintable(error));
+}
+
+namespace
+{
+    ItemShare::Created makeShare(ItemShare* shares, const QJsonObject& payload, const ItemShare::Options& options, QString* error)
+    {
+        ItemShare::Created created;
+        bool finished = false;
+        shares->create(payload, options, [&](const ItemShare::Created& share, const QString& message) {
+            created = share;
+            *error = message;
+            finished = true;
+        });
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 10000);
+        return created;
+    }
+
+    QList<ItemShare::Listing> listShares(ItemShare* shares)
+    {
+        QList<ItemShare::Listing> list;
+        bool finished = false;
+        shares->list([&](const QList<ItemShare::Listing>& result, const QString&) {
+            list = result;
+            finished = true;
+        });
+        std::ignore = QTest::qWaitFor([&] { return finished; }, 10000);
+        return list;
+    }
+} // namespace
+
+void TestVaultSharing::testMakesShareLinks()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    const auto vaultId = f.createVault("Home");
+    ItemShare shares(f.alice.data());
+
+    Entry entry;
+    entry.setUuid(QUuid::createUuid());
+    entry.setTitle("Office Wi-Fi");
+    entry.setUsername("guest");
+    entry.setPassword("hunter2-wifi");
+    entry.setUrl("https://example.com");
+    entry.attributes()->set("PIN", "1234", true);
+    entry.attributes()->set("otp", "otpauth://totp/x?secret=JBSWY3DPEHPK3PXP");
+    const auto fields = ItemShare::shareableFields(&entry);
+    QStringList names;
+    for (const auto& field : fields) {
+        names << field.name + ":" + field.kind + (field.isProtected ? "*" : "");
+    }
+    QCOMPARE(names, QStringList({"UserName:username", "Password:password*", "URL:url", "otp:totp*", "PIN:custom*"}));
+
+    ItemShare::Options options;
+    options.vaultId = vaultId;
+    options.entryId = QString::fromLatin1(entry.uuid().toRfc4122().toHex());
+    options.maxOpens = 1;
+    QString error;
+    const auto share = makeShare(&shares, ItemShare::entryPayload(&entry, {"UserName", "Password"}), options, &error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(share.url.startsWith("https://share.example/" + share.id + "#"));
+
+    // The server got ciphertext it can't read; the key from the link opens it
+    const auto& stored = f.server->shares.value(share.id);
+    QCOMPARE(stored.vaultId, vaultId);
+    QCOMPARE(stored.request.value("max_opens").toInt(), 1);
+    QVERIFY(!stored.request.contains("kdf"));
+    QVERIFY(!stored.ct.contains("hunter2-wifi"));
+    QCOMPARE((stored.ct.size() - 41) % SharePad, 0);
+    const auto linkKey = secureFromBase64Url(share.url.section('#', 1));
+    QByteArray payload;
+    QVERIFY(decryptSharePayload(linkKey, share.id, stored.ct, &payload));
+    const auto json = QJsonDocument::fromJson(payload).object();
+    QCOMPARE(json.value("title").toString(), QString("Office Wi-Fi"));
+    const auto shared = json.value("fields").toArray();
+    QCOMPARE(shared.size(), 2);
+    QCOMPARE(shared.at(1).toObject().value("value").toString(), QString("hunter2-wifi"));
+    QVERIFY(shared.at(1).toObject().value("protected").toBool());
+
+    // With a passcode: the server keeps the KDF and auth, and the link key alone opens nothing
+    ItemShare::Options locked;
+    locked.passcode = "tiger lily 42";
+    const auto text = makeShare(&shares, ItemShare::textPayload("4321", "Door"), locked, &error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    const auto& lockedStored = f.server->shares.value(text.id);
+    QVERIFY(lockedStored.vaultId.isEmpty());
+    bool ok = false;
+    const auto kdf = KdfParams::fromJson(lockedStored.request.value("kdf").toObject(), &ok);
+    QVERIFY(ok && kdf.isAcceptable());
+    const auto passcodeKey = sharePasscodeKey("tiger lily 42", kdf);
+    QCOMPARE(lockedStored.request.value("auth").toString(), toBase64Url(shareAuth(passcodeKey)));
+    const auto textKey = secureFromBase64Url(text.url.section('#', 1));
+    QVERIFY(!decryptSharePayload(textKey, text.id, lockedStored.ct, &payload));
+    QVERIFY(decryptSharePayload(textKey, text.id, lockedStored.ct, &payload, passcodeKey));
+
+    // The owner's list reads its own references
+    auto list = listShares(&shares);
+    QCOMPARE(list.size(), 2);
+    QCOMPARE(list.at(0).title, QString("Door"));
+    QCOMPARE(list.at(1).title, QString("Office Wi-Fi"));
+    QCOMPARE(list.at(1).entryId, options.entryId);
+    QVERIFY(list.at(0).passcode);
+
+    bool revoked = false;
+    shares.revoke(share.id, [&](bool result, const QString&) { revoked = result; });
+    QVERIFY(QTest::qWaitFor([&] { return revoked; }, 5000));
+    list = listShares(&shares);
+    QVERIFY(list.at(1).isEnded());
+    QCOMPARE(list.at(1).endReason, QString("revoked"));
+}
+
+void TestVaultSharing::testShareLinksFollowTheOrgPolicy()
+{
+    Fixture f;
+    installSyncFactory(f.server);
+    QVERIFY(f.signUp());
+    ItemShare shares(f.alice.data());
+    QVERIFY(shares.blockedReason({}).isEmpty());
+
+    Server::Org org;
+    org.id = "2d1e7c4a-5b6f-4a8e-9c0d-1e2f3a4b5c6d";
+    org.name = "Acme";
+    org.members << Server::OrgMember{f.alice->accountId(), "member"};
+    org.shareLinks = "managers";
+    f.server->orgs.insert(org.id, org);
+    const auto vaultId = f.createVault("Acme vault", nullptr, {});
+    f.server->vaults[vaultId].orgId = org.id;
+    QSignalSpy vaults(f.alice.data(), &AccountManager::vaultsChanged);
+    f.alice->reloadVaults();
+    QVERIFY(vaults.wait(5000));
+
+    QCOMPARE(shares.blockedReason(vaultId), QString("In your organization only owners and admins can make share links."));
+    f.server->orgs[org.id].members.first().role = "admin";
+    f.alice->reloadVaults();
+    QVERIFY(vaults.wait(5000));
+    QVERIFY(shares.blockedReason(vaultId).isEmpty());
+    f.server->orgs[org.id].shareLinks = "off";
+    f.alice->reloadVaults();
+    QVERIFY(vaults.wait(5000));
+    QCOMPARE(shares.blockedReason(vaultId), QString("Your organization has turned share links off."));
 }

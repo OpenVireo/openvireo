@@ -23,6 +23,7 @@
 #include "account/AccountOfflineCache.h"
 #include "account/ServiceAccountAdmin.h"
 #include "account/VaultKeyring.h"
+#include "account/ItemShare.h"
 #include "account/VaultSharing.h"
 #include "core/Config.h"
 #include "core/Database.h"
@@ -73,6 +74,7 @@ AccountController::AccountController(DatabaseTabWidget* tabs, AccountManager* ac
     , m_tabs(tabs)
     , m_account(account ? account : (g_managerFactory ? g_managerFactory() : new AccountManager()))
     , m_sharing(new VaultSharing(m_account, this))
+    , m_itemShare(new ItemShare(m_account, this))
     , m_mode(savedMode())
 {
     m_account->setParent(this);
@@ -129,6 +131,11 @@ AccountManager* AccountController::account() const
 VaultSharing* AccountController::sharing() const
 {
     return m_sharing;
+}
+
+ItemShare* AccountController::itemShare() const
+{
+    return m_itemShare;
 }
 
 AccountController::Mode AccountController::mode() const

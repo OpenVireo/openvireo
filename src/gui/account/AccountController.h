@@ -34,6 +34,7 @@ class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
 class VaultSharing;
+class ItemShare;
 
 /**
  * The desktop side of the three ways to use KeePassXC (docs/plans/accounts-and-sharing.md, "Modes"):
@@ -76,6 +77,7 @@ public:
 
     AccountManager* account() const;
     VaultSharing* sharing() const;
+    ItemShare* itemShare() const;
 
     Mode mode() const;
     void setMode(Mode mode);
@@ -159,6 +161,7 @@ private:
     QPointer<DatabaseTabWidget> m_tabs;
     AccountManager* m_account;
     VaultSharing* m_sharing;
+    ItemShare* m_itemShare;
     Mode m_mode = Mode::Unset;
     bool m_openOnUnlock = false;
     bool m_locking = false;

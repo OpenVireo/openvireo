@@ -182,6 +182,12 @@ public:
     // The org's audit log, newest first; `before` is the `next` cursor of the previous page
     void auditLog(const QString& orgId, const QString& before, int limit, Callback callback);
 
+    // Share links (SPEC §22)
+    void createShare(const QJsonObject& body, Callback callback);
+    void uploadShare(const QString& shareId, const QByteArray& ciphertext, const QString& ref, Callback callback);
+    void listShares(Callback callback);
+    void revokeShare(const QString& shareId, Callback callback);
+
     // A Grant for POST /vaults, /vaults/{id}/access and /vaults/{id}/keys
     static QJsonObject
     grant(const QString& principal, const QString& role, int keyVersion, const QByteArray& sealedKey);
