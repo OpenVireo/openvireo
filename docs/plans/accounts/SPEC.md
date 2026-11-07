@@ -234,6 +234,7 @@ ov_sa_ + base64url(UTF-8 JSON {"v":1,"url":<issuer>,"sa_id":<uuid>,"secret":<b64
 ```
 
 `web` is the web app's URL (§16). It is optional; clients that don't find it hide "Manage account".
+`share` is the base URL of the public share page (§22), optional; without it clients use `<web>/s`.
 
 ## 11. Events
 
@@ -557,14 +558,14 @@ feature (MFA, recovery, Emergency Kit, devices, key rotation, export) is ever li
 belongs to an org and covers its vaults. A user without a subscription is on `free`, an org on
 `org_free`. `null` is unlimited.
 
-| Plan | Billed | `personal_vaults` | `share_recipients` | `members` | `org_vaults` | `service_accounts` | `audit_days` | `vault_bytes` |
-|---|---|---|---|---|---|---|---|---|
-| `free` | — | 1 | 0 | | | | | 25 MiB |
-| `premium` | user, $3/mo, $30/yr | null | 5 | | | | | 1 GiB |
-| `org_free` | — | | | 2 | 2 | 1 | 7 | 25 MiB |
-| `families` | org, $5/mo, $50/yr | | | 6 | null | 1 | 30 | 1 GiB |
-| `teams` | org, $4/member/mo, $40/yr | | | null | null | 10 | 90 | 1 GiB |
-| `business` | org, $8/member/mo, $80/yr | | | null | null | null | 365 | 5 GiB |
+| Plan | Billed | `personal_vaults` | `share_recipients` | `members` | `org_vaults` | `service_accounts` | `audit_days` | `vault_bytes` | `share_links` | `share_link_days` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `free` | — | 1 | 0 | | | | | 25 MiB | 5 | 7 |
+| `premium` | user, $3/mo, $30/yr | null | 5 | | | | | 1 GiB | null | 30 |
+| `org_free` | — | | | 2 | 2 | 1 | 7 | 25 MiB | null | 30 |
+| `families` | org, $5/mo, $50/yr | | | 6 | null | 1 | 30 | 1 GiB | null | 30 |
+| `teams` | org, $4/member/mo, $40/yr | | | null | null | 10 | 90 | 1 GiB | null | 30 |
+| `business` | org, $8/member/mo, $80/yr | | | null | null | null | 365 | 5 GiB | null | 30 |
 
 The prices are the auth server's settings (`BILLING_PLANS`); clients read limits, not prices.
 
@@ -581,6 +582,8 @@ The prices are the auth server's settings (`BILLING_PLANS`); clients read limits
 - `service_accounts`: the org's SAs, checked by `POST /orgs/{org}/service-accounts`.
 - `audit_days`: `GET /orgs/{org}/audit` returns only events this many days old or newer.
 - `vault_bytes`: the largest database the sync server takes for the vault (below).
+- `share_links`, `share_link_days`: share links that haven't ended, and their longest expiry (§22).
+  Checked by `POST /shares`.
 
 **Over a limit.** Routes answer **402** `plan_limit`:
 `{"error", "code": "plan_limit", "limit": "<name>", "max": n, "current": n, "plan": "<plan>", "upgrade_url"}`.
@@ -698,3 +701,78 @@ Key, device id, tokens, sync state, cache or keys. It is kept in memory only, is
 ends when the tab closes or the account locks. Its device row is deleted on sign-out where the server
 can be reached. It doesn't use `/session/claim`, whose cookie outlives the tab. Native clients don't
 offer shared sessions, since their secrets are in the OS account's keychain.
+
+## 22. Share links
+
+A user can share a copy of an item, or some text, with anyone through a link. The recipient needs no
+account. The server keeps only ciphertext; the key is in the link's fragment, which browsers don't
+send. (Decided 2026-11-07; the plan is `openvireo-dev-guide/plans/share-links.md`.)
+
+**Keys and envelope.**
+
+```
+K        = 32 random bytes                                    # the link key
+id       = 16 random bytes, base64url (22 characters)         # chosen by the server
+P        = Argon2id(UTF-8(NFKC(passcode)), kdf.salt, kdf.m, kdf.t, kdf.p, len 32)   # only with a passcode
+content  = HKDF(ikm=K, salt=P or empty, info="ov-share-v1", L=32)
+ct       = wrap(content, pad(UTF-8(payload JSON)), "ov-share-v1|<id>")              # §4
+auth     = HKDF(ikm=P, salt=empty, info="ov-share-auth-v1", L=32)                   # only with a passcode
+```
+
+- `kdf` is `{"alg":"argon2id","salt":<16 random bytes>,"m","t","p"}` with §3's defaults; clients
+  refuse `m < 19456` or `t < 2` here too.
+- `pad` appends `0x80`, then zero bytes up to the next multiple of 512. `unpad` drops trailing zero
+  bytes and then one `0x80`; anything else is an error.
+- The server stores `SHA-256(auth)` and needs `auth` before it returns `ct`. It can try passcodes
+  against that hash but learns nothing without `K`.
+- The link is `<share>/<id>#<K>`, with `K` base64url. `share` is the discovery field below, or
+  `<web>/s` without it. Clients never send `K` anywhere, and the page never puts it in a request.
+
+**Payload.**
+
+```json
+{"v":1,"kind":"entry","title":"Office Wi-Fi","shared_by":"Sam",
+ "fields":[{"k":"username","label":"Username","value":"guest"},
+           {"k":"password","label":"Password","value":"…","protected":true},
+           {"k":"totp","label":"One-time code","value":"otpauth://totp/…"}]}
+```
+
+- `kind` is `entry` or `text`. A `text` share has one field, `{"k":"text","label":"Text","value":…}`.
+- `k` is one of `username`, `password`, `url`, `notes`, `totp`, `custom`, `text`. Pages show
+  unknown kinds as `custom`. `protected` fields are hidden until shown. A `totp` value is an
+  `otpauth://` URI and the page shows the current code.
+- `shared_by` is optional and chosen by the sender. Pages label it as stated by the sender.
+- Pages render every value as plain text.
+- `ct` is at most 64 KiB.
+
+**Owner reference.** So that the owner's clients can list their links by item without the server
+learning which item, a share carries `ref`:
+
+```
+ref_key = HKDF(ikm=enc_sk, salt=empty, info="ov-share-ref-v1", L=32)    # the owner's X25519 secret key (§5)
+ref     = wrap(ref_key, UTF-8(JSON {"vault":<uuid or null>,"entry":<id or null>,"title":<string>}), "ov-share-ref|<id>")
+```
+
+`entry` is the item's KDBX UUID as 32 lowercase hex characters.
+
+**Lifetime.** A share ends when it expires, when `opens` reaches `max_opens`, when its owner revokes
+it, after 5 wrong passcodes, when its owner can no longer read its vault (removed, vault deleted or
+archived), or when its org turns links off. An ended share's `ct` is deleted; its row is kept for 30
+days for the owner's list. `expires_in` is 3600 to 2592000 seconds, and at most `share_link_days`
+(§19). `max_opens` is null (unlimited) or 1 to 100. Only `POST …/open` counts as an open, so fetching
+the page, and link previews, don't use one up.
+
+**Org policy.** `item_share_links` on an org is `on` (the default), `managers` (only confirmed owners
+and admins can share from its vaults) or `off`. Turning it to `off` ends the links from its vaults.
+Shares from org vaults are audited (§11): `share.create`, `share.open` (recorded without an IP),
+`share.revoke`.
+
+**Plans.** `share_links` counts a subject's shares that haven't ended: the org's for org vaults,
+otherwise the user's (personal vaults and text). `share_link_days` caps `expires_in`.
+
+**Discovery.** `share` (optional): the base URL of the public page, e.g.
+`"share":"https://share.openvireo.com"`. It is a separate origin from `web` on the hosted service.
+
+**Test vectors.** `share` in `test-vectors.json`: one share without a passcode and one with, each
+with `K`, `id`, the nonce, the payload, the padded plaintext, `content`, `ct`, and for the passcode
+share `kdf`, `P` and `auth`; and a `ref`.
