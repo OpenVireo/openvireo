@@ -159,6 +159,33 @@ vectors.restore_proof = {
   ],
 };
 
+// 8c. Share links (SPEC §22): one share without a passcode, one with, and an owner reference
+const pad512 = (b) => { const n = Math.ceil((b.length + 1) / 512) * 512; const o = new Uint8Array(n); o.set(b); o[b.length] = 0x80; return o; };
+const shareCase = (label, payload, passcode) => {
+  const K = fixed(`share/${label}/key`, 32), id = b64u(fixed(`share/${label}/id`, 16)), nonce = fixed(`share/${label}/nonce`, 24);
+  const out = { key: b64u(K), id, nonce_hex: hex(nonce), payload: JSON.stringify(payload) };
+  let salt = new Uint8Array(0);
+  if (passcode !== undefined) {
+    const kdf = { alg: "argon2id", saltBytes: fixed(`share/${label}/kdf-salt`, 16), m: 1024, t: 2, p: 1 };
+    const P = argon2id(utf8(passcode.normalize("NFKC")), kdf.saltBytes, { m: kdf.m, t: kdf.t, p: kdf.p, dkLen: 32 });
+    salt = P;
+    const auth = hkdf(sha256, P, new Uint8Array(0), utf8("ov-share-auth-v1"), 32);
+    Object.assign(out, { passcode, kdf: { alg: "argon2id", salt: b64u(kdf.saltBytes), m: kdf.m, t: kdf.t, p: kdf.p }, passcode_key_hex: hex(P), auth: b64u(auth), auth_sha256_hex: hex(sha256(auth)) });
+  }
+  const content = hkdf(sha256, K, salt, utf8("ov-share-v1"), 32);
+  const padded = pad512(utf8(out.payload));
+  const ct = wrap(content, nonce, padded, `ov-share-v1|${id}`);
+  if (hex(unwrap(content, ct, `ov-share-v1|${id}`)) !== hex(padded)) throw new Error("share roundtrip");
+  return { ...out, padded_hex: hex(padded), aad: `ov-share-v1|${id}`, content_key_hex: hex(content), ct: b64u(ct), link: `https://share.openvireo.example/${id}#${b64u(K)}` };
+};
+const refKey = hkdf(sha256, alice.encSk, new Uint8Array(0), utf8("ov-share-ref-v1"), 32);
+const plainShare = shareCase("plain", { v: 1, kind: "entry", title: "Office Wi-Fi", shared_by: "Sam", fields: [{ k: "username", label: "Username", value: "guest" }, { k: "password", label: "Password", value: "correct horse battery staple", protected: true }, { k: "url", label: "Website", value: "https://example.com" }] });
+const refPlain = JSON.stringify({ vault: vaultId, entry: "0123456789abcdef0123456789abcdef", title: "Office Wi-Fi" });
+vectors.share = {
+  cases: [plainShare, shareCase("passcode", { v: 1, kind: "text", fields: [{ k: "text", label: "Text", value: "Ünïcödé secret ﬁ" }] }, "tiger lily 42")],
+  ref: { owner_enc_sk_hex: hex(alice.encSk), ref_key_hex: hex(refKey), share_id: plainShare.id, plaintext: refPlain, nonce_hex: hex(fixed("share/ref-nonce", 24)), aad: `ov-share-ref|${plainShare.id}`, ref: b64u(wrap(refKey, fixed("share/ref-nonce", 24), utf8(refPlain), `ov-share-ref|${plainShare.id}`)) },
+};
+
 // 9. A vault .kdbx encrypted with the vault key as a raw 32-byte key file component
 kdbxweb.CryptoEngine.setArgon2Impl(async (password, salt, memory, iterations, length, parallelism, type) => {
   if (type !== kdbxweb.CryptoEngine.Argon2TypeArgon2id) throw new Error("expected argon2id");

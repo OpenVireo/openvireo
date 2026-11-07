@@ -47,4 +47,17 @@ def unseal_b(blob, sk, aad):
     return s.crypto_aead_xchacha20poly1305_ietf_decrypt(blob[57:], aad, n, key)
 rs = rp["reseal"]; old = unseal_b(b(rs["archived_sealed_key"]), H(ks["enc_sk_hex"]), rs["aad"].encode())
 res.append(ok(old == unseal_b(b(rs["sealed"]), H(rp["new_enc_sk_hex"]), rs["aad"].encode()) == H(V["vault_kdbx"]["vault_key_hex"]), "restore reseal"))
+def unpad(p):
+    p = p.rstrip(b"\0"); assert p[-1:] == b"\x80"; return p[:-1]
+for c in V["share"]["cases"]:
+    salt = b""
+    if "passcode" in c:
+        k = c["kdf"]; salt = s.crypto_pwhash(32, unicodedata.normalize("NFKC", c["passcode"]).encode(), b(k["salt"]), k["t"], k["m"]*1024, s.crypto_pwhash_ALG_ARGON2ID13)
+        a = hkdf(salt, b"", b"ov-share-auth-v1")
+        res.append(ok(salt.hex() == c["passcode_key_hex"] and a == b(c["auth"]) and hashlib.sha256(a).hexdigest() == c["auth_sha256_hex"], "share passcode + auth"))
+    key = hkdf(b(c["key"]), salt, b"ov-share-v1"); bl = b(c["ct"])
+    pt = s.crypto_aead_xchacha20poly1305_ietf_decrypt(bl[25:], f"ov-share-v1|{c['id']}".encode(), bl[1:25], key)
+    res.append(ok(key.hex() == c["content_key_hex"] and len(pt) % 512 == 0 and unpad(pt).decode() == c["payload"], "share " + c["id"][:6]))
+r = V["share"]["ref"]; rk = hkdf(H(r["owner_enc_sk_hex"]), b"", b"ov-share-ref-v1"); bl = b(r["ref"])
+res.append(ok(rk.hex() == r["ref_key_hex"] and s.crypto_aead_xchacha20poly1305_ietf_decrypt(bl[25:], r["aad"].encode(), bl[1:25], rk).decode() == r["plaintext"], "share ref"))
 print("ALL PASS" if all(res) else "SOME FAILED")

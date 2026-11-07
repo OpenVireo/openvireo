@@ -527,8 +527,8 @@ paths:
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
     patch:
       tags: [auth]
-      summary: Rename (owner/admin)
-      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string } } } } } }
+      summary: Rename, or set item_share_links (owner/admin). Turning links off ends the links from the org's vaults (SPEC §22).
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, item_share_links: { enum: ['on', managers, 'off'] } } } } } }
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Org' } } } } }
     delete:
       tags: [auth]
@@ -846,6 +846,84 @@ paths:
                         details: { type: object }
                   next: { type: [string, 'null'] }
 
+  /shares:
+    get:
+      tags: [auth]
+      summary: The caller's share links (SPEC §22), newest first, including ones that ended in the last 30 days
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { shares: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
+    post:
+      tags: [auth]
+      summary: |
+        Reserve a share id (users only). With vault_id the caller needs read access to the vault, and its org's item_share_links
+        must allow them. The ciphertext follows with PUT /shares/{id} within 10 minutes, or the reservation is dropped.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expires_in]
+              properties:
+                vault_id: { type: [string, 'null'], format: uuid, description: null for a text share }
+                expires_in: { type: integer, minimum: 3600, maximum: 2592000, description: seconds, at most share_link_days (SPEC §19) }
+                max_opens: { type: [integer, 'null'], minimum: 1, maximum: 100 }
+                kdf: { oneOf: [ { $ref: '#/components/schemas/Kdf' }, { type: 'null' } ], description: the passcode's Argon2id parameters }
+                auth: { $ref: '#/components/schemas/B64', description: 'HKDF of the passcode key, 32 bytes; required with kdf' }
+      responses:
+        '201': { description: Reserved, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '402': { $ref: '#/components/responses/Error', description: 'plan_limit (share_links or share_link_days), body is PlanLimit' }
+        '403': { $ref: '#/components/responses/Error', description: share links are turned off for the vault's org, or limited to managers }
+  /shares/{id}:
+    parameters: [ { $ref: '#/components/parameters/ShareId' } ]
+    put:
+      tags: [auth]
+      summary: Upload the ciphertext and owner reference (owner, once)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ct, ref]
+              properties:
+                ct: { $ref: '#/components/schemas/B64', description: at most 64 KiB decoded }
+                ref: { $ref: '#/components/schemas/B64' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '409': { $ref: '#/components/responses/Error', description: already uploaded }
+    delete:
+      tags: [auth]
+      summary: Revoke (owner). Deletes the ciphertext; the row stays in the owner's list.
+      responses: { '204': { description: revoked } }
+  /public/shares/{id}:
+    parameters: [ { $ref: '#/components/parameters/ShareId' } ]
+    get:
+      tags: [auth]
+      summary: What the public page needs before opening. No authentication; any origin. Unknown, unfilled and ended shares all answer 404.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expires_at: { type: string, format: date-time }
+                  opens_left: { type: [integer, 'null'] }
+                  kdf: { oneOf: [ { $ref: '#/components/schemas/Kdf' }, { type: 'null' } ] }
+        '404': { $ref: '#/components/responses/Error' }
+  /public/shares/{id}/open:
+    parameters: [ { $ref: '#/components/parameters/ShareId' } ]
+    post:
+      tags: [auth]
+      summary: Return the ciphertext and count one open. No authentication; any origin.
+      security: []
+      requestBody: { content: { application/json: { schema: { type: object, properties: { auth: { $ref: '#/components/schemas/B64' } } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { ct: { $ref: '#/components/schemas/B64' }, opens_left: { type: [integer, 'null'] } } } } } }
+        '403': { $ref: '#/components/responses/Error', description: 'invalid_passcode, with attempts_left; the fifth wrong passcode ends the share (404 afterwards)' }
+        '404': { $ref: '#/components/responses/Error' }
+
 components:
   securitySchemes:
     bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'an access token (JWT), or a device token on the sync server in legacy/both mode' }
@@ -853,6 +931,7 @@ components:
   parameters:
     Org: { name: org, in: path, required: true, schema: { type: string, format: uuid } }
     Vault: { name: vault, in: path, required: true, schema: { type: string, format: uuid } }
+    ShareId: { name: id, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{22}$' } }
   responses:
     Error:
       description: error
@@ -1022,6 +1101,7 @@ components:
         name: { type: string }
         role: { $ref: '#/components/schemas/OrgRole' }
         plan: { $ref: '#/components/schemas/Plan' }
+        item_share_links: { enum: ['on', managers, 'off'], description: SPEC §22 }
         created_at: { type: string, format: date-time }
     Plan:
       type: object
@@ -1033,8 +1113,8 @@ components:
           type: object
           additionalProperties: { type: [integer, 'null'] }
           description: |
-            Users: personal_vaults, share_recipients, vault_bytes.
-            Orgs: members, org_vaults, service_accounts, audit_days, vault_bytes.
+            Users: personal_vaults, share_recipients, vault_bytes, share_links, share_link_days.
+            Orgs: members, org_vaults, service_accounts, audit_days, vault_bytes, share_links, share_link_days.
     PlanLimit:
       type: object
       description: The 402 body (SPEC §19).
@@ -1047,6 +1127,22 @@ components:
         current: { type: integer }
         plan: { type: string }
         upgrade_url: { type: string, format: uri }
+    Share:
+      type: object
+      description: A share link as its owner sees it (SPEC §22). Never includes ct.
+      properties:
+        id: { type: string }
+        vault_id: { type: [string, 'null'], format: uuid }
+        ref: { oneOf: [ { $ref: '#/components/schemas/B64' }, { type: 'null' } ] }
+        passcode: { type: boolean }
+        max_opens: { type: [integer, 'null'] }
+        opens: { type: integer }
+        opened_at: { type: array, items: { type: string, format: date-time } }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        status: { enum: [pending, active, ended] }
+        ended_at: { type: [string, 'null'], format: date-time }
+        end_reason: { type: [string, 'null'], enum: [expired, opened, revoked, passcode, access_lost, policy, null] }
     Member:
       type: object
       properties:
