@@ -72,7 +72,7 @@ A share link gives a copy of an entry to anyone, who opens it in a browser witho
 
 The entry is encrypted on your computer with a new key that is only in the link, after the `#`, which browsers don't send to any server, so OpenVireo can't read what you shared. The link holds a copy: editing or deleting the entry later doesn't change it. Nothing is shown until the person clicks _Reveal_, so a chat app's link preview doesn't use up a one-time link.
 
-_Account_ -> _Shared Links…_ lists your links with how often each was opened, revokes a link at once, and shares some text that isn't in a vault (_Share Text…_). A link also stops working when it expires, has been opened as often as allowed, after five wrong passcodes, when you lose access to its vault, or when your organization turns share links off.
+_Account_ -> _Shared Links…_ lists your links with how often each was opened, revokes a link at once, and shares some text that isn't in a vault (_Share Text…_). A link also stops working when it expires, has been opened as often as allowed, after five wrong passcodes, when you lose access to its vault, or when your organization turns share links off (owners and admins choose who can make share links in the web app, under _Organizations_ -> _Share links_).
 
 === Organizations
 _Account_ -> _Organizations, Service Accounts and Audit Log…_ opens the organization settings. Click _New organization…_ to create one; you become its owner. For each organization you can manage:
