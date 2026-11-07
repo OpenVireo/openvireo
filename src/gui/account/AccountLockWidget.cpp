@@ -81,6 +81,7 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
     , m_unlockButton(new VaultButton(tr("Unlock"), m_card))
     , m_recoverLink(new QLabel(m_card))
     , m_dismissLink(new QLabel(this))
+    , m_switchLink(new QLabel(this))
     , m_signOutLink(new QLabel(this))
 {
     Vault::paintCanvas(this);
@@ -160,8 +161,10 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
     links->setSpacing(24);
     links->addStretch();
     m_dismissLink->setObjectName("accountLockDismiss");
+    m_switchLink->setObjectName("accountLockSwitch");
     m_signOutLink->setObjectName("accountLockSignOut");
     links->addWidget(m_dismissLink);
+    links->addWidget(m_switchLink);
     links->addWidget(m_signOutLink);
     links->addStretch();
 
@@ -185,6 +188,7 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
         QDesktopServices::openUrl(AccountController::recoveryRequestUrl(issuer));
     });
     connect(m_dismissLink, &QLabel::linkActivated, this, &AccountLockWidget::dismissRequested);
+    connect(m_switchLink, &QLabel::linkActivated, this, &AccountLockWidget::switchAccountRequested);
     connect(m_signOutLink, &QLabel::linkActivated, this, &AccountLockWidget::signOut);
 }
 
@@ -276,6 +280,8 @@ void AccountLockWidget::updateLinks()
     Vault::styleLabel(m_dismissLink, Typography::FontRole::Caption, p.accentText);
     m_dismissLink->setText(
         linkHtml(m_databasesOpen ? tr("Go to open databases") : tr("Open a local database"), p.accentText));
+    Vault::styleLabel(m_switchLink, Typography::FontRole::Caption, p.accentText);
+    m_switchLink->setText(linkHtml(tr("Switch account"), p.accentText));
     Vault::styleLabel(m_signOutLink, Typography::FontRole::Caption, p.accentText);
     m_signOutLink->setText(linkHtml(tr("Sign out"), p.accentText));
 }

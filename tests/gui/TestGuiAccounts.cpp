@@ -765,6 +765,54 @@ void TestGuiAccounts::testSignOutReturnsToTheStartScreen()
     QVERIFY(m_mainWindow->accountVaultsPane()->isHidden());
 }
 
+void TestGuiAccounts::testSwitchesAccountsWithoutSigningOut()
+{
+    const QString other("other@example.com");
+    const auto secretKey = registerElsewhere(Email);
+    const auto otherKey = registerElsewhere(other);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* controller = m_mainWindow->accountController();
+    auto* start = m_mainWindow->startScreen();
+
+    // Locked, the lock screen offers the list, and adding an account keeps this one signed in
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    m_mainWindow->accountLockScreen()->switchAccountRequested();
+    QVERIFY(m_mainWindow->isStartScreenShown());
+    QCOMPARE(start->currentPage(), AccountStartWidget::Page::Accounts);
+    QTest::mouseClick(child<QPushButton>(start, "addAccountButton"), Qt::LeftButton);
+    QTRY_COMPARE(start->currentPage(), AccountStartWidget::Page::SignIn);
+    QCOMPARE(controller->account()->state(), AccountManager::State::SignedOut);
+    signIn(other, otherKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    QCOMPARE(controller->account()->email(), other);
+
+    // Back to the first: its lock screen, which asks only for the password
+    controller->lockAccount();
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    m_mainWindow->accountLockScreen()->switchAccountRequested();
+    m_server->requests.clear();
+    QPushButton* row = nullptr;
+    for (auto* button : start->findChildren<QPushButton*>("knownAccountRow")) {
+        if (button->text().startsWith(Email)) {
+            row = button;
+        }
+    }
+    QVERIFY(row);
+    QTest::mouseClick(row, Qt::LeftButton);
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QCOMPARE(controller->account()->email(), Email);
+    QCOMPARE(controller->account()->state(), AccountManager::State::Locked);
+    QVERIFY(child<QLabel>(m_mainWindow->accountLockScreen(), "accountLockEmail")->text() == Email);
+    for (const auto& request : m_server->requests) {
+        QVERIFY(!request.contains("login"));
+    }
+    controller->unlockAccount(Password);
+    QTRY_COMPARE_WITH_TIMEOUT(controller->account()->state(), AccountManager::State::Unlocked, 10000);
+}
+
 namespace
 {
     // The vaults and headings the sidebar shows, in order

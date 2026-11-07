@@ -997,6 +997,129 @@ void TestAccountManager::testLockClearsKeys()
     QTRY_VERIFY(manager->keyring().contains(vaultId));
 }
 
+void TestAccountManager::testSwitchingKeepsTheOtherAccountSignedIn()
+{
+    Fixture fixture;
+    QScopedPointer<QObject> parent(new QObject());
+    auto* manager = fixture.manager(parent.data());
+    manager->registerAccount(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    const auto first = manager->accountId();
+    const auto firstSession = SyncTokenStore::load("ov-account-session:" + first);
+    QVERIFY(AccountOfflineCache::hasProfile(first));
+
+    // Setting it aside leaves the session and the cache, tells the server nothing, and empties the manager
+    fixture.server->requests.clear();
+    bool set = false;
+    manager->setAside([&] { set = true; });
+    QVERIFY(set);
+    QCOMPARE(manager->state(), AccountManager::State::SignedOut);
+    QVERIFY(manager->accountId().isEmpty());
+    QCOMPARE(SyncTokenStore::load("ov-account-session:" + first), firstSession);
+    QVERIFY(AccountOfflineCache::hasProfile(first));
+    QVERIFY(fixture.server->requests.isEmpty());
+
+    const QString second("second@example.com");
+    manager->registerAccount(second, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    const auto secondId = manager->accountId();
+    QVERIFY(secondId != first);
+
+    auto known = manager->knownAccounts();
+    QCOMPARE(known.size(), 2);
+    QCOMPARE(known.first().id, secondId);
+    QVERIFY(known.first().current);
+    QVERIFY(known.last().signedIn);
+    QVERIFY(!known.last().current);
+    QCOMPARE(known.last().email, Email);
+
+    // Back to the first: locked, with neither a sign-in nor a two-step code, and it's the one restored next launch
+    fixture.server->requests.clear();
+    bool switched = false;
+    manager->switchTo(first, [&](bool ok) { switched = ok; });
+    QVERIFY(switched);
+    QCOMPARE(manager->state(), AccountManager::State::Locked);
+    QCOMPARE(manager->email(), Email);
+    QCOMPARE(AccountManager::lastAccountId(), first);
+    for (const auto& request : fixture.server->requests) {
+        QVERIFY(!request.contains("login"));
+    }
+    manager->unlock(Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+
+    // A session that has ended can't be switched to, and the current account's stays
+    manager->signOutKnown(secondId);
+    QVERIFY(SyncTokenStore::load("ov-account-session:" + secondId).isEmpty());
+    QVERIFY(!AccountOfflineCache::hasProfile(secondId));
+    QVERIFY(AccountOfflineCache::hasProfile(first));
+    QVERIFY(!AccountManager::storedSecretKey(ServerId, second).isEmpty());
+    bool ok = true;
+    manager->switchTo(secondId, [&](bool result) { ok = result; });
+    QVERIFY(!ok);
+    QCOMPARE(manager->state(), AccountManager::State::SignedOut);
+    QCOMPARE(manager->knownAccounts().size(), 2);
+
+    // Removing it forgets the Secret Key too
+    manager->forgetKnown(secondId);
+    QVERIFY(AccountManager::storedSecretKey(ServerId, second).isEmpty());
+    QCOMPARE(manager->knownAccounts().size(), 1);
+    QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
+}
+
+void TestAccountManager::testChecksSessionsSetAside()
+{
+    Fixture fixture;
+    QScopedPointer<QObject> parent(new QObject());
+    auto* manager = fixture.manager(parent.data());
+    manager->registerAccount(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    const auto first = manager->accountId();
+    bool set = false;
+    manager->setAside([&] { set = true; });
+    QVERIFY(set);
+    manager->registerAccount("second@example.com", Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    const auto second = manager->accountId();
+
+    const auto refreshTokenOf = [](const QString& id) {
+        return QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + id).toUtf8())
+            .object()
+            .value("refresh_token")
+            .toString();
+    };
+    const auto before = refreshTokenOf(first);
+    manager->checkSetAsideAccounts();
+    QTRY_VERIFY(refreshTokenOf(first) != before);
+    // Once a day at most
+    const auto rotated = refreshTokenOf(first);
+    manager->checkSetAsideAccounts();
+    QTest::qWait(50);
+    QCOMPARE(refreshTokenOf(first), rotated);
+    QCOMPARE(manager->accountId(), second);
+
+    // A refusal ends that session alone
+    auto session = QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + first).toUtf8()).object();
+    session["refresh_token"] = QStringLiteral("revoked");
+    SyncTokenStore::save("ov-account-session:" + first, QJsonDocument(session).toJson(QJsonDocument::Compact));
+    auto known = manager->knownAccounts();
+    QCOMPARE(known.last().id, first);
+    // Past the day's limit, as a day later
+    auto raw = QJsonDocument::fromJson(SyncTokenStore::load("ov-account-known").toUtf8()).array();
+    for (auto value : raw) {
+        auto entry = value.toObject();
+        entry["checked_at"] = 1;
+        value = entry;
+    }
+    SyncTokenStore::save("ov-account-known", QJsonDocument(raw).toJson(QJsonDocument::Compact));
+    manager->checkSetAsideAccounts();
+    QTRY_VERIFY(SyncTokenStore::load("ov-account-session:" + first).isEmpty());
+    QVERIFY(!AccountOfflineCache::hasProfile(first));
+    QCOMPARE(manager->accountId(), second);
+    QCOMPARE(manager->state(), AccountManager::State::Unlocked);
+    QVERIFY(!refreshTokenOf(second).isEmpty());
+    QVERIFY(AccountOfflineCache::hasProfile(second));
+}
+
 void TestAccountManager::testRestoreSessionAfterRestart()
 {
     Fixture fixture;

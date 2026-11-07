@@ -128,6 +128,11 @@ public slots:
     // Make a vault of a database the import wizard made, and open it: a personal one, or one of the org `orgId`
     void importAsVault(const QSharedPointer<Database>& db, const QString& name, const QString& orgId = {});
 
+    // Closes the open account's vaults and keeps it signed in, to add another (SPEC §21)
+    void setAsideAccount(std::function<void()> done);
+    // Goes to another account's lock screen, keeping the open one signed in. False when it has to sign in.
+    void switchToAccount(const QString& accountId, std::function<void(bool ok)> done);
+
 signals:
     void modeChanged(AccountController::Mode mode);
     // Signed out, or the session ended on the server: show the start screen

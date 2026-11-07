@@ -734,6 +734,7 @@ void MainWindow::setupAccounts()
     m_lockScreen->setController(m_accountController);
     m_lockScreen->setVisible(false);
     m_ui->verticalLayout_5->insertWidget(1, m_lockScreen, 1);
+    connect(m_lockScreen, &AccountLockWidget::switchAccountRequested, this, &MainWindow::showStartScreen);
     connect(m_lockScreen, &AccountLockWidget::dismissRequested, this, [this] {
         m_lockScreenDismissed = true;
         updateHomeScreen();
@@ -790,6 +791,8 @@ void MainWindow::setupAccounts()
             QDesktopServices::openUrl(url);
         }
     });
+    m_actionAccountSwitch = m_accountMenu->addAction(tr("S&witch Account…"), this, &MainWindow::showStartScreen);
+    m_actionAccountSwitch->setObjectName("actionAccountSwitch");
     m_actionAccountSignOut =
         m_accountMenu->addAction(tr("Sign &Out"), m_accountController.data(), &AccountController::signOut);
     m_ui->menubar->insertMenu(m_ui->menuHelp->menuAction(), m_accountMenu);
@@ -1153,6 +1156,7 @@ void MainWindow::updateAccountActions()
     m_actionAccountQuickUnlock->setEnabled(locked && account->canQuickUnlock());
     m_actionAccountLock->setEnabled(unlocked);
     m_actionAccountSignOut->setEnabled(signedIn);
+    m_actionAccountSwitch->setEnabled(signedIn && !m_accountController->account()->isServiceAccount());
     // Working from the offline cache: what needs the servers waits until they answer again (SPEC §20)
     const bool online = !account->isOffline();
     const auto offlineTip = online ? QString() : tr("Not available while offline");
