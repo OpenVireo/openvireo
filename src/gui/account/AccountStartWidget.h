@@ -20,11 +20,14 @@
 
 #include <QLabel>
 #include <QPointer>
+#include "account/AccountManager.h"
+
 #include <QPushButton>
 #include <QScopedPointer>
 #include <QWidget>
 
 class AccountController;
+class QVBoxLayout;
 
 namespace Ui
 {
@@ -84,14 +87,15 @@ public:
     {
         SignIn,
         Mfa,
-        SelfHosted
+        SelfHosted,
+        Accounts
     };
 
     explicit AccountStartWidget(QWidget* parent = nullptr);
     ~AccountStartWidget() override;
 
     void setController(AccountController* controller);
-    // Back to the sign-in page, with the password cleared
+    // Back to the first page, with the password cleared: the accounts this device knows, or the sign-in form
     void reset();
     Page currentPage() const;
 
@@ -120,6 +124,13 @@ private slots:
 
 private:
     void showPage(Page page);
+    void updateAccountsPage();
+    void openKnownAccount(const AccountManager::KnownAccount& account);
+    void showWelcomeBack(const AccountManager::KnownAccount& account);
+    void showAddAccount();
+    void signOutKnownAccount(const AccountManager::KnownAccount& account);
+    void removeKnownAccount(const AccountManager::KnownAccount& account);
+    void setSignInFormFor(bool welcomeBack);
     void setBusy(const QString& message);
     void showError(const QString& message);
     void applyTheme();
@@ -131,6 +142,13 @@ private:
     // Asked for with the "First time on this device?" link, even if this device has the Secret Key
     bool m_secretKeyRequested = false;
     QAction* m_revealPasswordAction = nullptr;
+    QWidget* m_accountsPage = nullptr;
+    QLabel* m_accountsHeading = nullptr;
+    QLabel* m_accountsIntro = nullptr;
+    QLabel* m_accountsLink = nullptr;
+    QVBoxLayout* m_accountRows = nullptr;
+    QString m_signInHeadingText;
+    QString m_signInIntroText;
 };
 
 #endif // KEEPASSXC_ACCOUNTSTARTWIDGET_H

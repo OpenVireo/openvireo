@@ -187,6 +187,23 @@ public:
     // The account this device last signed in to, for restoreSession()
     static QString lastAccountId();
 
+    // An account this device knows (SPEC §21). One is open at a time; the others can stay signed in.
+    struct KnownAccount
+    {
+        QString id;
+        QString email;
+        ServerConfig server;
+        qint64 lastUsedAt = 0;
+        // When a session set aside last heard from its server
+        qint64 checkedAt = 0;
+        // It has a session on this device
+        bool signedIn = false;
+        // It's the one open now
+        bool current = false;
+    };
+    // Most recently used first
+    QList<KnownAccount> knownAccounts() const;
+
     using CreateVaultCallback =
         std::function<void(const QString& vaultId, QSharedPointer<Database> db, const QString& error)>;
     // Create a personal vault: its key is sealed to this account. `done` gets the empty vault database
@@ -203,6 +220,18 @@ public slots:
     void signInServiceAccount(const QString& token);
     // After a restart: pick the session up from the keychain, Locked until unlock()
     bool restoreSession(const QString& accountId);
+    // Locks the account and leaves its session in the keychain for its user to come back to: the server isn't told
+    // and the offline cache and Quick Unlock stay (SPEC §21). A refresh under way finishes first.
+    void setAside(std::function<void()> done);
+    // Sets the open account aside and opens another, Locked. False when that account has no session: it signs in.
+    void switchTo(const QString& accountId, std::function<void(bool ok)> done);
+    // Signs out of an account that isn't open: it stays known, signed out
+    void signOutKnown(const QString& accountId);
+    // Removes an account that isn't open from this device, with its Secret Key and device id
+    void forgetKnown(const QString& accountId);
+    // Asks the servers about sessions set aside, each at most once a day: this keeps them within their 30 days, and
+    // a revoked device finds out (SPEC §21)
+    void checkSetAsideAccounts();
     void unlock(const QString& password);
     // Unlock with the AUK the Quick Unlock provider holds; it asks the user to authenticate first
     void quickUnlock();
@@ -227,6 +256,7 @@ signals:
     void signedIn();
     // The session ended: signed out here, revoked on the server or the refresh token was reused
     void signedOut(const QString& reason);
+    void knownAccountsChanged();
     void accessTokenChanged();
     void vaultsChanged();
     void orgsChanged();
@@ -267,6 +297,11 @@ private:
     QString defaultServerId() const;
     OpaqueClient::Ids opaqueIds(const QString& email) const;
 
+    void rememberCurrentAccount() const;
+    // Runs `done` once no refresh is rotating a token this device holds
+    void whenTokensSettled(std::function<void()> done);
+    void finishSetAsideCheck();
+
     static QString sessionKey(const QString& accountId);
     static QString secretKeyKey(const QString& serverId, const QString& email);
     static QString deviceKey(const QString& serverId, const QString& email);
@@ -291,6 +326,8 @@ private:
     bool m_refreshing = false;
     bool m_reloadAfterRefresh = false;
     QList<std::function<void(const QString&)>> m_tokenWaiters;
+    int m_setAsideChecks = 0;
+    QList<std::function<void()>> m_setAsideCheckWaiters;
 
     std::unique_ptr<Pending> m_pending;
     AccountCrypto::Keyset m_keyset;

@@ -55,6 +55,7 @@ public:
 signals:
     // Leave the lock screen for the welcome screen or the open databases; the account stays locked
     void dismissRequested();
+    void switchAccountRequested();
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -89,6 +90,7 @@ private:
     VaultButton* m_unlockButton;
     QLabel* m_recoverLink;
     QLabel* m_dismissLink;
+    QLabel* m_switchLink;
     QLabel* m_signOutLink;
     bool m_databasesOpen = false;
 };

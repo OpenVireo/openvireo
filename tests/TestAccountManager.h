@@ -39,6 +39,8 @@ private slots:
     void testAccessEventRefreshesAndReloads();
     void testLockClearsKeys();
     void testRestoreSessionAfterRestart();
+    void testSwitchingKeepsTheOtherAccountSignedIn();
+    void testChecksSessionsSetAside();
     void testAccountVaultUsesTokenProvider();
     void testParsesAccountEvents();
     void testServerConfigWebUrl();

@@ -23,12 +23,16 @@
 #include "account/AccountManager.h"
 #include "core/Config.h"
 #include "gui/Icons.h"
+#include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAction>
 #include <QDesktopServices>
 #include <QFontDatabase>
+#include <QHBoxLayout>
+#include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
 #include <QUrl>
@@ -200,6 +204,45 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
         m_revealPasswordAction->setToolTip(show ? tr("Hide password") : tr("Show password"));
     });
 
+    m_signInHeadingText = m_ui->signInHeading->text();
+    m_signInIntroText = m_ui->signInIntro->text();
+
+    // The accounts this device knows (SPEC §21), a page like the others but built here since its rows are
+    m_accountsPage = new QWidget(m_ui->pages);
+    m_accountsPage->setObjectName("accountsPage");
+    auto* accountsLayout = new QVBoxLayout(m_accountsPage);
+    accountsLayout->setContentsMargins(0, 0, 0, 0);
+    accountsLayout->setSpacing(0);
+    m_accountsHeading = new QLabel(tr("Accounts"), m_accountsPage);
+    m_accountsHeading->setContentsMargins(0, 0, 0, 4);
+    accountsLayout->addWidget(m_accountsHeading);
+    m_accountsIntro = new QLabel(
+        tr("Going to another account keeps this one signed in, so coming back takes only your master password."),
+        m_accountsPage);
+    m_accountsIntro->setWordWrap(true);
+    accountsLayout->addWidget(m_accountsIntro);
+    accountsLayout->addSpacing(16);
+    m_accountRows = new QVBoxLayout();
+    m_accountRows->setSpacing(8);
+    accountsLayout->addLayout(m_accountRows);
+    accountsLayout->addSpacing(16);
+    auto* addAccount = new VaultButton(tr("Add another account"), m_accountsPage);
+    addAccount->setObjectName("addAccountButton");
+    addAccount->setMinimumHeight(36);
+    accountsLayout->addWidget(addAccount);
+    connect(addAccount, &QPushButton::clicked, this, &AccountStartWidget::showAddAccount);
+    m_ui->pages->addWidget(m_accountsPage);
+
+    m_accountsLink = new QLabel(m_ui->signInPage);
+    m_accountsLink->setObjectName("backToAccountsLink");
+    m_accountsLink->setContentsMargins(0, 12, 0, 0);
+    m_ui->signInPage->layout()->addWidget(m_accountsLink);
+    connect(m_accountsLink, &QLabel::linkActivated, this, [this] {
+        m_ui->messageWidget->hideMessage();
+        setSignInFormFor(false);
+        showPage(Page::Accounts);
+    });
+
     Vault::followTheme(this, [this] { applyTheme(); });
 
     connect(m_ui->signInButton, &QPushButton::clicked, this, &AccountStartWidget::signIn);
@@ -259,6 +302,7 @@ void AccountStartWidget::setController(AccountController* controller)
     connect(account, &AccountManager::error, this, &AccountStartWidget::handleAccountError);
     connect(account, &AccountManager::mfaRequired, this, &AccountStartWidget::handleMfaRequired);
     connect(account, &AccountManager::signedIn, this, &AccountStartWidget::handleSignedIn);
+    connect(account, &AccountManager::knownAccountsChanged, this, &AccountStartWidget::updateAccountsPage);
     reset();
 }
 
@@ -284,10 +328,10 @@ void AccountStartWidget::applyTheme()
     const auto p = FluentTheme::palette();
     Vault::styleLabel(m_ui->titleLabel, Typography::FontRole::Title, p.text);
     Vault::styleLabel(m_ui->subtitleLabel, Typography::FontRole::Body, p.textSecondary);
-    for (auto* heading : {m_ui->signInHeading, m_ui->mfaHeading, m_ui->selfHostedHeading}) {
+    for (auto* heading : {m_ui->signInHeading, m_ui->mfaHeading, m_ui->selfHostedHeading, m_accountsHeading}) {
         Vault::styleLabel(heading, Typography::FontRole::Subtitle, p.text);
     }
-    for (auto* intro : {m_ui->signInIntro, m_ui->mfaIntro, m_ui->selfHostedIntro}) {
+    for (auto* intro : {m_ui->signInIntro, m_ui->mfaIntro, m_ui->selfHostedIntro, m_accountsIntro}) {
         Vault::styleLabel(intro, Typography::FontRole::Body, p.textSecondary);
     }
     for (auto* label : {m_ui->emailLabel,
@@ -305,7 +349,9 @@ void AccountStartWidget::applyTheme()
     Vault::styleLabel(m_ui->busyLabel, Typography::FontRole::Body, p.textSecondary);
 
     Vault::styleLabel(m_ui->secretKeyLink, Typography::FontRole::Body, p.accentText);
-    m_ui->secretKeyLink->setText(linkHtml(tr("First time on this device? Enter your Secret Key"), p.accentText));
+    m_ui->secretKeyLink->setText(linkHtml(tr("Use a different Secret Key"), p.accentText));
+    Vault::styleLabel(m_accountsLink, Typography::FontRole::Caption, p.accentText);
+    m_accountsLink->setText(linkHtml(tr("Back to your accounts"), p.accentText));
     Vault::styleLabel(m_ui->recoverLink, Typography::FontRole::Caption, p.accentText);
     m_ui->recoverLink->setText(linkHtml(tr("Can't sign in? Lost your password or Emergency Kit"), p.accentText));
     Vault::styleLabel(m_ui->serverLabel, Typography::FontRole::Caption, p.textSecondary);
@@ -356,7 +402,195 @@ void AccountStartWidget::reset()
     updateSecretKeyField();
     updateServerRow();
     updateSignInButton();
-    showPage(Page::SignIn);
+    setSignInFormFor(false);
+    updateAccountsPage();
+    const bool hasAccounts = m_controller && !m_controller->account()->knownAccounts().isEmpty();
+    showPage(hasAccounts ? Page::Accounts : Page::SignIn);
+}
+
+void AccountStartWidget::setSignInFormFor(bool welcomeBack)
+{
+    // Coming back to a known account, its email and server aren't asked for
+    m_ui->signInHeading->setText(m_signInHeadingText);
+    m_ui->signInIntro->setText(m_signInIntroText);
+    m_ui->emailLabel->setVisible(!welcomeBack);
+    m_ui->emailEdit->setVisible(!welcomeBack);
+    m_ui->serverRow->setEnabled(!welcomeBack);
+    for (QWidget* widget :
+         std::initializer_list<QWidget*>{m_ui->serverIcon, m_ui->serverLabel, m_ui->serverValueLabel, m_ui->serverChangeLink}) {
+        widget->setVisible(!welcomeBack);
+    }
+    const bool hasAccounts = m_controller && !m_controller->account()->knownAccounts().isEmpty();
+    m_accountsLink->setVisible(hasAccounts);
+}
+
+void AccountStartWidget::updateAccountsPage()
+{
+    while (auto* item = m_accountRows->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    if (!m_controller) {
+        return;
+    }
+    const auto known = m_controller->account()->knownAccounts();
+    for (const auto& account : known) {
+        auto* row = new QWidget(m_accountsPage);
+        auto* layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(4);
+
+        auto* open = new AccountStartOptionButton(row);
+        open->setObjectName("knownAccountRow");
+        open->setProperty("accountId", account.id);
+        open->setGlyph(Typography::Icons::Lock);
+        QStringList parts{account.email, QUrl(account.server.issuer).host()};
+        if (!account.signedIn) {
+            parts << tr("Signed out");
+        }
+        open->setText(parts.join(QStringLiteral(" · ")));
+        open->setToolTip(account.email);
+        connect(open, &QPushButton::clicked, this, [this, account] { openKnownAccount(account); });
+        layout->addWidget(open, 1);
+
+        auto* more = new QPushButton(QStringLiteral("…"), row);
+        more->setObjectName("knownAccountMore");
+        more->setFixedWidth(32);
+        more->setToolTip(tr("More for %1").arg(account.email));
+        more->setAccessibleName(tr("More for %1").arg(account.email));
+        connect(more, &QPushButton::clicked, this, [this, more, account] {
+            QMenu menu(this);
+            if (account.signedIn) {
+                menu.addAction(tr("Sign out"), this, [this, account] { signOutKnownAccount(account); });
+            }
+            menu.addAction(tr("Remove from this device"), this, [this, account] { removeKnownAccount(account); });
+            menu.exec(more->mapToGlobal(more->rect().bottomLeft()));
+        });
+        layout->addWidget(more);
+        m_accountRows->addWidget(row);
+    }
+}
+
+void AccountStartWidget::openKnownAccount(const AccountManager::KnownAccount& account)
+{
+    if (!m_controller) {
+        return;
+    }
+    if (account.current) {
+        emit finished();
+        return;
+    }
+    if (!account.signedIn) {
+        showWelcomeBack(account);
+        return;
+    }
+    QPointer<AccountStartWidget> guard(this);
+    m_controller->switchToAccount(account.id, [guard, account](bool ok) {
+        if (!guard) {
+            return;
+        }
+        if (ok) {
+            emit guard->finished();
+        } else {
+            guard->showWelcomeBack(account);
+        }
+    });
+}
+
+void AccountStartWidget::showWelcomeBack(const AccountManager::KnownAccount& account)
+{
+    if (!m_controller) {
+        return;
+    }
+    QPointer<AccountStartWidget> guard(this);
+    m_controller->setAsideAccount([guard, account] {
+        if (!guard) {
+            return;
+        }
+        guard->m_ui->emailEdit->setText(account.email);
+        guard->m_ui->serverEdit->setText(account.server.issuer);
+        guard->m_ui->passwordEdit->clear();
+        guard->m_ui->secretKeyEdit->clear();
+        guard->m_secretKeyRequested = false;
+        guard->setSignInFormFor(true);
+        guard->m_ui->signInHeading->setText(tr("Welcome back"));
+        guard->m_ui->signInIntro->setText(account.email);
+        guard->updateSecretKeyField();
+        guard->updateServerRow();
+        guard->updateSignInButton();
+        guard->m_ui->messageWidget->hideMessage();
+        guard->showPage(Page::SignIn);
+    });
+}
+
+void AccountStartWidget::showAddAccount()
+{
+    if (!m_controller) {
+        return;
+    }
+    QPointer<AccountStartWidget> guard(this);
+    m_controller->setAsideAccount([guard] {
+        if (!guard) {
+            return;
+        }
+        guard->m_ui->emailEdit->clear();
+        guard->m_ui->passwordEdit->clear();
+        guard->m_ui->secretKeyEdit->clear();
+        guard->m_secretKeyRequested = false;
+        guard->m_ui->serverEdit->setText(AccountController::hostedServerUrl());
+        guard->setSignInFormFor(false);
+        guard->updateSecretKeyField();
+        guard->updateServerRow();
+        guard->updateSignInButton();
+        guard->m_ui->messageWidget->hideMessage();
+        guard->showPage(Page::SignIn);
+    });
+}
+
+void AccountStartWidget::signOutKnownAccount(const AccountManager::KnownAccount& account)
+{
+    if (!m_controller) {
+        return;
+    }
+    const auto answer = MessageBox::question(
+        this,
+        tr("Sign out of %1?").arg(account.email),
+        tr("This device forgets the account's session and offline copy. Your vaults stay safe on the server; "
+           "signing in again downloads them."),
+        MessageBox::Yes | MessageBox::Cancel,
+        MessageBox::Cancel);
+    if (answer != MessageBox::Yes) {
+        return;
+    }
+    if (account.current) {
+        m_controller->signOut();
+    } else {
+        m_controller->account()->signOutKnown(account.id);
+    }
+}
+
+void AccountStartWidget::removeKnownAccount(const AccountManager::KnownAccount& account)
+{
+    if (!m_controller) {
+        return;
+    }
+    const auto answer = MessageBox::question(
+        this,
+        tr("Remove %1 from this device?").arg(account.email),
+        tr("You'll need your Secret Key from your Emergency Kit to sign in here again. Your account and vaults "
+           "aren't affected."),
+        MessageBox::Yes | MessageBox::Cancel,
+        MessageBox::Cancel);
+    if (answer != MessageBox::Yes) {
+        return;
+    }
+    if (account.current) {
+        m_controller->signOut();
+    }
+    m_controller->account()->forgetKnown(account.id);
+    if (m_controller->account()->knownAccounts().isEmpty()) {
+        reset();
+    }
 }
 
 AccountStartWidget::Page AccountStartWidget::currentPage() const
@@ -374,8 +608,10 @@ void AccountStartWidget::showPage(Page page)
     }
     m_ui->pages->updateGeometry();
     // The other ways to start sit beneath the sign-in card only
-    m_ui->optionsWidget->setVisible(page == Page::SignIn);
+    m_ui->optionsWidget->setVisible(page == Page::SignIn || page == Page::Accounts);
     switch (page) {
+    case Page::Accounts:
+        break;
     case Page::SignIn:
         if (m_ui->emailEdit->text().isEmpty()) {
             m_ui->emailEdit->setFocus();
@@ -432,7 +668,7 @@ void AccountStartWidget::updateSecretKeyField()
     m_ui->secretKeyLabel->setVisible(shown);
     m_ui->secretKeyEdit->setVisible(shown);
     m_ui->secretKeyHint->setVisible(needed);
-    m_ui->secretKeyLink->setVisible(!shown);
+    m_ui->secretKeyLink->setVisible(!shown && !email.isEmpty());
 }
 
 void AccountStartWidget::updateServerRow()

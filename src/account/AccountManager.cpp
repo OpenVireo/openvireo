@@ -28,7 +28,10 @@
 
 #include <botan/mem_ops.h>
 
+#include <algorithm>
+
 #include <QDateTime>
+#include <QJsonArray>
 #include <QJsonDocument>
 #ifdef KPXC_FEATURE_NETWORK
 #include <QNetworkInformation>
@@ -57,6 +60,8 @@ struct AccountManager::Pending
 namespace
 {
     const QString LastAccountKey = QStringLiteral("ov-account-last");
+    const QString KnownAccountsKey = QStringLiteral("ov-account-known");
+    constexpr qint64 SetAsideCheckIntervalSec = 24 * 60 * 60;
 
     qint64 now()
     {
@@ -70,6 +75,11 @@ namespace
 
     // Quick Unlock entries of accounts live beside those of databases, keyed by a name-based uuid
     const QUuid QuickUnlockNamespace("8c0d3f4e-5a6b-4c7d-9e8f-0a1b2c3d4e5f");
+
+    QUuid quickUnlockIdOf(const QString& serverId, const QString& accountId)
+    {
+        return QUuid::createUuidV5(QuickUnlockNamespace, "ov-account:" + serverId + ":" + accountId);
+    }
 
     // While offline the servers are tried again after this long, doubling up to the maximum
     constexpr int FirstReconnectDelaySec = 15;
@@ -343,7 +353,7 @@ bool AccountManager::canQuickUnlock() const
 
 QUuid AccountManager::quickUnlockId() const
 {
-    return QUuid::createUuidV5(QuickUnlockNamespace, "ov-account:" + defaultServerId() + ":" + m_accountId);
+    return quickUnlockIdOf(defaultServerId(), m_accountId);
 }
 
 void AccountManager::rememberAuk(const SecureBytes& auk)
@@ -418,6 +428,70 @@ QString AccountManager::storedSecretKey(const QString& serverId, const QString& 
 QString AccountManager::lastAccountId()
 {
     return SyncTokenStore::load(LastAccountKey);
+}
+
+QList<AccountManager::KnownAccount> AccountManager::knownAccounts() const
+{
+    QList<KnownAccount> list;
+    const auto array = QJsonDocument::fromJson(SyncTokenStore::load(KnownAccountsKey).toUtf8()).array();
+    for (const auto& value : array) {
+        const auto json = value.toObject();
+        KnownAccount account;
+        account.id = json.value("id").toString();
+        account.email = json.value("email").toString();
+        account.server = ServerConfig::fromJson(json.value("server").toObject());
+        account.lastUsedAt = json.value("last_used_at").toInteger();
+        account.checkedAt = json.value("checked_at").toInteger();
+        account.signedIn = !SyncTokenStore::load(sessionKey(account.id)).isEmpty();
+        account.current = account.id == m_accountId && !m_serviceAccount;
+        if (!account.id.isEmpty()) {
+            list << account;
+        }
+    }
+    std::stable_sort(list.begin(), list.end(), [](const KnownAccount& a, const KnownAccount& b) {
+        return a.lastUsedAt > b.lastUsedAt;
+    });
+    return list;
+}
+
+namespace
+{
+    void saveKnownAccounts(const QList<AccountManager::KnownAccount>& list)
+    {
+        QJsonArray array;
+        for (const auto& account : list) {
+            array << QJsonObject{{"id", account.id},
+                                 {"email", account.email},
+                                 {"server", account.server.toJson()},
+                                 {"last_used_at", account.lastUsedAt},
+                                 {"checked_at", account.checkedAt}};
+        }
+        SyncTokenStore::save(KnownAccountsKey, QJsonDocument(array).toJson(QJsonDocument::Compact));
+    }
+} // namespace
+
+void AccountManager::rememberCurrentAccount() const
+{
+    if (m_serviceAccount || m_accountId.isEmpty()) {
+        return;
+    }
+    auto list = knownAccounts();
+    qint64 checkedAt = 0;
+    list.removeIf([&](const KnownAccount& account) {
+        if (account.id != m_accountId) {
+            return false;
+        }
+        checkedAt = account.checkedAt;
+        return true;
+    });
+    KnownAccount current;
+    current.id = m_accountId;
+    current.email = m_email;
+    current.server = m_config;
+    current.lastUsedAt = now();
+    current.checkedAt = checkedAt;
+    list.prepend(current);
+    saveKnownAccounts(list);
 }
 
 void AccountManager::registerAccount(const QString& email, const QString& password)
@@ -625,6 +699,8 @@ void AccountManager::finishLogin(const QJsonObject& session)
             SyncTokenStore::save(deviceKey(defaultServerId(), m_email), m_deviceId);
             m_pending.reset();
             saveSession();
+            rememberCurrentAccount();
+            emit knownAccountsChanged();
             SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
             AccountOfflineCache::saveProfile(m_accountId, session.value("kdf").toObject(),
                                              session.value("keyset").toObject(), {});
@@ -685,8 +761,151 @@ bool AccountManager::restoreSession(const QString& accountId)
     m_accessToken.clear();
     m_accessTokenExpiry = 0;
     SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
+    rememberCurrentAccount();
     setState(State::Locked);
+    emit knownAccountsChanged();
     return true;
+}
+
+void AccountManager::whenTokensSettled(std::function<void()> done)
+{
+    QPointer<AccountManager> guard(this);
+    if (m_setAsideChecks > 0) {
+        m_setAsideCheckWaiters << [guard, done] {
+            if (guard) {
+                guard->whenTokensSettled(done);
+            }
+        };
+    } else if (m_refreshing) {
+        // Runs after the rotated token is saved, or after the session ended
+        m_tokenWaiters << [done](const QString&) { done(); };
+    } else {
+        done();
+    }
+}
+
+void AccountManager::setAside(std::function<void()> done)
+{
+    QPointer<AccountManager> guard(this);
+    whenTokensSettled([guard, done] {
+        if (!guard) {
+            return;
+        }
+        auto* self = guard.data();
+        if (self->m_serviceAccount || self->m_accountId.isEmpty() || self->m_refreshToken.isEmpty()) {
+            done();
+            return;
+        }
+        self->lock();
+        self->stopEvents();
+        self->m_refreshTimer.stop();
+        SyncServerClient::setAccountTokenProvider(self->m_accountId, nullptr);
+        self->m_accessToken.clear();
+        self->m_refreshToken.clear();
+        self->m_accessTokenExpiry = 0;
+        self->m_accountId.clear();
+        self->m_email.clear();
+        self->m_deviceId.clear();
+        self->setState(State::SignedOut);
+        emit self->vaultsChanged();
+        emit self->knownAccountsChanged();
+        done();
+    });
+}
+
+void AccountManager::switchTo(const QString& accountId, std::function<void(bool ok)> done)
+{
+    QPointer<AccountManager> guard(this);
+    setAside([guard, accountId, done] {
+        if (!guard || !guard->restoreSession(accountId)) {
+            done(false);
+            return;
+        }
+        SyncTokenStore::save(LastAccountKey, accountId);
+        done(true);
+    });
+}
+
+void AccountManager::signOutKnown(const QString& accountId)
+{
+    for (const auto& account : knownAccounts()) {
+        if (account.id == accountId && !account.current) {
+            // As signing out of a locked account: without a live token the server isn't told
+            SyncTokenStore::remove(sessionKey(accountId));
+            AccountOfflineCache::clear(accountId);
+            auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+            provider->reset(quickUnlockIdOf(account.server.serverId(), accountId));
+        }
+    }
+    emit knownAccountsChanged();
+}
+
+void AccountManager::forgetKnown(const QString& accountId)
+{
+    auto list = knownAccounts();
+    for (const auto& account : list) {
+        if (account.id == accountId && !account.current) {
+            signOutKnown(accountId);
+            SyncTokenStore::remove(secretKeyKey(account.server.serverId(), account.email));
+            SyncTokenStore::remove(deviceKey(account.server.serverId(), account.email));
+            list.removeIf([&](const KnownAccount& other) { return other.id == accountId; });
+            saveKnownAccounts(list);
+            break;
+        }
+    }
+    emit knownAccountsChanged();
+}
+
+void AccountManager::checkSetAsideAccounts()
+{
+    for (const auto& account : knownAccounts()) {
+        if (account.current || !account.signedIn || !account.server.isValid()
+            || (account.checkedAt > 0 && now() - account.checkedAt < SetAsideCheckIntervalSec)) {
+            continue;
+        }
+        const auto id = account.id;
+        auto session = QJsonDocument::fromJson(SyncTokenStore::load(sessionKey(id)).toUtf8()).object();
+        const auto token = session.value("refresh_token").toString();
+        if (token.isEmpty()) {
+            continue;
+        }
+        auto* client = account.server.api == m_config.api ? m_client : new AuthClient(account.server.api, this);
+        ++m_setAsideChecks;
+        client->refresh(token, [this, client, id, session](const AuthClient::Response& response) mutable {
+            if (client != m_client) {
+                client->deleteLater();
+            }
+            if (response.isSuccess()) {
+                // Every refresh replaces the refresh token, here as for the open account
+                session["refresh_token"] = response.json().value("refresh_token").toString();
+                SyncTokenStore::save(sessionKey(id), QJsonDocument(session).toJson(QJsonDocument::Compact));
+                auto list = knownAccounts();
+                for (auto& known : list) {
+                    if (known.id == id) {
+                        known.checkedAt = now();
+                    }
+                }
+                saveKnownAccounts(list);
+            } else if (response.status == 400 || response.status == 401 || response.status == 403) {
+                // The session is over on the server: that account's data goes, and no other's (SPEC §20)
+                signOutKnown(id);
+            }
+            finishSetAsideCheck();
+        });
+    }
+}
+
+void AccountManager::finishSetAsideCheck()
+{
+    if (--m_setAsideChecks > 0) {
+        return;
+    }
+    const auto waiters = std::move(m_setAsideCheckWaiters);
+    m_setAsideCheckWaiters.clear();
+    for (const auto& waiter : waiters) {
+        waiter();
+    }
+    emit knownAccountsChanged();
 }
 
 void AccountManager::unlock(const QString& password)
@@ -927,6 +1146,7 @@ void AccountManager::endSession(const QString& reason)
         emit vaultsChanged();
         emit signedOut(reason);
     }
+    emit knownAccountsChanged();
 }
 
 void AccountManager::followEmail(const QString& email)
@@ -946,7 +1166,9 @@ void AccountManager::followEmail(const QString& email)
     }
     m_email = email;
     saveSession();
+    rememberCurrentAccount();
     emit emailChanged();
+    emit knownAccountsChanged();
 }
 
 void AccountManager::saveSession() const

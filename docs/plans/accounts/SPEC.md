@@ -36,7 +36,8 @@ spec is wrong, report it; don't change one implementation on its own.
 - Parsing: remove whitespace and `-`, uppercase, map `O→0`, `I→1`, `L→1`, require the `K1` prefix
   and 26 characters, and reject the input if the two padding bits are not zero.
 - Stored on trusted devices in the OS keychain (Qt `SyncTokenStore`; web: IndexedDB, wrapped with a
-  non-extractable WebCrypto AES-GCM key) and printed in the Emergency Kit.
+  non-extractable WebCrypto AES-GCM key) and printed in the Emergency Kit. A stored Secret Key
+  belongs to one account on one server, and §21 says when it is deleted.
 
 ## 3. Account Unlock Key (AUK)
 
@@ -636,10 +637,10 @@ edits locally, and turns off actions that need the server (new vaults, sharing, 
 again it refreshes the cache, drops vaults that are no longer listed (with their local copies), and
 uploads local edits.
 
-**Wiping.** Ending the session (sign-out, revoked refresh token, §9) deletes the cache. When the
-session ended by accident (`token_reused`, `session_expired`), a client may keep its encrypted local
-edits and merge them after the same user next signs in; everything else in the cache goes. Locking
-keeps it. Clients offer a setting to not keep a cache (Qt: "Allow unlocking without a connection",
+**Wiping.** Ending the session (sign-out, revoked refresh token, §9) deletes that user's cache, and
+no other user's. When the session ended by accident (`token_reused`, `session_expired`), a client may
+keep its encrypted local edits and merge them after the same user next signs in; everything else in
+the cache goes. Locking and setting a session aside (§21) keep it. Clients offer a setting to not keep a cache (Qt: "Allow unlocking without a connection",
 on by default); turning it off deletes the cache. iOS has no such setting, because its AutoFill
 extension reads the cache.
 
@@ -649,3 +650,51 @@ Bitwarden's is the same except that its disk copy alone allows password guessing
   AUK (§3). With both, guesses are slowed only by the KDF, not by the server's rate limits.
 - A revoked device (§11), or one whose user changed the password on another device, keeps working
   from its cache, with the old password, until it reconnects.
+
+## 21. Remembered accounts, switching and shared sessions
+
+A client can know several accounts, and keep several signed in, but has only one open at a time.
+This section is client behaviour: nothing changes on the servers or the wire.
+
+**Remembered accounts.** A client may keep a list of accounts it has signed in to, each with its
+email, server and user id. The list holds no secrets, and is not synced.
+
+- Add or update an entry after a sign-in, sign-up or recovery, unless the session is shared.
+- Keep the entry on sign-out and when the server ends the session.
+- Delete it only when the user removes the account from this device, which also deletes the stored
+  Secret Key and device id for that account on that server, and works with no session.
+- Update it where the stored Secret Key already follows an email change (§16).
+
+**Leaving an account.**
+
+| | Session | Cache (§20) | Key behind biometrics | Secret Key, device id | Entry |
+|---|---|---|---|---|---|
+| Switch | Kept, set aside | Kept | Kept | Kept | Kept |
+| Sign out | Ended | Deleted | Deleted | Kept | Kept |
+| Remove from this device | Ended | Deleted | Deleted | Deleted | Deleted |
+
+**Setting a session aside.** Switching locks the account and moves its session to a key of its own.
+It tells the server nothing, and the session is not ended, so the device stays in the device list
+and §20's wiping doesn't apply. Returning moves the session back and unlocks as usual, with no
+OPAQUE sign-in and no TOTP.
+
+- **Exactly one key holds a refresh token at any moment.** Refresh tokens rotate and reuse revokes
+  the session (§9), so a session is moved and never copied. A client waits for a refresh in flight
+  before moving the session. After a crash leaves the same user's session under both keys, the active
+  key wins and the other is deleted.
+- A client keeps at most one set-aside session per user per server.
+- **Checking.** A client should refresh each set-aside session when it starts or comes to the
+  foreground, at most once every 24 hours. That keeps the session within its 30 days (§9) and tells
+  the device about a revocation. A refusal ends that session as in §9 and §20. The account's entry
+  stays, and shows as signed out. Having no response changes nothing.
+- A process that reads sessions separately from the app (an AutoFill extension) reads the active
+  session afresh each time, so it can't refresh with a token that has since moved or rotated.
+- Edits not yet uploaded stay encrypted in that user's cache and upload after that account's next
+  unlock.
+
+**Shared sessions.** A client running where other people use the same browser profile offers a
+shared session at sign-in. A shared session persists nothing in the browser: no entry, email, Secret
+Key, device id, tokens, sync state, cache or keys. It is kept in memory only, is never set aside, and
+ends when the tab closes or the account locks. Its device row is deleted on sign-out where the server
+can be reached. It doesn't use `/session/claim`, whose cookie outlives the tab. Native clients don't
+offer shared sessions, since their secrets are in the OS account's keychain.

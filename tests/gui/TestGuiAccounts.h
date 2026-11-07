@@ -53,6 +53,7 @@ private slots:
     void testMovesADatabaseToTheAccount();
     void testServiceAccountsDialog();
     void testSignOutReturnsToTheStartScreen();
+    void testSwitchesAccountsWithoutSigningOut();
     void testCreatesAnOrgAndOrgVaults();
     void testAcceptsAnInvitation();
     void testInvitesPromotesAndRemovesMembers();

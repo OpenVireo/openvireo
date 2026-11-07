@@ -165,6 +165,10 @@ bool AccountController::needsStartScreen() const
 
 void AccountController::restore()
 {
+    // Other accounts are checked in the background. Without an account nothing goes out, whatever is remembered.
+    if (m_mode == Mode::Account || m_mode == Mode::Unset) {
+        m_account->checkSetAsideAccounts();
+    }
     // Only account mode has anything to restore, and that touches the keychain, not the network
     if (m_mode != Mode::Account || m_account->state() != AccountManager::State::SignedOut) {
         return;
@@ -649,6 +653,32 @@ void AccountController::signOut()
     m_account->signOut();
     setMode(Mode::Unset);
     emit startScreenRequested();
+}
+
+void AccountController::setAsideAccount(std::function<void()> done)
+{
+    closeVaultTabs();
+    m_lastActiveVault.clear();
+    QPointer<AccountController> guard(this);
+    m_account->setAside([guard, done] {
+        if (guard) {
+            guard->setMode(Mode::Unset);
+        }
+        done();
+    });
+}
+
+void AccountController::switchToAccount(const QString& accountId, std::function<void(bool ok)> done)
+{
+    closeVaultTabs();
+    m_lastActiveVault.clear();
+    QPointer<AccountController> guard(this);
+    m_account->switchTo(accountId, [guard, done](bool ok) {
+        if (guard) {
+            guard->setMode(ok ? Mode::Account : Mode::Unset);
+        }
+        done(ok);
+    });
 }
 
 void AccountController::acceptInvitation(const QString& linkOrToken)
