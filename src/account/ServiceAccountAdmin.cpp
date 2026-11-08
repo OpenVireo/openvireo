@@ -127,7 +127,8 @@ void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
             orgs << Org{json.value("id").toString(),
                         json.value("name").toString(),
                         json.value("role").toString(),
-                        json.value("status").toString()};
+                        json.value("status").toString(),
+                        json.value("item_share_links").toString("on")};
         }
         done(orgs, {});
     });
@@ -814,6 +815,82 @@ void ServiceAccountAdmin::grantVault(const ServiceAccount& account,
     sharing->grant(vaultId, recipient, role, [sharing, done](bool ok, const QString& error) {
         sharing->deleteLater();
         done(ok, error);
+    });
+}
+
+void ServiceAccountAdmin::vaultAccess(const ServiceAccount& account, AccessCallback done)
+{
+    if (!m_account) {
+        done({}, tr("Not signed in."));
+        return;
+    }
+    // Only managers can list who has access, so only the vaults this account manages are asked
+    QStringList vaultIds;
+    for (const auto& vault : m_account->keyring().vaults()) {
+        if (vault.role == "manage") {
+            vaultIds << vault.id;
+        }
+    }
+    if (vaultIds.isEmpty()) {
+        done({}, {});
+        return;
+    }
+    struct Pending
+    {
+        int left = 0;
+        QHash<QString, QString> roles;
+        QString error;
+    };
+    auto pending = QSharedPointer<Pending>::create();
+    pending->left = vaultIds.size();
+    const auto principal = "sa:" + account.id;
+    for (const auto& vaultId : vaultIds) {
+        m_account->client()->vaultAccess(vaultId,
+                                         [pending, principal, vaultId, done](const AuthClient::Response& response) {
+                                             if (!response.isSuccess()) {
+                                                 pending->error = AuthClient::errorMessage(response);
+                                             } else {
+                                                 for (const auto& value : response.json().value("access").toArray()) {
+                                                     const auto row = value.toObject();
+                                                     if (row.value("principal").toString() == principal) {
+                                                         pending->roles.insert(vaultId, row.value("role").toString());
+                                                     }
+                                                 }
+                                             }
+                                             if (--pending->left == 0) {
+                                                 done(pending->roles, pending->error);
+                                             }
+                                         });
+    }
+}
+
+void ServiceAccountAdmin::revokeVault(const ServiceAccount& account, const QString& vaultId, Done done)
+{
+    auto* sharing = new VaultSharing(m_account, this);
+    sharing->revoke(vaultId, {"sa:" + account.id}, [sharing, done](bool ok, const QString& error) {
+        sharing->deleteLater();
+        done(ok, error);
+    });
+}
+
+void ServiceAccountAdmin::setShareLinks(const QString& orgId, const QString& policy, OrgCallback done)
+{
+    if (!m_account) {
+        done({}, tr("Not signed in."));
+        return;
+    }
+    m_account->client()->updateOrg(orgId, {{"item_share_links", policy}}, [done](const AuthClient::Response& response) {
+        if (!response.isSuccess()) {
+            done({}, AuthClient::errorMessage(response));
+            return;
+        }
+        const auto json = response.json();
+        done(Org{json.value("id").toString(),
+                 json.value("name").toString(),
+                 json.value("role").toString(),
+                 {},
+                 json.value("item_share_links").toString("on")},
+             {});
     });
 }
 

@@ -837,6 +837,29 @@ namespace FakeAccount
             }
         } else if (parts.value(0) == "orgs" && !isOrgAdmin(parts.value(1))) {
             error(403, "forbidden", "Only owners and admins can do that");
+        } else if (parts.value(0) == "orgs" && parts.size() == 2 && verb == "PATCH") {
+            auto& org = server.orgs[parts.value(1)];
+            if (json.contains("name")) {
+                org.name = json.value("name").toString();
+                server.log(caller, "org.rename", org.id, org.id);
+            }
+            if (json.contains("item_share_links")) {
+                const auto policy = json.value("item_share_links").toString();
+                if (policy != "on" && policy != "managers" && policy != "off") {
+                    error(400, "bad_request", "item_share_links must be on, managers or off");
+                    deliverLater(response, std::move(callback));
+                    return;
+                }
+                if (policy != org.shareLinks) {
+                    server.log(caller, "org.share_links", org.id, org.id);
+                    org.shareLinks = policy;
+                }
+            }
+            reply(200,
+                  {{"id", org.id},
+                   {"name", org.name},
+                   {"role", server.orgMember(org.id, caller.mid(5))->role},
+                   {"item_share_links", org.shareLinks}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 4 && verb == "PATCH") {
             const auto orgId = parts.value(1);
             const auto role = json.value("role").toString();

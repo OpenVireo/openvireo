@@ -138,6 +138,8 @@ public:
     // Orgs (the caller's orgs and roles come with me())
     // A new org; the caller becomes its owner
     void createOrg(const QString& name, Callback callback);
+    // Rename the org or change who can make share links ({name}, {item_share_links}); owners and admins
+    void updateOrg(const QString& orgId, const QJsonObject& changes, Callback callback);
     void orgMembers(const QString& orgId, Callback callback);
     // A new role for a member. `saMasterKeys` (SaMasterGrant) go along when promoting to owner or admin.
     void setMemberRole(const QString& orgId,

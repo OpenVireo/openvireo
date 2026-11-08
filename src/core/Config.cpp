@@ -143,6 +143,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_PreviewSplitterState, {QS("GUI/PreviewSplitterState"), Local, {}}},
     {Config::GUI_VaultSplitterState, {QS("GUI/VaultSplitterState"), Local, {}}},
     {Config::GUI_AutoTypeSelectDialogSize, {QS("GUI/AutoTypeSelectDialogSize"), Local, QSize(600, 250)}},
+    {Config::GUI_OrgAdminLastOrg, {QS("GUI/OrgAdminLastOrg"), Local, {}}},
+    {Config::GUI_OrgAdminLastSection, {QS("GUI/OrgAdminLastSection"), Local, 0}},
 
     // Security
     {Config::Security_ClearClipboard, {QS("Security/ClearClipboard"), Roaming, true}},
