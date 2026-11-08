@@ -595,9 +595,10 @@ show the message with an Upgrade link. Limits only stop *new* things: after a do
 subscription ends, everything over the limit keeps working (vaults open, sync, members stay), and
 nothing is deleted.
 
-**Reading limits.** `GET /me` has `plan: {id, limits}` for the user and the same object on each
-entry of `orgs`; `GET /orgs/{id}` and `POST /orgs` have it as `plan`. `id` is `null` and every limit
-`null` when billing is off. Clients use it to grey out actions; the server's check is what counts.
+**Reading limits.** `GET /me` has `plan: {id, limits, billing}` for the user and the same object on
+each entry of `orgs`; `GET /orgs/{id}` and `POST /orgs` have it as `plan`. `id` is `null` and every
+limit `null` when billing is off. Clients use it to grey out actions; the server's check is what
+counts. `billing` (below) is `null` on a free plan and when billing is off.
 
 **Sync quota.** Each `vlt` entry of the access token (§9) has `q`, the vault's `vault_bytes`, when it
 is limited: `{"id", "r", "q": 26214400}`. The sync server answers a `PUT /vaults/{vault}` body
@@ -605,10 +606,69 @@ larger than `q` with **413** `quota_exceeded` (`{"error", "code": "quota_exceede
 before it stores anything. Without `q` only the server's own `SYNC_MAX_DB_BYTES` applies. A quota
 change reaches the sync server with the next token (at most `exp`, 10 minutes).
 
-**Billing.** Stripe Checkout starts a subscription and the Stripe Customer Portal changes or cancels
-it, both from the auth site (`/subscription/pricing`, `/subscription/orgs/{org}` for an org's
-owners). Stripe's webhook keeps the auth server's copy; a subscription is in force while Stripe
-says `active`, `trialing` or `past_due`. Deleting an org cancels its subscription.
+**Billing.** A subject has at most one paid plan, billed by one of two sources:
+
+- **`stripe`**, the website. Stripe Checkout starts a subscription and the Stripe Customer Portal
+  changes or cancels it, both from the auth site (`/subscription/pricing`, `/subscription/orgs/{org}`
+  for an org's owners). Stripe's webhook keeps the auth server's copy; a subscription is in force
+  while Stripe says `active`, `trialing` or `past_due`.
+- **`apple`**, In-App Purchase in the iOS app, for `premium` and `families` only (`teams` and
+  `business` are per member and sold on the website). Product IDs `com.openvireo.premium.month`,
+  `com.openvireo.premium.year` (subscription group Personal) and `com.openvireo.families.month`,
+  `com.openvireo.families.year` (group Organization). The App Store sets the price shown in the app,
+  which can differ from the website's. Apple's server notifications and the app keep the auth
+  server's copy; a subscription is in force while Apple says it is active or in its billing grace
+  period, and ends when Apple says it expired, was revoked or refunded, or is in billing retry after
+  the grace period.
+
+The plan, its limits and everything above are the same whichever source bills it.
+
+`billing` in `plan`:
+
+```json
+{"source": "apple", "interval": "year", "status": "active",
+ "renews_at": "2027-11-08T12:00:00Z", "ends_at": null, "manage": "app_store"}
+```
+
+- `source`: `stripe` or `apple`. `interval`: `month` or `year`. `status`: `active`, `trialing` or
+  `past_due` (Apple's billing grace period is `past_due`).
+- `renews_at` when it will renew, else `null`; `ends_at` when it is set not to renew, else `null`.
+- `manage`: `website` (the auth site's pricing or org billing page) or `app_store` (the subscription
+  belongs to an Apple ID: manage it on that device, or at `https://apps.apple.com/account/subscriptions`).
+  Clients follow `manage`, not `source`. No client other than iOS sells In-App Purchase, and none
+  can change or cancel an Apple subscription.
+
+**In-App Purchase.** The app buys with `appAccountToken` set to the subject's UUID (the user's for
+Premium, the org's for Families) and then reports the transaction.
+
+- `GET /billing/apple/eligibility` (for the user) or `?org=<uuid>` (for an org) →
+  `{"eligible": bool, "reason": null | code}`. Not eligible: `billed_by_stripe` (a Stripe plan is in
+  force), `billed_by_apple` (an Apple plan is in force; the app offers Manage instead), `not_owner`
+  (the caller isn't an owner of the org), `per_seat_plan` (the org is on `teams` or `business`),
+  `billing_off`. Clients ask before showing purchase buttons.
+- `POST /billing/apple/transactions` `{"signed_transaction": "<JWS from StoreKit>"}`. The server
+  verifies Apple's signature, that `appAccountToken` is the caller or an org the caller owns, and that
+  the product is a plan for that subject, then records it and answers **200** with the subject's
+  `plan`. Errors: 400 `apple_verification_failed`; 403 `forbidden` (token is someone else); 409
+  `apple_subscription_bound` (this Apple subscription already belongs to another user or org; it is
+  never moved); 409 `billed_by_stripe` (the purchase is recorded but the Stripe plan stays in force:
+  the client tells the person to cancel one of them). A transaction without `appAccountToken` (an
+  offer code redeemed in the App Store) is bound to the caller. Reporting the same transaction again
+  is harmless; clients report every transaction StoreKit gives them (`Transaction.updates`,
+  `currentEntitlements`) on launch and on Restore.
+- Once bound, an Apple subscription (`originalTransactionId`) stays with its subject across
+  renewals, lapses and resubscriptions.
+- App Review and TestFlight buy in Apple's Sandbox. The hosted server accepts Sandbox transactions
+  too; they last as long as Apple's accelerated Sandbox subscriptions do.
+
+**One plan per subject.** The website refuses Checkout for a subject with an Apple plan in force and
+shows how to manage it at Apple instead; it never starts a second subscription. When an Apple plan
+ends, a Stripe one can be bought (and the other way round); there is no proration between them.
+
+**Ending.** Deleting an org cancels a Stripe subscription. An Apple subscription can only be
+cancelled by the person whose Apple ID pays for it: the server stops counting it for a deleted
+subject and tells the owners to cancel it at Apple. Handing an org to a new owner leaves an Apple
+subscription on the buyer's Apple ID, covering the org until they cancel it.
 
 ## 20. Offline cache
 
@@ -814,7 +874,9 @@ scheduled. Otherwise it answers **202** `{"scheduled_for": RFC 3339}` and, at on
 - revokes every refresh token and deletes every device of the user;
 - ends every share link the user owns (§22); restoring doesn't bring them back;
 - sets the personal subscription, and those of orgs with outcome `delete`, to end at the period end
-  (no refund);
+  (no refund) when Stripe bills them. An Apple-billed one (§19) can't be cancelled by the server: the
+  preflight's `subscription` has `manage: "app_store"`, clients tell the user to cancel it in their
+  Apple ID settings first (iOS opens the manage sheet), and the email repeats it;
 - sends `access` `{"vault": null, "change": "deletion_scheduled", "at": scheduled_for}` (§11) to the
   user, and emails them the date and how to restore.
 
@@ -835,7 +897,8 @@ then refreshes its token to get one without `del`.
 deletes the user's grants on other vaults (marking those vaults `rotation_required`, notifying their
 managers), their SA master keys, every vault they own including archived ones (§18), with the blobs
 deleted through `DELETE {sync}/internal/vaults/{id}`, invitations to their email and the user row;
-deletes the payment customer of the user and of deleted orgs; and sends `access`
+deletes the payment customer of the user and of deleted orgs (an Apple subscription that still
+renews is no longer counted for anyone; its renewals are ignored); and sends `access`
 `{"vault": null, "change": "account_deleted"}`. The audit keeps `account.delete` with the actor's
 subject and no email. After the erase the email can sign up again. Nothing else is kept.
 

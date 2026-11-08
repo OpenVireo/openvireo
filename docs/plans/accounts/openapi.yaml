@@ -14,7 +14,8 @@ info:
     - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
       `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`, `invalid_code`,
       `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`,
-      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`, `plan_limit` (402, SPEC §19). (The sync server
+      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`, `plan_limit` (402, SPEC §19), `billed_by_stripe`, `apple_subscription_bound`,
+      `apple_verification_failed` (SPEC §19 In-App Purchase). (The sync server
       today sends only `error`; it adds `code` on the new routes.)
     - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
     - Binary fields are base64url without padding (`B64`). Ids are UUIDv4 strings.
@@ -883,6 +884,53 @@ paths:
                         details: { type: object }
                   next: { type: [string, 'null'] }
 
+  /billing/apple/eligibility:
+    get:
+      tags: [auth]
+      summary: Whether the iOS app may sell an In-App Purchase plan to the caller, or to an org they own (SPEC §19)
+      parameters:
+        - { name: org, in: query, required: false, schema: { type: string, format: uuid }, description: omit for the caller's personal plan }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [eligible, reason]
+                properties:
+                  eligible: { type: boolean }
+                  reason: { type: [string, 'null'], enum: [billed_by_stripe, billed_by_apple, not_owner, per_seat_plan, billing_off, null] }
+        '404': { $ref: '#/components/responses/Error', description: no such org, or the caller isn't a member }
+  /billing/apple/transactions:
+    post:
+      tags: [auth]
+      summary: |
+        Report a StoreKit transaction (SPEC §19). Idempotent. The transaction's appAccountToken must be the caller's uuid or an
+        org the caller owns; without one it is bound to the caller.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [signed_transaction]
+              properties:
+                signed_transaction: { type: string, description: the JWS from StoreKit 2 (Transaction.jwsRepresentation) }
+      responses:
+        '200':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subject, plan]
+                properties:
+                  subject: { type: string, description: 'user:<uuid> or org:<uuid>' }
+                  plan: { $ref: '#/components/schemas/Plan' }
+        '400': { $ref: '#/components/responses/Error', description: apple_verification_failed, or a product that is no plan for the subject }
+        '403': { $ref: '#/components/responses/Error', description: the appAccountToken is another user, or an org the caller doesn't own }
+        '409': { $ref: '#/components/responses/Error', description: 'apple_subscription_bound (belongs to another user or org) or billed_by_stripe (recorded; the Stripe plan stays in force)' }
+
   /shares:
     get:
       tags: [auth]
@@ -1186,20 +1234,36 @@ components:
           properties:
             plan: { type: string }
             period_end: { type: [string, 'null'], format: date-time }
+            source: { enum: [stripe, apple], description: SPEC §19 }
+            manage: { enum: [website, app_store], description: 'app_store: the server cannot cancel it; the user must, at Apple (SPEC §23)' }
         share_links: { type: integer }
         blocked: { type: boolean }
     Plan:
       type: object
       description: SPEC §19. id and every limit are null when billing is off; a null limit is unlimited.
-      required: [id, limits]
+      required: [id, limits, billing]
       properties:
         id: { type: [string, 'null'], enum: [free, premium, org_free, families, teams, business, null] }
+        billing:
+          oneOf: [ { $ref: '#/components/schemas/Billing' }, { type: 'null' } ]
+          description: null on a free plan or when billing is off
         limits:
           type: object
           additionalProperties: { type: [integer, 'null'] }
           description: |
             Users: personal_vaults, share_recipients, vault_bytes, share_links, share_link_days.
             Orgs: members, org_vaults, service_accounts, audit_days, vault_bytes, share_links, share_link_days.
+    Billing:
+      type: object
+      description: Who bills a paid plan and how to manage it (SPEC §19). Clients follow manage, not source.
+      required: [source, interval, status, renews_at, ends_at, manage]
+      properties:
+        source: { enum: [stripe, apple] }
+        interval: { enum: [month, year] }
+        status: { enum: [active, trialing, past_due] }
+        renews_at: { type: [string, 'null'], format: date-time }
+        ends_at: { type: [string, 'null'], format: date-time, description: set when it will not renew }
+        manage: { enum: [website, app_store] }
     PlanLimit:
       type: object
       description: The 402 body (SPEC §19).
