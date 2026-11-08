@@ -21,6 +21,8 @@
 #include <QCoreApplication>
 #include <QString>
 
+class QWidget;
+
 /**
  * The Emergency Kit: a one-page PDF with what a new device needs to sign in, the account's email,
  * server and Secret Key (SPEC §2), and a blank line for the master password, which KeePassXC never
@@ -35,6 +37,9 @@ public:
 
     QString html() const;
     bool writePdf(const QString& filePath, QString* error = nullptr) const;
+    // Asks where to save the PDF (Documents by default) and writes it. False when cancelled, with `error`
+    // empty, or when writing failed, with `error` set; `savedPath` is the file written.
+    bool saveAs(QWidget* parent, QString* savedPath = nullptr, QString* error = nullptr) const;
 
 private:
     QString m_email;

@@ -31,8 +31,8 @@ namespace Ui
 }
 
 /**
- * Creates a KeePassXC account in two steps: the email and master password, then the Secret Key, shown
- * once, with the Emergency Kit to save. The account is signed in and unlocked when it closes.
+ * Creates an OpenVireo account in two steps: the email and master password, then the Secret Key, with
+ * Copy and the Emergency Kit to save (EmergencyKitDialog shows it again later). The account is signed in and unlocked when it closes.
  */
 class SignUpWizard : public QDialog
 {

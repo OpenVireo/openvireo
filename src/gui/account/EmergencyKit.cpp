@@ -17,11 +17,15 @@
 
 #include "EmergencyKit.h"
 
+#include "gui/FileDialog.h"
+
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QLocale>
 #include <QPageSize>
 #include <QPdfWriter>
+#include <QStandardPaths>
 #include <QTextDocument>
 
 EmergencyKit::EmergencyKit(const QString& email, const QString& server, const QString& secretKey)
@@ -80,6 +84,24 @@ bool EmergencyKit::writePdf(const QString& filePath, QString* error) const
             *error = tr("Could not write %1.").arg(filePath);
         }
         return false;
+    }
+    return true;
+}
+
+bool EmergencyKit::saveAs(QWidget* parent, QString* savedPath, QString* error) const
+{
+    if (error) {
+        error->clear();
+    }
+    const auto defaultPath = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation))
+                                 .filePath("OpenVireo Emergency Kit.pdf");
+    const auto path =
+        fileDialog()->getSaveFileName(parent, tr("Save Emergency Kit"), defaultPath, tr("PDF files (*.pdf)"));
+    if (path.isEmpty() || !writePdf(path, error)) {
+        return false;
+    }
+    if (savedPath) {
+        *savedPath = path;
     }
     return true;
 }

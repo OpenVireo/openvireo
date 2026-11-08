@@ -57,6 +57,7 @@
 #include "gui/account/AccountController.h"
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
+#include "gui/account/EmergencyKitDialog.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
@@ -794,6 +795,10 @@ void MainWindow::setupAccounts()
     m_actionAccountAcceptInvitation =
         m_accountMenu->addAction(tr("Accept &Invitation…"), this, &MainWindow::acceptAccountInvitation);
     m_accountMenu->addSeparator();
+    // The Secret Key this device keeps, as in the web app's Account panel and iOS Settings
+    m_actionAccountEmergencyKit =
+        m_accountMenu->addAction(tr("&Emergency Kit…"), this, &MainWindow::showEmergencyKit);
+    m_actionAccountEmergencyKit->setObjectName("actionAccountEmergencyKit");
     // Password, two-step verification and devices live in the web app (SPEC §16)
     m_actionAccountManage = m_accountMenu->addAction(tr("&Manage Account…"), this, [this] {
         const auto url = m_accountController->account()->server().accountSettingsUrl();
@@ -819,6 +824,7 @@ void MainWindow::setupAccounts()
                                                     m_actionAccountServiceAccounts,
                                                     m_actionAccountAcceptInvitation,
                                                     nullptr,
+                                                    m_actionAccountEmergencyKit,
                                                     m_actionAccountManage,
                                                     m_actionAccountSignOut});
     }
@@ -1070,6 +1076,13 @@ void MainWindow::showSharedLinks()
     dialog->open();
 }
 
+void MainWindow::showEmergencyKit()
+{
+    auto* dialog = new EmergencyKitDialog(m_accountController->account(), this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
 void MainWindow::showServiceAccounts()
 {
     auto* dialog = new ServiceAccountsDialog(m_accountController->account(), this);
@@ -1188,6 +1201,8 @@ void MainWindow::updateAccountActions()
     m_actionAccountQuickUnlock->setEnabled(locked && account->canQuickUnlock());
     m_actionAccountLock->setEnabled(unlocked);
     m_actionAccountSignOut->setEnabled(signedIn);
+    // Shown from this device's keychain, so it works offline but never while locked
+    m_actionAccountEmergencyKit->setEnabled(unlocked);
     m_actionAccountSwitch->setEnabled(signedIn && !m_accountController->account()->isServiceAccount());
     // Working from the offline cache: what needs the servers waits until they answer again (SPEC §20)
     const bool online = !account->isOffline();

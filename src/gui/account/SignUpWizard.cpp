@@ -22,13 +22,12 @@
 #include "EmergencyKit.h"
 
 #include "account/AccountManager.h"
-#include "gui/FileDialog.h"
+#include "gui/Clipboard.h"
 #include "gui/MessageBox.h"
 
 #include <QDir>
 #include <QFontDatabase>
 #include <QPushButton>
-#include <QStandardPaths>
 
 SignUpWizard::SignUpWizard(AccountController* controller, QWidget* parent)
     : QDialog(parent)
@@ -60,6 +59,12 @@ SignUpWizard::SignUpWizard(AccountController* controller, QWidget* parent)
     });
     connect(m_ui->buttonBox, &QDialogButtonBox::rejected, this, &SignUpWizard::reject);
     connect(m_ui->saveKitButton, &QPushButton::clicked, this, &SignUpWizard::saveKit);
+    connect(m_ui->copyKeyButton, &QPushButton::clicked, this, [this] {
+        // Cleared from the clipboard after the time set in Settings › Security
+        clipboard()->setText(m_secretKey);
+        m_ui->messageWidget->showMessage(tr("Secret Key copied. Paste it into your Emergency Kit."),
+                                         MessageWidget::Positive);
+    });
     connect(m_ui->savedCheckBox, &QCheckBox::toggled, this, [this](bool checked) {
         if (m_ui->pages->currentIndex() == 1) {
             m_nextButton->setEnabled(checked);
@@ -167,17 +172,13 @@ void SignUpWizard::handleRegistered(const QString& secretKey)
 
 void SignUpWizard::saveKit()
 {
-    const auto defaultPath = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation))
-                                 .filePath("OpenVireo Emergency Kit.pdf");
-    const auto path =
-        fileDialog()->getSaveFileName(this, tr("Save Emergency Kit"), defaultPath, tr("PDF files (*.pdf)"));
-    if (path.isEmpty()) {
-        return;
-    }
     const auto email = m_controller ? m_controller->account()->email() : m_ui->emailEdit->text();
+    QString path;
     QString error;
-    if (!EmergencyKit(email, AccountController::hostedServerUrl(), m_secretKey).writePdf(path, &error)) {
-        m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+    if (!EmergencyKit(email, AccountController::hostedServerUrl(), m_secretKey).saveAs(this, &path, &error)) {
+        if (!error.isEmpty()) {
+            m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+        }
         return;
     }
     m_kitSaved = true;
@@ -192,8 +193,8 @@ void SignUpWizard::reject()
         // The account exists and is signed in; only the kit can still be lost
         auto answer = MessageBox::question(this,
                                            tr("Close without the Emergency Kit?"),
-                                           tr("Your Secret Key won't be shown again. Without it you can't sign in on "
-                                              "another device. Close anyway?"),
+                                           tr("Without your Secret Key you can't sign in on another device. You can "
+                                              "save the kit later from Account › Emergency Kit. Close anyway?"),
                                            MessageBox::Close | MessageBox::Cancel,
                                            MessageBox::Cancel);
         if (answer != MessageBox::Close) {
