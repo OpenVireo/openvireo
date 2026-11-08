@@ -306,6 +306,19 @@ paths:
                         role: { $ref: '#/components/schemas/OrgRole' }
                         status: { $ref: '#/components/schemas/MemberStatus' }
                         plan: { $ref: '#/components/schemas/Plan' }
+                  deletion_scheduled_for: { type: [string, 'null'], format: date-time, description: set while the account is pending deletion (SPEC.md §23) }
+    delete:
+      tags: [auth]
+      summary: Schedule the account's deletion (SPEC.md §23). Needs a token issued in the last 5 minutes.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [confirm], properties: { confirm: { type: string, description: the account email } } }
+      responses:
+        '202': { description: scheduled, content: { application/json: { schema: { type: object, required: [scheduled_for], properties: { scheduled_for: { type: string, format: date-time } } } } } }
+        '400': { $ref: '#/components/responses/Error', description: confirm_mismatch }
+        '403': { $ref: '#/components/responses/Error', description: not a recent login }
+        '409': { $ref: '#/components/responses/Error', description: 'deletion_blocked (body adds orgs: [{id, name}]) or deletion_pending' }
   /me/password/start:
     post:
       tags: [auth]
@@ -398,6 +411,20 @@ paths:
       tags: [auth]
       requestBody: { content: { application/json: { schema: { type: object, required: [totp], properties: { totp: { type: string } } } } } }
       responses: { '204': { description: disabled } }
+  /me/deletion:
+    get:
+      tags: [auth]
+      summary: What deleting the account will do (SPEC.md §23). Allowed on a pending account's token.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/DeletionPreview' } } } }
+  /me/deletion/cancel:
+    post:
+      tags: [auth]
+      summary: Restore a pending account (SPEC.md §23). Needs a token issued in the last 5 minutes.
+      responses:
+        '204': { description: restored }
+        '403': { $ref: '#/components/responses/Error', description: not a recent login }
+        '409': { $ref: '#/components/responses/Error', description: not pending }
   /me/recovery:
     get:
       tags: [auth]
@@ -666,6 +693,16 @@ paths:
       tags: [auth]
       summary: Delete the vault's metadata and access (manage). Clients DELETE the blob on the sync server first.
       responses: { '204': { description: deleted } }
+  /vaults/{vault}/owner:
+    parameters: [ { $ref: '#/components/parameters/Vault' } ]
+    post:
+      tags: [auth]
+      summary: Give a personal vault to a user who holds a current-version grant (owner only, SPEC.md §23)
+      requestBody: { content: { application/json: { schema: { type: object, required: [principal], properties: { principal: { $ref: '#/components/schemas/Principal' } } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Vault' } } } }
+        '400': { $ref: '#/components/responses/Error', description: org vault }
+        '409': { $ref: '#/components/responses/Error', description: not_a_member }
   /vaults/{vault}/access:
     parameters: [ { $ref: '#/components/parameters/Vault' } ]
     get:
@@ -1103,6 +1140,54 @@ components:
         plan: { $ref: '#/components/schemas/Plan' }
         item_share_links: { enum: ['on', managers, 'off'], description: SPEC §22 }
         created_at: { type: string, format: date-time }
+    DeletionPreview:
+      type: object
+      required: [scheduled_for, would_erase_on, vaults, orgs, subscription, share_links, blocked]
+      properties:
+        scheduled_for: { type: [string, 'null'], format: date-time }
+        would_erase_on: { type: string, format: date-time }
+        vaults:
+          type: array
+          items:
+            type: object
+            required: [id, encrypted_name, shared_with]
+            properties:
+              id: { type: string, format: uuid }
+              encrypted_name: { $ref: '#/components/schemas/B64' }
+              shared_with:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    principal: { $ref: '#/components/schemas/Principal' }
+                    display: { type: [string, 'null'] }
+                    role: { $ref: '#/components/schemas/VaultRole' }
+        orgs:
+          type: array
+          items:
+            type: object
+            required: [id, name, role, outcome, members]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              role: { $ref: '#/components/schemas/OrgRole' }
+              outcome: { enum: [leave, delete, blocked] }
+              members:
+                type: array
+                description: confirmed members, only for a blocked org
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    email: { type: string }
+                    role: { $ref: '#/components/schemas/OrgRole' }
+        subscription:
+          type: [object, 'null']
+          properties:
+            plan: { type: string }
+            period_end: { type: [string, 'null'], format: date-time }
+        share_links: { type: integer }
+        blocked: { type: boolean }
     Plan:
       type: object
       description: SPEC §19. id and every limit are null when billing is off; a null limit is unlimited.
