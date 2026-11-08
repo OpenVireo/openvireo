@@ -183,6 +183,7 @@ removes a member without a new key version.
 | `dev` | device uuid (users only) |
 | `org` | owning org uuid (SAs only) |
 | `vlt` | `[{"id": vault uuid, "r": "read"|"write"|"manage", "q"?: bytes}]`, every vault the principal can open; `q` is the vault's sync quota (§19) |
+| `del` | RFC 3339 erase date, only on a pending account's token, which then has no `vlt` (§23) |
 | `iat`, `nbf`, `exp` | `exp = iat + 600` |
 | `jti` | uuid |
 
@@ -242,7 +243,8 @@ The sync server's `GET /api/v1/events` is the only event stream. With a JWT:
 
 - `event: vault`, `data: {"id","etag","revision"}` or `{"id","deleted":true}`. Sent for every vault
   in the token's `vlt` that changes.
-- `event: access`, `data: {"vault": uuid|null, "change": "granted"|"revoked"|"rotating"|"rotated"|"org"}`.
+- `event: access`, `data: {"vault": uuid|null, "change": "granted"|"revoked"|"rotating"|"rotated"|"org"|"deletion_scheduled"|"account_deleted"}`.
+  `deletion_scheduled` carries `at` (the erase date) and `account_deleted` ends the account (§23).
   The auth server sends these through the sync server (below). On any `access` event the client
   refreshes its JWT (picking up new `vlt` claims), calls `GET /api/v1/vaults` again, and
   reconnects the stream.
@@ -552,7 +554,8 @@ still read: changing the email of a locked-out account is out of scope for v1.
 
 The hosted service sells plans; a self-hosted server has none (`OPENVIREO_BILLING=0`, the default).
 Plans pay for hosted storage, sharing and teams. Nothing local, nothing self-hosted and no security
-feature (MFA, recovery, Emergency Kit, devices, key rotation, export) is ever limited.
+feature (MFA, recovery, Emergency Kit, devices, key rotation, export, account deletion) is ever
+limited. Scheduling an account deletion stops the plan renewing (§23).
 
 **Plans.** A personal plan belongs to a user and covers the vaults they own (`owner_id`); an org plan
 belongs to an org and covers its vaults. A user without a subscription is on `free`, an org on
@@ -667,6 +670,7 @@ email, server and user id. The list holds no secrets, and is not synced.
 - Delete it only when the user removes the account from this device, which also deletes the stored
   Secret Key and device id for that account on that server, and works with no session.
 - Update it where the stored Secret Key already follows an email change (§16).
+- An entry can carry `deletion_scheduled_for`; §23 says when it is set, cleared and removed.
 
 **Leaving an account.**
 
@@ -776,3 +780,81 @@ otherwise the user's (personal vaults and text). `share_link_days` caps `expires
 **Test vectors.** `share` in `test-vectors.json`: one share without a passcode and one with, each
 with `K`, `id`, the nonce, the payload, the padded plaintext, `content`, `ct`, and for the passcode
 share `kdf`, `P` and `auth`; and a `ref`.
+
+## 23. Account deletion
+
+A user deletes their account from any client (web, iOS, desktop, CLI). Deletion is **scheduled**:
+the account is locked at once and **erased** after a grace period, `ACCOUNT_DELETION_DAYS` on the
+auth server (default 30). Signing in during the grace period offers only restoring the account or
+signing out. An operator can erase at once from the admin panel.
+
+**Preflight.** `GET /me/deletion` describes what scheduling (or, for a pending account, the erase)
+will do: `{scheduled_for, would_erase_on, vaults, orgs, subscription, share_links, blocked}`.
+`vaults` are the user's personal vaults with `encrypted_name` (decrypted by the client as for
+`GET /vaults`) and `shared_with` (the other principals with a grant). Each of `orgs` has an
+`outcome`:
+
+| Membership | `outcome` | At erase |
+|---|---|---|
+| Member or admin | `leave` | Removed as by `DELETE /orgs/{org}/members/{user}`: grants revoked, vaults `rotation_required`, SA master keys dropped |
+| Owner, another confirmed owner exists | `leave` | As above |
+| Owner, no other confirmed member (invited and accepted members hold no keys) | `delete` | The org is deleted as by `DELETE /orgs/{org}` |
+| Only confirmed owner, other confirmed members | `blocked` | – |
+
+A `blocked` org lists its confirmed `members` (candidates for owner) and makes `blocked` true. The
+client resolves it before scheduling: promote a member to owner (`PATCH /orgs/{org}/members/{user}`;
+an admin needs no new keys, a member also needs `sa_master_keys`), or delete the org. The server
+never chooses an owner for the user.
+
+**Scheduling.** `DELETE /me` with `{"confirm": "<the account email>"}`, on a token issued in the last
+5 minutes (as for a password change). 400 `confirm_mismatch` if the email differs; 409
+`deletion_blocked` `{orgs:[{id,name}]}` while any org is blocked; 409 `deletion_pending` if already
+scheduled. Otherwise it answers **202** `{"scheduled_for": RFC 3339}` and, at once:
+
+- revokes every refresh token and deletes every device of the user;
+- ends every share link the user owns (§22); restoring doesn't bring them back;
+- sets the personal subscription, and those of orgs with outcome `delete`, to end at the period end
+  (no refund);
+- sends `access` `{"vault": null, "change": "deletion_scheduled", "at": scheduled_for}` (§11) to the
+  user, and emails them the date and how to restore.
+
+**Pending accounts.** Until the erase, the keyset, OPAQUE record, vaults, grants and memberships are
+kept. Login still works, but the access token carries `del: scheduled_for` and **no `vlt`**, so the
+sync server serves nothing. A `del` token is refused everywhere except `GET /me`, `GET /me/deletion`,
+`POST /me/deletion/cancel`, `POST /auth/refresh` and `POST /auth/logout`, with 403
+`account_pending_deletion` `{scheduled_for}`. `GET /me` has `deletion_scheduled_for` (null when not
+pending). Others who share the user's personal vaults keep access until the erase. A pending owner
+does not count as an owner of an org: removing or demoting the org's last other confirmed owner is
+409, so a blocked org can't appear after scheduling. The email stays taken.
+
+**Restoring.** `POST /me/deletion/cancel` (pending account, token issued in the last 5 minutes)
+clears the schedule, lets subscriptions that haven't ended renew again, and answers 204. The client
+then refreshes its token to get one without `del`.
+
+**Erase.** A daily job erases accounts whose date has passed. It settles each org by its `outcome`;
+deletes the user's grants on other vaults (marking those vaults `rotation_required`, notifying their
+managers), their SA master keys, every vault they own including archived ones (§18), with the blobs
+deleted through `DELETE {sync}/internal/vaults/{id}`, invitations to their email and the user row;
+deletes the payment customer of the user and of deleted orgs; and sends `access`
+`{"vault": null, "change": "account_deleted"}`. The audit keeps `account.delete` with the actor's
+subject and no email. After the erase the email can sign up again. Nothing else is kept.
+
+**Giving a vault away.** `POST /vaults/{vault}/owner` `{"principal": "user:<uuid>"}`, by the owner of
+a personal vault, to a user who already holds a grant on the vault's current key version (else 409
+`not_a_member`; 400 for an org vault). The server makes them the owner with `manage`, removes the old
+owner's grants, sets `rotation_required` (the old owner knows the key) and notifies everyone with
+access. No crypto is involved: the vault name is wrapped with a key derived from the vault key (§4).
+A pending account can't call it, so clients offer it before scheduling.
+
+**Clients.**
+
+| Event | Offline cache (§20), key behind biometrics, AutoFill identities | Secret Key, device id, remembered entry (§21) |
+|---|---|---|
+| Scheduled (here, or `deletion_scheduled` / a refused refresh elsewhere) | Deleted | Kept; the entry stores `deletion_scheduled_for` |
+| Restored, or signed in and `GET /me` shows no date | – | Entry's date cleared |
+| `account_deleted`, or a day past the stored date | Deleted | Deleted |
+
+A client signs in to a pending account to a screen offering **Restore account** and **Sign out**, and
+shows remembered pending accounts with their date. OPAQUE answers the same for unknown users, so a
+client can't learn from the server that an account was erased; it clears the entry by date instead.
+Deleting and restoring need the server; clients disable them offline.
