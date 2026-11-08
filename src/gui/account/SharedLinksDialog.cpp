@@ -104,7 +104,8 @@ QString SharedLinksDialog::describe(const ItemShare::Listing& share, const QDate
     QString expires;
     if (left <= 0) {
         expires = tr("Expired");
-    } else if (left >= 86400) {
+    } else if (left >= 82800) {
+        // Days once at least 23 hours are left, so a 1-day link reads "1 day" right after it's made
         expires = tr("Expires in %n day(s)", "", static_cast<int>((left + 43200) / 86400));
     } else if (left >= 3600) {
         expires = tr("Expires in %n hour(s)", "", static_cast<int>(left / 3600));
