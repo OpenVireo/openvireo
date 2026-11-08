@@ -564,11 +564,11 @@ belongs to an org and covers its vaults. A user without a subscription is on `fr
 | Plan | Billed | `personal_vaults` | `share_recipients` | `members` | `org_vaults` | `service_accounts` | `audit_days` | `vault_bytes` | `share_links` | `share_link_days` |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `free` | — | 1 | 0 | | | | | 25 MiB | 5 | 7 |
-| `premium` | user, $3/mo, $30/yr | null | 5 | | | | | 1 GiB | null | 30 |
+| `premium` | user, $2/mo, $18/yr | null | 5 | | | | | 1 GiB | null | 30 |
 | `org_free` | — | | | 2 | 2 | 1 | 7 | 25 MiB | null | 30 |
-| `families` | org, $5/mo, $50/yr | | | 6 | null | 1 | 30 | 1 GiB | null | 30 |
+| `families` | org, $4/mo, $40/yr | | | 6 | null | 1 | 30 | 1 GiB | null | 30 |
 | `teams` | org, $4/member/mo, $40/yr | | | null | null | 10 | 90 | 1 GiB | null | 30 |
-| `business` | org, $8/member/mo, $80/yr | | | null | null | null | 365 | 5 GiB | null | 30 |
+| `business` | org, $6/member/mo, $60/yr | | | null | null | null | 365 | 5 GiB | null | 30 |
 
 The prices are the auth server's settings (`BILLING_PLANS`); clients read limits, not prices.
 
