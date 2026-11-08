@@ -228,6 +228,7 @@ set(gui_SOURCES
         account/AccountCrypto.cpp
         account/AccountManager.cpp
         account/AccountOfflineCache.cpp
+        account/AccountPlan.cpp
         account/AuthClient.cpp
         account/OpaqueClient.cpp
         account/ServiceAccountAdmin.cpp

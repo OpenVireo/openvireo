@@ -247,6 +247,7 @@ ServiceAccountsDialog::ServiceAccountsDialog(AccountManager* account, QWidget* p
     connect(m_orgCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] {
         config()->set(Config::GUI_OrgAdminLastOrg, currentOrg());
         m_orgRole->setText(currentRole() == "owner" ? tr("You are an owner") : tr("You are an admin"));
+        updateOrgPlan();
         m_vaultAccess.clear();
         updateShareLinks();
         loadServiceAccounts();
@@ -282,6 +283,14 @@ QWidget* ServiceAccountsDialog::buildSidebar()
     m_orgRole->setObjectName("orgRoleLabel");
     m_orgRole->setContentsMargins(4, 0, 0, 0);
     layout->addWidget(m_orgRole);
+    m_orgPlan = OrgAdmin::label(sidebar, Typography::FontRole::Caption, true);
+    m_orgPlan->setObjectName("orgPlanLabel");
+    m_orgPlan->setContentsMargins(4, 0, 0, 0);
+    m_orgPlan->setWordWrap(true);
+    m_orgPlan->setTextFormat(Qt::RichText);
+    m_orgPlan->setOpenExternalLinks(true);
+    m_orgPlan->hide();
+    layout->addWidget(m_orgPlan);
     layout->addSpacing(10);
 
     m_navigation = new QListWidget(sidebar);
@@ -612,6 +621,34 @@ QWidget* ServiceAccountsDialog::buildServiceAccountsPage()
     split->addWidget(m_detailsStack, 1);
     layout->addLayout(split, 1);
     return page;
+}
+
+void ServiceAccountsDialog::updateOrgPlan()
+{
+    // SPEC §19: what the org is on and where it's managed; the desktop app never sells or changes a plan
+    const auto orgId = currentOrg();
+    AccountPlan::Plan plan;
+    for (const auto& org : m_orgs) {
+        if (org.id == orgId) {
+            plan = org.plan;
+        }
+    }
+    if (!plan.isKnown()) {
+        m_orgPlan->hide();
+        return;
+    }
+    QString text = AccountPlan::summary(plan).toHtmlEscaped();
+    const auto url = m_account ? AccountPlan::manageUrl(plan, m_account->server().issuer, orgId) : QUrl();
+    // Only owners manage a plan on the website; an Apple subscription belongs to whoever bought it
+    if (url.isValid() && (plan.isAppStore() || currentRole() == "owner")) {
+        const auto link = plan.isAppStore() ? tr("Apple ID settings") : tr("Manage on the website");
+        text += QStringLiteral("<br>") + AccountPlan::manageHint(plan).toHtmlEscaped();
+        text += QStringLiteral(" <a href=\"%1\">%2</a>")
+                    .arg(url.toString(QUrl::FullyEncoded).toHtmlEscaped(), link.toHtmlEscaped());
+    }
+    m_orgPlan->setText(text);
+    m_orgPlan->setToolTip(AccountPlan::describe(plan));
+    m_orgPlan->show();
 }
 
 QWidget* ServiceAccountsDialog::buildShareLinksPage()
@@ -985,6 +1022,9 @@ void ServiceAccountsDialog::showOrgs()
     const bool empty = m_orgCombo->count() == 0;
     m_orgCombo->setVisible(!empty);
     m_orgRole->setVisible(!empty);
+    if (empty) {
+        m_orgPlan->hide();
+    }
     m_navigation->setVisible(!empty);
     if (empty) {
         // Nothing to administer: say how to get an organization instead of showing empty sections
@@ -1002,6 +1042,7 @@ void ServiceAccountsDialog::showOrgs()
     m_orgCombo->setCurrentIndex(qMax(0, m_orgCombo->findData(keep)));
     config()->set(Config::GUI_OrgAdminLastOrg, currentOrg());
     m_orgRole->setText(currentRole() == "owner" ? tr("You are an owner") : tr("You are an admin"));
+    updateOrgPlan();
     m_vaultAccess.clear();
     updateShareLinks();
     loadServiceAccounts();

@@ -103,6 +103,7 @@ namespace
                                     json.value("role").toString(),
                                     json.value("status").toString()};
             org.shareLinks = json.value("item_share_links").toString("on");
+            org.plan = AccountPlan::parse(json.value("plan"));
             orgs << org;
         }
         return orgs;
@@ -314,6 +315,11 @@ const VaultKeyring& AccountManager::keyring() const
 AuthClient* AccountManager::client() const
 {
     return m_client;
+}
+
+AccountPlan::Plan AccountManager::plan() const
+{
+    return m_plan;
 }
 
 QList<AccountManager::Org> AccountManager::orgs() const
@@ -1085,6 +1091,7 @@ void AccountManager::reconnect()
 void AccountManager::takeProfile(const QJsonObject& me)
 {
     m_orgs = parseOrgs(me.value("orgs").toArray());
+    m_plan = AccountPlan::parse(me.value("plan"));
     setPendingDeletion(me.value("deletion_scheduled_for").toString());
     AccountOfflineCache::saveProfile(
         m_accountId, me.value("kdf").toObject(), me.value("keyset").toObject(), me.value("orgs").toArray());
@@ -1111,6 +1118,7 @@ void AccountManager::lock()
     m_keyring.clear();
     m_keyset.clear();
     m_orgs.clear();
+    m_plan = {};
     if (m_state == State::Unlocked || m_state == State::SigningIn || m_state == State::NeedsMfa) {
         if (m_serviceAccount) {
             // A service account has no session to keep without its token
@@ -1140,6 +1148,7 @@ void AccountManager::endSession(const QString& reason)
     // Like closing a database: its Quick Unlock goes with the session
     forgetAuk();
     m_orgs.clear();
+    m_plan = {};
     setOffline(false);
     if (!m_accountId.isEmpty()) {
         SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);

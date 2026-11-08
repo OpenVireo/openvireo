@@ -19,6 +19,7 @@
 #define KEEPASSXC_ACCOUNTMANAGER_H
 
 #include "AccountCrypto.h"
+#include "AccountPlan.h"
 #include "AuthClient.h"
 #include "OpaqueClient.h"
 #include "VaultKeyring.h"
@@ -123,6 +124,8 @@ public:
         QString status;
         // Who may make share links from the org's vaults: on, managers or off (SPEC §22)
         QString shareLinks = QStringLiteral("on");
+        // The org's plan and who bills it (SPEC §19)
+        AccountPlan::Plan plan;
 
         bool isConfirmed() const
         {
@@ -165,6 +168,8 @@ public:
     // user:<id> or sa:<id>
     QString principal() const;
     QString email() const;
+    // The user's own plan from GET /me (SPEC §19); unknown until it answered
+    AccountPlan::Plan plan() const;
     QString deviceId() const;
     QString accessTokenNow() const;
     const AccountCrypto::Keyset& keyset() const;
@@ -366,6 +371,7 @@ private:
     AccountCrypto::Keyset m_keyset;
     VaultKeyring m_keyring;
     QList<Org> m_orgs;
+    AccountPlan::Plan m_plan;
     QuickUnlockInterface* m_quickUnlock = nullptr;
     QPointer<SyncEventStream> m_events;
 

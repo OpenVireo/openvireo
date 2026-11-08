@@ -477,6 +477,17 @@ namespace
                                {"kdf", user.kdf},
                                {"keyset", user.keyset},
                                {"mfa", QJsonObject{{"totp", user.mfa}}},
+                               // SPEC §19: a plan bought in the iOS app
+                               {"plan",
+                                QJsonObject{{"id", "premium"},
+                                            {"limits", QJsonObject()},
+                                            {"billing",
+                                             QJsonObject{{"source", "apple"},
+                                                         {"interval", "year"},
+                                                         {"status", "active"},
+                                                         {"renews_at", "2027-11-08T12:00:00Z"},
+                                                         {"ends_at", QJsonValue::Null},
+                                                         {"manage", "app_store"}}}}},
                                {"deletion_scheduled_for", server.deletions.value(user.id)}});
                     }
                 }
@@ -623,10 +634,16 @@ void TestAccountManager::testRegisterAndSignIn()
     QVERIFY(!fixture.server->requests.isEmpty());
     QTRY_VERIFY(vaultsChanged.count() > 0);
 
+    // The plan from GET /me, with who bills it
+    QTRY_VERIFY(manager->plan().isKnown());
+    QCOMPARE(manager->plan().id, QString("premium"));
+    QVERIFY(manager->plan().isAppStore());
+
     const auto encPk = manager->keyset().publicKeys.encPk;
     manager->signOut();
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(manager->keyset().isNull());
+    QVERIFY(!manager->plan().isKnown());
     QVERIFY(manager->accessTokenNow().isEmpty());
     QVERIFY(fixture.server->requests.contains("POST auth/logout"));
 

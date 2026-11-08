@@ -810,6 +810,9 @@ void MainWindow::setupAccounts()
             QDesktopServices::openUrl(url);
         }
     });
+    // SPEC §19: the plan and who bills it; changing it happens on the website or at Apple
+    m_actionAccountPlan = m_accountMenu->addAction(tr("&Plan…"), this, &MainWindow::showAccountPlan);
+    m_actionAccountPlan->setObjectName("actionAccountPlan");
     // SPEC §23: locks the account now and erases it after the grace period
     m_actionAccountDelete = m_accountMenu->addAction(tr("&Delete Account…"), this, &MainWindow::showDeleteAccount);
     m_actionAccountDelete->setObjectName("actionAccountDelete");
@@ -1090,6 +1093,26 @@ void MainWindow::showDeleteAccount()
     dialog->open();
 }
 
+void MainWindow::showAccountPlan()
+{
+    auto* account = m_accountController->account();
+    const auto plan = account->plan();
+    if (!plan.isKnown()) {
+        return;
+    }
+    const auto url = AccountPlan::manageUrl(plan, account->server().issuer);
+    if (!url.isValid()) {
+        MessageBox::information(this, tr("Your Plan"), AccountPlan::describe(plan));
+        return;
+    }
+    // Open goes to the Apple ID subscriptions page or the account website, per `manage` (SPEC §19)
+    const auto answer = MessageBox::information(
+        this, tr("Your Plan"), AccountPlan::describe(plan), MessageBox::Open | MessageBox::Close, MessageBox::Close);
+    if (answer == MessageBox::Open) {
+        QDesktopServices::openUrl(url);
+    }
+}
+
 void MainWindow::showEmergencyKit()
 {
     auto* dialog = new EmergencyKitDialog(m_accountController->account(), this);
@@ -1243,6 +1266,7 @@ void MainWindow::updateAccountActions()
     m_actionAccountSharedLinks->setEnabled(unlocked && online && !account->isServiceAccount());
     m_actionAccountDelete->setEnabled(unlocked && online && !account->isServiceAccount()
                                       && account->deletionScheduledFor().isEmpty());
+    m_actionAccountPlan->setEnabled(unlocked && !account->isServiceAccount() && account->plan().isKnown());
     m_actionAccountServiceAccounts->setEnabled(unlocked && online);
     m_actionAccountAcceptInvitation->setEnabled(unlocked && online);
     m_actionAccountMove->setEnabled(unlocked && online && dbWidget && !dbWidget->isLocked()
