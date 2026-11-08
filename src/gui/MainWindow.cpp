@@ -63,6 +63,7 @@
 #include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SharedLinksDialog.h"
+#include "gui/account/DeleteAccountDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/entry/EntryView.h"
 #include "gui/notifications/NotificationCenter.h"
@@ -809,6 +810,9 @@ void MainWindow::setupAccounts()
             QDesktopServices::openUrl(url);
         }
     });
+    // SPEC §23: locks the account now and erases it after the grace period
+    m_actionAccountDelete = m_accountMenu->addAction(tr("&Delete Account…"), this, &MainWindow::showDeleteAccount);
+    m_actionAccountDelete->setObjectName("actionAccountDelete");
     m_actionAccountSwitch = m_accountMenu->addAction(tr("S&witch Account…"), this, &MainWindow::showStartScreen);
     m_actionAccountSwitch->setObjectName("actionAccountSwitch");
     m_actionAccountSignOut =
@@ -1079,6 +1083,13 @@ void MainWindow::showSharedLinks()
     dialog->open();
 }
 
+void MainWindow::showDeleteAccount()
+{
+    auto* dialog = new DeleteAccountDialog(m_accountController->account(), this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
+}
+
 void MainWindow::showEmergencyKit()
 {
     auto* dialog = new EmergencyKitDialog(m_accountController->account(), this);
@@ -1230,6 +1241,8 @@ void MainWindow::updateAccountActions()
     m_actionAccountNewVault->setEnabled(unlocked && online);
     m_actionAccountShare->setEnabled(unlocked && online);
     m_actionAccountSharedLinks->setEnabled(unlocked && online && !account->isServiceAccount());
+    m_actionAccountDelete->setEnabled(unlocked && online && !account->isServiceAccount()
+                                      && account->deletionScheduledFor().isEmpty());
     m_actionAccountServiceAccounts->setEnabled(unlocked && online);
     m_actionAccountAcceptInvitation->setEnabled(unlocked && online);
     m_actionAccountMove->setEnabled(unlocked && online && dbWidget && !dbWidget->isLocked()
@@ -1238,6 +1251,7 @@ void MainWindow::updateAccountActions()
                          m_actionAccountNewVault.data(),
                          m_actionAccountShare.data(),
                          m_actionAccountSharedLinks.data(),
+                         m_actionAccountDelete.data(),
                          m_actionAccountServiceAccounts.data(),
                          m_actionAccountAcceptInvitation.data(),
                          m_actionAccountMove.data()}) {

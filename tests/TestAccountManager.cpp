@@ -250,6 +250,8 @@ namespace
         int accessExpiresIn = 600;
         int counter = 0;
         QJsonArray vaults;
+        // User id → erase date while the account is scheduled for deletion (SPEC §23)
+        QHash<QString, QString> deletions;
         // No server answers: every request fails as if the network were down
         bool unreachable = false;
         QStringList requests;
@@ -423,6 +425,48 @@ namespace
                 error(401, "unauthorized");
             } else if (path == "auth/logout") {
                 reply(204);
+            } else if (const auto pendingUser = server.accessTokens.value(bearer).mid(5);
+                       server.deletions.contains(pendingUser) && path != "me" && path != "me/deletion"
+                       && path != "me/deletion/cancel") {
+                reply(403,
+                      {{"error", "scheduled for deletion"},
+                       {"code", "account_pending_deletion"},
+                       {"scheduled_for", server.deletions.value(pendingUser)}});
+            } else if (path == "me/deletion") {
+                reply(200,
+                      {{"scheduled_for", QJsonValue::Null},
+                       {"would_erase_on", "2026-12-08T12:00:00Z"},
+                       {"vaults", QJsonArray()},
+                       {"orgs", QJsonArray()},
+                       {"subscription", QJsonValue::Null},
+                       {"share_links", 0},
+                       {"blocked", false}});
+            } else if (path == "me" && verb == "DELETE") {
+                const auto userId = server.accessTokens.value(bearer).mid(5);
+                QString email;
+                for (const auto& user : server.users) {
+                    if (user.id == userId) {
+                        email = user.email;
+                    }
+                }
+                if (json.value("confirm").toString().compare(email, Qt::CaseInsensitive) != 0) {
+                    error(400, "confirm_mismatch");
+                } else {
+                    server.deletions.insert(userId, "2026-12-08T12:00:00Z");
+                    // Signed out everywhere
+                    for (auto& family : server.families) {
+                        if (family.userId == userId) {
+                            family.revoked = true;
+                        }
+                    }
+                    reply(202, {{"scheduled_for", "2026-12-08T12:00:00Z"}});
+                }
+            } else if (path == "me/deletion/cancel") {
+                if (server.deletions.remove(server.accessTokens.value(bearer).mid(5)) == 0) {
+                    error(409, "conflict");
+                } else {
+                    reply(204);
+                }
             } else if (path == "me") {
                 const auto principal = server.accessTokens.value(bearer);
                 for (const auto& user : server.users) {
@@ -432,7 +476,8 @@ namespace
                                {"email", user.email},
                                {"kdf", user.kdf},
                                {"keyset", user.keyset},
-                               {"mfa", QJsonObject{{"totp", user.mfa}}}});
+                               {"mfa", QJsonObject{{"totp", user.mfa}}},
+                               {"deletion_scheduled_for", server.deletions.value(user.id)}});
                     }
                 }
             } else if (path == "vaults" && verb == "GET") {
@@ -962,6 +1007,90 @@ void TestAccountManager::testAccessEventRefreshesAndReloads()
     QCOMPARE(fixture.server->requests.count("GET vaults"), 1);
     // The refresh came first, so the vault list was read with the new token
     QCOMPARE(fixture.server->bearers.last(), manager->accessTokenNow());
+}
+
+void TestAccountManager::testDeleteAccountAndRestore()
+{
+    Fixture fixture;
+    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    auto* manager = fixture.manager(this);
+    manager->signIn(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+
+    // The password is checked on this device first, and the typed email by the server
+    QString error;
+    QString when;
+    bool done = false;
+    manager->deleteAccount("wrong", Email, [&](const QString& at, const QString& e) {
+        when = at;
+        error = e;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
+    QVERIFY(!error.isEmpty());
+    QVERIFY(fixture.server->deletions.isEmpty());
+    done = false;
+    manager->deleteAccount(Password, "bob@example.com", [&](const QString& at, const QString& e) {
+        when = at;
+        error = e;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
+    QVERIFY(error.contains("email"));
+
+    QSignalSpy signedOut(manager, &AccountManager::signedOut);
+    done = false;
+    manager->deleteAccount(Password, Email.toUpper(), [&](const QString& at, const QString& e) {
+        when = at;
+        error = e;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QCOMPARE(when, QString("2026-12-08T12:00:00Z"));
+    QCOMPARE(manager->state(), AccountManager::State::SignedOut);
+    QCOMPARE(signedOut.count(), 1);
+    // The account stays known with its date, and the Secret Key stays for a restore
+    QCOMPARE(manager->knownAccounts().first().deletionScheduledFor, when);
+    QVERIFY(!AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+
+    // Signing in again: a pending account opens nothing
+    QSignalSpy pending(manager, &AccountManager::pendingDeletionChanged);
+    manager->signIn(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QTRY_COMPARE(manager->deletionScheduledFor(), when);
+    QVERIFY(pending.count() >= 1);
+    QVERIFY(manager->keyring().isEmpty());
+
+    done = false;
+    manager->restoreAccount(Password, [&](const QString& e) {
+        error = e;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(manager->deletionScheduledFor().isEmpty());
+    QVERIFY(manager->knownAccounts().first().deletionScheduledFor.isEmpty());
+    QVERIFY(fixture.server->deletions.isEmpty());
+}
+
+void TestAccountManager::testDeletionEventsSignOut()
+{
+    Fixture fixture;
+    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    auto* manager = fixture.manager(this);
+    manager->signIn(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QVERIFY(!AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+
+    SyncEventStream::Event event;
+    event.type = SyncEventStream::Event::Type::Access;
+    event.change = "account_deleted";
+    manager->handleAccessEvent(event);
+    QCOMPARE(manager->state(), AccountManager::State::SignedOut);
+    // Erased: the account and its Secret Key leave this device
+    QVERIFY(AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+    QVERIFY(manager->knownAccounts().isEmpty());
 }
 
 void TestAccountManager::testLockClearsKeys()

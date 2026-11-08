@@ -180,6 +180,7 @@ set(gui_SOURCES
         gui/account/ShareVaultDialog.cpp
         gui/account/ShareLinkDialog.cpp
         gui/account/SharedLinksDialog.cpp
+        gui/account/DeleteAccountDialog.cpp
         gui/account/SignUpWizard.cpp
         gui/vault/AccountVaultsPane.cpp
         gui/vault/EntryDetailCard.cpp

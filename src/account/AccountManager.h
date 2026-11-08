@@ -210,6 +210,8 @@ public:
         bool signedIn = false;
         // It's the one open now
         bool current = false;
+        // The erase date (RFC 3339) while it is scheduled for deletion (SPEC §23)
+        QString deletionScheduledFor;
     };
     // Most recently used first
     QList<KnownAccount> knownAccounts() const;
@@ -219,6 +221,21 @@ public:
     // Create a personal vault: its key is sealed to this account. `done` gets the empty vault database
     // to save and upload with If-None-Match: *, or an error.
     void createVault(const QString& name, CreateVaultCallback done);
+
+    // Account deletion (SPEC §23). The erase date while the signed-in account is pending: it opens no
+    // vaults until restoreAccount().
+    QString deletionScheduledFor() const;
+    // What deleting will do (GET /me/deletion), passed through as the server's JSON
+    void deletionPreview(std::function<void(const QJsonObject& preview, const QString& error)> done);
+    // Checks the master password, schedules the deletion and signs this device out (its offline cache
+    // goes; the Secret Key stays, so the account can still be restored). `done` gets the erase date.
+    void deleteAccount(const QString& password,
+                       const QString& confirm,
+                       std::function<void(const QString& scheduledFor, const QString& error)> done);
+    void restoreAccount(const QString& password, std::function<void(const QString& error)> done);
+    void transferVault(const QString& vaultId, const QString& principal, std::function<void(const QString& error)> done);
+    // Drops remembered accounts (and their Secret Keys) a day past their erase date
+    void removeErasedAccounts();
 
 public slots:
     // Create an account. registered() hands out the Secret Key for the Emergency Kit.
@@ -276,6 +293,8 @@ signals:
     // A vault's blob changed on the sync server
     void vaultChanged(const SyncEventStream::Event& event);
     void error(const QString& message);
+    // The signed-in account turned out to be pending deletion, or was restored
+    void pendingDeletionChanged();
 
 private:
     struct Pending;
@@ -311,6 +330,10 @@ private:
     // Runs `done` once no refresh is rotating a token this device holds
     void whenTokensSettled(std::function<void()> done);
     void finishSetAsideCheck();
+    void setPendingDeletion(const QString& scheduledFor);
+    void setKnownDeletion(const QString& accountId, const QString& scheduledFor) const;
+    void verifyPassword(const QString& password, std::function<void(const QString& error)> done);
+    void freshToken(std::function<void(bool ok)> done);
 
     static QString sessionKey(const QString& accountId);
     static QString secretKeyKey(const QString& serverId, const QString& email);
@@ -347,6 +370,7 @@ private:
     QPointer<SyncEventStream> m_events;
 
     bool m_offline = false;
+    QString m_deletionScheduledFor;
     QTimer m_reconnectTimer;
     int m_reconnectDelaySec = 0;
 };

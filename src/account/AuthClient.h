@@ -113,6 +113,12 @@ public:
     void lookupUser(const QString& email, Callback callback);
     // `principal` is user:<id> or sa:<id>
     void publicKey(const QString& principal, Callback callback);
+    // Account deletion (SPEC §23)
+    void deletionPreview(Callback callback);
+    // Needs an access token issued in the last 5 minutes; 202 {scheduled_for}
+    void scheduleDeletion(const QString& confirm, Callback callback);
+    void cancelDeletion(Callback callback);
+    void transferVault(const QString& vaultId, const QString& principal, Callback callback);
     void listDevices(Callback callback);
     void revokeDevice(const QString& deviceId, Callback callback);
 
@@ -140,6 +146,8 @@ public:
     void createOrg(const QString& name, Callback callback);
     // Rename the org or change who can make share links ({name}, {item_share_links}); owners and admins
     void updateOrg(const QString& orgId, const QJsonObject& changes, Callback callback);
+    // Owners only: the org goes with its vaults and service accounts
+    void deleteOrg(const QString& orgId, Callback callback);
     void orgMembers(const QString& orgId, Callback callback);
     // A new role for a member. `saMasterKeys` (SaMasterGrant) go along when promoting to owner or admin.
     void setMemberRole(const QString& orgId,
