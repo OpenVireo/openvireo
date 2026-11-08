@@ -29,6 +29,7 @@
 #include "gui/AboutDialog.h"
 #ifdef KPXC_FEATURE_BROWSER
 #include "browser/BrowserAccessControlDialog.h"
+#include "browser/BrowserKeyAssociationDialog.h"
 #include "browser/BrowserPasskeysConfirmationDialog.h"
 #endif
 #include "gui/Application.h"
@@ -1418,6 +1419,98 @@ void TestGuiVault::testAccessControlDialog()
     }
 
     qDeleteAll(entries);
+#else
+    QSKIP("Browser integration is not built");
+#endif
+}
+
+void TestGuiVault::testKeyAssociationDialog()
+{
+#ifdef KPXC_FEATURE_BROWSER
+    using fluent::dialogs_flyouts::ContentDialog;
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
+    QVERIFY(BrowserKeyAssociationDialog::canShowOver(m_dbWidget));
+    auto nameInUse = [](const QString& name) { return name == "firefox-desktop"; };
+
+    auto findSave = [](ContentDialog* dialog) -> QPushButton* {
+        for (auto* button : dialog->findChildren<QPushButton*>()) {
+            if (button->text() == dialog->primaryButtonText()) {
+                return button;
+            }
+        }
+        return nullptr;
+    };
+
+    // The request names the database, the field takes focus, and saving waits for a name
+    {
+        BrowserKeyAssociationDialog dialog("Passwords", nameInUse, m_mainWindow.data());
+        QTimer::singleShot(10000, &dialog, &QDialog::reject);
+        bool shown = false;
+        QTimer::singleShot(0, this, [&] {
+            QTRY_VERIFY(dialog.isVisible());
+            shown = true;
+            QCOMPARE(dialog.title(), BrowserKeyAssociationDialog::tr("Connect a browser?"));
+            QCOMPARE(dialog.defaultButton(), int(ContentDialog::Primary));
+            QVERIFY(dialog.findChild<QLabel*>("keyAssociationMessage")->text().contains("Passwords"));
+            auto* name = dialog.findChild<QLineEdit*>("keyAssociationName");
+            // Focus within the dialog, which holds whether or not the test app is the active one
+            QTRY_COMPARE(dialog.focusWidget(), static_cast<QWidget*>(name));
+            auto* save = findSave(&dialog);
+            QVERIFY(save);
+            QVERIFY(!save->isEnabled());
+            QTest::keyClicks(name, "   ");
+            QVERIFY(!save->isEnabled());
+            name->clear();
+
+            // A name in use relabels the command and says what saving does
+            QTest::keyClicks(name, "firefox-desktop");
+            QVERIFY(save->isEnabled());
+            QCOMPARE(save->text(), BrowserKeyAssociationDialog::tr("Replace and allow access"));
+            QVERIFY(dialog.findChild<QLabel*>("keyAssociationHint")->text().contains("already exists"));
+            QVERIFY(dialog.replacesExisting());
+            QVERIFY(dialog.hintIsCaution());
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-key-association-replace.png"));
+            }
+
+            name->clear();
+            QTest::keyClicks(name, " chrome-laptop ");
+            QCOMPARE(save->text(), BrowserKeyAssociationDialog::tr("Save and allow access"));
+            QVERIFY(!dialog.replacesExisting());
+            QVERIFY(!dialog.hintIsCaution());
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-key-association.png"));
+            }
+            QTest::keyClick(name, Qt::Key_Return);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QVERIFY(shown);
+        QCOMPARE(dialog.name(), QString("chrome-laptop"));
+    }
+
+    // Escape cancels
+    {
+        BrowserKeyAssociationDialog dialog("Passwords", nameInUse, m_mainWindow.data());
+        QTimer::singleShot(0, this, [&] {
+            QTRY_VERIFY(dialog.isVisible());
+            QTest::keyClicks(dialog.findChild<QLineEdit*>("keyAssociationName"), "edge");
+            QTest::keyClick(&dialog, Qt::Key_Escape);
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+    }
+
+    // Locking the database cancels, as BrowserService connects it
+    {
+        BrowserKeyAssociationDialog dialog("Passwords", nameInUse, m_mainWindow.data());
+        connect(m_dbWidget, SIGNAL(databaseLockRequested()), &dialog, SLOT(reject()));
+        QTimer::singleShot(0, this, [&] {
+            QTRY_VERIFY(dialog.isVisible());
+            dialog.reject();
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Rejected));
+    }
 #else
     QSKIP("Browser integration is not built");
 #endif

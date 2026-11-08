@@ -23,6 +23,7 @@ if(KPXC_FEATURE_BROWSER)
             BrowserEntryConfig.cpp
             BrowserEntrySaveDialog.cpp
             BrowserHost.cpp
+            BrowserKeyAssociationDialog.cpp
             BrowserMessageBuilder.cpp
             BrowserPasskeys.cpp
             BrowserPasskeysClient.cpp
