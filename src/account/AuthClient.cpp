@@ -284,6 +284,11 @@ void AuthClient::createOrg(const QString& name, Callback callback)
     post("orgs", {{"name", name}}, std::move(callback), true);
 }
 
+void AuthClient::updateOrg(const QString& orgId, const QJsonObject& changes, Callback callback)
+{
+    sendJson("PATCH", "orgs/" + encoded(orgId), changes, std::move(callback));
+}
+
 void AuthClient::orgMembers(const QString& orgId, Callback callback)
 {
     get("orgs/" + encoded(orgId) + "/members", std::move(callback));

@@ -58,6 +58,8 @@ private slots:
     void testCreatesAnOrgAndOrgVaults();
     void testAcceptsAnInvitation();
     void testInvitesPromotesAndRemovesMembers();
+    void testOrgDialogGuidesOwnersAndAdmins();
+    void testOrgDialogAsAVaultCard();
     void testQuickUnlocksTheAccount();
     void testLinksToAccountRecovery();
     void testImportsAKdbxFile();

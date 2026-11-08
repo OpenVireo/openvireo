@@ -128,6 +128,8 @@ public:
     // `token` is the ov_sa_… token, to show once
     using TokenCallback =
         std::function<void(const ServiceAccount& account, const QString& token, const QString& error)>;
+    // Vault id -> the role a service account has in it
+    using AccessCallback = std::function<void(const QHash<QString, QString>& roles, const QString& error)>;
     using AuditCallback =
         std::function<void(const QList<AuditEvent>& events, const QString& next, const QString& error)>;
 
@@ -137,6 +139,9 @@ public:
     void createOrg(const QString& name, OrgCallback done);
     // The orgs this account is a confirmed member of
     void loadOrgs(OrgsCallback done);
+    // Who can make share links from the org's vaults: on, managers or off (SPEC §22). Narrowing it ends the
+    // links it no longer allows.
+    void setShareLinks(const QString& orgId, const QString& policy, OrgCallback done);
     void listMembers(const QString& orgId, MembersCallback done);
     // The roles a member with `role` can give: only owners make owners
     static QStringList assignableRoles(const QString& role);
@@ -181,6 +186,10 @@ public:
 
     // Seal the vault's current key to the SA and grant it `role` (read or write)
     void grantVault(const ServiceAccount& account, const QString& vaultId, const QString& role, Done done);
+    // The vaults this account manages that the SA can open, with its role in each
+    void vaultAccess(const ServiceAccount& account, AccessCallback done);
+    // Take the SA out of the vault; the vault gets a new key, so its old one opens nothing saved from now on
+    void revokeVault(const ServiceAccount& account, const QString& vaultId, Done done);
 
     void auditLog(const QString& orgId, const QString& before, AuditCallback done);
 

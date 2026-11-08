@@ -58,6 +58,7 @@
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKitDialog.h"
+#include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
@@ -790,8 +791,10 @@ void MainWindow::setupAccounts()
     m_actionAccountSharedLinks = m_accountMenu->addAction(tr("Shared &Links…"), this, &MainWindow::showSharedLinks);
     m_actionAccountMove =
         m_accountMenu->addAction(tr("&Move Database to Account…"), this, &MainWindow::moveDatabaseToAccount);
-    m_actionAccountServiceAccounts = m_accountMenu->addAction(
-        tr("&Organizations, Service Accounts and Audit Log…"), this, &MainWindow::showServiceAccounts);
+    m_actionAccountServiceAccounts =
+        m_accountMenu->addAction(tr("&Organization…"), this, &MainWindow::showServiceAccounts);
+    m_actionAccountServiceAccounts->setToolTip(
+        tr("Members, invitations, service accounts, share links and the audit log of your organizations"));
     m_actionAccountAcceptInvitation =
         m_accountMenu->addAction(tr("Accept &Invitation…"), this, &MainWindow::acceptAccountInvitation);
     m_accountMenu->addSeparator();
@@ -1085,6 +1088,21 @@ void MainWindow::showEmergencyKit()
 
 void MainWindow::showServiceAccounts()
 {
+    // In the Vault Index layout the window is a card over this one, like Settings
+    if (FluentTheme::vaultLayoutEnabled()) {
+        auto* modal = findChild<OrgAdminModal*>();
+        if (!modal) {
+            modal = new OrgAdminModal(this, new ServiceAccountsDialog(m_accountController->account(), this));
+        }
+        modal->open();
+        return;
+    }
+    auto* open = findChild<ServiceAccountsDialog*>();
+    if (open && open->isVisible()) {
+        open->raise();
+        open->activateWindow();
+        return;
+    }
     auto* dialog = new ServiceAccountsDialog(m_accountController->account(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->open();

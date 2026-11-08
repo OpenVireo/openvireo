@@ -121,6 +121,8 @@ public:
         GUI_GroupSplitterState,
         GUI_VaultSplitterState,
         GUI_AutoTypeSelectDialogSize,
+        GUI_OrgAdminLastOrg,
+        GUI_OrgAdminLastSection,
         GUI_CheckForUpdatesNextCheck,
 
         Security_ClearClipboard,

@@ -42,20 +42,23 @@
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKit.h"
 #include "gui/account/EmergencyKitDialog.h"
+#include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
+#include "gui/notifications/NotificationCenter.h"
 #include "gui/remote/DatabaseSettingsWidgetRemote.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "gui/notifications/NotificationCenter.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/wizard/ImportWizard.h"
 #include "keys/PasswordKey.h"
+
 #include "quickunlock/QuickUnlockInterface.h"
+#include <components/dialogs_flyouts/ContentDialog.h>
 
 #include <QAction>
 #include <QCheckBox>
@@ -66,12 +69,11 @@
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
-#include <QRadioButton>
-#include <QListWidget>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QStandardPaths>
@@ -703,6 +705,24 @@ void TestGuiAccounts::testServiceAccountsDialog()
     child<QComboBox>(dialog, "vaultRoleCombo")->setCurrentIndex(0);
     dialog->grantSelectedVault();
     QTRY_COMPARE(m_server->roleOf(vaultId, "sa:" + saId), QString("read"));
+    // The card lists what it can open, and the vault isn't offered again
+    QTRY_COMPARE(dialog->vaultAccess().value(vaultId), QString("read"));
+    QCOMPARE(child<QTreeWidget>(dialog, "vaultAccessTree")->topLevelItemCount(), 1);
+    QCOMPARE(child<QComboBox>(dialog, "vaultCombo")->count(), 0);
+    QVERIFY(!child<QPushButton>(dialog, "grantButton")->isEnabled());
+
+    // Removing its access gives the vault a new key, and the vault can be granted again
+    QTRY_VERIFY(!dialog->isBusy());
+    const int keyVersion = m_server->vaults.value(vaultId).current;
+    dialog->revokeVault(vaultId);
+    QTRY_VERIFY_WITH_TIMEOUT(m_server->roleOf(vaultId, "sa:" + saId).isEmpty(), 10000);
+    QTRY_VERIFY(m_server->vaults.value(vaultId).current > keyVersion);
+    QTRY_VERIFY(!dialog->isBusy());
+    QTRY_VERIFY(dialog->vaultAccess().isEmpty());
+    QTRY_COMPARE(child<QComboBox>(dialog, "vaultCombo")->count(), 1);
+    dialog->grantSelectedVault();
+    QTRY_COMPARE(m_server->roleOf(vaultId, "sa:" + saId), QString("read"));
+    QTRY_VERIFY(!dialog->isBusy());
 
     // Another secret, with an expiry
     const auto expires = QDateTime::currentDateTimeUtc().addDays(30);
@@ -739,14 +759,25 @@ void TestGuiAccounts::testServiceAccountsDialog()
     QTRY_VERIFY(!dialog->isBusy());
 
     // Expire the whole service account
-    child<QCheckBox>(dialog, "neverExpiresCheckBox")->setChecked(false);
-    dialog->applyExpiry();
+    dialog->setExpiry(QDateTime::currentDateTimeUtc().addDays(90));
     QTRY_VERIFY(m_server->serviceAccounts.value(saId).json.value("expires_at").isString());
+    QTRY_VERIFY(!dialog->isBusy());
 
-    // The audit log shows what happened, newest first
+    // The audit log shows what happened, newest first, in words, with the server's name for the action kept
     auto* audit = child<QTreeWidget>(dialog, "auditTree");
-    QTRY_VERIFY(audit->topLevelItemCount() >= 4);
-    QCOMPARE(audit->topLevelItem(0)->text(2), QString("sa.secret.update"));
+    QTRY_VERIFY(audit->topLevelItemCount() >= 5);
+    QTRY_COMPARE(audit->topLevelItem(0)->data(2, Qt::UserRole).toString(), QString("sa.update"));
+    QCOMPARE(audit->topLevelItem(0)->text(2), QString("Service account changed"));
+    QCOMPARE(audit->topLevelItem(1)->data(2, Qt::UserRole).toString(), QString("sa.secret.update"));
+    // Filtering matches the words and the server's name alike
+    auto* filter = child<QLineEdit>(dialog, "auditFilter");
+    filter->setText("secret.issue");
+    int shown = 0;
+    for (int i = 0; i < audit->topLevelItemCount(); ++i) {
+        shown += audit->topLevelItem(i)->isHidden() ? 0 : 1;
+    }
+    QCOMPARE(shown, 1);
+    filter->clear();
 
     // Confirm an accepted member with the vault picked for them
     QString bob;
@@ -1109,13 +1140,138 @@ void TestGuiAccounts::testInvitesPromotesAndRemovesMembers()
     QTRY_VERIFY([&] {
         actions.clear();
         for (int i = 0; i < audit->topLevelItemCount(); ++i) {
-            actions << audit->topLevelItem(i)->text(2);
+            actions << audit->topLevelItem(i)->data(2, Qt::UserRole).toString();
         }
         return actions.contains("org.member.remove");
     }());
     QVERIFY(actions.contains("org.member.role"));
     QVERIFY(actions.contains("org.invitation.cancel"));
     dialog->close();
+}
+
+void TestGuiAccounts::testOrgDialogGuidesOwnersAndAdmins()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+
+    // Without an org, the window says how to get one instead of showing empty sections
+    auto* dialog = openOrgDialog(m_mainWindow.data());
+    QVERIFY(dialog);
+    QTRY_VERIFY(!dialog->isBusy());
+    auto* pages = child<QStackedWidget>(dialog, "orgPages");
+    QCOMPARE(pages->currentWidget()->objectName(), QString("orgEmptyPage"));
+    QVERIFY(dialog->navigation()->isHidden());
+
+    // A new org opens on its invitations, the next thing to do
+    dialog->createOrg("Acme");
+    QTRY_VERIFY(!dialog->currentOrg().isEmpty());
+    const auto orgId = dialog->currentOrg();
+    QTRY_VERIFY(!dialog->navigation()->isHidden());
+    QCOMPARE(dialog->currentSection(), ServiceAccountsDialog::Invitations);
+    QCOMPARE(pages->currentWidget()->objectName(), QString("invitationsPage"));
+
+    // A member who accepted shows first, with a badge on the section and a banner to review them
+    QString bob;
+    m_server->addUser("bob@example.com", &bob);
+    m_server->addOrgMember(orgId, "bob@example.com", "member", "accepted");
+    dialog->loadMembers();
+    QTRY_COMPARE(dialog->waitingCount(), 1);
+    auto* members = child<QTreeWidget>(dialog, "membersTree");
+    QCOMPARE(members->topLevelItem(0)->text(0), QString("bob@example.com"));
+    QCOMPARE(dialog->navigation()->item(ServiceAccountsDialog::Members)->data(OrgAdmin::CountRole).toInt(), 1);
+    dialog->setCurrentSection(ServiceAccountsDialog::Members);
+    auto* waitingBar = dialog->findChild<QWidget*>("membersWaitingBar");
+    QVERIFY(waitingBar && waitingBar->isVisibleTo(dialog));
+    auto* confirm = child<QPushButton>(dialog, "confirmMemberButton");
+    QVERIFY(!confirm->isVisibleTo(dialog));
+    members->topLevelItem(0)->setSelected(true);
+    QVERIFY(confirm->isVisibleTo(dialog) && confirm->isEnabled());
+    // The owner can't change their own role, and says why
+    members->clearSelection();
+    members->topLevelItem(1)->setSelected(true);
+    QVERIFY(!child<QPushButton>(dialog, "changeRoleButton")->isEnabled());
+    QVERIFY(!child<QPushButton>(dialog, "changeRoleButton")->toolTip().isEmpty());
+
+    dialog->confirmMember(bob.mid(5));
+    QTRY_COMPARE(dialog->waitingCount(), 0);
+    QTRY_VERIFY(!waitingBar->isVisibleTo(dialog));
+    QCOMPARE(dialog->navigation()->item(ServiceAccountsDialog::Members)->data(OrgAdmin::CountRole).toInt(), 0);
+    QTRY_VERIFY(!dialog->isBusy());
+
+    // Who can make share links is saved at once, and shows in the audit log
+    QCOMPARE(dialog->shareLinkPolicy(), QString("on"));
+    QVERIFY(child<QRadioButton>(dialog, "shareLinksOn")->isChecked());
+    dialog->setShareLinkPolicy("managers");
+    QTRY_COMPARE(m_server->orgs.value(orgId).shareLinks, QString("managers"));
+    QTRY_COMPARE(dialog->shareLinkPolicy(), QString("managers"));
+    QVERIFY(child<QRadioButton>(dialog, "shareLinksManagers")->isChecked());
+    QTRY_VERIFY(m_mainWindow->accountController()->account()->org(orgId).shareLinks == "managers");
+    auto* audit = child<QTreeWidget>(dialog, "auditTree");
+    QTRY_VERIFY([&] {
+        for (int i = 0; i < audit->topLevelItemCount(); ++i) {
+            if (audit->topLevelItem(i)->data(2, Qt::UserRole).toString() == "org.share_links") {
+                return audit->topLevelItem(i)->text(2) == "Share link setting changed";
+            }
+        }
+        return false;
+    }());
+
+    // The section and org are there again next time
+    QTRY_VERIFY(!dialog->isBusy());
+    dialog->setCurrentSection(ServiceAccountsDialog::AuditLog);
+    dialog->close();
+    QTRY_VERIFY(!m_mainWindow->findChild<ServiceAccountsDialog*>());
+    dialog = openOrgDialog(m_mainWindow.data());
+    QVERIFY(dialog);
+    QTRY_COMPARE(dialog->currentOrg(), orgId);
+    QCOMPARE(dialog->currentSection(), ServiceAccountsDialog::AuditLog);
+    QCOMPARE(child<QStackedWidget>(dialog, "orgPages")->currentWidget()->objectName(), QString("auditPage"));
+    dialog->close();
+}
+
+void TestGuiAccounts::testOrgDialogAsAVaultCard()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    const auto orgId = m_server->addOrg("Acme", Email);
+    m_mainWindow->accountController()->account()->reloadVaults();
+    QTRY_VERIFY(m_mainWindow->accountController()->account()->org(orgId).canAdminister());
+
+    // The main window here keeps the classic layout, so the card goes over a window of its own
+    FluentTheme::setVaultLayoutEnabledForTests(true);
+    QWidget host;
+    host.resize(1200, 800);
+    host.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&host));
+    auto* dialog = new ServiceAccountsDialog(m_mainWindow->accountController()->account(), &host);
+    QPointer<OrgAdminModal> modal = new OrgAdminModal(&host, dialog);
+    modal->open();
+    QVERIFY(modal->isOpen());
+    QTRY_COMPARE(dialog->currentOrg(), orgId);
+    // The card brings the title and Done, so the window's own Close button stays hidden
+    QVERIFY(!child<QDialogButtonBox>(dialog, "buttonBox")->isVisibleTo(dialog));
+    QVERIFY(child<QPushButton>(modal.data(), "orgAdminDone")->isVisible());
+
+    // The one-time token shows as a Fluent content dialog, and is forgotten when it closes
+    dialog->createServiceAccount("CI deploy");
+    QTRY_VERIFY(dialog->tokenDialog());
+    QVERIFY(qobject_cast<fluent::dialogs_flyouts::ContentDialog*>(dialog->tokenDialog()));
+    auto* token = child<QLineEdit>(dialog->tokenDialog(), "serviceAccountToken");
+    QVERIFY(token->text().startsWith("ov_sa_"));
+    // A Fluent dialog closes only once it has finished opening
+    QTest::qWait(500);
+    dialog->tokenDialog()->reject();
+    QTRY_VERIFY(!dialog->tokenDialog());
+
+    // Done closes the card and the window inside it
+    QTRY_VERIFY(!dialog->isBusy());
+    QTest::mouseClick(child<QPushButton>(modal.data(), "orgAdminDone"), Qt::LeftButton);
+    QTRY_VERIFY(!modal);
+    FluentTheme::setVaultLayoutEnabledForTests(false);
 }
 
 namespace
