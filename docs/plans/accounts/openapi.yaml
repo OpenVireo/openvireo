@@ -14,7 +14,7 @@ info:
     - Errors are `{"error": "<human message>", "code": "<machine_code>"}`. Codes used here: `invalid_request`,
       `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`, `mfa_required`, `invalid_mfa`, `invalid_code`,
       `session_expired`, `token_reused`, `precondition_failed`, `precondition_required`,
-      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`, `plan_limit` (402, SPEC §19), `billed_by_stripe`, `apple_subscription_bound`,
+      `recovery_not_ready`, `recovery_cancelled`, `restore_locked`, `invalid_proof`, `plan_limit` (402, SPEC §19), `billed_by_stripe`, `billed_by_apple`, `apple_subscription_bound`,
       `apple_verification_failed` (SPEC §19 In-App Purchase). (The sync server
       today sends only `error`; it adds `code` on the new routes.)
     - Every 401 carries `WWW-Authenticate: Bearer`. Rate-limited routes return 429 with `Retry-After`.
@@ -929,7 +929,7 @@ paths:
                   plan: { $ref: '#/components/schemas/Plan' }
         '400': { $ref: '#/components/responses/Error', description: apple_verification_failed, or a product that is no plan for the subject }
         '403': { $ref: '#/components/responses/Error', description: the appAccountToken is another user, or an org the caller doesn't own }
-        '409': { $ref: '#/components/responses/Error', description: 'apple_subscription_bound (belongs to another user or org) or billed_by_stripe (recorded; the Stripe plan stays in force)' }
+        '409': { $ref: '#/components/responses/Error', description: 'apple_subscription_bound (belongs to another user or org) billed_by_stripe (recorded; the Stripe plan stays in force), or billed_by_apple (another Apple subscription already pays for the subject)' }
 
   /shares:
     get:

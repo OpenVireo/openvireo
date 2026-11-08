@@ -659,7 +659,9 @@ Premium, the org's for Families) and then reports the transaction.
   `plan`. Errors: 400 `apple_verification_failed`; 403 `forbidden` (token is someone else); 409
   `apple_subscription_bound` (this Apple subscription already belongs to another user or org; it is
   never moved); 409 `billed_by_stripe` (the purchase is recorded but the Stripe plan stays in force:
-  the client tells the person to cancel one of them). A transaction without `appAccountToken` (an
+  the client tells the person to cancel one of them); 409 `billed_by_apple` (a different Apple
+  subscription already pays for the subject; this one is recorded, the first stays in force, and the
+  client tells the person to cancel one of them). A transaction without `appAccountToken` (an
   offer code redeemed in the App Store) is bound to the caller. Reporting the same transaction again
   is harmless; clients report every transaction StoreKit gives them (`Transaction.updates`,
   `currentEntitlements`) on launch and on Restore.
