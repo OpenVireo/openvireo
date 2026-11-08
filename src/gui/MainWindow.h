@@ -126,6 +126,7 @@ public slots:
     void showShareVaultDialog(const QString& vaultId = {});
     void showShareLinkDialog();
     void showSharedLinks();
+    void showDeleteAccount();
     void showServiceAccounts();
     void showEmergencyKit();
     void createAccountVault();
@@ -277,6 +278,7 @@ private:
     QPointer<QAction> m_actionAccountNewVault;
     QPointer<QAction> m_actionAccountShare;
     QPointer<QAction> m_actionAccountSharedLinks;
+    QPointer<QAction> m_actionAccountDelete;
     QPointer<QAction> m_actionAccountEmergencyKit;
     QPointer<QAction> m_actionEntryShareLink;
     QPointer<QAction> m_actionAccountMove;

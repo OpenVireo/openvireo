@@ -25,6 +25,7 @@
 #include "account/VaultKeyring.h"
 #include "account/ItemShare.h"
 #include "account/VaultSharing.h"
+#include "gui/account/DeleteAccountDialog.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Group.h"
@@ -82,6 +83,18 @@ AccountController::AccountController(DatabaseTabWidget* tabs, AccountManager* ac
         g_instance = this;
     }
     connect(m_account, &AccountManager::stateChanged, this, &AccountController::handleStateChanged);
+    // SPEC §23: signed in to an account scheduled for deletion: restore it or sign out
+    connect(m_account, &AccountManager::pendingDeletionChanged, this, [this] {
+        if (m_account->deletionScheduledFor().isEmpty()) {
+            return;
+        }
+        closeVaultTabs();
+        auto* dialog = new PendingDeletionDialog(m_account, m_tabs ? m_tabs->window() : nullptr);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->open();
+    });
+    // Accounts a day past their erase date are gone from the server, and leave this device too
+    QTimer::singleShot(0, m_account, &AccountManager::removeErasedAccounts);
     connect(m_account, &AccountManager::vaultsChanged, this, &AccountController::handleVaultsChanged);
     connect(m_account, &AccountManager::signedOut, this, [this](const QString& reason) {
         closeVaultTabs();

@@ -206,6 +206,31 @@ void AuthClient::listDevices(Callback callback)
     get("devices", std::move(callback));
 }
 
+void AuthClient::deleteOrg(const QString& orgId, Callback callback)
+{
+    request("DELETE", endpoint("orgs/" + encoded(orgId)), {}, true, std::move(callback));
+}
+
+void AuthClient::deletionPreview(Callback callback)
+{
+    get("me/deletion", std::move(callback));
+}
+
+void AuthClient::scheduleDeletion(const QString& confirm, Callback callback)
+{
+    sendJson("DELETE", "me", QJsonObject{{"confirm", confirm}}, std::move(callback));
+}
+
+void AuthClient::cancelDeletion(Callback callback)
+{
+    post("me/deletion/cancel", {}, std::move(callback), true);
+}
+
+void AuthClient::transferVault(const QString& vaultId, const QString& principal, Callback callback)
+{
+    post("vaults/" + encoded(vaultId) + "/owner", QJsonObject{{"principal", principal}}, std::move(callback), true);
+}
+
 void AuthClient::revokeDevice(const QString& deviceId, Callback callback)
 {
     request("DELETE", endpoint("devices/" + encoded(deviceId)), {}, true, std::move(callback));
@@ -601,6 +626,25 @@ QString AuthClient::errorMessage(const Response& response)
             return tr("%1. Change your plan on the account website.").arg(message);
         }
         return tr("%1. Change your plan at %2").arg(message, upgradeUrl);
+    }
+    // Account deletion (SPEC §23)
+    const auto code = response.errorCode();
+    if (code == "confirm_mismatch") {
+        return tr("That isn't this account's email. Nothing was deleted.");
+    }
+    if (code == "deletion_blocked") {
+        QStringList names;
+        for (const auto& org : response.json().value("orgs").toArray()) {
+            names << org.toObject().value("name").toString();
+        }
+        return tr("You're the only owner of %1. Make someone else an owner, or delete it, first.")
+            .arg(names.isEmpty() ? tr("an organization") : names.join(", "));
+    }
+    if (code == "not_a_member") {
+        return tr("They need access to the vault before it can be given to them.");
+    }
+    if (code == "account_pending_deletion") {
+        return tr("This account is scheduled for deletion. Restore it first.");
     }
     if (message.isEmpty()) {
         message = tr("Unexpected response.");

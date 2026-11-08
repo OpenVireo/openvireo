@@ -33,6 +33,7 @@
 #include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QLocale>
 #ifdef KPXC_FEATURE_NETWORK
 #include <QNetworkInformation>
 #endif
@@ -455,6 +456,7 @@ QList<AccountManager::KnownAccount> AccountManager::knownAccounts() const
         account.server = ServerConfig::fromJson(json.value("server").toObject());
         account.lastUsedAt = json.value("last_used_at").toInteger();
         account.checkedAt = json.value("checked_at").toInteger();
+        account.deletionScheduledFor = json.value("deletion_scheduled_for").toString();
         account.signedIn = !SyncTokenStore::load(sessionKey(account.id)).isEmpty();
         account.current = account.id == m_accountId && !m_serviceAccount;
         if (!account.id.isEmpty()) {
@@ -473,11 +475,15 @@ namespace
     {
         QJsonArray array;
         for (const auto& account : list) {
-            array << QJsonObject{{"id", account.id},
-                                 {"email", account.email},
-                                 {"server", account.server.toJson()},
-                                 {"last_used_at", account.lastUsedAt},
-                                 {"checked_at", account.checkedAt}};
+            QJsonObject json{{"id", account.id},
+                             {"email", account.email},
+                             {"server", account.server.toJson()},
+                             {"last_used_at", account.lastUsedAt},
+                             {"checked_at", account.checkedAt}};
+            if (!account.deletionScheduledFor.isEmpty()) {
+                json.insert("deletion_scheduled_for", account.deletionScheduledFor);
+            }
+            array << json;
         }
         SyncTokenStore::save(KnownAccountsKey, QJsonDocument(array).toJson(QJsonDocument::Compact));
     }
@@ -490,11 +496,13 @@ void AccountManager::rememberCurrentAccount() const
     }
     auto list = knownAccounts();
     qint64 checkedAt = 0;
+    QString deletion;
     list.removeIf([&](const KnownAccount& account) {
         if (account.id != m_accountId) {
             return false;
         }
         checkedAt = account.checkedAt;
+        deletion = account.deletionScheduledFor;
         return true;
     });
     KnownAccount current;
@@ -503,6 +511,7 @@ void AccountManager::rememberCurrentAccount() const
     current.server = m_config;
     current.lastUsedAt = now();
     current.checkedAt = checkedAt;
+    current.deletionScheduledFor = deletion;
     list.prepend(current);
     saveKnownAccounts(list);
 }
@@ -1076,6 +1085,7 @@ void AccountManager::reconnect()
 void AccountManager::takeProfile(const QJsonObject& me)
 {
     m_orgs = parseOrgs(me.value("orgs").toArray());
+    setPendingDeletion(me.value("deletion_scheduled_for").toString());
     AccountOfflineCache::saveProfile(
         m_accountId, me.value("kdf").toObject(), me.value("keyset").toObject(), me.value("orgs").toArray());
 }
@@ -1147,6 +1157,7 @@ void AccountManager::endSession(const QString& reason)
     m_keyset.clear();
     m_accountId.clear();
     m_serviceAccount = false;
+    m_deletionScheduledFor.clear();
     const auto waiters = std::move(m_tokenWaiters);
     m_tokenWaiters.clear();
     m_refreshing = false;
@@ -1410,6 +1421,11 @@ void AccountManager::reloadVaults()
                 }
                 return;
             }
+            if (response.errorCode() == "account_pending_deletion") {
+                // SPEC §23: nothing opens until the account is restored
+                setPendingDeletion(response.json().value("scheduled_for").toString());
+                return;
+            }
             emit error(AuthClient::errorMessage(response));
             return;
         }
@@ -1453,8 +1469,24 @@ void AccountManager::reloadOrgs()
 
 void AccountManager::handleAccessEvent(const SyncEventStream::Event& event)
 {
-    Q_UNUSED(event)
     if (m_state == State::SignedOut) {
+        return;
+    }
+    // SPEC §23: deleted here or on another device
+    if (event.change == "deletion_scheduled") {
+        endSession(tr("This account is scheduled for deletion. Sign in to restore it."));
+        return;
+    }
+    if (event.change == "account_deleted") {
+        const auto server = defaultServerId();
+        const auto email = m_email;
+        auto list = knownAccounts();
+        list.removeIf([this](const KnownAccount& a) { return a.id == m_accountId; });
+        saveKnownAccounts(list);
+        endSession(tr("This account was deleted."));
+        SyncTokenStore::remove(secretKeyKey(server, email));
+        SyncTokenStore::remove(deviceKey(server, email));
+        emit knownAccountsChanged();
         return;
     }
     // The new access shows in the token's vlt claim and in GET /vaults
@@ -1522,4 +1554,221 @@ void AccountManager::startEvents()
 void AccountManager::stopEvents()
 {
     delete m_events.data();
+}
+
+// ------------------------------------------------------------------ account deletion (SPEC §23)
+
+QString AccountManager::deletionScheduledFor() const
+{
+    return m_deletionScheduledFor;
+}
+
+void AccountManager::setPendingDeletion(const QString& scheduledFor)
+{
+    if (m_serviceAccount || scheduledFor == m_deletionScheduledFor) {
+        return;
+    }
+    m_deletionScheduledFor = scheduledFor;
+    setKnownDeletion(m_accountId, scheduledFor);
+    emit knownAccountsChanged();
+    emit pendingDeletionChanged();
+}
+
+void AccountManager::setKnownDeletion(const QString& accountId, const QString& scheduledFor) const
+{
+    auto list = knownAccounts();
+    for (auto& account : list) {
+        if (account.id == accountId) {
+            account.deletionScheduledFor = scheduledFor;
+        }
+    }
+    saveKnownAccounts(list);
+}
+
+void AccountManager::removeErasedAccounts()
+{
+    const auto cutoff = QDateTime::currentDateTimeUtc().addDays(-1);
+    bool changed = false;
+    for (const auto& account : knownAccounts()) {
+        const auto at = QDateTime::fromString(account.deletionScheduledFor, Qt::ISODate);
+        if (!at.isValid() || at > cutoff || account.current) {
+            continue;
+        }
+        const auto server = account.server.serverId();
+        SyncTokenStore::remove(sessionKey(account.id));
+        SyncTokenStore::remove(secretKeyKey(server, account.email));
+        SyncTokenStore::remove(deviceKey(server, account.email));
+        AccountOfflineCache::clear(account.id);
+        auto list = knownAccounts();
+        list.removeIf([&](const KnownAccount& a) { return a.id == account.id; });
+        saveKnownAccounts(list);
+        changed = true;
+    }
+    if (changed) {
+        emit knownAccountsChanged();
+    }
+}
+
+void AccountManager::freshToken(std::function<void(bool ok)> done)
+{
+    // DELETE /me and POST /me/deletion/cancel want a token issued in the last 5 minutes
+    m_tokenWaiters << [done](const QString& token) { done(!token.isEmpty()); };
+    refreshAccessToken();
+}
+
+void AccountManager::verifyPassword(const QString& password, std::function<void(const QString& error)> done)
+{
+    SecureBytes secretKey;
+    if (!parseSecretKey(storedSecretKey(defaultServerId(), m_email), &secretKey)) {
+        done(tr("This device no longer has the account's Secret Key. Sign in again."));
+        return;
+    }
+    const auto normalized = normalizePassword(password);
+    QPointer<AccountManager> guard(this);
+    m_client->me([this, guard, secretKey, normalized, done](const AuthClient::Response& response) {
+        if (!guard) {
+            return;
+        }
+        if (!response.isSuccess()) {
+            done(AuthClient::errorMessage(response));
+            return;
+        }
+        const auto me = response.json();
+        bool kdfOk = false;
+        const auto kdf = KdfParams::fromJson(me.value("kdf").toObject(), &kdfOk);
+        if (!kdfOk || !kdf.isAcceptable()) {
+            done(tr("The account server sent unsafe key derivation settings."));
+            return;
+        }
+        const auto wrapped = me.value("keyset").toObject();
+        AsyncTask::runThenCallback(
+            [kdf, normalized, secretKey] { return deriveAuk(stretchPassword(normalized, kdf), secretKey); },
+            this,
+            [wrapped, done](const SecureBytes& auk) {
+                Keyset keyset;
+                done(unwrapKeyset(auk, wrapped, &keyset) ? QString() : tr("That master password is wrong."));
+            });
+    });
+}
+
+void AccountManager::deletionPreview(std::function<void(const QJsonObject& preview, const QString& error)> done)
+{
+    m_client->deletionPreview([done](const AuthClient::Response& response) {
+        if (!response.isSuccess()) {
+            done({}, AuthClient::errorMessage(response));
+            return;
+        }
+        done(response.json(), {});
+    });
+}
+
+void AccountManager::deleteAccount(const QString& password,
+                                   const QString& confirm,
+                                   std::function<void(const QString& scheduledFor, const QString& error)> done)
+{
+    if (m_serviceAccount || m_state != State::Unlocked) {
+        done({}, tr("Unlock your account first."));
+        return;
+    }
+    QPointer<AccountManager> guard(this);
+    verifyPassword(password, [this, guard, confirm, done](const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!error.isEmpty()) {
+            done({}, error);
+            return;
+        }
+        freshToken([this, guard, confirm, done](bool ok) {
+            if (!guard) {
+                return;
+            }
+            if (!ok) {
+                done({}, tr("Your session has ended. Sign in again."));
+                return;
+            }
+            m_client->scheduleDeletion(confirm.trimmed(), [this, guard, done](const AuthClient::Response& response) {
+                if (!guard) {
+                    return;
+                }
+                if (!response.isSuccess()) {
+                    done({}, AuthClient::errorMessage(response));
+                    return;
+                }
+                const auto when = response.json().value("scheduled_for").toString();
+                // The server already ended every session; the Secret Key stays for a restore
+                setKnownDeletion(m_accountId, when);
+                const auto date = QLocale().toString(QDateTime::fromString(when, Qt::ISODate).toLocalTime().date(),
+                                                     QLocale::LongFormat);
+                endSession(tr("Your account is locked and will be deleted on %1. Sign in before then to restore it.")
+                               .arg(date));
+                done(when, {});
+            });
+        });
+    });
+}
+
+void AccountManager::restoreAccount(const QString& password, std::function<void(const QString& error)> done)
+{
+    if (m_serviceAccount || m_deletionScheduledFor.isEmpty()) {
+        done(tr("This account isn't scheduled for deletion."));
+        return;
+    }
+    QPointer<AccountManager> guard(this);
+    verifyPassword(password, [this, guard, done](const QString& error) {
+        if (!guard) {
+            return;
+        }
+        if (!error.isEmpty()) {
+            done(error);
+            return;
+        }
+        freshToken([this, guard, done](bool ok) {
+            if (!guard) {
+                return;
+            }
+            if (!ok) {
+                done(tr("Your session has ended. Sign in again."));
+                return;
+            }
+            m_client->cancelDeletion([this, guard, done](const AuthClient::Response& response) {
+                if (!guard) {
+                    return;
+                }
+                if (!response.isSuccess()) {
+                    done(AuthClient::errorMessage(response));
+                    return;
+                }
+                // A token without `del`, which opens vaults again
+                freshToken([this, guard, done](bool) {
+                    if (!guard) {
+                        return;
+                    }
+                    setPendingDeletion({});
+                    reloadVaults();
+                    startEvents();
+                    done({});
+                });
+            });
+        });
+    });
+}
+
+void AccountManager::transferVault(const QString& vaultId,
+                                   const QString& principal,
+                                   std::function<void(const QString& error)> done)
+{
+    QPointer<AccountManager> guard(this);
+    m_client->transferVault(vaultId, principal, [this, guard, done](const AuthClient::Response& response) {
+        if (!guard) {
+            return;
+        }
+        if (!response.isSuccess()) {
+            done(AuthClient::errorMessage(response));
+            return;
+        }
+        m_reloadAfterRefresh = true;
+        refreshAccessToken();
+        done({});
+    });
 }

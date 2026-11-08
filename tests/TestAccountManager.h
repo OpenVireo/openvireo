@@ -38,6 +38,8 @@ private slots:
     void testKeyringOpensNewestKeyWithFallback();
     void testAccessEventRefreshesAndReloads();
     void testLockClearsKeys();
+    void testDeleteAccountAndRestore();
+    void testDeletionEventsSignOut();
     void testRestoreSessionAfterRestart();
     void testSwitchingKeepsTheOtherAccountSignedIn();
     void testChecksSessionsSetAside();
