@@ -22,6 +22,7 @@
 #include "BrowserEntryConfig.h"
 #include "BrowserEntrySaveDialog.h"
 #include "BrowserHost.h"
+#include "BrowserKeyAssociationDialog.h"
 #include "BrowserMessageBuilder.h"
 #include "BrowserPasskeys.h"
 #include "BrowserPasskeysClient.h"
@@ -582,11 +583,31 @@ QString BrowserService::storeKey(const QString& key)
         return {};
     }
 
-    bool contains;
-    auto dialogResult = MessageBox::Cancel;
     QString id;
 
-    do {
+    // In the Vault Index layout, the request shows as a Fluent content dialog over the window, which comes forward
+    // with it. A name already in use is called out in the dialog, so it needs no second prompt to replace it.
+    if (FluentTheme::vaultLayoutEnabled()) {
+        raiseWindow(true);
+    }
+    if (BrowserKeyAssociationDialog::canShowOver(m_currentDatabaseWidget)) {
+        BrowserKeyAssociationDialog keyDialog(
+            db->metadata()->name(),
+            [db](const QString& name) {
+                return db->metadata()->customData()->contains(
+                    CustomData::getKeyWithPrefix(CustomData::BrowserKeyPrefix, name));
+            },
+            m_currentDatabaseWidget->window());
+        connect(m_currentDatabaseWidget, SIGNAL(databaseLockRequested()), &keyDialog, SLOT(reject()));
+        const int ok = keyDialog.exec();
+        id = keyDialog.name();
+        if (ok != QDialog::Accepted || id.isEmpty() || !isDatabaseOpened()) {
+            hideWindow();
+            return {};
+        }
+    }
+
+    while (id.isEmpty()) {
         QInputDialog keyDialog(m_currentDatabaseWidget);
         connect(m_currentDatabaseWidget, SIGNAL(databaseLockRequested()), &keyDialog, SLOT(reject()));
         keyDialog.setWindowTitle(tr("OpenVireo - New key association request"));
@@ -608,18 +629,19 @@ QString BrowserService::storeKey(const QString& key)
             return {};
         }
 
-        contains =
-            db->metadata()->customData()->contains(CustomData::getKeyWithPrefix(CustomData::BrowserKeyPrefix, id));
-        if (contains) {
-            dialogResult = MessageBox::warning(m_currentDatabaseWidget,
-                                               tr("OpenVireo - Overwrite existing key?"),
-                                               tr("A shared encryption key with the name \"%1\" "
-                                                  "already exists.\nDo you want to overwrite it?")
-                                                   .arg(id),
-                                               MessageBox::Overwrite | MessageBox::Cancel,
-                                               MessageBox::Cancel);
+        if (db->metadata()->customData()->contains(CustomData::getKeyWithPrefix(CustomData::BrowserKeyPrefix, id))) {
+            auto dialogResult = MessageBox::warning(m_currentDatabaseWidget,
+                                                    tr("OpenVireo - Overwrite existing key?"),
+                                                    tr("A shared encryption key with the name \"%1\" "
+                                                       "already exists.\nDo you want to overwrite it?")
+                                                        .arg(id),
+                                                    MessageBox::Overwrite | MessageBox::Cancel,
+                                                    MessageBox::Cancel);
+            if (dialogResult == MessageBox::Cancel) {
+                id.clear();
+            }
         }
-    } while (contains && dialogResult == MessageBox::Cancel);
+    }
 
     hideWindow();
     db->metadata()->customData()->set(CustomData::getKeyWithPrefix(CustomData::BrowserKeyPrefix, id), key);
