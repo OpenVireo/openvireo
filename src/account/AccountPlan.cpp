@@ -109,12 +109,22 @@ namespace AccountPlan
         }
         const auto& billing = plan.billing;
         QString when;
+        const bool trial = billing.status == "trialing";
         if (billing.endsAt.isValid()) {
-            when = tr("ends %1").arg(longDate(billing.endsAt));
+            when = trial ? tr("free trial, ends %1").arg(longDate(billing.endsAt))
+                         : tr("ends %1").arg(longDate(billing.endsAt));
         } else if (billing.renewsAt.isValid()) {
-            when = tr("renews %1").arg(longDate(billing.renewsAt));
+            when = trial ? tr("free trial until %1, then billed %2")
+                               .arg(longDate(billing.renewsAt),
+                                    billing.interval == "year" ? tr("yearly") : tr("monthly"))
+                         : tr("renews %1").arg(longDate(billing.renewsAt));
+        } else if (trial) {
+            when = tr("free trial");
         }
         if (billing.source == "apple") {
+            if (trial && !billing.endsAt.isValid() && billing.renewsAt.isValid()) {
+                return tr("%1, %2 by Apple.").arg(name, when);
+            }
             return when.isEmpty() ? tr("%1, billed by Apple.").arg(name)
                                   : tr("%1, %2, billed by Apple.").arg(name, when);
         }
