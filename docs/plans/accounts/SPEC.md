@@ -623,6 +623,13 @@ change reaches the sync server with the next token (at most `exp`, 10 minutes).
 
 The plan, its limits and everything above are the same whichever source bills it.
 
+**Free trial.** A paid plan starts with a 14-day free trial, once per subject. On the website the
+server offers it only to a user or org that has never had a paid plan from either source
+(`STRIPE_TRIAL_PERIOD_DAYS`). In the app every product has a 2-week free introductory offer; Apple
+decides eligibility (once per Apple ID per subscription group), and the app shows the trial only
+when StoreKit says the person is eligible. A plan in its trial has `billing.status` `trialing` and
+`renews_at` at the trial's end.
+
 `billing` in `plan`:
 
 ```json
