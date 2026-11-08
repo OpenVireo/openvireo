@@ -105,6 +105,17 @@ void TestAccountPlan::testDescribe()
     plan = AccountPlan::parse(json(R"({"id": "org_free", "billing": null})"));
     QCOMPARE(AccountPlan::describe(plan), QString("Free plan. Change it on the account website."));
 
+    plan = AccountPlan::parse(json(R"({"id": "premium", "billing": {"source": "apple", "interval": "year",
+        "status": "trialing", "renews_at": "2026-11-22T12:00:00Z", "ends_at": null, "manage": "app_store"}})"));
+    QCOMPARE(AccountPlan::describe(plan),
+             QString("Premium, free trial until 22 November 2026, then billed yearly by Apple. Manage it on your "
+                     "iPhone or in your Apple ID settings."));
+
+    plan = AccountPlan::parse(json(R"({"id": "premium", "billing": {"source": "stripe", "interval": "month",
+        "status": "trialing", "renews_at": null, "ends_at": "2026-11-22T12:00:00Z", "manage": "website"}})"));
+    QCOMPARE(AccountPlan::describe(plan),
+             QString("Premium, free trial, ends 22 November 2026. Manage it on the account website."));
+
     QCOMPARE(AccountPlan::displayName("some_new"), QString("Some new"));
 }
 
