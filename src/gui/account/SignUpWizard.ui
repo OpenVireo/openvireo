@@ -126,7 +126,7 @@
        <item>
         <widget class="QLabel" name="kitIntro">
          <property name="text">
-          <string>This is your Secret Key. You need it, with your master password, to sign in on a new device. It is shown only now: save your Emergency Kit and keep it safe.</string>
+          <string>This is your Secret Key. You need it, with your master password, to sign in on a new device. Save your Emergency Kit now and keep it safe. Later, Account › Emergency Kit shows it again on this device.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -151,6 +151,13 @@
             <enum>Qt::Horizontal</enum>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="VaultButton" name="copyKeyButton">
+           <property name="text">
+            <string>Copy Secret Key</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="VaultButton" name="saveKitButton">

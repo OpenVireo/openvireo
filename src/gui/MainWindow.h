@@ -127,6 +127,7 @@ public slots:
     void showShareLinkDialog();
     void showSharedLinks();
     void showServiceAccounts();
+    void showEmergencyKit();
     void createAccountVault();
     // The account's lock screen, in front of any open databases
     void unlockAccount();
@@ -276,6 +277,7 @@ private:
     QPointer<QAction> m_actionAccountNewVault;
     QPointer<QAction> m_actionAccountShare;
     QPointer<QAction> m_actionAccountSharedLinks;
+    QPointer<QAction> m_actionAccountEmergencyKit;
     QPointer<QAction> m_actionEntryShareLink;
     QPointer<QAction> m_actionAccountMove;
     QPointer<QAction> m_actionAccountServiceAccounts;

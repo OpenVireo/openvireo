@@ -48,6 +48,7 @@ private slots:
     void testOtherMfaErrorsReturnToSignIn();
     void testPairsWithASelfHostedServer();
     void testSignUpShowsTheSecretKeyOnce();
+    void testEmergencyKitShowsTheStoredSecretKey();
     void testUnlockOpensEveryVaultAndLockClearsKeys();
     void testShareDialogRevokeRotatesTheKey();
     void testMovesADatabaseToTheAccount();

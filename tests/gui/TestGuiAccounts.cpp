@@ -41,6 +41,7 @@
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKit.h"
+#include "gui/account/EmergencyKitDialog.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
@@ -56,7 +57,9 @@
 #include "keys/PasswordKey.h"
 #include "quickunlock/QuickUnlockInterface.h"
 
+#include <QAction>
 #include <QCheckBox>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QDialogButtonBox>
@@ -427,6 +430,11 @@ void TestGuiAccounts::testSignUpShowsTheSecretKeyOnce()
     // Finishing waits for the kit
     QVERIFY(!next->isEnabled());
 
+    // Copy, as on the web app and iOS
+    QTest::mouseClick(child<QPushButton>(wizard, "copyKeyButton"), Qt::LeftButton);
+    QCOMPARE(QApplication::clipboard()->text(), secretKey);
+    QVERIFY(!next->isEnabled());
+
     QTemporaryDir dir;
     const auto kitPath = dir.filePath("kit.pdf");
     fileDialog()->setNextFileName(kitPath);
@@ -450,6 +458,39 @@ void TestGuiAccounts::testSignUpShowsTheSecretKeyOnce()
     QVERIFY(!m_mainWindow->isStartScreenShown());
     QCOMPARE(m_mainWindow->accountController()->mode(), AccountController::Mode::Account);
     QCOMPARE(m_mainWindow->accountController()->account()->state(), AccountManager::State::Unlocked);
+}
+
+void TestGuiAccounts::testEmergencyKitShowsTheStoredSecretKey()
+{
+    const auto secretKey = registerElsewhere(Email);
+    createWindow({});
+    signIn(Email, secretKey);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
+    auto* action = m_mainWindow->findChild<QAction*>("actionAccountEmergencyKit");
+    QVERIFY(action);
+    QTRY_VERIFY(action->isEnabled());
+
+    action->trigger();
+    EmergencyKitDialog* dialog = nullptr;
+    QTRY_VERIFY(dialog = m_mainWindow->findChild<EmergencyKitDialog*>());
+    QCOMPARE(child<QLabel>(dialog, "secretKeyLabel")->text(), secretKey);
+
+    QTest::mouseClick(child<QPushButton>(dialog, "copyKeyButton"), Qt::LeftButton);
+    QCOMPARE(QApplication::clipboard()->text(), secretKey);
+
+    QTemporaryDir dir;
+    const auto kitPath = dir.filePath("kit.pdf");
+    fileDialog()->setNextFileName(kitPath);
+    QTest::mouseClick(child<QPushButton>(dialog, "saveKitButton"), Qt::LeftButton);
+    QFile kit(kitPath);
+    QVERIFY(kit.open(QIODevice::ReadOnly));
+    QVERIFY(kit.read(5) == "%PDF-");
+    QVERIFY(child<MessageWidget>(dialog, "messageWidget")->text().contains("saved"));
+    dialog->close();
+
+    // Never while locked
+    m_mainWindow->accountController()->lockAccount();
+    QTRY_VERIFY(!action->isEnabled());
 }
 
 void TestGuiAccounts::testUnlockOpensEveryVaultAndLockClearsKeys()

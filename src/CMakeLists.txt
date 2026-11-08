@@ -174,6 +174,7 @@ set(gui_SOURCES
         gui/account/AccountLockWidget.cpp
         gui/account/AccountStartWidget.cpp
         gui/account/EmergencyKit.cpp
+        gui/account/EmergencyKitDialog.cpp
         gui/account/ServiceAccountsDialog.cpp
         gui/account/ShareVaultDialog.cpp
         gui/account/ShareLinkDialog.cpp
