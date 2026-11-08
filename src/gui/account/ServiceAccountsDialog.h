@@ -155,6 +155,7 @@ private:
     QWidget* buildInvitationsPage();
     QWidget* buildServiceAccountsPage();
     QWidget* buildShareLinksPage();
+    void updateOrgPlan();
     QWidget* buildAuditPage();
     QWidget* buildEmptyPage();
     void applyTheme();
@@ -199,6 +200,8 @@ private:
     // Sidebar
     VaultComboBox* m_orgCombo;
     QLabel* m_orgRole;
+    // The current org's plan and where it's managed (SPEC §19)
+    QLabel* m_orgPlan;
     QListWidget* m_navigation;
     VaultButton* m_newOrgButton;
     QStackedWidget* m_pages;

@@ -124,11 +124,13 @@ void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
             if (json.contains("status") && json.value("status").toString() != "confirmed") {
                 continue;
             }
-            orgs << Org{json.value("id").toString(),
-                        json.value("name").toString(),
-                        json.value("role").toString(),
-                        json.value("status").toString(),
-                        json.value("item_share_links").toString("on")};
+            Org org{json.value("id").toString(),
+                    json.value("name").toString(),
+                    json.value("role").toString(),
+                    json.value("status").toString(),
+                    json.value("item_share_links").toString("on")};
+            org.plan = AccountPlan::parse(json.value("plan"));
+            orgs << org;
         }
         done(orgs, {});
     });

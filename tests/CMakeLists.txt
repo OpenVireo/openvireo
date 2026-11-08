@@ -127,6 +127,9 @@ add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
 add_unit_test(NAME testaccountcrypto SOURCES TestAccountCrypto.cpp
         LIBS ${TEST_LIBRARIES})
 
+add_unit_test(NAME testaccountplan SOURCES TestAccountPlan.cpp
+        LIBS ${TEST_LIBRARIES})
+
 add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp
         LIBS ${TEST_LIBRARIES})
 if(KPXC_FEATURE_ACCOUNTS)

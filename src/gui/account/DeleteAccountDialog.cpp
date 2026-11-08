@@ -18,6 +18,7 @@
 #include "DeleteAccountDialog.h"
 
 #include "account/AccountManager.h"
+#include "account/AccountPlan.h"
 #include "account/AuthClient.h"
 #include "account/ServiceAccountAdmin.h"
 #include "gui/MessageBox.h"
@@ -142,7 +143,8 @@ QStringList DeleteAccountDialog::summary(const QJsonObject& preview)
         }
     }
     if (preview.value("subscription").isObject()) {
-        lines << tr("Your %1 plan stops renewing.").arg(preview.value("subscription").toObject().value("plan").toString());
+        // SPEC §23: the server can't cancel an Apple subscription, so the user must, before it renews
+        lines << AccountPlan::deletionNote(preview.value("subscription").toObject());
     }
     const int links = preview.value("share_links").toInt();
     if (links > 0) {
