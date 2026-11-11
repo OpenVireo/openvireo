@@ -45,6 +45,30 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.10.0" date="2026-11-11" type="development">
+        <description>
+            <p>The second beta of OpenVireo.</p>
+            <ul>
+              <li>Import a .kdbx file into an open database, as copies, or as a new vault</li>
+              <li>Lock a signed-in account behind a lock screen, and unlock it offline from the last synced keys</li>
+              <li>Remember accounts and switch between them without signing in again</li>
+              <li>Share an entry with a link that opens without an account; organization owners choose who can make links</li>
+              <li>Sync deleted entries and the Recycle Bin between devices</li>
+              <li>Warn when this computer's clock is off the sync server's</li>
+              <li>Show the Secret Key again from Account › Emergency Kit</li>
+              <li>Delete your account from the Account menu, with a 30-day grace period</li>
+              <li>Show your plan, its free trial, and whether it is billed by Apple or the website</li>
+              <li>Redesigned Organization window</li>
+              <li>The browser connection request is a Fluent dialog</li>
+              <li>Accounts only connect to servers over https, except on this computer</li>
+              <li>The browser extension is sent OpenVireo's own version</li>
+              <li>The AppImage no longer bundles libcrypto and libssl</li>
+              <li>Fix potential integer overflows in importers</li>
+              <li>Fix Ed25519 keys shown as 32 bits in the SSH key generation dialog</li>
+              <li>The command-line tool no longer creates a file where the null device is missing</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.9.0" date="2026-10-29" type="development">
         <description>
             <p>The first public beta of OpenVireo, based on KeePassXC 2.8.0-beta1.</p>
