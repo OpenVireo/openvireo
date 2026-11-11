@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.10.0 (2026-11-11)
+## 1.0.0 (2026-11-11)
 
-The second beta of OpenVireo. This is a beta: keep a backup of your databases and report problems at https://github.com/openvireo/openvireo/issues.
+The first stable release of OpenVireo. Report problems at https://github.com/openvireo/openvireo/issues.
 
 ### New Features
 - Import a .kdbx file into an open database, as copies, or as a new vault
