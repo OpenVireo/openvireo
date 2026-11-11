@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.10.0 (2026-11-11)
+
+The second beta of OpenVireo. This is a beta: keep a backup of your databases and report problems at https://github.com/openvireo/openvireo/issues.
+
+### New Features
+- Import a .kdbx file into an open database, as copies, or as a new vault
+- Lock a signed-in account behind a lock screen, and unlock it offline from the last synced keys
+- Remember accounts and switch between them without signing in again
+- Share an entry with a link that opens without an account; organization owners choose who can make links
+- Sync deleted entries and the Recycle Bin between devices
+- Warn when this computer's clock is off the sync server's
+- Show the Secret Key again from Account › Emergency Kit
+- Delete your account from the Account menu, with a 30-day grace period
+- Show your plan, its free trial, and whether it is billed by Apple or the website
+
+### Changes
+- Redesigned Organization window
+- The browser connection request is a Fluent dialog
+- Accounts only connect to servers over https, except on this computer
+- The browser extension is sent OpenVireo's own version
+- The AppImage no longer bundles libcrypto and libssl
+
+### Fixes
+- Fix potential integer overflows in importers
+- Fix Ed25519 keys shown as 32 bits in the SSH key generation dialog
+- The command-line tool no longer creates a file where the null device is missing
+
 ## 0.9.0 (2026-10-29)
 
 The first public beta of OpenVireo. It is based on KeePassXC 2.8.0-beta1 and includes most of the fixes from KeePassXC 2.8.0. OpenVireo uses its own settings and keychain entries, so it does not pick up KeePassXC's; your databases open as before. This is a beta: keep a backup of your databases and report problems at https://github.com/openvireo/openvireo/issues.
