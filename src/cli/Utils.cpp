@@ -63,12 +63,10 @@ namespace Utils
             STDIN.setDevice(fd);
         }
 
-        fd = new QFile();
-#ifdef Q_OS_WIN
-        if (fd->open(fopen("nul", "w"), QIODevice::WriteOnly)) {
-#else
-        if (fd->open(fopen("/dev/null", "w"), QIODevice::WriteOnly)) {
-#endif
+        // Open the platform null device by name. ExistingOnly guarantees we never
+        // create a file (e.g. a world-writable /dev/null in a chroot without one).
+        fd = new QFile(QProcess::nullDevice());
+        if (fd->open(QIODevice::WriteOnly | QIODevice::ExistingOnly)) {
             DEVNULL.setDevice(fd);
         }
 
