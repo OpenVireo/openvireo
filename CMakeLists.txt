@@ -17,8 +17,8 @@
 cmake_minimum_required(VERSION 3.16.0)
 
 # Version Number. OpenVireo has its own version; 0.x releases are betas.
-set(KEEPASSXC_VERSION_MAJOR "0")
-set(KEEPASSXC_VERSION_MINOR "10")
+set(KEEPASSXC_VERSION_MAJOR "1")
+set(KEEPASSXC_VERSION_MINOR "0")
 set(KEEPASSXC_VERSION_PATCH "0")
 set(KEEPASSXC_VERSION "${KEEPASSXC_VERSION_MAJOR}.${KEEPASSXC_VERSION_MINOR}.${KEEPASSXC_VERSION_PATCH}")
 # The KeePassXC release this is based on. The browser extension checks its features against this version.
