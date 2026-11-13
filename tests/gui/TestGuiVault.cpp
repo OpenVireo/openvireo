@@ -38,8 +38,8 @@
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/MainWindow.h"
-#include "gui/PasswordGeneratorWidget.h"
 #include "gui/MessageBox.h"
+#include "gui/PasswordGeneratorWidget.h"
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
 #include "gui/TotpSetupDialog.h"
@@ -47,13 +47,13 @@
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
 #include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultEntryEditCard.h"
-#include "gui/vault/VaultPanes.h"
-#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
+#include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "gui/wizard/ImportWizard.h"
@@ -64,6 +64,7 @@
 
 #include <QCheckBox>
 #include <QClipboard>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QHeaderView>
@@ -71,15 +72,14 @@
 #include <QLineEdit>
 #include <QListView>
 #include <QListWidget>
-#include <QComboBox>
+#include <QMenu>
 #include <QPlainTextEdit>
-#include <QScrollArea>
-#include <QScrollBar>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QStackedWidget>
-#include <QMenu>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -662,8 +662,14 @@ void TestGuiVault::testDatabasePicker()
     QVERIFY(!firstChecked);
     QCOMPARE(menuItems.size(), 10);
     QCOMPARE(menuItems.mid(2),
-             QStringList({"-", "actionDatabaseNew", "actionDatabaseOpen", "-", "actionDatabaseSettings", "-",
-                          "actionLockAllDatabases", "actionDatabaseClose"}));
+             QStringList({"-",
+                          "actionDatabaseNew",
+                          "actionDatabaseOpen",
+                          "-",
+                          "actionDatabaseSettings",
+                          "-",
+                          "actionLockAllDatabases",
+                          "actionDatabaseClose"}));
     QCOMPARE(m_tabWidget->currentDatabaseWidget(), m_dbWidget.data());
     QCOMPARE(picker->text(), m_dbWidget->displayName());
     QVERIFY(header->findChild<SearchWidget*>("SearchWidget")->isVisible());
@@ -1366,7 +1372,8 @@ void TestGuiVault::testAccessControlDialog()
             auto* disabledChoice = content->findChild<QAbstractButton*>("accessEntryChoice2");
             QVERIFY(!disabledChoice->isEnabled());
             QVERIFY(!disabledChoice->isChecked());
-            QVERIFY(disabledChoice->font().strikeOut());
+            QVERIFY(content->findChild<QLabel*>("accessEntryTitle2")->font().strikeOut());
+            QCOMPARE(content->findChild<QLabel*>("accessEntryUsername0")->text(), QString("alice"));
             remember->setChecked(true);
             QTest::keyClick(content, Qt::Key_Return);
         });
@@ -1405,6 +1412,40 @@ void TestGuiVault::testAccessControlDialog()
         });
         QCOMPARE(dialog.exec(), int(QDialog::Rejected));
         QVERIFY(!dialog.remember());
+    }
+
+    // Without a window to show over, the request shows as a Fluent window of its own with the same cards
+    {
+        BrowserAccessControlDialog dialog(nullptr);
+        dialog.setEntries(entries, "https://example.com/login", false);
+        QTimer::singleShot(10000, &dialog, &QDialog::reject);
+        bool shown = false;
+        QTimer::singleShot(0, this, [&] {
+            QTRY_VERIFY(dialog.isVisible());
+            shown = true;
+            QVERIFY(!m_mainWindow->findChild<ContentDialog*>("accessControlDialog"));
+            QVERIFY(dialog.findChild<QLabel*>("accessTitle")->isVisible());
+            QVERIFY(!dialog.findChild<QTableWidget*>()->isVisible());
+            auto* allow = dialog.findChild<QPushButton*>("accessAllow");
+            QVERIFY(allow->isVisible());
+            QVERIFY(allow->isEnabled());
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                dialog.grab().save(QDir(dir).absoluteFilePath("vault-access-control-window.png"));
+            }
+            for (int i = 0; i < 3; ++i) {
+                dialog.findChild<QAbstractButton*>(QString("accessEntryChoice%1").arg(i))->setChecked(false);
+            }
+            QVERIFY(!allow->isEnabled());
+            dialog.findChild<QAbstractButton*>("accessEntryChoice1")->setChecked(true);
+            QVERIFY(allow->isEnabled());
+            allow->click();
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QVERIFY(shown);
+        const auto selected = dialog.getEntries(SelectionType::Selected);
+        QCOMPARE(selected.size(), 1);
+        QCOMPARE(selected.first()->row(), 1);
     }
 
     // Locking the database denies the request
@@ -1900,7 +1941,8 @@ void TestGuiVault::testSidebarListsOnlyTags()
     QVERIFY(tagsHeader->isChecked());
 
     // Clicking a tag still searches for it
-    QTest::mouseClick(tagView->viewport(), Qt::LeftButton, {}, tagView->visualRect(tagView->model()->index(0, 0)).center());
+    QTest::mouseClick(
+        tagView->viewport(), Qt::LeftButton, {}, tagView->visualRect(tagView->model()->index(0, 0)).center());
     QTRY_VERIFY(m_dbWidget->isSearchActive());
     QVERIFY(m_dbWidget->getCurrentSearch().startsWith("tag:"));
     m_dbWidget->endSearch();
@@ -1965,8 +2007,7 @@ void TestGuiVault::testScreenshots()
         totpModal->findChild<QRadioButton*>("radioCustom")->setChecked(true);
         QApplication::processEvents();
         QTest::qWait(100);
-        QVERIFY(
-            m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-totp-custom-%1.png").arg(theme))));
+        QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-totp-custom-%1.png").arg(theme))));
         QTest::keyClick(totpModal, Qt::Key_Escape);
         QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultTotpSetupModal"));
         m_mainWindow->findChild<QAction*>("actionAbout")->trigger();
@@ -1989,14 +2030,17 @@ void TestGuiVault::testScreenshots()
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();
         QTest::qWait(100);
-        QVERIFY(
-            m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-settings-%1.png").arg(theme))));
-        m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList")->setCurrentRow(2);
+        QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-settings-%1.png").arg(theme))));
+        m_mainWindow->findChild<ApplicationSettingsWidget*>()
+            ->findChild<QListWidget*>("categoryList")
+            ->setCurrentRow(2);
         QApplication::processEvents();
         QVERIFY(m_mainWindow->grab().save(
             QDir(dir).absoluteFilePath(QString("vault-settings-autotype-%1.png").arg(theme))));
-        auto* categories = m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList");
-        for (const auto& name : {QStringLiteral("Browser Integration"), QStringLiteral("SSH Agent"), QStringLiteral("KeeShare")}) {
+        auto* categories =
+            m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList");
+        for (const auto& name :
+             {QStringLiteral("Browser Integration"), QStringLiteral("SSH Agent"), QStringLiteral("KeeShare")}) {
             const auto items = categories->findItems(name, Qt::MatchExactly);
             if (items.isEmpty()) {
                 continue;
@@ -2006,7 +2050,9 @@ void TestGuiVault::testScreenshots()
             const auto file = QString("vault-settings-%1-%2.png").arg(name.toLower().remove(' '), theme);
             QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(file)));
         }
-        m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList")->setCurrentRow(0);
+        m_mainWindow->findChild<ApplicationSettingsWidget*>()
+            ->findChild<QListWidget*>("categoryList")
+            ->setCurrentRow(0);
         m_mainWindow->findChild<QAction*>("actionSettings")->trigger();
         QApplication::processEvents();
         // Includes the native window controls; needs screen recording permission
