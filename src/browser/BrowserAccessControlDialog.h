@@ -24,12 +24,16 @@
 
 class Entry;
 class QAbstractButton;
+class QLabel;
+class QPushButton;
 class VaultButton;
 
 namespace fluent::textfields
 {
     class Label;
 }
+
+class VaultSettingsSection;
 
 namespace Ui
 {
@@ -73,26 +77,34 @@ private:
     bool areAllDisabled() const;
     QList<QTableWidgetItem*> getAllItems() const;
     void setupVaultLayout();
-    void addVaultEntryRow(int row);
+    void addVaultEntryRow(int row, const Entry* entry);
     void syncVaultEntryRow(int row);
     bool hasVaultChoice() const;
+    bool canShowOverWindow() const;
     int execVaultDialog();
+    int execVaultWindow();
 
 private:
     QScopedPointer<Ui::BrowserAccessControlDialog> m_ui;
     QList<Entry*> m_entriesToConfirm;
 
-    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these cards
+    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these
+    // cards. Without a window to show over, the dialog shows them in a Fluent window of its own.
     struct VaultEntryRow
     {
         QAbstractButton* choice;
-        fluent::textfields::Label* username;
+        QLabel* title;
+        QLabel* username;
         VaultButton* disable;
     };
     QWidget* m_vaultCards = nullptr;
     fluent::textfields::Label* m_vaultMessage = nullptr;
-    QWidget* m_vaultEntryList = nullptr;
+    VaultSettingsSection* m_vaultEntries = nullptr;
     QList<VaultEntryRow> m_vaultEntryRows;
+    // The dialog's own title and commands, for when it shows as a window of its own
+    fluent::textfields::Label* m_vaultTitle = nullptr;
+    QWidget* m_vaultCommands = nullptr;
+    QPushButton* m_vaultAllow = nullptr;
 };
 
 #endif // KEEPASSXC_BROWSERACCESSCONTROLDIALOG_H

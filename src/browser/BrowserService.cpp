@@ -1715,14 +1715,17 @@ void BrowserService::raiseWindow(const bool force)
         m_prevWindowState = WindowState::Minimized;
     }
 #ifdef Q_OS_MACOS
-    Q_UNUSED(force)
-
     if (macUtils()->isHidden()) {
         m_prevWindowState = WindowState::Hidden;
     } else if (getMainWindow()->isMinimizedToSystemTray()) {
         m_prevWindowState = WindowState::HiddenInSystemTray;
     }
     macUtils()->raiseOwnWindow();
+    // Activating the app leaves a minimized window in the Dock and one closed to the tray hidden, so a dialog that
+    // shows over the window would have nothing to show over. hideWindow() puts it back afterwards.
+    if (force) {
+        getMainWindow()->bringToFront();
+    }
     Tools::wait(500);
 #else
     if (getMainWindow()->isHidden()) {
