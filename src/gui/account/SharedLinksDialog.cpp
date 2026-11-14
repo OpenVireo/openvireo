@@ -193,8 +193,6 @@ void SharedLinksDialog::revokeSelected()
 
 void SharedLinksDialog::shareText()
 {
-    auto* dialog = new ShareLinkDialog(m_shares, {}, nullptr, this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    auto* dialog = ShareLinkDialog::present(m_shares, {}, nullptr, this);
     connect(dialog, &QDialog::finished, this, &SharedLinksDialog::reload);
-    dialog->open();
 }

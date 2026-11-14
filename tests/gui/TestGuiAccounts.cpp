@@ -44,6 +44,7 @@
 #include "gui/account/EmergencyKitDialog.h"
 #include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
+#include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/notifications/NotificationCenter.h"
@@ -54,6 +55,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultModal.h"
 #include "gui/wizard/ImportWizard.h"
 #include "keys/PasswordKey.h"
 
@@ -1880,4 +1882,58 @@ void TestGuiAccounts::testUnlocksOfflineFromTheLockScreen()
     const auto accountId = account->accountId();
     controller->signOut();
     QVERIFY(!QFile::exists(AccountOfflineCache::path(accountId)));
+}
+
+void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
+{
+    FluentTheme::setVaultLayoutEnabledForTests(true);
+    Database db;
+    auto* entry = new Entry();
+    entry->setUuid(QUuid::createUuid());
+    entry->setTitle("Mail");
+    entry->setUsername("someone@example.com");
+    entry->setPassword("hunter2");
+    entry->setGroup(db.rootGroup());
+
+    // Over the main window, the dialog is the content of a card that brings the title and the buttons
+    QWidget host;
+    host.resize(1100, 800);
+    host.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&host));
+    QPointer<ShareLinkDialog> dialog = ShareLinkDialog::present(nullptr, "vault", entry, &host);
+    QVERIFY(host.findChild<VaultModal*>());
+    QVERIFY(!child<QWidget>(dialog, "shareLinkCommands")->isVisibleTo(dialog));
+    auto* make = child<QPushButton>(&host, "vaultShareLinkMake");
+    QVERIFY(make && make->isVisible());
+    // No way to make links here, so nothing to make one with
+    QVERIFY(!make->isEnabled());
+
+    // The passcode shows only while it's asked for
+    auto* passcode = child<QLineEdit>(dialog, "shareLinkPasscode");
+    QVERIFY(!passcode->isVisibleTo(dialog));
+    auto* require = dialog->findChild<VaultCheckBox*>();
+    QVERIFY(require);
+    for (auto* box : dialog->findChildren<VaultCheckBox*>()) {
+        if (box->text() == ShareLinkDialog::tr("Require a passcode")) {
+            require = box;
+        }
+    }
+    require->setChecked(true);
+    QVERIFY(passcode->isVisibleTo(dialog));
+    QCOMPARE(passcode->text().size(), 14);
+
+    // Cancel closes the card with the dialog
+    QTest::mouseClick(child<QPushButton>(&host, "vaultShareLinkCancel"), Qt::LeftButton);
+    QTRY_VERIFY(!dialog);
+    QTRY_VERIFY(!host.findChild<VaultModal*>());
+
+    // Over another dialog, it is a Fluent window of its own with its own commands
+    QDialog other;
+    other.show();
+    QPointer<ShareLinkDialog> text = ShareLinkDialog::present(nullptr, {}, nullptr, &other);
+    QVERIFY(text->isWindow());
+    QVERIFY(child<QWidget>(text, "shareLinkCommands")->isVisibleTo(text));
+    text->reject();
+    QTRY_VERIFY(!text);
+    FluentTheme::setVaultLayoutEnabledForTests(false);
 }
