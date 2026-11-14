@@ -1074,9 +1074,7 @@ void MainWindow::showShareLinkDialog()
                              MessageWidget::Information);
         return;
     }
-    auto* dialog = new ShareLinkDialog(m_accountController->itemShare(), vaultId, entry, this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->open();
+    ShareLinkDialog::present(m_accountController->itemShare(), vaultId, entry, this);
 }
 
 void MainWindow::showSharedLinks()
