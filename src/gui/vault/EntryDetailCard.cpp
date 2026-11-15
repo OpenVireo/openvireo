@@ -21,8 +21,10 @@
 #include "core/Config.h"
 #include "core/Entry.h"
 #include "core/EntryAttachments.h"
+#include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/Totp.h"
+#include "gui/Clipboard.h"
 #include "gui/Font.h"
 #include "gui/Icons.h"
 #include "gui/styles/FluentTheme.h"
@@ -101,6 +103,7 @@ EntryDetailCard::EntryDetailCard(QWidget* parent)
     , m_icon(new QLabel(this))
     , m_title(new QLabel(this))
     , m_subtitle(new QLabel(this))
+    , m_attributesLabel(new QLabel(tr("Additional attributes"), this))
     , m_meta(new QLabel(this))
     , m_notesLabel(new QLabel(tr("Notes"), this))
     , m_notes(new QLabel(this))
@@ -199,6 +202,14 @@ EntryDetailCard::EntryDetailCard(QWidget* parent)
     fieldsLayout->addWidget(m_urlRow);
     layout->addWidget(m_fields);
 
+    // Custom attributes, one row each, rebuilt per entry
+    layout->addWidget(m_attributesLabel);
+    m_attributes = new FieldGroup(content);
+    auto* attributesLayout = new QVBoxLayout(m_attributes);
+    attributesLayout->setContentsMargins(0, 0, 0, 0);
+    attributesLayout->setSpacing(0);
+    layout->addWidget(m_attributes);
+
     // Tags, expiry and attachments
     m_meta->setWordWrap(true);
     m_meta->setTextFormat(Qt::PlainText);
@@ -245,6 +256,7 @@ void EntryDetailCard::setEntry(Entry* entry)
         m_passwordRevealed = false;
         m_totpRevealed = false;
         m_notesRevealed = false;
+        m_revealedAttributes.clear();
     }
     m_entry = entry;
     refresh();
@@ -280,6 +292,7 @@ void EntryDetailCard::refresh()
     updateHeader();
     updateFields();
     updateTotp();
+    updateAttributes();
     updateMeta();
     m_pages->setCurrentIndex(1);
 }
@@ -299,8 +312,12 @@ void EntryDetailCard::applyColors()
     Vault::styleLabel(m_subtitle, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_meta, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_notesLabel, Typography::FontRole::BodyStrong, p.text);
+    Vault::styleLabel(m_attributesLabel, Typography::FontRole::BodyStrong, p.text);
     Vault::styleLabel(m_notes, Typography::FontRole::Body, p.textSecondary);
     for (auto* row : {m_usernameRow, m_passwordRow, m_totpRow, m_urlRow}) {
+        row->applyColors();
+    }
+    for (auto* row : m_attributeRows) {
         row->applyColors();
     }
     Vault::styleLabel(m_urlRow->value(), Typography::FontRole::Body, p.accentText);
@@ -393,6 +410,62 @@ void EntryDetailCard::updateTotp()
     if (!m_totpTimer->isActive()) {
         m_totpTimer->start();
     }
+}
+
+void EntryDetailCard::updateAttributes()
+{
+    // deleteLater: a reveal click rebuilds the rows from inside that row's own button
+    for (auto* row : m_attributeRows) {
+        row->hide();
+        m_attributes->layout()->removeWidget(row);
+        row->deleteLater();
+    }
+    m_attributeRows.clear();
+
+    const auto* attributes = m_entry->attributes();
+    // TOTP lives in custom attributes but already has its own row
+    auto keys = attributes->customKeys();
+    if (m_entry->hasTotp()) {
+        keys.removeAll(Totp::ATTRIBUTE_OTP);
+        keys.removeAll(Totp::ATTRIBUTE_SEED);
+        keys.removeAll(Totp::ATTRIBUTE_SETTINGS);
+    }
+    m_attributesLabel->setVisible(!keys.isEmpty());
+    m_attributes->setVisible(!keys.isEmpty());
+
+    auto* layout = static_cast<QVBoxLayout*>(m_attributes->layout());
+    for (const auto& key : keys) {
+        const bool isProtected = attributes->isProtected(key);
+        const bool revealed = m_revealedAttributes.contains(key);
+
+        auto* row = new VaultFieldRow(key, m_attributes);
+        row->caption()->setToolTip(key);
+        row->caption()->setWordWrap(true);
+        row->value()->setWordWrap(true);
+        row->value()->setTextFormat(Qt::PlainText);
+        row->value()->setText(isProtected && !revealed ? HiddenText : resolved(m_entry, attributes->value(key)));
+
+        auto* copy = row->addButton(Typography::Icons::Copy, tr("Copy %1").arg(key));
+        connect(copy, &QAbstractButton::clicked, this, [this, key] {
+            if (m_entry) {
+                clipboard()->setText(resolved(m_entry, m_entry->attributes()->value(key)),
+                                     config()->get(Config::Security_ClearClipboard).toBool());
+            }
+        });
+        if (isProtected) {
+            auto* reveal = row->addButton(Typography::Icons::RevealPasswordMedium,
+                                          revealed ? tr("Hide %1").arg(key) : tr("Show %1").arg(key));
+            connect(reveal, &QAbstractButton::clicked, this, [this, key] {
+                if (!m_revealedAttributes.remove(key)) {
+                    m_revealedAttributes.insert(key);
+                }
+                updateAttributes();
+            });
+        }
+        layout->addWidget(row);
+        m_attributeRows << row;
+    }
+    m_attributes->update();
 }
 
 void EntryDetailCard::updateMeta()

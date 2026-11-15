@@ -21,6 +21,7 @@
 #include "config-keepassx.h"
 #include "core/Config.h"
 #include "core/Database.h"
+#include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/KdbxImport.h"
 #include "core/Metadata.h"
@@ -269,6 +270,55 @@ void TestGuiVault::testDetailCardFollowsSelection()
     m_github->setUsername("bongani-dev");
     QTRY_VERIFY(hasLabelWithText(card, "bongani-dev"));
     m_github->setUsername("bongani");
+}
+
+void TestGuiVault::testDetailCardAttributes()
+{
+    auto* card = m_dbWidget->findChild<EntryDetailCard*>();
+    auto findButton = [card](const QString& toolTip) -> QAbstractButton* {
+        for (auto* button : card->findChildren<QAbstractButton*>()) {
+            if (button->toolTip() == toolTip && button->isVisible()) {
+                return button;
+            }
+        }
+        return nullptr;
+    };
+
+    // No custom attributes, no section
+    selectEntry(m_github);
+    QTRY_VERIFY(hasLabelWithText(card, "GitHub"));
+    QVERIFY(!hasLabelWithText(card, "Additional attributes"));
+
+    m_github->attributes()->set("Account ID", "acme-4821");
+    m_github->attributes()->set("Recovery PIN", "735190", true);
+    // New rows show on the next event loop pass
+    QTRY_VERIFY(hasLabelWithText(card, "Recovery PIN"));
+    QVERIFY(hasLabelWithText(card, "Additional attributes"));
+    QVERIFY(hasLabelWithText(card, "Account ID"));
+    QVERIFY(hasLabelWithText(card, "acme-4821"));
+    // TOTP is stored as custom attributes but keeps its own row
+    QVERIFY(!hasLabelWithText(card, "otp"));
+    // Protected values stay hidden until revealed
+    QVERIFY(!hasLabelWithText(card, "735190"));
+    QVERIFY(!findButton("Show Account ID"));
+
+    QAbstractButton* reveal = nullptr;
+    QTRY_VERIFY((reveal = findButton("Show Recovery PIN")));
+    QTest::mouseClick(reveal, Qt::LeftButton);
+    QTRY_VERIFY(hasLabelWithText(card, "735190"));
+    QTRY_VERIFY((reveal = findButton("Hide Recovery PIN")));
+    QTest::mouseClick(reveal, Qt::LeftButton);
+    QTRY_VERIFY(!hasLabelWithText(card, "735190"));
+
+    // Copy puts the real value on the clipboard, protected or not
+    QAbstractButton* copy = nullptr;
+    QTRY_VERIFY((copy = findButton("Copy Recovery PIN")));
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(QApplication::clipboard()->text(), QString("735190"));
+
+    m_github->attributes()->remove("Account ID");
+    m_github->attributes()->remove("Recovery PIN");
+    QTRY_VERIFY(!hasLabelWithText(card, "Additional attributes"));
 }
 
 void TestGuiVault::testCommandBar()
