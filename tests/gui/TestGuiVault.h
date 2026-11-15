@@ -40,6 +40,7 @@ private slots:
     void testLayout();
     void testEntryListMode();
     void testDetailCardFollowsSelection();
+    void testDetailCardAttributes();
     void testCommandBar();
     void testEditEntryInPlace();
     void testNewEntryModal();

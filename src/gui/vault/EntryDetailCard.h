@@ -18,7 +18,9 @@
 #ifndef KEEPASSXC_ENTRYDETAILCARD_H
 #define KEEPASSXC_ENTRYDETAILCARD_H
 
+#include <QList>
 #include <QPointer>
+#include <QSet>
 
 #include <components/layout/Card.h>
 
@@ -56,6 +58,7 @@ private:
     void updateFields();
     void updateTotp();
     void updateMeta();
+    void updateAttributes();
     void applyColors();
 
     QPointer<Entry> m_entry;
@@ -81,6 +84,11 @@ private:
     fluent::basicinput::Button* m_usernameRevealButton;
     fluent::basicinput::Button* m_passwordRevealButton;
     fluent::basicinput::Button* m_totpRevealButton;
+
+    QLabel* m_attributesLabel;
+    QWidget* m_attributes;
+    QList<VaultFieldRow*> m_attributeRows;
+    QSet<QString> m_revealedAttributes;
 
     QLabel* m_meta;
     QLabel* m_notesLabel;
