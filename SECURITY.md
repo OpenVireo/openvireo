@@ -1,46 +1,61 @@
-### Reporting Security Issues
+# Security Policy
 
-The KeePassXC team takes security vulnerabilities very seriously and appreciates your responsible disclosure efforts. We will make every effort to acknowledge your contributions and handle them promptly.
+OpenVireo is a password manager, so security reports are our top priority. Thank you for reporting responsibly.
 
-To report a security issue, please use one of the following methods:
+## Reporting a vulnerability
 
-- **GitHub Security Advisory:** Use the ["Report a Vulnerability"](https://github.com/keepassxreboot/keepassxc/security/advisories/new) tab on our GitHub repository.
-- **Private Matrix Message:** Contact any of the following KeePassXC team members privately (also encrypted):
-  - [@droidmonkey_kpxc](https://matrix.to/#/@droidmonkey_kpxc:matrix.org)
-  - [@varjolintu](https://matrix.to/#/@varjolintu:matrix.org)
-  - [@phoerious](https://matrix.to/#/@phoerious:matrix.org)
-- **Send an Email:** Send your report to team@keepassxc.org. We recommend encrypting the email if possible.
+Please **do not** open a public issue, discussion or pull request for a security problem.
 
-Please **DO NOT** use public channels (e.g., GitHub issues, Matrix chat channels) for initial reporting of bona fide security vulnerabilities.
+- **GitHub (preferred):** use [Report a vulnerability](https://github.com/openvireo/openvireo/security/advisories/new) on the affected repository's **Security** tab. Private reporting is turned on for every public OpenVireo repository.
+- **Email:** send your report to [admin@openvireo.com](mailto:admin@openvireo.com) with "Security" in the subject.
 
-Once you report a security issue, our team will respond with the next steps. After our initial reply, we will keep you informed of the progress towards a fix and full announcement. We may ask for additional information or guidance during this process. If we disagree that your report constitutes a genuine security vulnerability, we will inform you and close the report. Your report may be turned into an issue for further tracking.
+Please include:
 
-If you discover vulnerabilities in third-party modules used by KeePassXC, please report them to the maintainers of the respective modules. If the vulnerability impacts KeePassXC directly, we encourage you to notify us using the above methods. We will validate if the vulnerability is exploitable from KeePassXC code; please note that not all vulnerabilities are actually exploitable and do not constitute an immediate concern for the KeePassXC application.
+- the product and version (desktop, browser extension, iOS, web vault, SDK/CLI, sync server, or the openvireo.com account service)
+- steps to reproduce, or a proof of concept
+- the impact you think it has
 
-### Example Security Vulnerabilities
+## What to expect
 
-When reporting, please ensure the issue falls under what can be considered a genuine security vulnerability for KeePassXC. Some examples include:
+- We acknowledge your report within **3 business days**.
+- We keep you updated while we investigate and fix it, and agree a disclosure date with you.
+- We credit you in the advisory and release notes, unless you prefer to stay anonymous.
 
-- Unauthorized access to sensitive user data (e.g., passwords).
-- Remote code execution or escalation of privileges.
-- Bypassing authentication or encryption mechanisms.
-- Broken or improperly implemented encryption methods. 
+If we decide the report is not a vulnerability, we tell you why. We may turn it into a normal issue.
 
-### Counter Examples
+## Scope
 
-The following issues are **not** considered security vulnerabilities:
+In scope:
 
-- Bugs caused by locally modifying the application (e.g., injecting DLLs, altering code).
-- Crashes or misbehavior resulting from normal use (report this as a normal issue).
-- Vulnerabilities found in third-party modules (should be reported to the module’s maintainers).
-  
-### CVE Reporting Policy
+- the OpenVireo apps: desktop, browser extension, iOS, and the web vault at app.openvireo.com
+- the OpenVireo SDK, `ov` CLI, connect server and sync server
+- the openvireo.com services: accounts, sync, app and share links
 
-Please **DO NOT** submit a report to a Common Vulnerabilities and Exposures (CVE) Numbering Authority (CNA) before confirming the security vulnerability with the KeePassXC team. If we do not respond to your report within 30 days, this restriction no longer applies.
+Examples of real vulnerabilities:
 
+- unauthorized access to vault data, master passwords, Secret Keys or account keys
+- bypassing authentication, two-step login, account recovery, or organization access controls
+- weak or broken cryptography, or plaintext secrets leaking to the server, logs or disk
+- remote code execution or privilege escalation
 
-### Other Communication
+Out of scope:
 
-For other inquiries (e.g., developer questions, user questions), please use the public channels on Matrix:
-- **User's Channel:** [#keepassxc:mozilla.org](https://matrix.to/#/#keepassxc:mozilla.org)
-- **Developer's Channel:** [#keepassxc-dev:mozilla.org](https://matrix.to/#/#keepassxc-dev:mozilla.org)
+- issues that require an already compromised device, or a locally modified app (for example injected DLLs)
+- crashes or misbehavior from normal use (please open a normal issue)
+- missing best-practice headers, or rate limits, without a demonstrated impact
+- denial of service, social engineering, or physical attacks
+- vulnerabilities in third-party dependencies that OpenVireo cannot exploit (please report these upstream)
+
+Problems in code inherited from KeePassXC or KeePassXC-Browser that also affect upstream should also be reported to the [KeePassXC team](https://github.com/keepassxreboot/keepassxc/security).
+
+## Safe harbor
+
+We will not take legal action against research done in good faith under this policy. That means you avoid privacy violations, data destruction and service disruption, only test against accounts you own, and give us reasonable time to fix the problem before you disclose it.
+
+## CVEs
+
+Please do not request a CVE before we have confirmed the issue. If we do not reply within 30 days, this no longer applies.
+
+## Verifying releases
+
+Releases are signed with the OpenVireo release key, fingerprint `FE27 78BF 0747 05E0 994B BAF9 FEBA 3556 2DE1 04CB`. See [Verifying signatures](https://openvireo.com/verifying-signatures/).
