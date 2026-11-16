@@ -1301,6 +1301,82 @@ void TestSyncEngine::testKeepsADeletedGroupThatGainedAnEntry()
     }
 }
 
+void TestSyncEngine::testKeepsAMoveFromOneDeviceAndAnEditFromAnother()
+{
+    auto* clock = new MockClock();
+    MockClock::setup(clock);
+    auto teardown = qScopeGuard([] { MockClock::teardown(); });
+    Fixture first("first");
+    QVERIFY(first.local);
+    QScopedPointer<Fixture> second;
+    QVERIFY(twoDevicesWithWork(first, second, clock));
+
+    // Moved out of Work on the first device, edited later on the second, before either syncs
+    clock->advanceMinute(1);
+    findEntry(first.local.data(), "In Work")->setGroup(first.local->rootGroup());
+    clock->advanceMinute(1);
+    findEntry(second->local.data(), "In Work")->setPassword("edited");
+    for (int i = 0; i < 2; ++i) {
+        clock->advanceMinute(1);
+        QVERIFY(first.sync().value(0).toBool());
+        clock->advanceMinute(1);
+        QVERIFY(second->sync().value(0).toBool());
+    }
+
+    // Both keep the move and the edit, so the copies are the same
+    const auto* firstEntry = findEntry(first.local.data(), "In Work");
+    const auto* secondEntry = findEntry(second->local.data(), "In Work");
+    QVERIFY(firstEntry && secondEntry);
+    for (const auto* entry : {firstEntry, secondEntry}) {
+        QCOMPARE(entry->group()->uuid(), entry->database()->rootGroup()->uuid());
+        QCOMPARE(entry->password(), QString("edited"));
+    }
+    QCOMPARE(firstEntry->timeInfo().locationChanged().toSecsSinceEpoch(),
+             secondEntry->timeInfo().locationChanged().toSecsSinceEpoch());
+    auto serverCopy = openServerCopy(first.server, first.dir.filePath("check.kdbx"));
+    QVERIFY(serverCopy);
+    const auto* serverEntry = findEntry(serverCopy.data(), "In Work");
+    QVERIFY(serverEntry);
+    QCOMPARE(serverEntry->group(), serverCopy->rootGroup());
+    QCOMPARE(serverEntry->password(), QString("edited"));
+}
+
+void TestSyncEngine::testBringsTogetherCopiesInDifferentGroups()
+{
+    // Copies left in different groups with the same location-changed time (by an older version's merge)
+    // end up together, where this device has it
+    Database local;
+    Database remote;
+    const auto time = QDateTime(QDate(2026, 3, 1), QTime(10, 0), QTimeZone::utc());
+    const auto groupUuid = QUuid::createUuid();
+    const auto entryUuid = QUuid::createUuid();
+    for (auto* db : {&local, &remote}) {
+        db->rootGroup()->setUuid(QUuid("{6e3a9f40-1c2b-4d5e-8f70-9a1b2c3d4e5f}"));
+        auto* group = new Group();
+        group->setUuid(groupUuid);
+        group->setName("Work");
+        group->setParent(db->rootGroup());
+        auto* entry = new Entry();
+        entry->setUuid(entryUuid);
+        entry->setTitle("Bank");
+        entry->setGroup(db == &local ? group : db->rootGroup());
+        entry->setUpdateTimeinfo(false);
+        auto timeInfo = entry->timeInfo();
+        timeInfo.setLastModificationTime(time);
+        timeInfo.setLocationChanged(time);
+        entry->setTimeInfo(timeInfo);
+    }
+
+    const auto changes = SyncEngine::mergeDatabases(&local, &remote, nullptr);
+    QVERIFY(!changes.isEmpty());
+    for (auto* db : {&local, &remote}) {
+        const auto* entry = db->rootGroup()->findEntryByUuid(entryUuid);
+        QVERIFY(entry);
+        QCOMPARE(entry->group()->uuid(), groupUuid);
+        QCOMPARE(entry->timeInfo().locationChanged(), time);
+    }
+}
+
 void TestSyncEngine::testMergesRecycleBinsMadeOnTwoDevices()
 {
     auto* clock = new MockClock();
