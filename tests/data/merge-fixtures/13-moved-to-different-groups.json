@@ -1,0 +1,123 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            },
+            {
+                "name": "Home",
+                "uuid": "d4000000-0000-4000-8000-000000000004"
+            }
+        ]
+    },
+    "description": "Both moved the entry: local into Work at 10:00 (also adding Notes), remote into Home at 10:30. The later move wins, so both copies end in Home at 10:30, and local's Notes are kept as only local changed the fields. Without the rule each copy kept its own group with the same location-changed time.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Notes": "PIN in safe",
+                        "Password": "old-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "group": "d4000000-0000-4000-8000-000000000004",
+                    "history_count": 1,
+                    "location_changed": "2026-03-01T10:30:00Z",
+                    "modified": "2026-03-01T10:00:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ],
+            "groups": [
+                {
+                    "name": "Work",
+                    "parent": "6e3a9f40-1c2b-4d5e-8f70-9a1b2c3d4e5f",
+                    "uuid": "c3000000-0000-4000-8000-000000000003"
+                },
+                {
+                    "name": "Home",
+                    "parent": "6e3a9f40-1c2b-4d5e-8f70-9a1b2c3d4e5f",
+                    "uuid": "d4000000-0000-4000-8000-000000000004"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Notes": "PIN in safe",
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "group": "c3000000-0000-4000-8000-000000000003",
+                "location_changed": "2026-03-01T10:00:00Z",
+                "modified": "2026-03-01T10:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            },
+            {
+                "name": "Home",
+                "uuid": "d4000000-0000-4000-8000-000000000004"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "group": "d4000000-0000-4000-8000-000000000004",
+                "location_changed": "2026-03-01T10:30:00Z",
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            },
+            {
+                "name": "Home",
+                "uuid": "d4000000-0000-4000-8000-000000000004"
+            }
+        ]
+    }
+}

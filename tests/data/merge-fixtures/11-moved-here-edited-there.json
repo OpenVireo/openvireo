@@ -1,0 +1,102 @@
+{
+    "base": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            }
+        ]
+    },
+    "description": "Local moved the entry into Work at 10:00 without editing it; remote changed its password at 10:05 and left it in the root. Both copies end in Work with the move's location-changed time (10:00) and remote's password: the location comes from the copy moved last, the fields from the usual comparison. Without that rule both copies landed in Work but lost the move's time.",
+    "expected": {
+        "conflicts": {
+        },
+        "result": {
+            "deleted": [
+            ],
+            "entries": [
+                {
+                    "attributes": {
+                        "Password": "new-password",
+                        "Title": "Bank",
+                        "URL": "https://bank.example",
+                        "UserName": "alice"
+                    },
+                    "group": "c3000000-0000-4000-8000-000000000003",
+                    "history_count": 1,
+                    "location_changed": "2026-03-01T10:00:00Z",
+                    "modified": "2026-03-01T10:05:00Z",
+                    "uuid": "a1000000-0000-4000-8000-000000000001"
+                }
+            ],
+            "groups": [
+                {
+                    "name": "Work",
+                    "parent": "6e3a9f40-1c2b-4d5e-8f70-9a1b2c3d4e5f",
+                    "uuid": "c3000000-0000-4000-8000-000000000003"
+                }
+            ]
+        }
+    },
+    "local": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Password": "old-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "group": "c3000000-0000-4000-8000-000000000003",
+                "location_changed": "2026-03-01T10:00:00Z",
+                "modified": "2026-03-01T09:00:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            }
+        ]
+    },
+    "now": "2026-03-01T12:00:00Z",
+    "remote": {
+        "deleted": [
+        ],
+        "entries": [
+            {
+                "attributes": {
+                    "Password": "new-password",
+                    "Title": "Bank",
+                    "URL": "https://bank.example",
+                    "UserName": "alice"
+                },
+                "modified": "2026-03-01T10:05:00Z",
+                "uuid": "a1000000-0000-4000-8000-000000000001"
+            }
+        ],
+        "groups": [
+            {
+                "name": "Work",
+                "uuid": "c3000000-0000-4000-8000-000000000003"
+            }
+        ]
+    }
+}
