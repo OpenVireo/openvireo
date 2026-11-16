@@ -30,6 +30,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -60,6 +61,11 @@ namespace
         return time.toUTC().toString(Qt::ISODate);
     }
 
+    QDateTime timeOr(const QJsonValue& value, const QDateTime& fallback)
+    {
+        return value.isString() ? parseTime(value) : fallback;
+    }
+
     QSharedPointer<Database> buildDatabase(const QJsonObject& json)
     {
         auto db = QSharedPointer<Database>::create();
@@ -73,6 +79,38 @@ namespace
         rootTime.setLastAccessTime(RootTime);
         rootTime.setLocationChanged(RootTime);
         root->setTimeInfo(rootTime);
+
+        // Groups may be listed in any order; each goes under its parent once that exists
+        QHash<QUuid, Group*> groups{{RootUuid, root}};
+        auto pending = json.value("groups").toArray().toVariantList();
+        while (!pending.isEmpty()) {
+            const auto before = pending.size();
+            for (auto it = pending.begin(); it != pending.end();) {
+                const auto object = QJsonObject::fromVariantMap(it->toMap());
+                const QUuid parentUuid(object.value("parent").toString(RootUuid.toString(QUuid::WithoutBraces)));
+                auto* parent = groups.value(parentUuid);
+                if (!parent) {
+                    ++it;
+                    continue;
+                }
+                auto* group = new Group();
+                group->setUpdateTimeinfo(false);
+                group->setUuid(QUuid(object.value("uuid").toString()));
+                group->setName(object.value("name").toString());
+                TimeInfo time = rootTime;
+                const auto modified = timeOr(object.value("modified"), RootTime);
+                time.setLastModificationTime(modified);
+                time.setLastAccessTime(modified);
+                time.setLocationChanged(timeOr(object.value("location_changed"), RootTime));
+                group->setTimeInfo(time);
+                group->setParent(parent);
+                groups.insert(group->uuid(), group);
+                it = pending.erase(it);
+            }
+            if (pending.size() == before) {
+                qFatal("merge fixture: group parent missing");
+            }
+        }
 
         for (const auto& value : json.value("entries").toArray()) {
             const auto object = value.toObject();
@@ -94,10 +132,17 @@ namespace
             time.setCreationTime(RootTime);
             time.setLastModificationTime(modified);
             time.setLastAccessTime(modified);
-            time.setLocationChanged(RootTime);
+            time.setLocationChanged(timeOr(object.value("location_changed"), RootTime));
             entry->setTimeInfo(time);
-            entry->setGroup(root);
+            const QUuid groupUuid(object.value("group").toString(RootUuid.toString(QUuid::WithoutBraces)));
+            entry->setGroup(groups.value(groupUuid, root));
             entry->setUpdateTimeinfo(true);
+        }
+        // Only now, so adding the entries didn't touch the groups' times
+        for (auto* group : groups) {
+            if (group != root) {
+                group->setUpdateTimeinfo(true);
+            }
         }
         for (const auto& value : json.value("deleted").toArray()) {
             const auto object = value.toObject();
@@ -148,7 +193,34 @@ namespace
             if (!attachments.isEmpty()) {
                 object["attachments"] = attachments;
             }
+            // Where the entry is, only when not the default (directly in the root, never moved)
+            if (entry->group()->uuid() != RootUuid) {
+                object["group"] = entry->group()->uuid().toString(QUuid::WithoutBraces);
+            }
+            if (entry->timeInfo().locationChanged() != RootTime) {
+                object["location_changed"] = formatTime(entry->timeInfo().locationChanged());
+            }
             entryArray << object;
+        }
+        QList<const Group*> groups;
+        for (const auto* group : db->rootGroup()->groupsRecursive(false)) {
+            groups << group;
+        }
+        std::sort(groups.begin(), groups.end(), [](const Group* a, const Group* b) {
+            return a->uuid().toString() < b->uuid().toString();
+        });
+        QJsonArray groupArray;
+        for (const auto* group : groups) {
+            QJsonObject object{{"uuid", group->uuid().toString(QUuid::WithoutBraces)},
+                               {"name", group->name()},
+                               {"parent", group->parentGroup()->uuid().toString(QUuid::WithoutBraces)}};
+            if (group->timeInfo().lastModificationTime() != RootTime) {
+                object["modified"] = formatTime(group->timeInfo().lastModificationTime());
+            }
+            if (group->timeInfo().locationChanged() != RootTime) {
+                object["location_changed"] = formatTime(group->timeInfo().locationChanged());
+            }
+            groupArray << object;
         }
         QStringList deleted;
         for (const auto& object : db->deletedObjects()) {
@@ -157,7 +229,12 @@ namespace
             }
         }
         deleted.sort();
-        return {{"entries", entryArray}, {"deleted", QJsonArray::fromStringList(deleted)}};
+        QJsonObject projection{{"entries", entryArray}, {"deleted", QJsonArray::fromStringList(deleted)}};
+        // Only when there are groups besides the root, so fixtures without groups keep their form
+        if (!groupArray.isEmpty()) {
+            projection["groups"] = groupArray;
+        }
+        return projection;
     }
 } // namespace
 
@@ -215,6 +292,8 @@ void TestMergeFixtures::testFixtures()
     auto remoteResult = project(remote.data());
     QCOMPARE(QJsonDocument(remoteResult.value("entries").toArray()).toJson(),
              QJsonDocument(result.value("entries").toArray()).toJson());
+    QCOMPARE(QJsonDocument(remoteResult.value("groups").toArray()).toJson(),
+             QJsonDocument(result.value("groups").toArray()).toJson());
 
     const QJsonObject actual{{"result", result}, {"conflicts", conflicts}};
     if (qEnvironmentVariableIsSet("KPXC_UPDATE_MERGE_FIXTURES")) {
