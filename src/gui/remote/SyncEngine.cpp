@@ -347,6 +347,84 @@ namespace
         parent->setUpdateTimeinfo(updateTimeinfo);
     }
 
+    /*
+     * Where an entry both sides have ends up: in the group of the copy moved last (newer location-changed
+     * time, whole seconds as the files keep them; local wins a tie), whichever copy wins on its fields.
+     * Merger replaces the older-modified copy with the newer one, location and all, so a move made on one
+     * device and an edit made on the other would leave the copies in different groups with the same
+     * location-changed time, and no later sync would bring them together. Found before anything is
+     * merged, applied to both after Merger.
+     */
+    struct Location
+    {
+        QUuid group; // null for the root group, which Merger treats as the same group whatever its UUID
+        QDateTime changed;
+    };
+
+    QHash<QUuid, Location> locationsOf(const Database* local, const Database* remote)
+    {
+        QHash<QUuid, Location> locations;
+        for (const auto* localEntry : local->rootGroup()->entriesRecursive()) {
+            const auto* remoteEntry = remote->rootGroup()->findEntryByUuid(localEntry->uuid());
+            if (!remoteEntry || !localEntry->group() || !remoteEntry->group()) {
+                continue;
+            }
+            const auto localTime = localEntry->timeInfo().locationChanged();
+            const auto remoteTime = remoteEntry->timeInfo().locationChanged();
+            const auto* winner =
+                localTime.toSecsSinceEpoch() >= remoteTime.toSecsSinceEpoch() ? localEntry : remoteEntry;
+            const auto* group = winner->group();
+            const bool inRoot = group == group->database()->rootGroup();
+            locations.insert(localEntry->uuid(),
+                             {inRoot ? QUuid() : group->uuid(), winner->timeInfo().locationChanged()});
+        }
+        return locations;
+    }
+
+    // Puts each copy where `locations` says, without touching any modification times
+    Merger::ChangeList applyLocations(Database* local, Database* remote, const QHash<QUuid, Location>& locations)
+    {
+        Merger::ChangeList changes;
+        for (auto it = locations.begin(); it != locations.end(); ++it) {
+            bool moved = false;
+            Entry* localEntry = nullptr;
+            for (auto* db : {local, remote}) {
+                auto* entry = db->rootGroup()->findEntryByUuid(it.key());
+                auto* group =
+                    it.value().group.isNull() ? db->rootGroup() : db->rootGroup()->findGroupByUuid(it.value().group);
+                if (!entry || !group) {
+                    continue;
+                }
+                if (db == local) {
+                    localEntry = entry;
+                }
+                auto* previous = entry->group();
+                if (previous == group && entry->timeInfo().locationChanged() == it.value().changed) {
+                    continue;
+                }
+                const bool entryUpdates = entry->canUpdateTimeinfo();
+                const bool previousUpdates = previous->canUpdateTimeinfo();
+                const bool groupUpdates = group->canUpdateTimeinfo();
+                entry->setUpdateTimeinfo(false);
+                previous->setUpdateTimeinfo(false);
+                group->setUpdateTimeinfo(false);
+                entry->setGroup(group);
+                auto timeInfo = entry->timeInfo();
+                timeInfo.setLocationChanged(it.value().changed);
+                entry->setTimeInfo(timeInfo);
+                group->setUpdateTimeinfo(groupUpdates);
+                previous->setUpdateTimeinfo(previousUpdates);
+                entry->setUpdateTimeinfo(entryUpdates);
+                moved = moved || previous != group;
+            }
+            if (moved && localEntry) {
+                changes << Merger::Change(
+                    Merger::Change::Type::Moved, *localEntry, SyncEngine::tr("Moved to where it was moved last"));
+            }
+        }
+        return changes;
+    }
+
     void setDeletion(Database* db, const QUuid& uuid, const DeletedObject* object)
     {
         QList<DeletedObject> deletions;
@@ -1014,6 +1092,8 @@ QStringList SyncEngine::conflictingFields(const Entry* local, const Entry* remot
 Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote, const Database* base)
 {
     Merger::ChangeList changes;
+    // Before combineEntries and Merger copy one entry's location over the other's
+    const auto locations = locationsOf(local, remote);
     if (base) {
         for (auto* localEntry : local->rootGroup()->entriesRecursive()) {
             auto* remoteEntry = remote->rootGroup()->findEntryByUuid(localEntry->uuid());
@@ -1050,6 +1130,7 @@ Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote,
     Merger firstMerge(local, remote);
     Merger secondMerge(remote, local);
     changes += firstMerge.merge() + secondMerge.merge();
+    changes += applyLocations(local, remote, locations);
     if (!pending.isEmpty()) {
         changes += applyDeletions(local, remote, base, pending);
     }
