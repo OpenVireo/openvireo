@@ -101,7 +101,9 @@ namespace
             AccountManager::Org org{json.value("id").toString(),
                                     json.value("name").toString(),
                                     json.value("role").toString(),
-                                    json.value("status").toString()};
+                                    json.value("status").toString(),
+                                    QStringLiteral("on"),
+                                    {}};
             org.shareLinks = json.value("item_share_links").toString("on");
             org.plan = AccountPlan::parse(json.value("plan"));
             orgs << org;

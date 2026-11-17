@@ -178,7 +178,9 @@ QList<AccountVaultsPane::Section> AccountVaultsPane::sections(AccountManager* ac
     for (const auto& orgId : byOrg.keys()) {
         if (!orgId.isEmpty() && account->org(orgId).id.isEmpty()) {
             // Not in /me (yet): still listed, under a generic heading
-            orgs << AccountManager::Org{orgId, {}, {}, {}};
+            AccountManager::Org unknown;
+            unknown.id = orgId;
+            orgs << unknown;
         }
     }
     std::sort(orgs.begin(), orgs.end(), [](const AccountManager::Org& a, const AccountManager::Org& b) {
