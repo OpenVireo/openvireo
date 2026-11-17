@@ -359,7 +359,7 @@ void TestSyncEngine::testStateStoreRoundTrip()
     state.lastSync = QDateTime::currentDateTimeUtc();
     state.generation = 4;
     const auto entryUuid = QUuid::createUuid();
-    state.entries.insert(entryUuid, QDateTime::fromSecsSinceEpoch(1700000000, QTimeZone::utc()));
+    state.entries.insert(entryUuid, QDateTime::fromSecsSinceEpoch(1700000000, QTimeZone::utc()).toUTC());
     QVERIFY(store.save(dbPath, params, state));
 
     auto loaded = store.load(dbPath, params);
@@ -1111,7 +1111,7 @@ namespace
     {
         const auto msec = time.time().msec();
         return QDateTime::fromMSecsSinceEpoch(time.toSecsSinceEpoch() * 1000 + (msec >= 500 ? msec - 400 : msec + 400),
-                                              QTimeZone::utc());
+                                              QTimeZone::utc()).toUTC();
     }
 } // namespace
 
@@ -1347,7 +1347,7 @@ void TestSyncEngine::testBringsTogetherCopiesInDifferentGroups()
     // end up together, where this device has it
     Database local;
     Database remote;
-    const auto time = QDateTime(QDate(2026, 3, 1), QTime(10, 0), QTimeZone::utc());
+    const auto time = QDateTime(QDate(2026, 3, 1), QTime(10, 0), QTimeZone::utc()).toUTC();
     const auto groupUuid = QUuid::createUuid();
     const auto entryUuid = QUuid::createUuid();
     for (auto* db : {&local, &remote}) {
