@@ -49,7 +49,7 @@ namespace
     const QString FixtureDir = QStringLiteral(KEEPASSX_TEST_DATA_DIR "/merge-fixtures");
     // Every copy shares the root group, as copies of one database do
     const QUuid RootUuid("{6e3a9f40-1c2b-4d5e-8f70-9a1b2c3d4e5f}");
-    const QDateTime RootTime = QDateTime(QDate(2026, 1, 1), QTime(0, 0), QTimeZone::utc());
+    const QDateTime RootTime = QDateTime(QDate(2026, 1, 1), QTime(0, 0), QTimeZone::utc()).toUTC();
 
     QDateTime parseTime(const QJsonValue& value)
     {
