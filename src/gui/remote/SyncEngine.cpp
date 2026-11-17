@@ -179,7 +179,7 @@ namespace
             const bool expires = value.toString() != "never";
             timeInfo.setExpires(expires);
             if (expires) {
-                timeInfo.setExpiryTime(QDateTime::fromSecsSinceEpoch(value.toLongLong(), QTimeZone::utc()));
+                timeInfo.setExpiryTime(QDateTime::fromSecsSinceEpoch(value.toLongLong(), QTimeZone::utc()).toUTC());
             }
             entry->setTimeInfo(timeInfo);
         } else if (field == "icon") {
@@ -238,7 +238,7 @@ namespace
         auto* older = localIsNewer ? remote : local;
         const auto when = QDateTime::fromSecsSinceEpoch(
             qMax(Clock::currentDateTimeUtc().toSecsSinceEpoch(), qMax(seconds(local), seconds(remote))),
-            QTimeZone::utc());
+            QTimeZone::utc()).toUTC();
 
         for (auto* entry : {older, newer}) {
             entry->beginUpdate();

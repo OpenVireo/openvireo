@@ -98,7 +98,12 @@ void ServiceAccountAdmin::createOrg(const QString& name, OrgCallback done)
             return;
         }
         const auto json = response.json();
-        Org org{json.value("id").toString(), json.value("name").toString(), json.value("role").toString("owner"), {}};
+        Org org{json.value("id").toString(),
+                json.value("name").toString(),
+                json.value("role").toString("owner"),
+                {},
+                QStringLiteral("on"),
+                {}};
         if (guard && guard->m_account) {
             guard->m_account->reloadVaults();
         }
@@ -128,7 +133,8 @@ void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
                     json.value("name").toString(),
                     json.value("role").toString(),
                     json.value("status").toString(),
-                    json.value("item_share_links").toString("on")};
+                    json.value("item_share_links").toString("on"),
+                    {}};
             org.plan = AccountPlan::parse(json.value("plan"));
             orgs << org;
         }
@@ -891,7 +897,8 @@ void ServiceAccountAdmin::setShareLinks(const QString& orgId, const QString& pol
                  json.value("name").toString(),
                  json.value("role").toString(),
                  {},
-                 json.value("item_share_links").toString("on")},
+                 json.value("item_share_links").toString("on"),
+                 {}},
              {});
     });
 }
