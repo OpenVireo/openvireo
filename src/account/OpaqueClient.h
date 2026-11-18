@@ -21,14 +21,15 @@
 #include "AccountCrypto.h"
 
 /**
- * The client half of OPAQUE (SPEC §8), a thin wrapper over the libopaque C core.
+ * The client half of OPAQUE (SPEC §8), a thin wrapper over openvireo-core's ov-opaque (opaque-ke). Its
+ * records are compatible with libopaque's, so accounts registered by earlier builds still sign in.
  *
  * The password never leaves the device: registration sends a blinded request and then a record the
  * server can't run a dictionary attack on without first answering each guess online, and login proves
  * knowledge of the password without sending it.
  *
- * Builds without libopaque (KPXC_FEATURE_ACCOUNTS off) get a client whose calls all fail; isAvailable()
- * tells them apart. The calls are virtual so tests can replace the protocol.
+ * Builds with KPXC_FEATURE_ACCOUNTS off get a client whose calls all fail; isAvailable() tells them apart.
+ * The calls are virtual so tests can replace the protocol.
  */
 class OpaqueClient
 {

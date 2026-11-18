@@ -445,10 +445,6 @@ target_link_libraries(keepassxc_gui
         ${sshagent_LIB})
 # openvireo-core (cmake/OpenVireoCore.cmake): <ovcore.h>, <ovdesktop.h> and the static library
 target_link_libraries(keepassxc_gui ovcore)
-if(KPXC_FEATURE_ACCOUNTS)
-    target_include_directories(keepassxc_gui SYSTEM PRIVATE ${OPAQUE_INCLUDE_DIRS})
-    target_link_libraries(keepassxc_gui ${OPAQUE_LIBRARIES})
-endif()
 
 if(APPLE)
     target_link_libraries(keepassxc_gui "-framework Foundation -framework AppKit -framework Carbon -framework Security -framework LocalAuthentication -framework ScreenCaptureKit")
