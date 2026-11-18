@@ -24,7 +24,8 @@ class QTcpServer;
 
 /*
  * openvireo-core on the desktop: the Qt Host (CoreHost) against a local HTTP server, the core facade through
- * it, and sign-in to an account that libopaque registered (the build before openvireo-core).
+ * it, sign-in to an account that libopaque registered (the build before openvireo-core), and the account-vault
+ * merge, which runs in the core.
  */
 class TestAccountCore : public QObject
 {
@@ -40,6 +41,7 @@ private slots:
     void testSecretStore();
     void testFileCache();
     void testLibopaqueAccountSignsIn();
+    void testAccountVaultMergeKeepsObjects();
 
 private:
     QTcpServer* m_server = nullptr;

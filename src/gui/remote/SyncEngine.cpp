@@ -24,7 +24,16 @@
 #include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
+#include "crypto/Random.h"
+#include "crypto/kdf/Argon2Kdf.h"
 #include "format/KeePass2Reader.h"
+#include "format/KeePass2Writer.h"
+#include "gui/account/AccountController.h"
+#include "keys/PasswordKey.h"
+
+#include <ovdesktop.h>
+
+#include <QBuffer>
 
 #include <QDir>
 #include <QFile>
@@ -613,6 +622,210 @@ namespace
         }
         return false;
     }
+
+    // ---- the account-vault merge in openvireo-core
+
+    rust::Slice<const uint8_t> slice(const QByteArray& data)
+    {
+        return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
+    }
+
+    QByteArray toByteArray(const rust::Vec<uint8_t>& data)
+    {
+        return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+    }
+
+    /*
+     * The parts of `db` the sync merge reads and writes (groups, entries with history, custom data and icons,
+     * deletion records, the Recycle Bin), as a new database with a throwaway key and a cheap KDF: the copies only
+     * exist to hand the core serialized bytes, and the user's key never crosses.
+     */
+    QSharedPointer<Database> mergeCopyOf(const Database* db, const QSharedPointer<const CompositeKey>& key)
+    {
+        auto copy = QSharedPointer<Database>::create();
+        copy->setEmitModified(false);
+        copy->metadata()->copyAttributesFrom(db->metadata());
+        copy->metadata()->customData()->copyDataFrom(db->metadata()->customData());
+        for (const auto& uuid : db->metadata()->customIconsOrder()) {
+            copy->metadata()->addCustomIcon(uuid, db->metadata()->customIcon(uuid));
+        }
+        auto* root = db->rootGroup()->clone(Entry::CloneIncludeHistory, Group::CloneIncludeEntries);
+        delete copy->setRootGroup(root);
+        // Cloning puts the copies into their groups "now"; the merge needs the original times (LocationChanged
+        // decides moves)
+        for (auto* group : copy->rootGroup()->groupsRecursive(true)) {
+            if (const auto* original = db->rootGroup()->findGroupByUuid(group->uuid())) {
+                group->setUpdateTimeinfo(false);
+                group->setTimeInfo(original->timeInfo());
+            }
+        }
+        for (auto* entry : copy->rootGroup()->entriesRecursive()) {
+            if (const auto* original = db->rootGroup()->findEntryByUuid(entry->uuid())) {
+                entry->setUpdateTimeinfo(false);
+                entry->setTimeInfo(original->timeInfo());
+            }
+        }
+        copy->setDeletedObjects(db->deletedObjects());
+        if (const auto* bin = db->metadata()->recycleBin()) {
+            copy->metadata()->setRecycleBin(copy->rootGroup()->findGroupByUuid(bin->uuid()));
+        }
+        auto kdf = QSharedPointer<Argon2Kdf>::create(Argon2Kdf::Type::Argon2id);
+        kdf->setMemory(1024);
+        kdf->setRounds(1);
+        kdf->setParallelism(1);
+        copy->setKdf(kdf);
+        copy->setKey(key);
+        return copy;
+    }
+
+    bool serialize(const QSharedPointer<Database>& db, QByteArray* data)
+    {
+        QBuffer buffer(data);
+        buffer.open(QIODevice::WriteOnly);
+        KeePass2Writer writer;
+        return writer.writeDatabase(&buffer, db.data());
+    }
+
+    QSharedPointer<Database> deserialize(const QByteArray& data, const QSharedPointer<const CompositeKey>& key)
+    {
+        auto db = QSharedPointer<Database>::create();
+        db->setEmitModified(false);
+        QBuffer buffer;
+        buffer.setData(data);
+        buffer.open(QIODevice::ReadOnly);
+        KeePass2Reader reader;
+        if (!reader.readDatabase(&buffer, key, db.data())) {
+            return {};
+        }
+        return db;
+    }
+
+    void replaceHistory(Entry* target, const Entry* source)
+    {
+        target->removeHistoryItems(target->historyItems());
+        for (const auto* item : source->historyItems()) {
+            target->addHistoryItem(item->clone(Entry::CloneNoFlags));
+        }
+    }
+
+    void applyGroup(const Group* source,
+                    Group* target,
+                    QHash<QUuid, Group*>& groups,
+                    QHash<QUuid, Entry*>& entries,
+                    QSet<QUuid>& keptGroups,
+                    QSet<QUuid>& keptEntries)
+    {
+        keptGroups.insert(target->uuid());
+        // Time updates stay off until applyMerged() is done: placing entries and groups must not touch it
+        target->setUpdateTimeinfo(false);
+
+        int index = 0;
+        for (const auto* child : source->children()) {
+            auto* group = groups.value(child->uuid());
+            if (!group) {
+                group = new Group();
+                group->setUuid(child->uuid());
+                groups.insert(child->uuid(), group);
+            }
+            group->setUpdateTimeinfo(false);
+            group->setParent(target, index++, false);
+            applyGroup(child, group, groups, entries, keptGroups, keptEntries);
+        }
+
+        for (const auto* sourceEntry : source->entries()) {
+            keptEntries.insert(sourceEntry->uuid());
+            auto* entry = entries.value(sourceEntry->uuid());
+            if (entry && entry->group() == target
+                && entry->equals(sourceEntry, CompareItemIgnoreMilliseconds | CompareItemIgnoreStatistics)) {
+                // Unchanged: keep it as it is, milliseconds included
+                continue;
+            }
+            if (!entry) {
+                entry = new Entry();
+                entry->setUuid(sourceEntry->uuid());
+                entries.insert(sourceEntry->uuid(), entry);
+            }
+            entry->setUpdateTimeinfo(false);
+            if (entry->group() != target) {
+                entry->setGroup(target, false);
+            }
+            replaceHistory(entry, sourceEntry);
+            // Also turns time updates back on
+            entry->copyDataFrom(sourceEntry);
+        }
+        target->copyDataFrom(source);
+    }
+
+    /*
+     * Makes `target` hold what `source` (the core's merge result) holds, changing its groups and entries in place
+     * rather than replacing them: the same objects stay, so the views keep their selection (by UUID) and the
+     * entry being edited. Entries the merge didn't change aren't touched.
+     */
+    void applyMerged(Database* target, const Database* source)
+    {
+        QHash<QUuid, Group*> groups;
+        for (auto* group : target->rootGroup()->groupsRecursive(true)) {
+            groups.insert(group->uuid(), group);
+        }
+        QHash<QUuid, Entry*> entries;
+        for (auto* entry : target->rootGroup()->entriesRecursive()) {
+            entries.insert(entry->uuid(), entry);
+        }
+        // Copies of one database share a root group whatever its UUID
+        groups.insert(source->rootGroup()->uuid(), target->rootGroup());
+
+        QSet<QUuid> keptGroups;
+        QSet<QUuid> keptEntries;
+        applyGroup(source->rootGroup(), target->rootGroup(), groups, entries, keptGroups, keptEntries);
+        keptGroups.insert(target->rootGroup()->uuid());
+
+        for (auto* entry : target->rootGroup()->entriesRecursive()) {
+            if (!keptEntries.contains(entry->uuid())) {
+                delete entry;
+            }
+        }
+        // Children first
+        auto stale = target->rootGroup()->groupsRecursive(false);
+        std::reverse(stale.begin(), stale.end());
+        for (auto* group : stale) {
+            if (!keptGroups.contains(group->uuid())) {
+                delete group;
+            }
+        }
+
+        for (const auto& uuid : source->metadata()->customIconsOrder()) {
+            if (!target->metadata()->hasCustomIcon(uuid)) {
+                target->metadata()->addCustomIcon(uuid, source->metadata()->customIcon(uuid));
+            }
+        }
+        target->metadata()->customData()->copyDataFrom(source->metadata()->customData());
+        if (const auto* bin = source->metadata()->recycleBin()) {
+            target->metadata()->setRecycleBin(target->rootGroup()->findGroupByUuid(bin->uuid()));
+        }
+        // Last: deleting stale items above recorded deletions of their own
+        target->setDeletedObjects(source->deletedObjects());
+        for (auto* group : target->rootGroup()->groupsRecursive(true)) {
+            group->setUpdateTimeinfo(true);
+        }
+    }
+
+    Merger::Change::Type changeType(uint8_t change)
+    {
+        switch (change) {
+        case 0:
+            return Merger::Change::Type::Added;
+        case 1:
+            return Merger::Change::Type::Modified;
+        case 2:
+            return Merger::Change::Type::Moved;
+        case 3:
+            return Merger::Change::Type::Deleted;
+        case 4:
+            return Merger::Change::Type::Metadata;
+        default:
+            return Merger::Change::Type::Unspecified;
+        }
+    }
 } // namespace
 
 SyncEngine::SyncEngine(const QSharedPointer<Database>& db,
@@ -1090,6 +1303,92 @@ QStringList SyncEngine::conflictingFields(const Entry* local, const Entry* remot
 }
 
 Merger::ChangeList SyncEngine::mergeDatabases(Database* local, Database* remote, const Database* base)
+{
+    if (AccountController::isAccountVaultPath(local->filePath())) {
+        bool ok = false;
+        auto changes = mergeAccountVault(local, remote, base, &ok);
+        if (ok) {
+            return changes;
+        }
+        qWarning("SyncEngine: openvireo-core couldn't merge the account vault, merging with KeePassXC's Merger");
+    }
+    return mergeHere(local, remote, base);
+}
+
+Merger::ChangeList
+SyncEngine::mergeAccountVault(Database* local, Database* remote, const Database* base, bool* ok)
+{
+    if (ok) {
+        *ok = false;
+    }
+    // A throwaway key for the serialized copies
+    auto key = QSharedPointer<CompositeKey>::create();
+    auto passwordKey = QSharedPointer<PasswordKey>::create();
+    passwordKey->setRawKey(randomGen()->randomArray(32));
+    key->addKey(passwordKey);
+    const auto components = passwordKey->rawKey();
+
+    QByteArray localData, remoteData, baseData;
+    if (!serialize(mergeCopyOf(local, key), &localData) || !serialize(mergeCopyOf(remote, key), &remoteData)
+        || (base && !serialize(mergeCopyOf(base, key), &baseData))) {
+        return {};
+    }
+
+    QSharedPointer<Database> mergedLocal;
+    QSharedPointer<Database> mergedRemote;
+    Merger::ChangeList changes;
+    try {
+        auto result = ovd::merge_kdbx(slice(localData),
+                                      slice(components),
+                                      slice(remoteData),
+                                      slice(components),
+                                      slice(baseData),
+                                      slice(components),
+                                      Clock::currentSecondsSinceEpoch());
+        if (result.local_changed) {
+            mergedLocal = deserialize(toByteArray(result.local), key);
+        }
+        if (result.remote_changed) {
+            mergedRemote = deserialize(toByteArray(result.remote), key);
+        }
+        if ((result.local_changed && !mergedLocal) || (result.remote_changed && !mergedRemote)) {
+            return {};
+        }
+        if (mergedLocal) {
+            applyMerged(local, mergedLocal.data());
+        }
+        if (mergedRemote) {
+            applyMerged(remote, mergedRemote.data());
+        }
+        for (const auto& change : result.changes) {
+            const auto type = changeType(change.change);
+            const auto details = QString::fromUtf8(change.details.data(), static_cast<int>(change.details.size()));
+            const auto uuid = change.uuid.size() == 16 ? QUuid::fromRfc4122(QByteArrayView(toByteArray(change.uuid)))
+                                                        : QUuid();
+            if (change.subject == 0) {
+                if (const auto* entry = local->rootGroup()->findEntryByUuid(uuid)) {
+                    changes << Merger::Change(type, *entry, details);
+                    continue;
+                }
+            } else if (change.subject == 1) {
+                if (const auto* group = local->rootGroup()->findGroupByUuid(uuid)) {
+                    changes << Merger::Change(type, *group, details);
+                    continue;
+                }
+            }
+            changes << Merger::Change(type, details);
+        }
+    } catch (const rust::Error& e) {
+        qWarning("SyncEngine: the core merge failed: %s", e.what());
+        return {};
+    }
+    if (ok) {
+        *ok = true;
+    }
+    return changes;
+}
+
+Merger::ChangeList SyncEngine::mergeHere(Database* local, Database* remote, const Database* base)
 {
     Merger::ChangeList changes;
     // Before combineEntries and Merger copy one entry's location over the other's

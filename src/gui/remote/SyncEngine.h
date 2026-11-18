@@ -154,7 +154,16 @@ public:
     // field by field first: a field changed on one side only takes that change, and only a field both
     // changed differently falls back to the newer one. An entry changed on one side only keeps that
     // change even when the device's clock made it look older.
+    //
+    // Account vaults (files under the accounts folder) merge in openvireo-core, see mergeAccountVault(); other
+    // databases with KeePassXC's Merger here.
     static Merger::ChangeList mergeDatabases(Database* local, Database* remote, const Database* base = nullptr);
+    // The same merge run by openvireo-core (ov-merge, which every OpenVireo client uses) on serialized copies of
+    // the three databases. The result goes back into `local` and `remote` in place: their group and entry
+    // objects stay, so the window keeps its selection by UUID. `ok` is false when the core couldn't merge; then
+    // nothing was changed.
+    static Merger::ChangeList
+    mergeAccountVault(Database* local, Database* remote, const Database* base = nullptr, bool* ok = nullptr);
     // The fields `local` and `remote` both changed differently since `base`, by name
     static QStringList conflictingFields(const Entry* local, const Entry* remote, const Entry* base);
     // Entry modification times, to be compared with the next sync's copies
@@ -198,6 +207,8 @@ signals:
     void finished(bool success, const QString& error);
 
 private:
+    // mergeDatabases() with KeePassXC's Merger
+    static Merger::ChangeList mergeHere(Database* local, Database* remote, const Database* base);
     void setState(State state);
     void start();
     bool hasLocalChanges() const;
