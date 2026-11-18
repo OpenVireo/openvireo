@@ -132,7 +132,6 @@ jobs:
       - name: Set up paths
         run: |
           echo "OUTPUT_DIR=$GITHUB_WORKSPACE/release-out" >> "$GITHUB_ENV"
-          echo "OPAQUE_PREFIX=$RUNNER_TEMP/opaque" >> "$GITHUB_ENV"
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
           echo "VCPKG_CACHE=$RUNNER_TEMP/vcpkg-cache" >> "$GITHUB_ENV"
 
@@ -163,12 +162,16 @@ jobs:
           mkdir -p "$RUNNER_TEMP/wix" && unzip -q "$RUNNER_TEMP/wix.zip" -d "$RUNNER_TEMP/wix"
           cygpath -w "$RUNNER_TEMP/wix" >> "$GITHUB_PATH"
 
-      # Windows gets libopaque from the vcpkg overlay port in utils/vcpkg_ports instead
-      - name: Build libopaque
-        if: matrix.platform != 'windows'
-        env:
-          MACOS_ARCH: ${{ matrix.platform == 'macos' && matrix.arch || '' }}
-        run: .github/scripts/build-opaque.sh "$OPAQUE_PREFIX"
+      # openvireo-core is built from source by CMake (cmake/OpenVireoCore.cmake); cargo fetches its pinned
+      # sources. Both macOS builds run on Apple Silicon, so the x86_64 one needs that Rust target.
+      - name: Set up Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          if [ "${{ matrix.platform }}" = macos ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          fi
+          rustc --version
 
       - name: Set up vcpkg
         if: matrix.platform != 'linux'
@@ -320,16 +323,14 @@ jobs:
           case "${{ matrix.platform }}" in
             macos)
               args+=(--build-qt ${{ steps.macos-signing.outputs.args }} --cmake-opts
-                     -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
-                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a"
+                     -DKPXC_FEATURE_ACCOUNTS=ON
                      -DVCPKG_HOST_TRIPLET=${{ matrix.host-triplet }} -DVCPKG_INSTALL_OPTIONS=--clean-after-build
                      "${update_opts[@]}")
               ;;
             linux)
               args+=(--use-system-deps --appimage --appimage-update-tag "$appimage_tag"
                      ${{ steps.linux-signing.outputs.args }} --cmake-opts
-                     -DKPXC_FEATURE_ACCOUNTS=ON "-DOPAQUE_ROOT=$OPAQUE_PREFIX"
-                     "-DSODIUM_LIBRARY=$OPAQUE_PREFIX/lib/libsodium.a" "${update_opts[@]}")
+                     -DKPXC_FEATURE_ACCOUNTS=ON "${update_opts[@]}")
               ;;
             windows)
               # Release-only triplets build Qt once instead of in debug and release; the host triplet
@@ -339,7 +340,6 @@ jobs:
                      -DVCPKG_INSTALL_OPTIONS=--clean-after-build "${update_opts[@]}")
               ;;
           esac
-          # SODIUM_LIBRARY is named explicitly so a shared libsodium elsewhere on the runner is never linked.
           # --clean-after-build deletes each port's build tree once it is installed; Qt's build trees would fill the runner's disk.
           python release-tool.py "${args[@]}"
 
