@@ -34,7 +34,7 @@
 #include "core/Config.h"
 
 #ifdef KPXC_FEATURE_ACCOUNTS
-#include "account/OpaqueCore.h"
+#include <ovdesktop.h>
 #endif
 
 #include <QBuffer>
@@ -86,13 +86,27 @@ namespace
     }
 
     /*
-     * Stands in for the OPAQUE server. With libopaque it runs the real server half, so sign-in goes
-     * through the actual protocol; without it the client and server below just compare a hash.
+     * Stands in for the OPAQUE server. With accounts on it runs opaque-ke's server half (openvireo-core's
+     * test server), so sign-in goes through the actual protocol; without it the client and server below
+     * just compare a hash.
      */
+#ifdef KPXC_FEATURE_ACCOUNTS
+    rust::Slice<const uint8_t> slice(const QByteArray& data)
+    {
+        return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
+    }
+
+    QByteArray toByteArray(const rust::Vec<uint8_t>& data)
+    {
+        return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+    }
+#endif
+
     struct OpaqueServer
     {
         struct Login
         {
+            // The server's login state
             QByteArray authU0;
             QString email;
         };
@@ -100,16 +114,13 @@ namespace
         static QByteArray registrationResponse(const QByteArray& request, QByteArray* sec)
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
-            QByteArray pub(OPAQUE_REGISTER_PUBLIC_LEN, '\0');
-            sec->resize(OPAQUE_REGISTER_SECRET_LEN);
-            if (opaque_CreateRegistrationResponse(reinterpret_cast<const uint8_t*>(request.constData()),
-                                                  nullptr,
-                                                  reinterpret_cast<uint8_t*>(sec->data()),
-                                                  reinterpret_cast<uint8_t*>(pub.data()))
-                != 0) {
+            try {
+                const auto step = ovd::opaque_server_registration_response(slice(request));
+                *sec = toByteArray(step.state);
+                return toByteArray(step.message);
+            } catch (const rust::Error&) {
                 return {};
             }
-            return pub;
 #else
             *sec = request;
             return "pub";
@@ -119,11 +130,11 @@ namespace
         static QByteArray storeRecord(const QByteArray& sec, const QByteArray& record)
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
-            QByteArray rec(OPAQUE_USER_RECORD_LEN, '\0');
-            opaque_StoreUserRecord(reinterpret_cast<const uint8_t*>(sec.constData()),
-                                   reinterpret_cast<const uint8_t*>(record.constData()),
-                                   reinterpret_cast<uint8_t*>(rec.data()));
-            return rec;
+            try {
+                return toByteArray(ovd::opaque_server_store_record(slice(sec), slice(record)));
+            } catch (const rust::Error&) {
+                return {};
+            }
 #else
             Q_UNUSED(sec)
             return record;
@@ -134,27 +145,17 @@ namespace
         credentialResponse(const QByteArray& ke1, const QByteArray& rec, const QString& email, QByteArray* authU0)
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
-            QByteArray user = OpaqueClient::userId(email);
-            QByteArray server = ServerId.toUtf8();
-            Opaque_Ids ids{static_cast<uint16_t>(user.size()),
-                           reinterpret_cast<uint8_t*>(user.data()),
-                           static_cast<uint16_t>(server.size()),
-                           reinterpret_cast<uint8_t*>(server.data())};
-            QByteArray ke2(OPAQUE_SERVER_SESSION_LEN, '\0');
-            QByteArray sk(OPAQUE_SHARED_SECRETBYTES, '\0');
-            authU0->resize(crypto_auth_hmacsha512_BYTES);
-            if (opaque_CreateCredentialResponse(reinterpret_cast<const uint8_t*>(ke1.constData()),
-                                                reinterpret_cast<const uint8_t*>(rec.constData()),
-                                                &ids,
-                                                reinterpret_cast<const uint8_t*>(OpaqueClient::Context.constData()),
-                                                static_cast<uint16_t>(OpaqueClient::Context.size()),
-                                                reinterpret_cast<uint8_t*>(ke2.data()),
-                                                reinterpret_cast<uint8_t*>(sk.data()),
-                                                reinterpret_cast<uint8_t*>(authU0->data()))
-                != 0) {
+            try {
+                const auto step = ovd::opaque_server_credential_response(slice(ke1),
+                                                                         slice(rec),
+                                                                         slice(OpaqueClient::userId(email)),
+                                                                         slice(ServerId.toUtf8()),
+                                                                         slice(OpaqueClient::Context));
+                *authU0 = toByteArray(step.state);
+                return toByteArray(step.message);
+            } catch (const rust::Error&) {
                 return {};
             }
-            return ke2;
 #else
             Q_UNUSED(email)
             *authU0 = "auth";
@@ -165,10 +166,12 @@ namespace
         static bool userAuth(const QByteArray& authU0, const QByteArray& authU)
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
-            return authU.size() == authU0.size()
-                   && opaque_UserAuth(reinterpret_cast<const uint8_t*>(authU0.constData()),
-                                      reinterpret_cast<const uint8_t*>(authU.constData()))
-                          == 0;
+            try {
+                ovd::opaque_server_user_auth(slice(authU0), slice(authU));
+                return true;
+            } catch (const rust::Error&) {
+                return false;
+            }
 #else
             return authU == authU0;
 #endif
@@ -176,7 +179,7 @@ namespace
     };
 
 #ifndef KPXC_FEATURE_ACCOUNTS
-    // Without libopaque: the record is the password's hash, and login compares hashes
+    // Without accounts: the record is the password's hash, and login compares hashes
     class FakeOpaqueClient : public OpaqueClient
     {
     public:
