@@ -27,6 +27,19 @@
 #   OPENVIREO_CORE_SOURCE_DIR - a local openvireo-core checkout to build instead of the pinned commit,
 #                               for working on the core and the desktop together. Never for releases.
 
+# Corrosion builds one Rust target per configure. A macOS build for one architecture (release-tool.py sets
+# CMAKE_OSX_ARCHITECTURES) builds the core for it; that target needs `rustup target add <triple>`.
+if(APPLE AND NOT Rust_CARGO_TARGET)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES _ovcore_arch_count)
+    if(_ovcore_arch_count GREATER 1)
+        message(FATAL_ERROR "openvireo-core builds for one macOS architecture per configure; set CMAKE_OSX_ARCHITECTURES to one of them")
+    elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+        set(Rust_CARGO_TARGET "x86_64-apple-darwin" CACHE STRING "Rust target triple")
+    elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+        set(Rust_CARGO_TARGET "aarch64-apple-darwin" CACHE STRING "Rust target triple")
+    endif()
+endif()
+
 include(FetchContent)
 FetchContent_Declare(Corrosion
         GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
@@ -74,6 +87,9 @@ if(Rust_CARGO_TARGET_ARCH STREQUAL "aarch64")
     string(TOUPPER "${Rust_CARGO_TARGET_CACHED}" _ovcore_triple)
     string(REPLACE "-" "_" _ovcore_triple "${_ovcore_triple}")
     list(APPEND _ovcore_env "CARGO_TARGET_${_ovcore_triple}_RUSTFLAGS=--cfg aes_armv8")
+endif()
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET)
+    list(APPEND _ovcore_env "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
 endif()
 corrosion_set_env_vars(ov_desktop ${_ovcore_env})
 
