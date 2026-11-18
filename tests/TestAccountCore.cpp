@@ -21,8 +21,13 @@
 
 #include "account/CoreHost.h"
 #include "account/OpaqueClient.h"
+#include "core/Database.h"
+#include "core/Entry.h"
+#include "core/Group.h"
 #include "crypto/Crypto.h"
+#include "gui/remote/SyncEngine.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "mock/MockClock.h"
 
 #include <ovdesktop.h>
 
@@ -410,4 +415,79 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
         refused = QByteArray(e.what()).startsWith("opaque_failed");
     }
     QVERIFY(refused);
+}
+
+void TestAccountCore::testAccountVaultMergeKeepsObjects()
+{
+    auto* clock = new MockClock(2026, 11, 1, 12, 0, 0);
+    MockClock::setup(clock);
+
+    // The copy both devices last synced: a group with two entries
+    auto base = QSharedPointer<Database>::create();
+    base->rootGroup()->setName("Vault");
+    auto* work = new Group();
+    work->setUuid(QUuid::createUuid());
+    work->setName("Work");
+    work->setParent(base->rootGroup());
+    const auto addEntry = [](Group* group, const QString& title, const QString& password) {
+        auto* entry = new Entry();
+        entry->setUuid(QUuid::createUuid());
+        entry->setTitle(title);
+        entry->setPassword(password);
+        entry->setGroup(group);
+        return entry;
+    };
+    const auto sharedUuid = addEntry(work, "Shared", "one")->uuid();
+    const auto goneUuid = addEntry(work, "Gone", "x")->uuid();
+    const auto copyOf = [](const Database* db) {
+        auto copy = QSharedPointer<Database>::create();
+        delete copy->setRootGroup(db->rootGroup()->clone(Entry::CloneIncludeHistory, Group::CloneIncludeEntries));
+        return copy;
+    };
+    auto local = copyOf(base.data());
+    auto remote = copyOf(base.data());
+
+    // The other device changed the password, deleted an entry and added one
+    clock->advanceMinute(5);
+    auto* remoteShared = remote->rootGroup()->findEntryByUuid(sharedUuid);
+    remoteShared->beginUpdate();
+    remoteShared->setPassword("two");
+    remoteShared->endUpdate();
+    delete remote->rootGroup()->findEntryByUuid(goneUuid);
+    const auto newUuid = addEntry(remote->rootGroup()->findGroupByUuid(work->uuid()), "New", "n")->uuid();
+
+    // What the window holds on to
+    auto* selected = local->rootGroup()->findEntryByUuid(sharedUuid);
+    auto* selectedGroup = local->rootGroup()->findGroupByUuid(work->uuid());
+    clock->advanceMinute(5);
+
+    bool ok = false;
+    const auto changes = SyncEngine::mergeAccountVault(local.data(), remote.data(), base.data(), &ok);
+    QVERIFY(ok);
+    QVERIFY(!changes.isEmpty());
+
+    // The same objects, with the merged content
+    QCOMPARE(local->rootGroup()->findEntryByUuid(sharedUuid), selected);
+    QCOMPARE(local->rootGroup()->findGroupByUuid(work->uuid()), selectedGroup);
+    QCOMPARE(selected->password(), QString("two"));
+    QCOMPARE(selected->group(), selectedGroup);
+    QVERIFY(!selected->historyItems().isEmpty());
+    QVERIFY(!local->rootGroup()->findEntryByUuid(goneUuid));
+    QVERIFY(local->containsDeletedObject(goneUuid));
+    auto* added = local->rootGroup()->findEntryByUuid(newUuid);
+    QVERIFY(added);
+    QCOMPARE(added->group(), selectedGroup);
+    QCOMPARE(added->password(), QString("n"));
+
+    // Both copies end up alike, one sync generation on
+    QVERIFY(remote->rootGroup()->findEntryByUuid(newUuid));
+    QCOMPARE(remote->rootGroup()->findEntryByUuid(sharedUuid)->password(), QString("two"));
+    QCOMPARE(SyncEngine::generationOf(local.data()), SyncEngine::generationOf(remote.data()));
+    QVERIFY(SyncEngine::generationOf(local.data()) > 0);
+
+    // Merging again changes nothing
+    ok = false;
+    QVERIFY(SyncEngine::mergeAccountVault(local.data(), remote.data(), nullptr, &ok).isEmpty());
+    QVERIFY(ok);
+    MockClock::teardown();
 }

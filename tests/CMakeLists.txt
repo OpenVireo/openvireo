@@ -131,13 +131,18 @@ add_unit_test(NAME testaccountplan SOURCES TestAccountPlan.cpp
         LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testaccountcore SOURCES TestAccountCore.cpp
-        LIBS ${TEST_LIBRARIES})
+        LIBS testsupport ${TEST_LIBRARIES})
 
 add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp
         LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testmergefixtures SOURCES TestMergeFixtures.cpp
         LIBS testsupport ${TEST_LIBRARIES})
+
+# The same fixtures through the account-vault merge, which runs in openvireo-core
+add_unit_test(NAME testmergefixturescore SOURCES TestMergeFixtures.cpp
+        LIBS testsupport ${TEST_LIBRARIES})
+target_compile_definitions(testmergefixturescore PRIVATE KPXC_MERGE_FIXTURES_VIA_CORE)
 
 add_unit_test(NAME testvaultsharing SOURCES TestVaultSharing.cpp util/FakeAccountServer.cpp
         LIBS ${TEST_LIBRARIES})
