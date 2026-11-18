@@ -628,6 +628,10 @@ elseif(BOTAN_VERSION VERSION_LESS "2.19.1")
 endif()
 include_directories(SYSTEM ${BOTAN_INCLUDE_DIR})
 
+# openvireo-core, the shared client of the OpenVireo protocol, built from source with Corrosion from a
+# pinned commit (cmake/OpenVireoCore.cmake); needs a Rust toolchain (cargo, rustc)
+include(OpenVireoCore)
+
 # KeePassXC accounts sign in with OPAQUE through the libopaque C core (with liboprf and libsodium).
 # Everything else about accounts only needs Botan, so builds without these libraries still have it.
 find_package(Opaque)

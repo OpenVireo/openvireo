@@ -1,0 +1,49 @@
+# The desktop's link to openvireo-core (docs: src/account/ovcore/src/lib.rs).
+#
+# CMake builds this crate with Corrosion into one static library. It re-exports the C++ binding
+# of the core facade (ov-ffi-cpp, header <ovcore.h>) and adds, in namespace `ovd` (header
+# <ovdesktop.h>), the lower-level pieces of the core that the desktop's account code calls and that
+# the facade binding doesn't bridge yet: the ov v1 crypto (SPEC §1-§9), the OPAQUE client steps
+# (SPEC §8) and the three-way sync merge on serialized vaults.
+#
+# Every openvireo-core crate comes from the same pinned commit. Bump `rev` here (all of them) and
+# run `cargo update -p ov-ffi-cpp` to move to a newer core.
+
+[package]
+name = "ov-desktop"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-only OR GPL-3.0-only"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[features]
+# opaque-ke's server half and seeded OPAQUE steps, for the desktop's tests (WITH_TESTS)
+test-server = ["ov-opaque/test-server", "dep:rand_chacha"]
+
+[dependencies]
+ov-ffi-cpp = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee" }
+ov-crypto = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee" }
+ov-error = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee" }
+ov-kdbx = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee" }
+ov-merge = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee" }
+ov-opaque = { git = "https://github.com/openvireo/openvireo-core", rev = "4d123cb8a55ab29fa72aacffc82a7dc1252961ee", default-features = false }
+cxx = "=1.0.205"
+rand_core = { version = "=0.6.4", default-features = false, features = ["getrandom"] }
+rand_chacha = { version = "=0.3.1", default-features = false, optional = true }
+zeroize = { version = "=1.9.1", default-features = false, features = ["alloc"] }
+
+[build-dependencies]
+cxx-build = "=1.0.205"
+
+# Debug builds of the desktop still run the KDFs (Argon2id, AES-KDF) at full speed
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
