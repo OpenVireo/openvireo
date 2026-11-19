@@ -19,6 +19,7 @@
 
 #include "config-keepassx-tests.h"
 
+#include "account/AccountCrypto.h"
 #include "account/CoreHost.h"
 #include "account/OpaqueClient.h"
 #include "core/Database.h"
@@ -27,7 +28,14 @@
 #include "crypto/Crypto.h"
 #include "gui/remote/SyncEngine.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "format/KeePass2Reader.h"
+#include "format/KeePass2Writer.h"
+#include "keys/CompositeKey.h"
+#include "keys/FileKey.h"
 #include "mock/MockClock.h"
+#include "util/CoreTestServers.h"
+
+#include <QBuffer>
 
 #include <ovcore.h>
 
@@ -490,4 +498,103 @@ void TestAccountCore::testAccountVaultMergeKeepsObjects()
     QVERIFY(SyncEngine::mergeAccountVault(local.data(), remote.data(), nullptr, &ok).isEmpty());
     QVERIFY(ok);
     MockClock::teardown();
+}
+
+void TestAccountCore::testAccountOnTestServers()
+{
+    // The desktop's Host (keychain, offline cache) with the core's in-process auth and sync servers behind it
+    auto servers = ov::call([] { return ov::test_servers_start(0); });
+    QTemporaryDir cacheDir;
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    ov::ClientConfig config;
+    config.device_name = "test";
+    config.offline = true;
+    auto client = CoreHost::newClient(config,
+                                      std::make_unique<CoreTestServers::Transport>(&*servers),
+                                      {},
+                                      std::make_unique<CoreHost::FileCache>(cacheDir.path()),
+                                      std::make_unique<CoreTestServers::Clock>(&*servers));
+    auto cancel = ov::new_cancel_token();
+    auto account = ov::call([&] { return client->connect(servers->issuer(), *cancel); });
+
+    const auto bytesOf = [](const QByteArray& data) {
+        rust::Vec<uint8_t> vec;
+        for (auto c : data) {
+            vec.push_back(static_cast<uint8_t>(c));
+        }
+        return vec;
+    };
+    ov::RegisterInput input{"desk@example.com", bytesOf("correct horse"), ov::KdfOverrides{true, 19456, true, 2, true, 1}, true};
+    auto created = ov::call([&] { return account->register_account(std::move(input), *cancel); });
+    // The Secret Key comes formatted for the Emergency Kit, as AccountCrypto reads it
+    AccountCrypto::SecureBytes secretKey;
+    QVERIFY(AccountCrypto::parseSecretKey(
+        QString::fromUtf8(reinterpret_cast<const char*>(created.secret_key.data()),
+                          static_cast<int>(created.secret_key.size())),
+        &secretKey));
+    ov::wipe(created.secret_key);
+    QVERIFY(!CoreHost::toQString(servers->user_id("desk@example.com")).isEmpty());
+    auto token = ov::call([&] { return account->access_token(false, *cancel); });
+    QVERIFY(token.size() > 20);
+    ov::wipe(token);
+
+    // A vault the core creates opens in KeePassXC with the raw vault key, and KeePassXC's edits sync back
+    auto vault = ov::call([&] { return account->create_vault("Desk", "", *cancel); });
+    const auto vaultId = std::string(ov::call([&] { return vault->id(); }));
+    auto credentials = ov::call([&] { return account->vault_kdbx_credentials(vaultId, *cancel); });
+    QVERIFY(!credentials.has_password);
+    QCOMPARE(credentials.key_file.size(), size_t(32));
+    QByteArray rawKey(reinterpret_cast<const char*>(credentials.key_file.data()),
+                      static_cast<int>(credentials.key_file.size()));
+    auto file = ov::call([&] { return vault->export_kdbx(std::move(credentials), {}, *cancel); });
+
+    QBuffer keyData(&rawKey);
+    keyData.open(QIODevice::ReadOnly);
+    auto fileKey = QSharedPointer<FileKey>::create();
+    QVERIFY(fileKey->load(&keyData));
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(fileKey);
+    QByteArray fileData(reinterpret_cast<const char*>(file.data()), static_cast<int>(file.size()));
+    QBuffer readBuffer(&fileData);
+    readBuffer.open(QIODevice::ReadOnly);
+    auto db = QSharedPointer<Database>::create();
+    KeePass2Reader reader;
+    QVERIFY2(reader.readDatabase(&readBuffer, key, db.data()), qPrintable(reader.errorString()));
+    auto* entry = new Entry();
+    entry->setUuid(QUuid::createUuid());
+    entry->setTitle("From KeePassXC");
+    entry->setPassword("secret");
+    entry->setGroup(db->rootGroup());
+    QByteArray written;
+    QBuffer writeBuffer(&written);
+    writeBuffer.open(QIODevice::WriteOnly);
+    KeePass2Writer writer;
+    QVERIFY(writer.writeDatabase(&writeBuffer, db.data()));
+
+    ov::SyncOptions options{true, false};
+    auto synced = ov::call(
+        [&] { return account->sync_vault_kdbx(vaultId, bytesOf(written), false, {}, options, *cancel); });
+    QVERIFY(servers->vault_revision(vaultId) >= 1);
+
+    // Another device sees the entry
+    auto reopened = ov::call([&] { return account->open_vault(vaultId, *cancel); });
+    bool found = false;
+    for (const auto& summary : ov::call([&] { return reopened->entries(false); })) {
+        found |= CoreHost::toQString(summary.title) == "From KeePassXC";
+    }
+    QVERIFY(found);
+
+    // The server lost the vault: an error until the user continues anyway
+    servers->lose_vault(vaultId);
+    QString code;
+    try {
+        ov::call([&] { return account->sync_vault_kdbx(vaultId, synced.kdbx, false, {}, options, *cancel); });
+    } catch (const ov::Error& e) {
+        code = QString::fromStdString(e.code());
+    }
+    QCOMPARE(code, QString("server_lost_database"));
+    ov::SyncOptions accept{true, true};
+    auto again =
+        ov::call([&] { return account->sync_vault_kdbx(vaultId, std::move(synced.kdbx), false, {}, accept, *cancel); });
+    QCOMPARE(again.report.outcome, ov::SyncOutcome::Created);
 }

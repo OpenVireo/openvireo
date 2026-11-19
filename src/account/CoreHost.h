@@ -99,7 +99,8 @@ namespace CoreHost
     rust::Box<ov::Client> newClient(ov::ClientConfig config,
                                     std::unique_ptr<ov::HttpTransport> http = {},
                                     std::unique_ptr<ov::SecureStore> store = {},
-                                    std::unique_ptr<ov::BlobCache> cache = {});
+                                    std::unique_ptr<ov::BlobCache> cache = {},
+                                    std::unique_ptr<ov::Clock> clock = {});
 
     QString toQString(rust::Str text);
     QString toQString(const rust::String& text);
