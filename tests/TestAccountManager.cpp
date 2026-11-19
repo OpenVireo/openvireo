@@ -34,7 +34,7 @@
 #include "core/Config.h"
 
 #ifdef KPXC_FEATURE_ACCOUNTS
-#include <ovdesktop.h>
+#include <ovcore.h>
 #endif
 
 #include <QBuffer>
@@ -115,7 +115,7 @@ namespace
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
             try {
-                const auto step = ovd::opaque_server_registration_response(slice(request));
+                const auto step = ov::opaque_server_registration_response(slice(request));
                 *sec = toByteArray(step.state);
                 return toByteArray(step.message);
             } catch (const rust::Error&) {
@@ -131,7 +131,7 @@ namespace
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
             try {
-                return toByteArray(ovd::opaque_server_store_record(slice(sec), slice(record)));
+                return toByteArray(ov::opaque_server_store_record(slice(sec), slice(record)));
             } catch (const rust::Error&) {
                 return {};
             }
@@ -146,7 +146,7 @@ namespace
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
             try {
-                const auto step = ovd::opaque_server_credential_response(slice(ke1),
+                const auto step = ov::opaque_server_credential_response(slice(ke1),
                                                                          slice(rec),
                                                                          slice(OpaqueClient::userId(email)),
                                                                          slice(ServerId.toUtf8()),
@@ -167,7 +167,7 @@ namespace
         {
 #ifdef KPXC_FEATURE_ACCOUNTS
             try {
-                ovd::opaque_server_user_auth(slice(authU0), slice(authU));
+                ov::opaque_server_user_auth(slice(authU0), slice(authU));
                 return true;
             } catch (const rust::Error&) {
                 return false;

@@ -19,7 +19,7 @@
 
 #include "config-keepassx.h"
 
-#include <ovdesktop.h>
+#include <ovcore.h>
 
 const QByteArray OpaqueClient::Context = QByteArrayLiteral("ov-opaque-v1");
 
@@ -70,7 +70,7 @@ bool OpaqueClient::createRegistrationRequest(const SecureBytes& password, Secure
         return false;
     }
     try {
-        auto start = ovd::opaque_start_registration(slice(password));
+        auto start = ov::opaque_start_registration(slice(password));
         *request = toByteArray(start.message);
         *sec = takeSecure(start.state);
         return true;
@@ -89,7 +89,7 @@ bool OpaqueClient::finalizeRegistration(const SecureBytes& sec,
     }
     try {
         *record = toByteArray(
-            ovd::opaque_finish_registration(slice(sec), slice(response), slice(ids.user), slice(ids.server)));
+            ov::opaque_finish_registration(slice(sec), slice(response), slice(ids.user), slice(ids.server)));
         return true;
     } catch (const rust::Error&) {
         return false;
@@ -102,7 +102,7 @@ bool OpaqueClient::createCredentialRequest(const SecureBytes& password, SecureBy
         return false;
     }
     try {
-        auto start = ovd::opaque_start_login(slice(password));
+        auto start = ov::opaque_start_login(slice(password));
         *ke1 = toByteArray(start.message);
         *sec = takeSecure(start.state);
         return true;
@@ -122,7 +122,7 @@ bool OpaqueClient::recoverCredentials(const QByteArray& ke2,
     }
     try {
         auto login =
-            ovd::opaque_finish_login(slice(sec), slice(ke2), slice(ids.user), slice(ids.server), slice(Context));
+            ov::opaque_finish_login(slice(sec), slice(ke2), slice(ids.user), slice(ids.server), slice(Context));
         *authU = toByteArray(login.auth_u);
         auto key = takeSecure(login.session_key);
         takeSecure(login.export_key);

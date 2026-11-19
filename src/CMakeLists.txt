@@ -443,7 +443,7 @@ target_link_libraries(keepassxc_gui
         ${fdosecrets_LIB}
         ${keeshare_LIB}
         ${sshagent_LIB})
-# openvireo-core (cmake/OpenVireoCore.cmake): <ovcore.h>, <ovdesktop.h> and the static library
+# openvireo-core (cmake/OpenVireoCore.cmake): <ovcore.h> and the static library
 target_link_libraries(keepassxc_gui ovcore)
 
 if(APPLE)
