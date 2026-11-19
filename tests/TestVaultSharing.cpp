@@ -1363,13 +1363,14 @@ void TestVaultSharing::testShareLinksFollowTheOrgPolicy()
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
 
-    QCOMPARE(shares.blockedReason(vaultId), QString("In your organization only owners and admins can make share links."));
+    // The org's policy comes with GET /me, which may answer after GET /vaults
+    QTRY_COMPARE(shares.blockedReason(vaultId), QString("In your organization only owners and admins can make share links."));
     f.server->orgs[org.id].members.first().role = "admin";
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
-    QVERIFY(shares.blockedReason(vaultId).isEmpty());
+    QTRY_VERIFY(shares.blockedReason(vaultId).isEmpty());
     f.server->orgs[org.id].shareLinks = "off";
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
-    QCOMPARE(shares.blockedReason(vaultId), QString("Your organization has turned share links off."));
+    QTRY_COMPARE(shares.blockedReason(vaultId), QString("Your organization has turned share links off."));
 }

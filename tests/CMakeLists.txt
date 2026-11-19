@@ -133,7 +133,7 @@ add_unit_test(NAME testaccountplan SOURCES TestAccountPlan.cpp
 add_unit_test(NAME testaccountcore SOURCES TestAccountCore.cpp util/CoreTestServers.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 
-add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp
+add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp util/CoreTestServers.cpp
         LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testmergefixtures SOURCES TestMergeFixtures.cpp

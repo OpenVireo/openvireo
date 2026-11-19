@@ -90,6 +90,8 @@ void AccountOfflineCache::clear(const QString& accountId)
 {
     if (!accountId.isEmpty()) {
         QFile::remove(path(accountId));
+        // What openvireo-core keeps for the account (CoreHost::FileCache): its profile, vault list and copies
+        QDir(accountsRoot() + "/" + accountId + "/core").removeRecursively();
     }
 }
 

@@ -21,7 +21,7 @@
 #include "AccountCrypto.h"
 #include "AccountPlan.h"
 #include "AuthClient.h"
-#include "OpaqueClient.h"
+#include "CoreHost.h"
 #include "VaultKeyring.h"
 
 #include "gui/remote/RemoteSettings.h"
@@ -29,6 +29,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QThreadPool>
 #include <QTimer>
 #include <QUrl>
 #include <QUuid>
@@ -39,20 +40,22 @@ class Database;
 class QuickUnlockInterface;
 
 /**
- * One KeePassXC account on this device (docs/plans/accounts/SPEC.md): signing up and in with OPAQUE and
- * the Secret Key, the access token and its refresh, the account keyset and the vault keys.
+ * One OpenVireo account on this device (docs/plans/accounts/SPEC.md). The session itself (sign-up and sign-in
+ * with OPAQUE and the Secret Key, unlock, the tokens and their refresh, sessions set aside) runs in
+ * openvireo-core's ov::Account, on a worker thread; this class keeps the Qt API and signals around it.
  *
  *   SignedOut ──signIn()──▶ SigningIn ──▶ [NeedsMfa ──submitMfa()──▶] Unlocked ──lock()──▶ Locked
  *       ▲                                                               │  ▲                 │
  *       └──────────── signOut(), or the session was revoked ────────────┘  └────unlock()─────┘
  *
  * The keyset (and with it every vault key) is only in memory while Unlocked and is wiped by lock().
- * The refresh token and the Secret Key stay in the device's keychain (SyncTokenStore), so after a
- * restart restoreSession() gets back to Locked and unlock() only needs the master password.
+ * The core keeps the refresh token and the Secret Key in the device's keychain (CoreHost::SecretStore), so after
+ * a restart restoreSession() gets back to Locked and unlock() only needs the master password.
  *
- * Access tokens live 10 minutes. They are refreshed a minute before they expire, when a request finds
- * one that is about to, and whenever the sync server announces an access change (SPEC §11). Presenting
- * a rotated refresh token makes the server revoke the session, which signs this device out.
+ * Access tokens live 10 minutes. The core refreshes them a minute before they expire, and this manager asks it to
+ * whenever the sync server announces an access change (SPEC §11). It is the only refresher: everything else
+ * borrows the core's token through accessToken(). Presenting a rotated refresh token makes the server revoke
+ * the session, which signs this device out.
  *
  * Account vaults get their tokens from this manager: it registers itself as the token provider of
  * its account with SyncServerClient while signed in.
@@ -147,8 +150,8 @@ public:
     static constexpr int MinTokenLifetimeSec = 30;
 
     explicit AccountManager(QObject* parent = nullptr);
-    // For tests: a client that doesn't use the network and another OPAQUE implementation
-    AccountManager(AuthClient* client, std::unique_ptr<OpaqueClient> opaque, QObject* parent = nullptr);
+    // For tests: the core's Host (transport, clock, keychain, cache) from `host` instead of the real ones
+    explicit AccountManager(CoreHost::Factory host, QObject* parent = nullptr);
     ~AccountManager() override;
 
     void setServer(const ServerConfig& config);
@@ -301,51 +304,79 @@ signals:
     // The signed-in account turned out to be pending deletion, or was restored
     void pendingDeletionChanged();
 
+public:
+    // What a worker reads from the core after a sign-in or unlock
+    struct SessionInfo;
+    // A failed core call (ov::Error), as plain Qt data
+    struct CoreError
+    {
+        QString code;
+        QString message;
+        QString details;
+        int status = 0;
+        bool ok() const
+        {
+            return code.isEmpty();
+        }
+    };
+
 private:
     struct Pending;
+    struct CoreSession;
+    enum class CoreEnd
+    {
+        // The core ended the session already (refused refresh)
+        None,
+        // Sign out: the server is told, the offline data goes
+        SignOut,
+        // As SignOut, and the Secret Key and device id go too
+        Forget
+    };
 
     void setState(State state);
     void fail(const QString& message);
-    void finishLogin(const QJsonObject& session);
-    void deriveKeyset(const QJsonObject& kdfJson,
-                      const QJsonObject& wrappedKeyset,
-                      std::function<void(bool ok, const QString& error)> done);
+    void finishSignIn(const SessionInfo& info, bool registering);
     void finishUnlock(bool offline);
     void setOffline(bool offline);
     void scheduleReconnect();
     // GET /me's kdf, keyset and orgs into the offline cache, and the orgs into orgs()
     void takeProfile(const QJsonObject& me);
-    QString unreachableMessage(const AuthClient::Response& response) const;
+    QString unreachableMessage() const;
+    QString messageFor(const CoreError& error) const;
+    // A refused refresh ended the session in the core: end it here too. True when it did.
+    bool sessionEndedBy(const CoreError& error);
     void followEmail(const QString& email);
     void reloadOrgs();
     QUuid quickUnlockId() const;
     void rememberAuk(const SecureBytes& auk);
     void forgetAuk();
-    void setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn);
+    void takeToken(const QString& token);
+    void finishTokenRequest(const CoreError& error);
     void exchangeServiceAccount();
     void finishRefresh(bool ok);
-    void endSession(const QString& reason);
-    void saveSession() const;
+    void endSession(const QString& reason, CoreEnd end = CoreEnd::None);
     void startEvents();
     void stopEvents();
     QString defaultServerId() const;
-    OpaqueClient::Ids opaqueIds(const QString& email) const;
 
+    // The core client and account for `config`, without network; null when the config isn't usable
+    std::shared_ptr<CoreSession> makeCore(const ServerConfig& config) const;
+    // Runs `work` on this manager's worker (one at a time, in order), then `done` on this thread
+    void runCore(std::shared_ptr<CoreSession> core,
+                 std::function<void(CoreSession&)> work,
+                 std::function<void(const CoreError&)> done);
     void rememberCurrentAccount() const;
-    // Runs `done` once no refresh is rotating a token this device holds
-    void whenTokensSettled(std::function<void()> done);
-    void finishSetAsideCheck();
     void setPendingDeletion(const QString& scheduledFor);
     void setKnownDeletion(const QString& accountId, const QString& scheduledFor) const;
-    void verifyPassword(const QString& password, std::function<void(const QString& error)> done);
-    void freshToken(std::function<void(bool ok)> done);
 
-    static QString sessionKey(const QString& accountId);
-    static QString secretKeyKey(const QString& serverId, const QString& email);
-    static QString deviceKey(const QString& serverId, const QString& email);
-
+    CoreHost::Factory m_host;
+    // Session-state queries that need no account (SPEC §21)
+    std::shared_ptr<CoreSession> m_local;
+    std::shared_ptr<CoreSession> m_core;
+    QThreadPool m_pool;
+    int m_inFlight = 0;
+    bool m_destroying = false;
     AuthClient* m_client;
-    std::unique_ptr<OpaqueClient> m_opaque;
     ServerConfig m_config;
     AccountCrypto::KdfParams m_newAccountKdf;
     bool m_eventsEnabled = true;
@@ -357,15 +388,13 @@ private:
     bool m_serviceAccount = false;
     AccountCrypto::ServiceAccountToken m_saToken;
 
+    // The last token the core handed out, and when it expires on this device's clock
     QString m_accessToken;
-    QString m_refreshToken;
     qint64 m_accessTokenExpiry = 0;
     QTimer m_refreshTimer;
     bool m_refreshing = false;
     bool m_reloadAfterRefresh = false;
     QList<std::function<void(const QString&)>> m_tokenWaiters;
-    int m_setAsideChecks = 0;
-    QList<std::function<void()>> m_setAsideCheckWaiters;
 
     std::unique_ptr<Pending> m_pending;
     AccountCrypto::Keyset m_keyset;

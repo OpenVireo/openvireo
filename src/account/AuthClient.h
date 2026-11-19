@@ -28,8 +28,15 @@
 #include <QSet>
 #include <QUrl>
 
-#include <functional>
+#include <QThreadPool>
 
+#include <functional>
+#include <memory>
+
+namespace ov
+{
+    class HttpTransport;
+}
 class QNetworkAccessManager;
 class QNetworkReply;
 
@@ -90,6 +97,9 @@ public:
     void setApiUrl(const QString& apiUrl);
     QString apiUrl() const;
     void setTokenProvider(AccessTokenProvider provider);
+    // Sends every request through this core Host transport (on a worker thread) instead of the client's own
+    // QNetworkAccessManager, so tests that fake the Host fake this client too. Interim, until AuthClient goes.
+    void setTransport(std::shared_ptr<ov::HttpTransport> transport);
 
     // GET <issuer>/.well-known/openvireo-configuration: {issuer, api, sync, jwks_uri, opaque, kdf_min}
     void discover(const QString& issuerUrl, Callback callback);
@@ -227,6 +237,8 @@ private:
     request(const QByteArray& verb, const QUrl& url, const QByteArray& body, bool authenticated, Callback callback);
 
     QString m_apiUrl;
+    std::shared_ptr<ov::HttpTransport> m_transport;
+    QThreadPool m_pool;
     AccessTokenProvider m_tokenProvider;
     quint64 m_generation = 0;
 #ifdef KPXC_FEATURE_NETWORK

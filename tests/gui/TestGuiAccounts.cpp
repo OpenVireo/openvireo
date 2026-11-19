@@ -1484,7 +1484,9 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     // When the master password changed elsewhere the old AUK no longer opens the keyset: it is dropped
     auto wrapped = m_server->users[Email].keyset;
     auto changed = wrapped;
-    changed["wrapped"] = AccountCrypto::toBase64Url(AccountCrypto::randomSecure(80));
+    // The keyset wrapped again under another AUK, as a password change on another device does
+    changed["wrapped"] = AccountCrypto::wrappedKeysetJson(AccountCrypto::randomSecure(32), AccountCrypto::generateKeyset())
+                             .value("wrapped");
     m_server->users[Email].keyset = changed;
     QTest::mouseClick(quickButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Locked, 10000);
