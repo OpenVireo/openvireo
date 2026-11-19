@@ -31,7 +31,7 @@
 #include "gui/account/AccountController.h"
 #include "keys/PasswordKey.h"
 
-#include <ovdesktop.h>
+#include <ovcore.h>
 
 #include <QBuffer>
 
@@ -809,18 +809,18 @@ namespace
         }
     }
 
-    Merger::Change::Type changeType(uint8_t change)
+    Merger::Change::Type changeType(ov::ChangeType change)
     {
         switch (change) {
-        case 0:
+        case ov::ChangeType::Added:
             return Merger::Change::Type::Added;
-        case 1:
+        case ov::ChangeType::Modified:
             return Merger::Change::Type::Modified;
-        case 2:
+        case ov::ChangeType::Moved:
             return Merger::Change::Type::Moved;
-        case 3:
+        case ov::ChangeType::Deleted:
             return Merger::Change::Type::Deleted;
-        case 4:
+        case ov::ChangeType::Metadata:
             return Merger::Change::Type::Metadata;
         default:
             return Merger::Change::Type::Unspecified;
@@ -1338,7 +1338,7 @@ SyncEngine::mergeAccountVault(Database* local, Database* remote, const Database*
     QSharedPointer<Database> mergedRemote;
     Merger::ChangeList changes;
     try {
-        auto result = ovd::merge_kdbx(slice(localData),
+        auto result = ov::merge_kdbx(slice(localData),
                                       slice(components),
                                       slice(remoteData),
                                       slice(components),
@@ -1365,12 +1365,12 @@ SyncEngine::mergeAccountVault(Database* local, Database* remote, const Database*
             const auto details = QString::fromUtf8(change.details.data(), static_cast<int>(change.details.size()));
             const auto uuid = change.uuid.size() == 16 ? QUuid::fromRfc4122(QByteArrayView(toByteArray(change.uuid)))
                                                         : QUuid();
-            if (change.subject == 0) {
+            if (change.subject == ov::ChangeSubject::Entry) {
                 if (const auto* entry = local->rootGroup()->findEntryByUuid(uuid)) {
                     changes << Merger::Change(type, *entry, details);
                     continue;
                 }
-            } else if (change.subject == 1) {
+            } else if (change.subject == ov::ChangeSubject::Group) {
                 if (const auto* group = local->rootGroup()->findGroupByUuid(uuid)) {
                     changes << Merger::Change(type, *group, details);
                     continue;

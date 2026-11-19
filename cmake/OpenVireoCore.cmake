@@ -14,14 +14,14 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Builds openvireo-core (github.com/openvireo/openvireo-core) from source with Corrosion, as the
-# static library of src/account/ovcore. That crate pins every core crate to one git commit (its
-# Cargo.toml and Cargo.lock), so builds are reproducible; cargo downloads the sources on the first
-# build (or `cargo vendor` them for offline builds).
+# static library of src/account/ovcore, a wrapper around the core's C++ binding (ov-ffi-cpp) that
+# pins it to one git commit (its Cargo.toml and Cargo.lock), so builds are reproducible; cargo
+# downloads the sources on the first build (or `cargo vendor` them for offline builds).
 #
 # Defines:
 #   ovcore              - interface target: link it to get the library and its headers
-#   OVCORE_INCLUDE_DIR  - where the generated headers go: <ovcore.h> (namespace ov, the core facade
-#                         and the Host interfaces) and <ovdesktop.h> (namespace ovd)
+#   OVCORE_INCLUDE_DIR  - where the generated headers go: <ovcore.h> (namespace ov: the core facade,
+#                         the Host interfaces and the crypto, OPAQUE and merge functions below it)
 #
 # Options:
 #   OPENVIREO_CORE_SOURCE_DIR - a local openvireo-core checkout to build instead of the pinned commit,
@@ -55,13 +55,8 @@ if(OPENVIREO_CORE_SOURCE_DIR)
     # Replace the pinned git sources with the checkout; the lock file no longer matches, so no --locked
     message(WARNING "Building openvireo-core from ${OPENVIREO_CORE_SOURCE_DIR}, not the pinned commit")
     set(_ovcore_flags)
-    foreach(_crate ov-ffi-cpp ov-crypto ov-error ov-kdbx ov-merge ov-opaque)
-        set(_dir "${OPENVIREO_CORE_SOURCE_DIR}/crates/${_crate}")
-        if(_crate STREQUAL "ov-ffi-cpp")
-            set(_dir "${OPENVIREO_CORE_SOURCE_DIR}/bindings/${_crate}")
-        endif()
-        list(APPEND _ovcore_flags "--config" "patch.'https://github.com/openvireo/openvireo-core'.${_crate}.path='${_dir}'")
-    endforeach()
+    list(APPEND _ovcore_flags "--config"
+         "patch.'https://github.com/openvireo/openvireo-core'.ov-ffi-cpp.path='${OPENVIREO_CORE_SOURCE_DIR}/bindings/ov-ffi-cpp'")
     list(APPEND _ovcore_args FLAGS ${_ovcore_flags})
 else()
     list(APPEND _ovcore_args LOCKED)

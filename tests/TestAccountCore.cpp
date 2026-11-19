@@ -29,7 +29,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "mock/MockClock.h"
 
-#include <ovdesktop.h>
+#include <ovcore.h>
 
 #include <QFile>
 #include <QHash>
@@ -385,11 +385,11 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
     const auto server = libopaque.value("id_s").toString().toUtf8();
     QCOMPARE(QString::fromUtf8(OpaqueClient::Context), libopaque.value("context").toString());
 
-    auto start = ovd::opaque_start_login_seeded(slice(password), slice(hex(login, "client_start_seed_hex")));
+    auto start = ov::opaque_start_login_seeded(slice(password), slice(hex(login, "client_start_seed_hex")));
     QCOMPARE(toByteArray(start.message).toHex(), hex(login, "ke1_hex").toHex());
 
     // ke2 is what the libopaque server answered for its stored record
-    auto finish = ovd::opaque_finish_login_seeded(slice(toByteArray(start.state)),
+    auto finish = ov::opaque_finish_login_seeded(slice(toByteArray(start.state)),
                                                   slice(hex(login, "ke2_hex")),
                                                   slice(user),
                                                   slice(server),
@@ -401,11 +401,11 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
              hex(libopaque.value("registration").toObject(), "export_key_hex").toHex());
 
     // A wrong password fails like a wrong record
-    auto wrong = ovd::opaque_start_login_seeded(slice(QByteArray("wrong password")),
+    auto wrong = ov::opaque_start_login_seeded(slice(QByteArray("wrong password")),
                                                 slice(hex(login, "client_start_seed_hex")));
     bool refused = false;
     try {
-        ovd::opaque_finish_login_seeded(slice(toByteArray(wrong.state)),
+        ov::opaque_finish_login_seeded(slice(toByteArray(wrong.state)),
                                         slice(hex(login, "ke2_hex")),
                                         slice(user),
                                         slice(server),

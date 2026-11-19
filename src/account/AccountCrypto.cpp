@@ -24,11 +24,10 @@
 #include <botan/mem_ops.h>
 
 #include <ovcore.h>
-#include <ovdesktop.h>
 
 
 /*
- * The crypto itself runs in openvireo-core (ov-crypto, through <ovcore.h> and <ovdesktop.h>), the same code
+ * The crypto itself runs in openvireo-core (ov-crypto, through <ovcore.h>), the same code
  * the web, iOS and CLI clients use. This file converts between Qt types and the core's byte buffers.
  */
 
@@ -188,7 +187,7 @@ namespace AccountCrypto
     SecureBytes generateSecretKey()
     {
         try {
-            return takeSecure(ovd::generate_secret_key());
+            return takeSecure(ov::generate_secret_key());
         } catch (const rust::Error&) {
             return {};
         }
@@ -197,7 +196,7 @@ namespace AccountCrypto
     QString formatSecretKey(const SecureBytes& secretKey)
     {
         try {
-            auto text = ovd::format_secret_key(slice(secretKey));
+            auto text = ov::format_secret_key(slice(secretKey));
             auto result = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
             Botan::secure_scrub_memory(const_cast<char*>(text.data()), text.size());
             return result;
@@ -210,7 +209,7 @@ namespace AccountCrypto
     {
         auto utf8 = text.toUtf8();
         try {
-            *secretKey = takeSecure(ovd::parse_secret_key(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size()))));
+            *secretKey = takeSecure(ov::parse_secret_key(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size()))));
             Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
             return true;
         } catch (const rust::Error&) {
@@ -259,7 +258,7 @@ namespace AccountCrypto
     {
         auto utf8 = password.toUtf8();
         try {
-            auto normalized = takeSecure(ovd::nfkc_utf8(slice(utf8)));
+            auto normalized = takeSecure(ov::nfkc_utf8(slice(utf8)));
             Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
             return normalized;
         } catch (const rust::Error&) {
@@ -292,7 +291,7 @@ namespace AccountCrypto
     wrap(const SecureBytes& key, const SecureBytes& plaintext, const QByteArray& aad, const QByteArray& nonce)
     {
         try {
-            return toByteArray(ovd::wrap(slice(key), slice(plaintext), slice(aad), slice(nonce)));
+            return toByteArray(ov::wrap(slice(key), slice(plaintext), slice(aad), slice(nonce)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -305,7 +304,7 @@ namespace AccountCrypto
                 Error* error)
     {
         try {
-            *plaintext = takeSecure(ovd::unwrap(slice(key), slice(wrapped), slice(aad)));
+            *plaintext = takeSecure(ov::unwrap(slice(key), slice(wrapped), slice(aad)));
         } catch (const rust::Error& e) {
             return fail(error, wrapped.isEmpty() ? Error::InvalidInput : errorOf(e));
         }
@@ -345,7 +344,7 @@ namespace AccountCrypto
     QByteArray x25519PublicKey(const SecureBytes& secretKey)
     {
         try {
-            return toByteArray(ovd::x25519_public_key(slice(secretKey)));
+            return toByteArray(ov::x25519_public_key(slice(secretKey)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -354,7 +353,7 @@ namespace AccountCrypto
     QByteArray ed25519PublicKey(const SecureBytes& seed)
     {
         try {
-            return toByteArray(ovd::ed25519_public_key(slice(seed)));
+            return toByteArray(ov::ed25519_public_key(slice(seed)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -363,7 +362,7 @@ namespace AccountCrypto
     QByteArray sign(const SecureBytes& signSeed, const QByteArray& message)
     {
         try {
-            return toByteArray(ovd::ed25519_sign(slice(signSeed), slice(message)));
+            return toByteArray(ov::ed25519_sign(slice(signSeed), slice(message)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -371,7 +370,7 @@ namespace AccountCrypto
 
     bool verify(const QByteArray& signPk, const QByteArray& message, const QByteArray& signature)
     {
-        return ovd::ed25519_verify(slice(signPk), slice(message), slice(signature));
+        return ov::ed25519_verify(slice(signPk), slice(message), slice(signature));
     }
 
     QByteArray signPublicKeys(const SecureBytes& signSeed, const QByteArray& encPk, const QByteArray& signPk)
@@ -381,12 +380,12 @@ namespace AccountCrypto
 
     bool verifyPublicKeys(const PublicKeys& publicKeys)
     {
-        return ovd::verify_public_keys(slice(publicKeys.encPk), slice(publicKeys.signPk), slice(publicKeys.sig));
+        return ov::verify_public_keys(slice(publicKeys.encPk), slice(publicKeys.signPk), slice(publicKeys.sig));
     }
 
     QString fingerprint(const PublicKeys& publicKeys)
     {
-        const auto text = ovd::fingerprint(slice(publicKeys.encPk), slice(publicKeys.signPk));
+        const auto text = ov::fingerprint(slice(publicKeys.encPk), slice(publicKeys.signPk));
         return QString::fromUtf8(text.data(), static_cast<int>(text.size()));
     }
 
@@ -394,7 +393,7 @@ namespace AccountCrypto
     {
         Keyset keyset;
         try {
-            const auto publicKeys = ovd::keyset_from_secrets(slice(encSk), slice(signSeed));
+            const auto publicKeys = ov::keyset_from_secrets(slice(encSk), slice(signSeed));
             keyset.encSk = encSk;
             keyset.signSeed = signSeed;
             keyset.publicKeys.encPk = toByteArray(publicKeys.enc_pk);
@@ -473,7 +472,7 @@ namespace AccountCrypto
     SecureBytes sharedSecret(const SecureBytes& secretKey, const QByteArray& publicKey)
     {
         try {
-            return takeSecure(ovd::x25519_shared(slice(secretKey), slice(publicKey)));
+            return takeSecure(ov::x25519_shared(slice(secretKey), slice(publicKey)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -492,7 +491,7 @@ namespace AccountCrypto
     {
         try {
             return toByteArray(
-                ovd::seal(slice(recipientEncPk), slice(plaintext), slice(aad), slice(ephemeralSk), slice(nonce)));
+                ov::seal(slice(recipientEncPk), slice(plaintext), slice(aad), slice(ephemeralSk), slice(nonce)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -505,7 +504,7 @@ namespace AccountCrypto
                 Error* error)
     {
         try {
-            *plaintext = takeSecure(ovd::unseal(slice(recipientEncSk), slice(sealed), slice(aad)));
+            *plaintext = takeSecure(ov::unseal(slice(recipientEncSk), slice(sealed), slice(aad)));
         } catch (const rust::Error& e) {
             return fail(error, sealed.isEmpty() ? Error::InvalidInput : errorOf(e));
         }
@@ -523,7 +522,7 @@ namespace AccountCrypto
     SecureBytes vaultNameKey(const SecureBytes& vaultKey)
     {
         try {
-            return takeSecure(ovd::vault_name_key(slice(vaultKey)));
+            return takeSecure(ov::vault_name_key(slice(vaultKey)));
         } catch (const rust::Error&) {
             return {};
         }
@@ -652,14 +651,14 @@ namespace AccountCrypto
     QString refreshTokenHash(const QString& refreshToken)
     {
         const auto utf8 = refreshToken.toUtf8();
-        const auto hash = ovd::refresh_token_hash(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
+        const auto hash = ov::refresh_token_hash(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
         return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
     }
 
     QString ServiceAccountToken::secretHash() const
     {
         try {
-            const auto hash = ovd::service_account_secret_hash(slice(secret));
+            const auto hash = ov::service_account_secret_hash(slice(secret));
             return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
         } catch (const rust::Error&) {
             return {};
@@ -669,7 +668,7 @@ namespace AccountCrypto
     QString ServiceAccountToken::secretPrefix() const
     {
         try {
-            const auto prefix = ovd::service_account_secret_prefix(slice(secret));
+            const auto prefix = ov::service_account_secret_prefix(slice(secret));
             return QString::fromUtf8(prefix.data(), static_cast<int>(prefix.size()));
         } catch (const rust::Error&) {
             return {};
@@ -681,7 +680,7 @@ namespace AccountCrypto
         const auto url = token.url.toUtf8();
         const auto saId = token.saId.toUtf8();
         try {
-            auto text = ovd::build_service_account_token(rust::Str(url.constData(), static_cast<size_t>(url.size())),
+            auto text = ov::build_service_account_token(rust::Str(url.constData(), static_cast<size_t>(url.size())),
                                                          rust::Str(saId.constData(), static_cast<size_t>(saId.size())),
                                                          slice(token.secret),
                                                          slice(token.kek));
@@ -697,7 +696,7 @@ namespace AccountCrypto
     {
         auto utf8 = text.toUtf8();
         try {
-            auto parsed = ovd::parse_service_account_token(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
+            auto parsed = ov::parse_service_account_token(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
             Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
             ServiceAccountToken result;
             result.version = 1;
