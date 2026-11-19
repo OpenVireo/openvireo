@@ -20,7 +20,7 @@
 
 #include "account/AccountManager.h"
 #include "account/AuthClient.h"
-#include "account/OpaqueClient.h"
+#include "account/CoreHost.h"
 #include "gui/remote/SyncServerClient.h"
 
 #include <QDateTime>
@@ -33,8 +33,8 @@
  * An in-memory KeePassXC account server and sync server for tests, following
  * docs/plans/accounts/openapi.yaml and sync-openapi.yaml closely enough for the clients not to notice.
  *
- * OPAQUE is replaced by comparing password hashes (FakeOpaqueClient), so these tests don't need
- * libopaque; TestAccountManager runs the real protocol. Access tokens are opaque strings, but like a JWT's
+ * Sign-up and sign-in run the real OPAQUE protocol: the server half is openvireo-core's test server
+ * (feature test-server). AccountManager reaches it through FakeAccount::Transport, a core Host transport. Access tokens are opaque strings, but like a JWT's
  * `vlt` claim each one remembers the vaults its principal could open when it was issued, and the sync
  * server only accepts it for those.
  */
@@ -50,22 +50,6 @@ namespace FakeAccount
     AccountManager::ServerConfig serverConfig();
     // The cheapest settings clients accept
     AccountCrypto::KdfParams testKdf();
-
-    class FakeOpaqueClient : public OpaqueClient
-    {
-    public:
-        bool createRegistrationRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* request) override;
-        bool finalizeRegistration(const SecureBytes& sec,
-                                  const QByteArray& response,
-                                  const Ids& ids,
-                                  QByteArray* record) override;
-        bool createCredentialRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* ke1) override;
-        bool recoverCredentials(const QByteArray& ke2,
-                                const SecureBytes& sec,
-                                const Ids& ids,
-                                QByteArray* authU,
-                                SecureBytes* sessionKey) override;
-    };
 
     struct Server
     {
@@ -167,6 +151,9 @@ namespace FakeAccount
         // principal -> PublicPrincipal JSON, for lookups and fingerprints
         QHash<QString, QJsonObject> directory;
         QHash<QString, QString> registrations;
+        // OPAQUE server states: registration session -> state, login session -> (email, state)
+        QHash<QString, QByteArray> registrationStates;
+        QHash<QString, QPair<QString, QByteArray>> loginStates;
         QHash<QString, QPair<QString, bool>> logins;
         QHash<QString, QString> mfaTokens;
         QHash<QString, int> mfaAttempts;
@@ -233,6 +220,11 @@ namespace FakeAccount
     {
     public:
         explicit FakeAuthClient(QSharedPointer<Server> server);
+        // send() for FakeAccount::Transport
+        void dispatch(const QByteArray& verb, const QUrl& url, const Headers& headers, const QByteArray& body, Callback callback)
+        {
+            send(verb, url, headers, body, TimeoutMsec, std::move(callback));
+        }
 
     protected:
         void send(const QByteArray& verb,
@@ -262,6 +254,22 @@ namespace FakeAccount
     private:
         QSharedPointer<Server> m_server;
     };
+
+    // The core Host transport in front of `server`: each request is answered by a FakeAuthClient on the GUI thread
+    class Transport : public ov::HttpTransport
+    {
+    public:
+        explicit Transport(QSharedPointer<Server> server);
+        ov::HttpResponse send(const ov::HttpRequest& req, ov::TransportFailure& failure) const override;
+        std::unique_ptr<ov::ByteStream> open_stream(const ov::HttpRequest& req,
+                                                    ov::TransportFailure& failure) const override;
+
+    private:
+        QSharedPointer<Server> m_server;
+    };
+
+    // The core Host for an account manager on `server`
+    CoreHost::Factory host(const QSharedPointer<Server>& server);
 
     // An account manager talking to `server`, with cheap KDF settings and no event stream
     AccountManager* createManager(const QSharedPointer<Server>& server, QObject* parent = nullptr);

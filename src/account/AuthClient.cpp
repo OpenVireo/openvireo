@@ -20,6 +20,10 @@
 #include "AccountCrypto.h"
 #include "core/Tools.h"
 
+#include <ovcore.h>
+#include <QCoreApplication>
+#include <QtConcurrent>
+
 #include <QJsonDocument>
 #include <QPointer>
 #include <QSysInfo>
@@ -83,6 +87,13 @@ AuthClient::AuthClient(const QString& apiUrl, QObject* parent)
 AuthClient::~AuthClient()
 {
     abort();
+    // Requests under way through the core transport finish first: the transport may not outlive its owner. A test
+    // transport can need this thread's event loop to answer, so it keeps turning (abort() muted the callbacks).
+    while (!m_pool.waitForDone(5)) {
+        if (QThread::currentThread() == thread()) {
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+    }
 }
 
 void AuthClient::setApiUrl(const QString& apiUrl)
@@ -96,6 +107,13 @@ void AuthClient::setApiUrl(const QString& apiUrl)
 QString AuthClient::apiUrl() const
 {
     return m_apiUrl;
+}
+
+void AuthClient::setTransport(std::shared_ptr<ov::HttpTransport> transport)
+{
+    // One request at a time: answers come back in the order they were asked, as from one connection
+    m_pool.setMaxThreadCount(1);
+    m_transport = std::move(transport);
 }
 
 void AuthClient::setTokenProvider(AccessTokenProvider provider)
@@ -556,6 +574,60 @@ void AuthClient::send(const QByteArray& verb,
                       Callback callback)
 {
     Response response;
+    if (m_transport) {
+        ov::HttpRequest req;
+        const auto v = verb.toUpper();
+        req.method = v == "GET"      ? ov::Method::Get
+                     : v == "HEAD"   ? ov::Method::Head
+                     : v == "PUT"    ? ov::Method::Put
+                     : v == "PATCH"  ? ov::Method::Patch
+                     : v == "DELETE" ? ov::Method::Delete
+                                     : ov::Method::Post;
+        const auto urlText = url.toString(QUrl::FullyEncoded).toStdString();
+        req.url = rust::String(urlText.data(), urlText.size());
+        for (const auto& header : headers) {
+            ov::Header h;
+            h.name = rust::String(header.first.constData(), static_cast<size_t>(header.first.size()));
+            h.value = rust::String(header.second.constData(), static_cast<size_t>(header.second.size()));
+            req.headers.push_back(std::move(h));
+        }
+        req.has_body = !body.isEmpty();
+        for (auto c : body) {
+            req.body.push_back(static_cast<uint8_t>(c));
+        }
+        Q_UNUSED(timeoutMsec)
+        auto transport = m_transport;
+        auto future = QtConcurrent::run(&m_pool, [transport, req]() {
+            Response out;
+            ov::TransportFailure failure{ov::TransportErrorKind::None, {}};
+            try {
+                auto res = transport->send(req, failure);
+                if (failure.kind == ov::TransportErrorKind::None) {
+                    out.status = res.status;
+                    out.body = QByteArray(reinterpret_cast<const char*>(res.body.data()),
+                                          static_cast<int>(res.body.size()));
+                } else {
+                    out.networkError = QString::fromUtf8(failure.message.data(), static_cast<int>(failure.message.size()));
+                    if (out.networkError.isEmpty()) {
+                        out.networkError = QStringLiteral("network error");
+                    }
+                }
+            } catch (const std::exception& e) {
+                out.networkError = QString::fromUtf8(e.what());
+            }
+            return out;
+        });
+        auto* watcher = new QFutureWatcher<Response>(this);
+        const auto generation = m_generation;
+        connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation, callback] {
+            watcher->deleteLater();
+            if (generation == m_generation) {
+                callback(watcher->result());
+            }
+        });
+        watcher->setFuture(future);
+        return;
+    }
 #ifdef KPXC_FEATURE_NETWORK
     if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
         response.networkError = tr("Invalid account server URL: %1").arg(url.toString());

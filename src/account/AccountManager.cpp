@@ -18,7 +18,6 @@
 #include "AccountManager.h"
 
 #include "account/AccountOfflineCache.h"
-#include "core/AsyncTask.h"
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Tools.h"
@@ -29,6 +28,7 @@
 #include <botan/mem_ops.h>
 
 #include <algorithm>
+#include <optional>
 
 #include <QDateTime>
 #include <QJsonArray>
@@ -37,25 +37,51 @@
 #ifdef KPXC_FEATURE_NETWORK
 #include <QNetworkInformation>
 #endif
+#include <QCoreApplication>
+#include <QSysInfo>
 #include <QThread>
+#include <QtConcurrent>
 #include <QUrl>
 #include <QUuid>
 
 using namespace AccountCrypto;
+
+// The core client and its account for one server
+struct AccountManager::CoreSession
+{
+    rust::Box<ov::Client> client;
+    std::optional<rust::Box<ov::Account>> account;
+
+    const ov::Account& acct() const
+    {
+        if (!account) {
+            throw std::runtime_error("signed_out: no account server");
+        }
+        return **account;
+    }
+};
 
 // What a sign-in or registration in progress keeps until the session arrives
 struct AccountManager::Pending
 {
     bool registering = false;
     QString email;
-    SecureBytes password;
-    SecureBytes secretKey;
-    SecureBytes opaqueSecret;
-    QString sessionId;
-    QString mfaToken;
-    // Registration only
-    KdfParams kdf;
+    std::shared_ptr<rust::Box<ov::TotpChallenge>> challenge;
+};
+
+struct AccountManager::SessionInfo
+{
     QString userId;
+    QString email;
+    QString deviceId;
+    QString accessToken;
+    QString secretKey;
+    QString deletion;
+    bool offline = false;
+    bool mfa = false;
+    std::shared_ptr<rust::Box<ov::TotpChallenge>> challenge;
+    SecureBytes keysetSecret;
+    SecureBytes auk;
 };
 
 namespace
@@ -179,18 +205,139 @@ QJsonObject AccountManager::ServerConfig::toJson() const
          QJsonObject{{"m", static_cast<qint64>(kdfMinMemoryKiB)}, {"t", static_cast<qint64>(kdfMinIterations)}}}};
 }
 
+
+namespace
+{
+    rust::Vec<uint8_t> bytesOf(const QByteArray& data)
+    {
+        rust::Vec<uint8_t> vec;
+        vec.reserve(static_cast<size_t>(data.size()));
+        for (auto c : data) {
+            vec.push_back(static_cast<uint8_t>(c));
+        }
+        return vec;
+    }
+
+    rust::Vec<uint8_t> secretOf(const QString& text)
+    {
+        auto utf8 = text.toUtf8();
+        auto vec = bytesOf(utf8);
+        Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
+        return vec;
+    }
+
+    SecureBytes takeSecure(rust::Vec<uint8_t>& bytes)
+    {
+        SecureBytes out(bytes.begin(), bytes.end());
+        ov::wipe(bytes);
+        return out;
+    }
+
+    QString takeText(rust::Vec<uint8_t>& bytes)
+    {
+        auto text = QString::fromUtf8(reinterpret_cast<const char*>(bytes.data()), static_cast<int>(bytes.size()));
+        ov::wipe(bytes);
+        return text;
+    }
+
+    rust::String rs(const QString& text)
+    {
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+    }
+
+    QString qs(const rust::String& text)
+    {
+        return CoreHost::toQString(text);
+    }
+
+    // The keyset didn't unwrap on this device: the password or the Secret Key is wrong. The core reports it as
+    // unauthorized (401), like an OPAQUE refusal, and only its message tells them apart.
+    // CONTRACT-REQUEST: a distinct code (or details) for "the keyset didn't unwrap".
+    bool wrongKey(const AccountManager::CoreError& e)
+    {
+        return e.code == "decryption_failed" || e.code == "invalid_secret_key"
+               || (e.code == "unauthorized" && e.message.contains("Secret Key"));
+    }
+
+    ov::ServerConfig coreConfig(const AccountManager::ServerConfig& config)
+    {
+        ov::ServerConfig out;
+        out.issuer = rs(config.issuer.isEmpty() ? config.api : config.issuer);
+        out.api = rs(config.api);
+        out.sync = rs(config.sync);
+        out.opaque_ids = rs(config.serverId());
+        out.has_kdf_min = true;
+        out.kdf_min_m = config.kdfMinMemoryKiB;
+        out.kdf_min_t = config.kdfMinIterations;
+        out.web = rs(config.web);
+        out.share = rs(config.share);
+        return out;
+    }
+
+    // The token's lifetime from its own claims, so it doesn't matter whose clock issued it
+    qint64 lifetimeOf(const QString& token)
+    {
+        JwtClaims claims;
+        if (parseJwtClaims(token, &claims) && claims.exp > 0 && claims.iat > 0 && claims.exp > claims.iat) {
+            return claims.exp - claims.iat;
+        }
+        return 600;
+    }
+} // namespace
+
+namespace
+{
+    void readSession(const ov::Account& account, AccountManager::SessionInfo& info, bool withToken)
+    {
+        info.userId = qs(account.user_id());
+        info.email = qs(account.email());
+        const auto stored = account.stored_session();
+        if (stored.has) {
+            info.deviceId = qs(stored.value.device_id);
+        }
+        auto secret = account.unlocked_keyset_secret();
+        info.keysetSecret = takeSecure(secret);
+        if (withToken) {
+            auto token = account.access_token(false, *ov::new_cancel_token());
+            info.accessToken = takeText(token);
+        }
+    }
+
+    Keyset keysetOf(const SecureBytes& secret)
+    {
+        if (secret.size() != 64) {
+            return {};
+        }
+        const SecureBytes encSk(secret.begin(), secret.begin() + 32);
+        const SecureBytes signSeed(secret.begin() + 32, secret.end());
+        return keysetFromSecrets(encSk, signSeed);
+    }
+} // namespace
+
 AccountManager::AccountManager(QObject* parent)
-    : AccountManager(new AuthClient(), std::make_unique<OpaqueClient>(), parent)
+    : AccountManager(CoreHost::Factory(), parent)
 {
 }
 
-AccountManager::AccountManager(AuthClient* client, std::unique_ptr<OpaqueClient> opaque, QObject* parent)
+AccountManager::AccountManager(CoreHost::Factory host, QObject* parent)
     : QObject(parent)
-    , m_client(client)
-    , m_opaque(std::move(opaque))
+    , m_host(std::move(host))
+    , m_client(new AuthClient())
 {
+    // One core call at a time, in the order they were made: a sign-out can't overtake the sign-in after it
+    m_pool.setMaxThreadCount(1);
+    m_pool.setExpiryTimeout(-1);
     m_client->setParent(this);
+    m_client->setTransport(std::shared_ptr<ov::HttpTransport>(m_host.makeTransport()));
     m_client->setTokenProvider(tokenProvider());
+    try {
+        ov::ClientConfig config;
+        config.device_name = rs(AuthClient::DeviceInfo::current().name);
+        m_local = std::make_shared<CoreSession>(CoreSession{m_host.newClient(config), std::nullopt});
+    } catch (const std::exception& e) {
+        qWarning("openvireo-core client: %s", e.what());
+    }
     m_refreshTimer.setSingleShot(true);
     connect(&m_refreshTimer, &QTimer::timeout, this, &AccountManager::refreshAccessToken);
     m_reconnectTimer.setSingleShot(true);
@@ -222,12 +369,94 @@ AccountManager::~AccountManager()
     }
     m_keyring.clear();
     m_keyset.clear();
+    // Calls under way finish (their results go nowhere): their Host may not outlive this manager. A test Host can
+    // need this thread's event loop to answer, so it keeps turning meanwhile.
+    m_destroying = true;
+    m_client->abort();
+    stopEvents();
+    while (!m_pool.waitForDone(5)) {
+        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+    delete m_client;
+    m_client = nullptr;
+}
+
+std::shared_ptr<AccountManager::CoreSession> AccountManager::makeCore(const ServerConfig& config) const
+{
+    if (!config.isValid()) {
+        return {};
+    }
+    try {
+        ov::ClientConfig clientConfig;
+        clientConfig.device_name = rs(AuthClient::DeviceInfo::current().name);
+        // The core keeps its offline copies (profile, vault list, vaults) only when allowed (SPEC §20)
+        clientConfig.offline = AccountOfflineCache::isEnabled();
+        clientConfig.has_server = true;
+        clientConfig.server = coreConfig(config);
+        auto core = std::make_shared<CoreSession>(CoreSession{m_host.newClient(clientConfig), std::nullopt});
+        // With the server given this reads the keychain only, no network
+        auto cancel = ov::new_cancel_token();
+        core->account = ov::call([&] { return core->client->connect(clientConfig.server.issuer, *cancel); });
+        return core;
+    } catch (const std::exception& e) {
+        qWarning("openvireo-core account: %s", e.what());
+        return {};
+    }
+}
+
+void AccountManager::runCore(std::shared_ptr<CoreSession> core,
+                             std::function<void(CoreSession&)> work,
+                             std::function<void(const CoreError&)> done)
+{
+    auto error = std::make_shared<CoreError>();
+    const auto fill = [](CoreError& out, const ov::ErrorInfo& info) {
+        out.code = qs(info.code);
+        out.message = qs(info.message);
+        out.details = qs(info.details);
+        out.status = info.status;
+    };
+    ++m_inFlight;
+    auto future = QtConcurrent::run(&m_pool, [core, work, error, fill] {
+        if (!core) {
+            error->code = QStringLiteral("signed_out");
+            error->message = QStringLiteral("no account server");
+            return;
+        }
+        try {
+            work(*core);
+        } catch (const ov::Error& e) {
+            fill(*error, e.info());
+        } catch (const rust::Error&) {
+            fill(*error, ov::take_last_error());
+        } catch (const std::exception& e) {
+            const QString what = QString::fromUtf8(e.what());
+            const auto colon = what.indexOf(": ");
+            error->code = colon > 0 ? what.left(colon) : QStringLiteral("internal");
+            error->message = colon > 0 ? what.mid(colon + 2) : what;
+        }
+        if (error->code.isEmpty() && !error->message.isEmpty()) {
+            error->code = QStringLiteral("internal");
+        }
+    });
+    auto* watcher = new QFutureWatcher<void>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, error, done] {
+        watcher->deleteLater();
+        --m_inFlight;
+        if (done && !m_destroying) {
+            done(*error);
+        }
+    });
+    watcher->setFuture(future);
 }
 
 void AccountManager::setServer(const ServerConfig& config)
 {
+    const bool same = m_core && config.toJson() == m_config.toJson();
     m_config = config;
     m_client->setApiUrl(config.api);
+    if (!same) {
+        m_core = makeCore(config);
+    }
     emit serverChanged();
 }
 
@@ -238,19 +467,46 @@ AccountManager::ServerConfig AccountManager::server() const
 
 void AccountManager::discover(const QString& issuerUrl)
 {
-    m_client->discover(issuerUrl, [this](const AuthClient::Response& response) {
-        const auto config = ServerConfig::fromJson(response.json());
-        if (!response.isSuccess() || !config.isValid()) {
-            emit error(response.isSuccess() ? tr("The server isn't an OpenVireo account server.")
-                                            : AuthClient::errorMessage(response));
-            return;
-        }
-        if (const auto insecure = config.insecureUrl(); !insecure.isEmpty()) {
-            emit error(insecureServerMessage(insecure));
-            return;
-        }
-        setServer(config);
-    });
+    if (!m_local) {
+        emit error(tr("This build of OpenVireo can't sign in to accounts."));
+        return;
+    }
+    auto result = std::make_shared<ServerConfig>();
+    const auto issuer = issuerUrl;
+    runCore(
+        m_local,
+        [result, issuer](CoreSession& core) {
+            const auto c = core.client->discover(rs(issuer), *ov::new_cancel_token());
+            result->issuer = qs(c.issuer);
+            result->api = qs(c.api);
+            result->sync = qs(c.sync);
+            result->web = qs(c.web);
+            result->share = qs(c.share);
+            result->opaqueServerId = qs(c.opaque_ids);
+            if (c.has_kdf_min) {
+                result->kdfMinMemoryKiB = qMax<quint32>(KdfParams::MinMemoryKiB, c.kdf_min_m);
+                result->kdfMinIterations = qMax<quint32>(KdfParams::MinIterations, c.kdf_min_t);
+            }
+        },
+        [this, result](const CoreError& e) {
+            if (!e.ok()) {
+                // The core refuses insecure URLs too (SPEC §1)
+                emit error(e.code == "insecure_url"
+                               ? tr("The server sent an address that doesn't use https://. Plain http:// is only "
+                                    "allowed for this computer.")
+                               : messageFor(e));
+                return;
+            }
+            if (!result->isValid()) {
+                emit error(tr("The server isn't an OpenVireo account server."));
+                return;
+            }
+            if (const auto insecure = result->insecureUrl(); !insecure.isEmpty()) {
+                emit error(insecureServerMessage(insecure));
+                return;
+            }
+            setServer(*result);
+        });
 }
 
 void AccountManager::setNewAccountKdf(const KdfParams& kdf)
@@ -336,7 +592,18 @@ bool AccountManager::isOffline() const
 
 bool AccountManager::hasOfflineCache() const
 {
-    return !m_serviceAccount && AccountOfflineCache::hasProfile(m_accountId);
+    if (m_serviceAccount || m_accountId.isEmpty()) {
+        return false;
+    }
+    if (AccountOfflineCache::hasProfile(m_accountId)) {
+        return true;
+    }
+    // The profile the core cached at the last sign-in or unlock (local, no network)
+    try {
+        return m_core && m_core->account && AccountOfflineCache::isEnabled() && m_core->acct().cached_kdf().has;
+    } catch (const std::exception&) {
+        return false;
+    }
 }
 
 AccountManager::Org AccountManager::org(const QString& orgId) const
@@ -380,7 +647,7 @@ QUuid AccountManager::quickUnlockId() const
 
 void AccountManager::rememberAuk(const SecureBytes& auk)
 {
-    if (!isQuickUnlockAvailable() || m_accountId.isEmpty()) {
+    if (!isQuickUnlockAvailable() || m_accountId.isEmpty() || auk.empty()) {
         return;
     }
     // The provider encrypts it right away and keeps it in memory only, as it does a database key
@@ -412,7 +679,7 @@ void AccountManager::fail(const QString& message)
     // Whatever was in progress is over; an existing session stays
     m_pending.reset();
     if (m_state == State::SigningIn || m_state == State::NeedsMfa) {
-        setState(m_refreshToken.isEmpty() && m_accessToken.isEmpty() ? State::SignedOut : State::Locked);
+        setState(m_accountId.isEmpty() ? State::SignedOut : State::Locked);
     }
     emit error(message);
 }
@@ -422,29 +689,17 @@ QString AccountManager::defaultServerId() const
     return m_config.serverId();
 }
 
-OpaqueClient::Ids AccountManager::opaqueIds(const QString& email) const
-{
-    return {OpaqueClient::userId(email), defaultServerId().toUtf8()};
-}
-
-QString AccountManager::sessionKey(const QString& accountId)
-{
-    return "ov-account-session:" + accountId;
-}
-
-QString AccountManager::secretKeyKey(const QString& serverId, const QString& email)
-{
-    return "ov-account-secret-key:" + serverId + ":" + email.trimmed().toLower();
-}
-
-QString AccountManager::deviceKey(const QString& serverId, const QString& email)
-{
-    return "ov-account-device:" + serverId + ":" + email.trimmed().toLower();
-}
-
 QString AccountManager::storedSecretKey(const QString& serverId, const QString& email)
 {
-    return SyncTokenStore::load(secretKeyKey(serverId, email));
+    // Where the core keeps it (CoreHost::SecretStore): secret_key:<idS>:<idU>, else the older secret_key:<idU>
+    const auto idU = email.trimmed().toLower();
+    for (const auto& key : {"secret_key:" + serverId + ":" + idU, "secret_key:" + idU}) {
+        const auto value = SyncTokenStore::load(CoreHost::SecretStore::KeyPrefix + key);
+        if (!value.isEmpty()) {
+            return QString::fromUtf8(QByteArray::fromBase64(value.toLatin1()));
+        }
+    }
+    return {};
 }
 
 QString AccountManager::lastAccountId()
@@ -465,8 +720,19 @@ QList<AccountManager::KnownAccount> AccountManager::knownAccounts() const
         account.lastUsedAt = json.value("last_used_at").toInteger();
         account.checkedAt = json.value("checked_at").toInteger();
         account.deletionScheduledFor = json.value("deletion_scheduled_for").toString();
-        account.signedIn = !SyncTokenStore::load(sessionKey(account.id)).isEmpty();
         account.current = account.id == m_accountId && !m_serviceAccount;
+        if (account.current && m_state != State::SignedOut) {
+            account.signedIn = true;
+        } else if (m_local && !account.id.isEmpty()) {
+            // Active or set aside in the keychain (no network)
+            try {
+                const auto issuer = account.server.issuer.isEmpty() ? account.server.api : account.server.issuer;
+                account.signedIn =
+                    m_local->client->session_state(rs(issuer), rs(account.id)) != ov::SessionState::SignedOut;
+            } catch (const std::exception&) {
+                account.signedIn = false;
+            }
+        }
         if (!account.id.isEmpty()) {
             list << account;
         }
@@ -524,270 +790,288 @@ void AccountManager::rememberCurrentAccount() const
     saveKnownAccounts(list);
 }
 
+QString AccountManager::unreachableMessage() const
+{
+    const auto host = hostOf(m_config.issuer.isEmpty() ? m_config.api : m_config.issuer);
+    if (AccountOfflineCache::isEnabled()) {
+        return tr("Can't reach %1, and this device hasn't kept a copy to unlock offline yet. Check your "
+                  "connection and try again.")
+            .arg(host);
+    }
+    return tr("Can't reach %1. Check your connection and try again.").arg(host);
+}
+
+QString AccountManager::messageFor(const CoreError& error) const
+{
+    if (error.code == "network_error") {
+        return tr("Can't reach %1. Check your connection and try again.")
+            .arg(hostOf(m_config.issuer.isEmpty() ? m_config.api : m_config.issuer));
+    }
+    if (error.code == "plan_limit") {
+        const auto details = QJsonDocument::fromJson(error.details.toUtf8()).object();
+        const auto url = details.value("upgrade_url").toString();
+        auto message = error.message;
+        if (!url.isEmpty()) {
+            if (!message.endsWith('.')) {
+                message += '.';
+            }
+            message += ' ' + tr("Change your plan at %1").arg(url);
+        }
+        return message;
+    }
+    if (error.status > 0) {
+        return tr("The account server responded with HTTP %1: %2").arg(error.status).arg(error.message);
+    }
+    return error.message.isEmpty() ? error.code : error.message;
+}
+
+bool AccountManager::sessionEndedBy(const CoreError& error)
+{
+    // The core refused refresh (401/403/410) and dropped the session already
+    if (error.code != "signed_out" || error.status == 0 || m_serviceAccount) {
+        return false;
+    }
+    const auto reason = QJsonDocument::fromJson(error.details.toUtf8()).object().value("reason").toString();
+    endSession(reason == "token_reused"
+                   ? tr("Your session was ended because its sign-in token was used twice. Sign in again.")
+                   : tr("Your session has ended. Sign in again."));
+    return true;
+}
+
+// ---------------------------------------------------------------------------------- sign-up and sign-in
+
 void AccountManager::registerAccount(const QString& email, const QString& password)
 {
-    if (!m_config.isValid()) {
+    if (!m_config.isValid() || !m_core) {
         emit error(tr("Choose an account server first."));
         return;
     }
     m_pending = std::make_unique<Pending>();
     m_pending->registering = true;
     m_pending->email = email.trimmed();
-    m_pending->password = normalizePassword(password);
-    m_pending->secretKey = generateSecretKey();
-    m_pending->kdf = m_newAccountKdf.salt.isEmpty() ? KdfParams::generate() : m_newAccountKdf;
-    if (m_pending->kdf.salt.isEmpty()) {
-        m_pending->kdf.salt = KdfParams::generate().salt;
-    }
     setState(State::SigningIn);
 
-    QByteArray request;
-    if (!m_opaque->createRegistrationRequest(m_pending->password, &m_pending->opaqueSecret, &request)) {
-        fail(OpaqueClient::isAvailable() ? tr("Could not start the registration.")
-                                         : tr("This build of OpenVireo can't sign in to accounts."));
-        return;
+    ov::RegisterInput input;
+    input.email = rs(m_pending->email);
+    input.password = secretOf(password);
+    if (!m_newAccountKdf.salt.isEmpty()) {
+        input.kdf = ov::KdfOverrides{true,
+                                     m_newAccountKdf.memoryKiB,
+                                     true,
+                                     m_newAccountKdf.iterations,
+                                     true,
+                                     m_newAccountKdf.parallelism};
     }
-    m_client->registerStart(m_pending->email, request, [this](const AuthClient::Response& response) {
-        if (!m_pending) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            fail(response.status == 409 ? tr("An account with this email address already exists.")
-                                        : AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
-        m_pending->sessionId = json.value("session_id").toString();
-        m_pending->userId = json.value("user_id").toString();
-        QByteArray record;
-        if (!m_opaque->finalizeRegistration(m_pending->opaqueSecret,
-                                            fromBase64Url(json.value("response").toString()),
-                                            opaqueIds(m_pending->email),
-                                            &record)) {
-            fail(tr("The account server sent an invalid registration response."));
-            return;
-        }
-
-        // The keyset is created here and only ever leaves the device wrapped with the AUK
-        const auto kdf = m_pending->kdf;
-        const auto password = m_pending->password;
-        const auto secretKey = m_pending->secretKey;
-        AsyncTask::runThenCallback(
-            [kdf, password, secretKey] { return deriveAuk(stretchPassword(password, kdf), secretKey); },
-            this,
-            [this, record](const SecureBytes& auk) {
-                if (!m_pending) {
-                    return;
-                }
-                auto keyset = generateKeyset();
-                const auto wrapped = wrappedKeysetJson(auk, keyset);
-                keyset.clear();
-                const auto device = AuthClient::DeviceInfo::current();
-                m_client->registerFinish(m_pending->sessionId,
-                                         record,
-                                         m_pending->kdf.toJson(),
-                                         wrapped,
-                                         device,
-                                         [this](const AuthClient::Response& response) {
-                                             if (!m_pending) {
-                                                 return;
-                                             }
-                                             if (!response.isSuccess()) {
-                                                 fail(response.status == 410
-                                                          ? tr("The registration took too long. Try again.")
-                                                          : AuthClient::errorMessage(response));
-                                                 return;
-                                             }
-                                             finishLogin(response.json());
-                                         });
-            });
-    });
+    input.trust_device = true;
+    auto shared = std::make_shared<ov::RegisterInput>(std::move(input));
+    auto info = std::make_shared<SessionInfo>();
+    auto core = m_core;
+    runCore(
+        core,
+        [shared, info](CoreSession& c) {
+            auto created = c.acct().register_account(std::move(*shared), *ov::new_cancel_token());
+            info->secretKey = takeText(created.secret_key);
+            info->auk = takeSecure(created.auk);
+            readSession(c.acct(), *info, true);
+        },
+        [this, info, core](const CoreError& e) {
+            if (!m_pending || core != m_core) {
+                return;
+            }
+            if (!e.ok()) {
+                fail(e.code == "conflict" ? tr("An account with this email address already exists.")
+                     : e.code == "gone"   ? tr("The registration took too long. Try again.")
+                                          : messageFor(e));
+                return;
+            }
+            finishSignIn(*info, true);
+        });
 }
 
 void AccountManager::signIn(const QString& email, const QString& password, const QString& secretKey)
 {
-    if (!m_config.isValid()) {
+    if (!m_config.isValid() || !m_core) {
         emit error(tr("Choose an account server first."));
         return;
     }
     m_pending = std::make_unique<Pending>();
     m_pending->email = email.trimmed();
-    m_pending->password = normalizePassword(password);
-    const auto secretKeyText =
-        secretKey.trimmed().isEmpty() ? storedSecretKey(defaultServerId(), m_pending->email) : secretKey;
-    if (secretKeyText.isEmpty()) {
+    const bool typed = !secretKey.trimmed().isEmpty();
+    if (!typed && storedSecretKey(defaultServerId(), m_pending->email).isEmpty()) {
         fail(tr("Enter your Secret Key: this device hasn't signed in to this account before."));
         return;
     }
-    if (!parseSecretKey(secretKeyText, &m_pending->secretKey)) {
+    SecureBytes parsed;
+    if (typed && !parseSecretKey(secretKey, &parsed)) {
         fail(tr("The Secret Key isn't valid. It looks like K1-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX."));
         return;
     }
     setState(State::SigningIn);
 
-    QByteArray ke1;
-    if (!m_opaque->createCredentialRequest(m_pending->password, &m_pending->opaqueSecret, &ke1)) {
-        fail(OpaqueClient::isAvailable() ? tr("Could not start signing in.")
-                                         : tr("This build of OpenVireo can't sign in to accounts."));
-        return;
+    ov::LoginInput input;
+    input.email = rs(m_pending->email);
+    input.password = secretOf(password);
+    input.has_secret_key = typed;
+    if (typed) {
+        input.secret_key = secretOf(formatSecretKey(parsed));
     }
-    m_client->loginStart(m_pending->email, ke1, [this](const AuthClient::Response& response) {
-        if (!m_pending) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            fail(AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
-        m_pending->sessionId = json.value("session_id").toString();
-        QByteArray authU;
-        // A wrong password (or an unknown email, which gets a fake record) fails here, on this device
-        if (!m_opaque->recoverCredentials(fromBase64Url(json.value("ke2").toString()),
-                                          m_pending->opaqueSecret,
-                                          opaqueIds(m_pending->email),
-                                          &authU)) {
-            fail(tr("The email address or the master password is wrong."));
-            return;
-        }
-        const auto device =
-            AuthClient::DeviceInfo::current(SyncTokenStore::load(deviceKey(defaultServerId(), m_pending->email)));
-        m_client->loginFinish(m_pending->sessionId, authU, device, [this](const AuthClient::Response& response) {
-            if (!m_pending) {
+    input.trust_device = true;
+    auto shared = std::make_shared<ov::LoginInput>(std::move(input));
+    auto info = std::make_shared<SessionInfo>();
+    auto core = m_core;
+    runCore(
+        core,
+        [shared, info](CoreSession& c) {
+            auto step = c.acct().login(std::move(*shared), *ov::new_cancel_token());
+            if (step->needs_totp()) {
+                info->mfa = true;
+                info->challenge = std::make_shared<rust::Box<ov::TotpChallenge>>(step->challenge());
                 return;
             }
-            if (!response.isSuccess()) {
-                fail(response.status == 401 ? tr("The email address or the master password is wrong.")
-                                            : AuthClient::errorMessage(response));
+            auto unlocked = step->take_unlocked();
+            info->auk = takeSecure(unlocked.auk);
+            info->deletion = qs(unlocked.deletion_scheduled_for);
+            readSession(c.acct(), *info, true);
+        },
+        [this, info, core](const CoreError& e) {
+            if (!m_pending || core != m_core) {
                 return;
             }
-            const auto json = response.json();
-            if (json.value("mfa_required").toBool()) {
-                m_pending->mfaToken = json.value("mfa_token").toString();
-                QStringList methods;
-                for (const auto& method : json.value("methods").toArray()) {
-                    methods << method.toString();
-                }
+            if (!e.ok()) {
+                // A wrong password (or an unknown email) fails OPAQUE on this device: unauthorized either way
+                fail(wrongKey(e)                 ? tr("The Secret Key or the master password is wrong.")
+                     : e.code == "unauthorized" ? tr("The email address or the master password is wrong.")
+                         : messageFor(e));
+                return;
+            }
+            if (info->mfa) {
+                m_pending->challenge = info->challenge;
                 setState(State::NeedsMfa);
-                emit mfaRequired(methods.isEmpty() ? QStringList{"totp"} : methods);
+                emit mfaRequired({"totp"});
                 return;
             }
-            finishLogin(json);
+            finishSignIn(*info, false);
         });
-    });
 }
 
 void AccountManager::submitMfa(const QString& totp)
 {
-    if (m_state != State::NeedsMfa || !m_pending) {
+    if (m_state != State::NeedsMfa || !m_pending || !m_pending->challenge) {
         return;
     }
     setState(State::SigningIn);
-    m_client->loginMfa(m_pending->mfaToken, totp, [this](const AuthClient::Response& response) {
-        if (!m_pending) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            if (response.errorCode() == "invalid_mfa") {
+    auto challenge = m_pending->challenge;
+    auto info = std::make_shared<SessionInfo>();
+    auto core = m_core;
+    const auto code = totp;
+    runCore(
+        core,
+        [challenge, info, code](CoreSession& c) {
+            auto step = c.acct().submit_totp(**challenge, rs(code), *ov::new_cancel_token());
+            auto unlocked = step->take_unlocked();
+            info->auk = takeSecure(unlocked.auk);
+            info->deletion = qs(unlocked.deletion_scheduled_for);
+            readSession(c.acct(), *info, true);
+        },
+        [this, info, core](const CoreError& e) {
+            if (!m_pending || core != m_core) {
+                return;
+            }
+            if (e.code == "invalid_mfa") {
                 // Let the user try another code; after the 5th wrong one the server drops the token
                 setState(State::NeedsMfa);
                 emit error(tr("The code is wrong or has expired."));
                 return;
             }
-            fail(AuthClient::errorMessage(response));
-            return;
-        }
-        finishLogin(response.json());
-    });
+            if (!e.ok()) {
+                fail(e.code == "mfa_expired" ? tr("The sign-in expired or the code was wrong too often. Sign in again.")
+                     : wrongKey(e)
+                         ? tr("The Secret Key or the master password is wrong.")
+                         : messageFor(e));
+                return;
+            }
+            finishSignIn(*info, false);
+        });
 }
 
-void AccountManager::finishLogin(const QJsonObject& session)
+void AccountManager::finishSignIn(const SessionInfo& info, bool registering)
 {
-    const auto user = session.value("user").toObject();
+    m_pending.reset();
     m_serviceAccount = false;
-    m_accountId = user.value("id").toString();
-    m_email = user.value("email").toString(m_pending->email);
-    m_deviceId = session.value("device_id").toString();
-    setTokens(session.value("access_token").toString(),
-              session.value("refresh_token").toString(),
-              session.value("expires_in").toInt());
-
-    deriveKeyset(
-        session.value("kdf").toObject(), session.value("keyset").toObject(), [this, session](bool ok, const QString& message) {
-            if (!ok) {
-                // The server accepted the password, so the Secret Key is the likely culprit.
-                // Don't leave the session the server just opened behind.
-                m_pending.reset();
-                signOut();
-                emit error(message);
-                return;
-            }
-            const bool registering = m_pending->registering;
-            const auto secretKey = formatSecretKey(m_pending->secretKey);
-            // This device is trusted from now on: it keeps the Secret Key
-            SyncTokenStore::save(secretKeyKey(defaultServerId(), m_email), secretKey);
-            SyncTokenStore::save(deviceKey(defaultServerId(), m_email), m_deviceId);
-            m_pending.reset();
-            saveSession();
-            rememberCurrentAccount();
-            emit knownAccountsChanged();
-            SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
-            AccountOfflineCache::saveProfile(m_accountId, session.value("kdf").toObject(),
-                                             session.value("keyset").toObject(), {});
-            setOffline(false);
-            setState(State::Unlocked);
-            if (registering) {
-                emit registered(secretKey);
-            }
-            emit signedIn();
-            reloadVaults();
-            startEvents();
-        });
-}
-
-void AccountManager::deriveKeyset(const QJsonObject& kdfJson,
-                                  const QJsonObject& wrappedKeyset,
-                                  std::function<void(bool ok, const QString& error)> done)
-{
-    bool kdfOk = false;
-    auto kdf = KdfParams::fromJson(kdfJson, &kdfOk);
-    // Low settings from the server would make the AUK cheap to guess
-    if (!kdfOk || !kdf.isAcceptable() || kdf.memoryKiB < m_config.kdfMinMemoryKiB
-        || kdf.iterations < m_config.kdfMinIterations) {
-        done(false, tr("The account server sent unsafe key derivation settings."));
-        return;
+    m_accountId = info.userId;
+    m_email = info.email;
+    m_deviceId = info.deviceId;
+    m_keyset = keysetOf(info.keysetSecret);
+    takeToken(info.accessToken);
+    // From now on Quick Unlock can stand in for the master password
+    rememberAuk(info.auk);
+    SyncTokenStore::save(LastAccountKey, m_accountId);
+    rememberCurrentAccount();
+    emit knownAccountsChanged();
+    SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
+    setOffline(false);
+    m_deletionScheduledFor.clear();
+    setState(State::Unlocked);
+    if (!info.deletion.isEmpty()) {
+        setPendingDeletion(info.deletion);
     }
-    const auto password = m_pending->password;
-    const auto secretKey = m_pending->secretKey;
-    AsyncTask::runThenCallback(
-        [kdf, password, secretKey] { return deriveAuk(stretchPassword(password, kdf), secretKey); },
-        this,
-        [this, wrappedKeyset, done](const SecureBytes& auk) {
-            Keyset keyset;
-            if (!unwrapKeyset(auk, wrappedKeyset, &keyset)) {
-                done(false, tr("The Secret Key or the master password is wrong."));
-                return;
-            }
-            m_keyset = keyset;
-            // From now on Quick Unlock can stand in for the master password
-            rememberAuk(auk);
-            done(true, {});
-        });
+    if (registering) {
+        emit registered(info.secretKey);
+    }
+    emit signedIn();
+    reloadVaults();
+    startEvents();
 }
+
+// ------------------------------------------------------------------------ sessions on this device (§21)
 
 bool AccountManager::restoreSession(const QString& accountId)
 {
-    const auto json = QJsonDocument::fromJson(SyncTokenStore::load(sessionKey(accountId)).toUtf8()).object();
-    const auto refreshToken = json.value("refresh_token").toString();
-    if (accountId.isEmpty() || refreshToken.isEmpty()) {
+    if (accountId.isEmpty()) {
         return false;
     }
-    setServer(ServerConfig::fromJson(json.value("server").toObject()));
+    KnownAccount known;
+    for (const auto& account : knownAccounts()) {
+        if (account.id == accountId) {
+            known = account;
+        }
+    }
+    if (known.id.isEmpty() || !known.server.isValid()) {
+        return false;
+    }
+    setServer(known.server);
+    if (m_state == State::SignedOut && m_inFlight == 0) {
+        // Read the keychain afresh: the core reads its session once per account object
+        m_core = makeCore(known.server);
+    }
+    if (!m_core) {
+        return false;
+    }
+    QString email;
+    QString deviceId;
+    try {
+        const auto& account = m_core->acct();
+        auto stored = account.stored_session();
+        if (!stored.has || qs(stored.value.user_id) != accountId) {
+            if (stored.has) {
+                // Another account's session is the active one: set it aside first
+                account.park_session();
+            }
+            if (!account.resume_session(rs(accountId))) {
+                return false;
+            }
+            stored = account.stored_session();
+        }
+        email = qs(stored.value.email);
+        deviceId = qs(stored.value.device_id);
+    } catch (const std::exception& e) {
+        qWarning("Restoring the account session failed: %s", e.what());
+        return false;
+    }
     m_serviceAccount = false;
     m_accountId = accountId;
-    m_email = json.value("email").toString();
-    m_deviceId = json.value("device_id").toString();
-    m_refreshToken = refreshToken;
+    m_email = email.isEmpty() ? known.email : email;
+    m_deviceId = deviceId;
     m_accessToken.clear();
     m_accessTokenExpiry = 0;
     SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
@@ -797,50 +1081,51 @@ bool AccountManager::restoreSession(const QString& accountId)
     return true;
 }
 
-void AccountManager::whenTokensSettled(std::function<void()> done)
-{
-    QPointer<AccountManager> guard(this);
-    if (m_setAsideChecks > 0) {
-        m_setAsideCheckWaiters << [guard, done] {
-            if (guard) {
-                guard->whenTokensSettled(done);
-            }
-        };
-    } else if (m_refreshing) {
-        // Runs after the rotated token is saved, or after the session ended
-        m_tokenWaiters << [done](const QString&) { done(); };
-    } else {
-        done();
-    }
-}
-
 void AccountManager::setAside(std::function<void()> done)
 {
-    QPointer<AccountManager> guard(this);
-    whenTokensSettled([guard, done] {
-        if (!guard) {
-            return;
-        }
-        auto* self = guard.data();
-        if (self->m_serviceAccount || self->m_accountId.isEmpty() || self->m_refreshToken.isEmpty()) {
-            done();
-            return;
-        }
-        self->lock();
-        self->stopEvents();
-        self->m_refreshTimer.stop();
-        SyncServerClient::setAccountTokenProvider(self->m_accountId, nullptr);
-        self->m_accessToken.clear();
-        self->m_refreshToken.clear();
-        self->m_accessTokenExpiry = 0;
-        self->m_accountId.clear();
-        self->m_email.clear();
-        self->m_deviceId.clear();
-        self->setState(State::SignedOut);
-        emit self->vaultsChanged();
-        emit self->knownAccountsChanged();
+    if (m_serviceAccount || m_accountId.isEmpty() || !m_core) {
         done();
-    });
+        return;
+    }
+    const auto finish = [this, done] {
+        stopEvents();
+        m_refreshTimer.stop();
+        SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);
+        m_pending.reset();
+        m_keyring.clear();
+        m_keyset.clear();
+        m_orgs.clear();
+        m_plan = {};
+        setOffline(false);
+        m_accessToken.clear();
+        m_accessTokenExpiry = 0;
+        m_accountId.clear();
+        m_email.clear();
+        m_deviceId.clear();
+        m_deletionScheduledFor.clear();
+        setState(State::SignedOut);
+        emit vaultsChanged();
+        emit knownAccountsChanged();
+        done();
+    };
+    if (m_inFlight == 0) {
+        // Nothing is rotating a token right now: the keychain move is quick
+        try {
+            m_core->acct().park_session();
+        } catch (const std::exception& e) {
+            qWarning("Setting the account aside failed: %s", e.what());
+        }
+        finish();
+        return;
+    }
+    // A refresh under way finishes first: the worker runs calls in order
+    QPointer<AccountManager> guard(this);
+    runCore(
+        m_core, [](CoreSession& c) { c.acct().park_session(); }, [guard, finish](const CoreError&) {
+            if (guard) {
+                finish();
+            }
+        });
 }
 
 void AccountManager::switchTo(const QString& accountId, std::function<void(bool ok)> done)
@@ -859,13 +1144,22 @@ void AccountManager::switchTo(const QString& accountId, std::function<void(bool 
 void AccountManager::signOutKnown(const QString& accountId)
 {
     for (const auto& account : knownAccounts()) {
-        if (account.id == accountId && !account.current) {
-            // As signing out of a locked account: without a live token the server isn't told
-            SyncTokenStore::remove(sessionKey(accountId));
-            AccountOfflineCache::clear(accountId);
-            auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
-            provider->reset(quickUnlockIdOf(account.server.serverId(), accountId));
+        if (account.id != accountId || account.current) {
+            continue;
         }
+        auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
+        provider->reset(quickUnlockIdOf(account.server.serverId(), accountId));
+        AccountOfflineCache::clear(accountId);
+        const auto id = accountId;
+        QPointer<AccountManager> guard(this);
+        runCore(
+            makeCore(account.server),
+            [id](CoreSession& c) { c.acct().sign_out_parked(rs(id), *ov::new_cancel_token()); },
+            [guard](const CoreError&) {
+                if (guard) {
+                    emit guard->knownAccountsChanged();
+                }
+            });
     }
     emit knownAccountsChanged();
 }
@@ -874,14 +1168,24 @@ void AccountManager::forgetKnown(const QString& accountId)
 {
     auto list = knownAccounts();
     for (const auto& account : list) {
-        if (account.id == accountId && !account.current) {
-            signOutKnown(accountId);
-            SyncTokenStore::remove(secretKeyKey(account.server.serverId(), account.email));
-            SyncTokenStore::remove(deviceKey(account.server.serverId(), account.email));
-            list.removeIf([&](const KnownAccount& other) { return other.id == accountId; });
-            saveKnownAccounts(list);
-            break;
+        if (account.id != accountId || account.current) {
+            continue;
         }
+        signOutKnown(accountId);
+        const auto email = account.email;
+        QPointer<AccountManager> guard(this);
+        // After the sign-out above (calls run in order): the Secret Key and device id go too
+        runCore(
+            makeCore(account.server),
+            [email](CoreSession& c) { c.acct().forget_device(rs(email)); },
+            [guard](const CoreError&) {
+                if (guard) {
+                    emit guard->knownAccountsChanged();
+                }
+            });
+        list.removeIf([&](const KnownAccount& other) { return other.id == accountId; });
+        saveKnownAccounts(list);
+        break;
     }
     emit knownAccountsChanged();
 }
@@ -894,101 +1198,93 @@ void AccountManager::checkSetAsideAccounts()
             continue;
         }
         const auto id = account.id;
-        auto session = QJsonDocument::fromJson(SyncTokenStore::load(sessionKey(id)).toUtf8()).object();
-        const auto token = session.value("refresh_token").toString();
-        if (token.isEmpty()) {
-            continue;
-        }
-        auto* client = account.server.api == m_config.api ? m_client : new AuthClient(account.server.api, this);
-        ++m_setAsideChecks;
-        client->refresh(token, [this, client, id, session](const AuthClient::Response& response) mutable {
-            if (client != m_client) {
-                client->deleteLater();
-            }
-            if (response.isSuccess()) {
-                // Every refresh replaces the refresh token, here as for the open account
-                session["refresh_token"] = response.json().value("refresh_token").toString();
-                SyncTokenStore::save(sessionKey(id), QJsonDocument(session).toJson(QJsonDocument::Compact));
-                auto list = knownAccounts();
-                for (auto& known : list) {
-                    if (known.id == id) {
-                        known.checkedAt = now();
-                    }
+        auto result = std::make_shared<ov::ParkedCheck>(ov::ParkedCheck::NoAnswer);
+        QPointer<AccountManager> guard(this);
+        // A refresh keeps the session within its 30 days; a refusal ends it, and only it (SPEC §20, §21)
+        runCore(
+            makeCore(account.server),
+            [id, result](CoreSession& c) { *result = c.acct().check_parked_session(rs(id), *ov::new_cancel_token()); },
+            [guard, id, result](const CoreError& e) {
+                if (!guard || !e.ok()) {
+                    return;
                 }
-                saveKnownAccounts(list);
-            } else if (response.status == 400 || response.status == 401 || response.status == 403) {
-                // The session is over on the server: that account's data goes, and no other's (SPEC §20)
-                signOutKnown(id);
-            }
-            finishSetAsideCheck();
-        });
+                if (*result == ov::ParkedCheck::Valid) {
+                    auto list = guard->knownAccounts();
+                    for (auto& known : list) {
+                        if (known.id == id) {
+                            known.checkedAt = now();
+                        }
+                    }
+                    saveKnownAccounts(list);
+                } else if (*result == ov::ParkedCheck::Ended) {
+                    guard->signOutKnown(id);
+                }
+                emit guard->knownAccountsChanged();
+            });
     }
 }
 
-void AccountManager::finishSetAsideCheck()
-{
-    if (--m_setAsideChecks > 0) {
-        return;
-    }
-    const auto waiters = std::move(m_setAsideCheckWaiters);
-    m_setAsideCheckWaiters.clear();
-    for (const auto& waiter : waiters) {
-        waiter();
-    }
-    emit knownAccountsChanged();
-}
+// ------------------------------------------------------------------------------------- unlock and lock
 
 void AccountManager::unlock(const QString& password)
 {
-    if (m_state != State::Locked || m_serviceAccount) {
+    if (m_state != State::Locked || m_serviceAccount || !m_core) {
         return;
     }
-    const auto secretKeyText = storedSecretKey(defaultServerId(), m_email);
+    if (storedSecretKey(defaultServerId(), m_email).isEmpty()) {
+        m_pending.reset();
+        emit error(tr("This device no longer has the account's Secret Key. Sign in again."));
+        return;
+    }
     m_pending = std::make_unique<Pending>();
     m_pending->email = m_email;
-    m_pending->password = normalizePassword(password);
-    if (!parseSecretKey(secretKeyText, &m_pending->secretKey)) {
-        fail(tr("This device no longer has the account's Secret Key. Sign in again."));
-        return;
-    }
     setState(State::SigningIn);
-    // The keyset and its KDF settings come from the server; reading them needs a valid access token. When
-    // the server can't be reached, the copy this device kept at its last unlock stands in (SPEC §20).
-    m_client->me([this](const AuthClient::Response& response) {
-        if (!m_pending) {
-            return;
-        }
-        QJsonObject profile;
-        const bool offline = !response.isSuccess();
-        if (response.isSuccess()) {
-            profile = response.json();
-            followEmail(profile.value("email").toString());
-        } else if (response.isUnreachable() && hasOfflineCache()) {
-            profile = AccountOfflineCache::load(m_accountId);
-        } else {
-            fail(unreachableMessage(response));
-            return;
-        }
-        deriveKeyset(profile.value("kdf").toObject(),
-                     profile.value("keyset").toObject(),
-                     [this, profile, offline](bool ok, const QString& message) {
-                         m_pending.reset();
-                         if (!ok) {
-                             setState(State::Locked);
-                             emit error(message);
-                             return;
-                         }
-                         if (!offline) {
-                             takeProfile(profile);
-                         }
-                         finishUnlock(offline);
-                     });
-    });
+    auto pw = std::make_shared<rust::Vec<uint8_t>>(secretOf(password));
+    auto info = std::make_shared<SessionInfo>();
+    auto core = m_core;
+    // The keyset and its KDF settings come from the server; when it can't be reached, the copy the core kept
+    // at the last unlock stands in (SPEC §20)
+    runCore(
+        core,
+        [pw, info](CoreSession& c) {
+            auto unlocked = c.acct().unlock(std::move(*pw), {}, *ov::new_cancel_token());
+            info->auk = takeSecure(unlocked.auk);
+            info->offline = unlocked.offline;
+            info->deletion = qs(unlocked.deletion_scheduled_for);
+            readSession(c.acct(), *info, !unlocked.offline);
+        },
+        [this, info, core](const CoreError& e) {
+            if (!m_pending || core != m_core) {
+                return;
+            }
+            m_pending.reset();
+            if (!e.ok()) {
+                if (sessionEndedBy(e)) {
+                    return;
+                }
+                setState(State::Locked);
+                emit error(e.code == "network_error" ? unreachableMessage()
+                           : wrongKey(e)
+                               ? tr("The Secret Key or the master password is wrong.")
+                               : messageFor(e));
+                return;
+            }
+            m_keyset = keysetOf(info->keysetSecret);
+            if (!info->accessToken.isEmpty()) {
+                takeToken(info->accessToken);
+            }
+            rememberAuk(info->auk);
+            followEmail(info->email);
+            if (!info->offline) {
+                setPendingDeletion(info->deletion);
+            }
+            finishUnlock(info->offline);
+        });
 }
 
 void AccountManager::quickUnlock()
 {
-    if (!canQuickUnlock()) {
+    if (!canQuickUnlock() || !m_core) {
         return;
     }
     auto* provider = m_quickUnlock ? m_quickUnlock : getQuickUnlock();
@@ -1002,42 +1298,55 @@ void AccountManager::quickUnlock()
         // The user cancelled
         return;
     }
-    const auto auk = toSecure(key);
+    auto auk = std::make_shared<rust::Vec<uint8_t>>(bytesOf(key));
     Botan::secure_scrub_memory(key.data(), key.size());
     m_pending = std::make_unique<Pending>();
     m_pending->email = m_email;
     setState(State::SigningIn);
-    m_client->me([this, auk](const AuthClient::Response& response) {
-        if (!m_pending) {
-            return;
-        }
-        QJsonObject profile;
-        const bool offline = !response.isSuccess();
-        if (response.isSuccess()) {
-            profile = response.json();
-            followEmail(profile.value("email").toString());
-        } else if (response.isUnreachable() && hasOfflineCache()) {
-            profile = AccountOfflineCache::load(m_accountId);
-        } else {
-            fail(unreachableMessage(response));
-            return;
-        }
-        m_pending.reset();
-        Keyset keyset;
-        if (!unwrapKeyset(auk, profile.value("keyset").toObject(), &keyset)) {
-            // The keyset was wrapped again, e.g. the master password changed on another device
-            forgetAuk();
-            setState(State::Locked);
-            emit error(tr("Quick Unlock no longer opens this account, e.g. because its master password changed. "
-                          "Unlock it with the master password."));
-            return;
-        }
-        m_keyset = keyset;
-        if (!offline) {
-            takeProfile(profile);
-        }
-        finishUnlock(offline);
-    });
+    auto info = std::make_shared<SessionInfo>();
+    auto core = m_core;
+    runCore(
+        core,
+        [auk, info](CoreSession& c) {
+            c.acct().unlock_with_auk(std::move(*auk), *ov::new_cancel_token());
+            info->offline = c.acct().is_offline();
+            info->deletion = qs(c.acct().deletion_scheduled_for());
+            readSession(c.acct(), *info, !info->offline);
+        },
+        [this, info, core](const CoreError& e) {
+            if (!m_pending || core != m_core) {
+                return;
+            }
+            m_pending.reset();
+            if (!e.ok()) {
+                if (sessionEndedBy(e)) {
+                    return;
+                }
+                if (wrongKey(e)) {
+                    // The keyset was wrapped again, e.g. the master password changed on another device
+                    forgetAuk();
+                }
+                setState(State::Locked);
+                if (e.code == "network_error") {
+                    emit error(unreachableMessage());
+                } else if (wrongKey(e)) {
+                    emit error(tr("Quick Unlock no longer opens this account, e.g. because its master password "
+                                  "changed. Unlock it with the master password."));
+                } else {
+                    emit error(messageFor(e));
+                }
+                return;
+            }
+            m_keyset = keysetOf(info->keysetSecret);
+            if (!info->accessToken.isEmpty()) {
+                takeToken(info->accessToken);
+            }
+            followEmail(info->email);
+            if (!info->offline) {
+                setPendingDeletion(info->deletion);
+            }
+            finishUnlock(info->offline);
+        });
 }
 
 void AccountManager::finishUnlock(bool offline)
@@ -1099,20 +1408,6 @@ void AccountManager::takeProfile(const QJsonObject& me)
         m_accountId, me.value("kdf").toObject(), me.value("keyset").toObject(), me.value("orgs").toArray());
 }
 
-QString AccountManager::unreachableMessage(const AuthClient::Response& response) const
-{
-    if (!response.isUnreachable()) {
-        return AuthClient::errorMessage(response);
-    }
-    const auto host = hostOf(m_config.issuer.isEmpty() ? m_config.api : m_config.issuer);
-    if (AccountOfflineCache::isEnabled()) {
-        return tr("Can't reach %1, and this device hasn't kept a copy to unlock offline yet. Check your "
-                  "connection and try again.")
-            .arg(host);
-    }
-    return tr("Can't reach %1. Check your connection and try again.").arg(host);
-}
-
 void AccountManager::lock()
 {
     setOffline(false);
@@ -1121,28 +1416,27 @@ void AccountManager::lock()
     m_keyset.clear();
     m_orgs.clear();
     m_plan = {};
+    if (m_core && m_core->account) {
+        m_core->acct().lock();
+    }
     if (m_state == State::Unlocked || m_state == State::SigningIn || m_state == State::NeedsMfa) {
         if (m_serviceAccount) {
             // A service account has no session to keep without its token
             endSession({});
             return;
         }
-        setState(m_refreshToken.isEmpty() ? State::SignedOut : State::Locked);
+        setState(m_accountId.isEmpty() ? State::SignedOut : State::Locked);
         emit vaultsChanged();
     }
 }
 
 void AccountManager::signOut()
 {
-    if (!m_serviceAccount && !m_accessToken.isEmpty() && m_accessTokenExpiry > now()) {
-        // Best effort: the server revokes this device's refresh tokens. The request takes the current
-        // token with it before endSession() forgets it; nobody waits for the answer.
-        m_client->logout([](const AuthClient::Response&) {});
-    }
-    endSession({});
+    // The core tells the server (best effort) and drops the session, the offline copies with it
+    endSession({}, m_serviceAccount ? CoreEnd::None : CoreEnd::SignOut);
 }
 
-void AccountManager::endSession(const QString& reason)
+void AccountManager::endSession(const QString& reason, CoreEnd end)
 {
     stopEvents();
     m_refreshTimer.stop();
@@ -1155,13 +1449,23 @@ void AccountManager::endSession(const QString& reason)
     if (!m_accountId.isEmpty()) {
         SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);
         if (!m_serviceAccount) {
-            SyncTokenStore::remove(sessionKey(m_accountId));
             // The offline cache goes with the session (SPEC §20)
             AccountOfflineCache::clear(m_accountId);
         }
     }
+    if (end != CoreEnd::None && m_core && m_core->account) {
+        const bool forget = end == CoreEnd::Forget;
+        m_core->acct().lock();
+        runCore(
+            m_core,
+            [forget](CoreSession& c) { c.acct().sign_out(forget, *ov::new_cancel_token()); },
+            [](const CoreError& e) {
+                if (!e.ok()) {
+                    qWarning("Signing out of the account: %s", qPrintable(e.message));
+                }
+            });
+    }
     m_accessToken.clear();
-    m_refreshToken.clear();
     m_accessTokenExpiry = 0;
     m_saToken = {};
     m_keyring.clear();
@@ -1186,53 +1490,31 @@ void AccountManager::endSession(const QString& reason)
 
 void AccountManager::followEmail(const QString& email)
 {
-    // The Secret Key and device id are kept under the email: move them when it changed elsewhere, so
-    // signing in again here doesn't ask for the Secret Key (SPEC §16)
-    if (email.isEmpty() || m_serviceAccount || OpaqueClient::userId(email) == OpaqueClient::userId(m_email)) {
+    // The core moved the Secret Key and device id to the new email already (SPEC §16)
+    if (email.isEmpty() || m_serviceAccount || email.trimmed().toLower() == m_email.trimmed().toLower()) {
         return;
     }
-    const auto server = defaultServerId();
-    for (const auto& key : {&AccountManager::secretKeyKey, &AccountManager::deviceKey}) {
-        const auto value = SyncTokenStore::load(key(server, m_email));
-        if (!value.isEmpty()) {
-            SyncTokenStore::save(key(server, email), value);
-            SyncTokenStore::remove(key(server, m_email));
-        }
-    }
     m_email = email;
-    saveSession();
     rememberCurrentAccount();
     emit emailChanged();
     emit knownAccountsChanged();
 }
 
-void AccountManager::saveSession() const
+// ------------------------------------------------------------------------------------------ tokens
+
+void AccountManager::takeToken(const QString& token)
 {
-    if (m_serviceAccount || m_accountId.isEmpty()) {
+    if (token.isEmpty()) {
         return;
     }
-    QJsonObject json{{"refresh_token", m_refreshToken},
-                     {"email", m_email},
-                     {"device_id", m_deviceId},
-                     {"server", m_config.toJson()}};
-    SyncTokenStore::save(sessionKey(m_accountId), QJsonDocument(json).toJson(QJsonDocument::Compact));
-    SyncTokenStore::save(LastAccountKey, m_accountId);
-}
-
-void AccountManager::setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn)
-{
-    m_accessToken = accessToken;
-    if (!refreshToken.isEmpty()) {
-        m_refreshToken = refreshToken;
+    const bool changed = token != m_accessToken;
+    m_accessToken = token;
+    const auto lifetime = lifetimeOf(token);
+    m_accessTokenExpiry = now() + lifetime;
+    m_refreshTimer.start(qMax<qint64>(1, lifetime - RefreshMarginSec) * 1000);
+    if (changed) {
+        emit accessTokenChanged();
     }
-    if (expiresIn <= 0) {
-        // Fall back to the token's own expiry
-        JwtClaims claims;
-        expiresIn = parseJwtClaims(accessToken, &claims) && claims.exp > 0 ? static_cast<int>(claims.exp - now()) : 0;
-    }
-    m_accessTokenExpiry = now() + expiresIn;
-    m_refreshTimer.start(qMax(1, expiresIn - RefreshMarginSec) * 1000);
-    emit accessTokenChanged();
 }
 
 void AccountManager::accessToken(std::function<void(const QString&)> done)
@@ -1251,16 +1533,51 @@ void AccountManager::accessToken(std::function<void(const QString&)> done)
             Qt::QueuedConnection);
         return;
     }
+    if (m_refreshing && !m_serviceAccount) {
+        // A refresh is under way (new vlt claims after an access change, say): its token, not the old one
+        m_tokenWaiters << done;
+        return;
+    }
     if (!m_accessToken.isEmpty() && m_accessTokenExpiry - now() > MinTokenLifetimeSec) {
         done(m_accessToken);
         return;
     }
-    if (m_refreshToken.isEmpty() && !(m_serviceAccount && !m_saToken.secret.empty())) {
+    if (m_serviceAccount) {
+        if (m_saToken.secret.empty()) {
+            done({});
+            return;
+        }
+        m_tokenWaiters << done;
+        exchangeServiceAccount();
+        return;
+    }
+    if (m_accountId.isEmpty() || !m_core) {
         done({});
         return;
     }
     m_tokenWaiters << done;
-    refreshAccessToken();
+    if (m_refreshing) {
+        return;
+    }
+    m_refreshing = true;
+    auto token = std::make_shared<QString>();
+    auto core = m_core;
+    runCore(
+        core,
+        [token](CoreSession& c) {
+            auto bytes = c.acct().access_token(false, *ov::new_cancel_token());
+            *token = takeText(bytes);
+        },
+        [this, token, core](const CoreError& e) {
+            if (core != m_core) {
+                return;
+            }
+            m_refreshing = false;
+            if (e.ok()) {
+                takeToken(*token);
+            }
+            finishTokenRequest(e);
+        });
 }
 
 AccessTokenProvider AccountManager::tokenProvider()
@@ -1284,34 +1601,44 @@ void AccountManager::refreshAccessToken()
         exchangeServiceAccount();
         return;
     }
-    if (m_refreshToken.isEmpty()) {
+    if (m_accountId.isEmpty() || !m_core) {
         finishRefresh(false);
         return;
     }
     m_refreshing = true;
-    m_client->refresh(m_refreshToken, [this](const AuthClient::Response& response) {
-        m_refreshing = false;
-        if (response.isSuccess()) {
-            const auto json = response.json();
-            setTokens(json.value("access_token").toString(),
-                      json.value("refresh_token").toString(),
-                      json.value("expires_in").toInt());
-            // Every refresh replaces the refresh token; the old one is now a reuse alarm on the server
-            saveSession();
-            finishRefresh(true);
-            return;
-        }
-        if (response.status == 400 || response.status == 401 || response.status == 403) {
-            // Revoked, expired or reused (token_reused): the session is over on the server
-            endSession(response.errorCode() == "token_reused"
-                           ? tr("Your session was ended because its sign-in token was used twice. Sign in again.")
-                           : tr("Your session has ended. Sign in again."));
-            return;
-        }
-        // The network or the server is down: keep the session and try again later
-        m_refreshTimer.start(30 * 1000);
-        finishRefresh(false);
-    });
+    auto token = std::make_shared<QString>();
+    auto core = m_core;
+    runCore(
+        core,
+        [token](CoreSession& c) {
+            auto bytes = c.acct().access_token(true, *ov::new_cancel_token());
+            *token = takeText(bytes);
+        },
+        [this, token, core](const CoreError& e) {
+            if (core != m_core) {
+                return;
+            }
+            m_refreshing = false;
+            if (e.ok()) {
+                takeToken(*token);
+            }
+            finishTokenRequest(e);
+        });
+}
+
+void AccountManager::finishTokenRequest(const CoreError& e)
+{
+    if (e.ok()) {
+        finishRefresh(true);
+        return;
+    }
+    // Revoked, expired or reused (token_reused): the session is over on the server
+    if (sessionEndedBy(e)) {
+        return;
+    }
+    // The network or the server is down: keep the session and try again later
+    m_refreshTimer.start(30 * 1000);
+    finishRefresh(false);
 }
 
 void AccountManager::finishRefresh(bool ok)
@@ -1331,6 +1658,8 @@ void AccountManager::finishRefresh(bool ok)
         startEvents();
     }
 }
+
+// ----------------------------------------------------------------------------------- service accounts
 
 void AccountManager::signInServiceAccount(const QString& token)
 {
@@ -1388,7 +1717,15 @@ void AccountManager::exchangeServiceAccount()
                 return;
             }
             const auto json = response.json();
-            setTokens(json.value("access_token").toString(), {}, json.value("expires_in").toInt());
+            const auto token = json.value("access_token").toString();
+            const auto expiresIn = json.value("expires_in").toInt();
+            const bool changed = token != m_accessToken;
+            m_accessToken = token;
+            m_accessTokenExpiry = now() + (expiresIn > 0 ? expiresIn : lifetimeOf(token));
+            m_refreshTimer.start(qMax<qint64>(1, m_accessTokenExpiry - now() - RefreshMarginSec) * 1000);
+            if (changed) {
+                emit accessTokenChanged();
+            }
             if (m_keyset.isNull()) {
                 // kek -> SA master key -> SA keyset; the server holds neither the kek nor the master key
                 SecureBytes master;
@@ -1412,6 +1749,8 @@ void AccountManager::exchangeServiceAccount()
             finishRefresh(true);
         });
 }
+
+// --------------------------------------------------------------------------------------------- vaults
 
 void AccountManager::reloadVaults()
 {
@@ -1485,18 +1824,16 @@ void AccountManager::handleAccessEvent(const SyncEventStream::Event& event)
     }
     // SPEC §23: deleted here or on another device
     if (event.change == "deletion_scheduled") {
-        endSession(tr("This account is scheduled for deletion. Sign in to restore it."));
+        endSession(tr("This account is scheduled for deletion. Sign in to restore it."), CoreEnd::SignOut);
         return;
     }
     if (event.change == "account_deleted") {
-        const auto server = defaultServerId();
-        const auto email = m_email;
         auto list = knownAccounts();
-        list.removeIf([this](const KnownAccount& a) { return a.id == m_accountId; });
+        const auto id = m_accountId;
+        list.removeIf([id](const KnownAccount& a) { return a.id == id; });
         saveKnownAccounts(list);
-        endSession(tr("This account was deleted."));
-        SyncTokenStore::remove(secretKeyKey(server, email));
-        SyncTokenStore::remove(deviceKey(server, email));
+        // Erased: the Secret Key and device id leave this device with the session
+        endSession(tr("This account was deleted."), CoreEnd::Forget);
         emit knownAccountsChanged();
         return;
     }
@@ -1605,11 +1942,16 @@ void AccountManager::removeErasedAccounts()
         if (!at.isValid() || at > cutoff || account.current) {
             continue;
         }
-        const auto server = account.server.serverId();
-        SyncTokenStore::remove(sessionKey(account.id));
-        SyncTokenStore::remove(secretKeyKey(server, account.email));
-        SyncTokenStore::remove(deviceKey(server, account.email));
         AccountOfflineCache::clear(account.id);
+        const auto id = account.id;
+        const auto email = account.email;
+        runCore(
+            makeCore(account.server),
+            [id, email](CoreSession& c) {
+                c.acct().sign_out_parked(rs(id), *ov::new_cancel_token());
+                c.acct().forget_device(rs(email));
+            },
+            {});
         auto list = knownAccounts();
         list.removeIf([&](const KnownAccount& a) { return a.id == account.id; });
         saveKnownAccounts(list);
@@ -1618,48 +1960,6 @@ void AccountManager::removeErasedAccounts()
     if (changed) {
         emit knownAccountsChanged();
     }
-}
-
-void AccountManager::freshToken(std::function<void(bool ok)> done)
-{
-    // DELETE /me and POST /me/deletion/cancel want a token issued in the last 5 minutes
-    m_tokenWaiters << [done](const QString& token) { done(!token.isEmpty()); };
-    refreshAccessToken();
-}
-
-void AccountManager::verifyPassword(const QString& password, std::function<void(const QString& error)> done)
-{
-    SecureBytes secretKey;
-    if (!parseSecretKey(storedSecretKey(defaultServerId(), m_email), &secretKey)) {
-        done(tr("This device no longer has the account's Secret Key. Sign in again."));
-        return;
-    }
-    const auto normalized = normalizePassword(password);
-    QPointer<AccountManager> guard(this);
-    m_client->me([this, guard, secretKey, normalized, done](const AuthClient::Response& response) {
-        if (!guard) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done(AuthClient::errorMessage(response));
-            return;
-        }
-        const auto me = response.json();
-        bool kdfOk = false;
-        const auto kdf = KdfParams::fromJson(me.value("kdf").toObject(), &kdfOk);
-        if (!kdfOk || !kdf.isAcceptable()) {
-            done(tr("The account server sent unsafe key derivation settings."));
-            return;
-        }
-        const auto wrapped = me.value("keyset").toObject();
-        AsyncTask::runThenCallback(
-            [kdf, normalized, secretKey] { return deriveAuk(stretchPassword(normalized, kdf), secretKey); },
-            this,
-            [wrapped, done](const SecureBytes& auk) {
-                Keyset keyset;
-                done(unwrapKeyset(auk, wrapped, &keyset) ? QString() : tr("That master password is wrong."));
-            });
-    });
 }
 
 void AccountManager::deletionPreview(std::function<void(const QJsonObject& preview, const QString& error)> done)
@@ -1677,92 +1977,76 @@ void AccountManager::deleteAccount(const QString& password,
                                    const QString& confirm,
                                    std::function<void(const QString& scheduledFor, const QString& error)> done)
 {
-    if (m_serviceAccount || m_state != State::Unlocked) {
+    if (m_serviceAccount || m_state != State::Unlocked || !m_core) {
         done({}, tr("Unlock your account first."));
         return;
     }
+    auto pw = std::make_shared<rust::Vec<uint8_t>>(secretOf(password));
+    auto when = std::make_shared<QString>();
+    const auto typed = confirm.trimmed();
     QPointer<AccountManager> guard(this);
-    verifyPassword(password, [this, guard, confirm, done](const QString& error) {
-        if (!guard) {
-            return;
-        }
-        if (!error.isEmpty()) {
-            done({}, error);
-            return;
-        }
-        freshToken([this, guard, confirm, done](bool ok) {
+    // The core checks the password on this device, gets a fresh token and schedules the deletion; the server ends
+    // every session, and the core this one (the Secret Key stays, for a restore)
+    runCore(
+        m_core,
+        [pw, when, typed](CoreSession& c) {
+            *when = qs(c.acct().delete_account(std::move(*pw), rs(typed), *ov::new_cancel_token()));
+        },
+        [guard, when, done](const CoreError& e) {
             if (!guard) {
                 return;
             }
-            if (!ok) {
-                done({}, tr("Your session has ended. Sign in again."));
+            if (!e.ok()) {
+                done({}, wrongKey(e)
+                             ? tr("That master password is wrong.")
+                             : guard->messageFor(e));
                 return;
             }
-            m_client->scheduleDeletion(confirm.trimmed(), [this, guard, done](const AuthClient::Response& response) {
-                if (!guard) {
-                    return;
-                }
-                if (!response.isSuccess()) {
-                    done({}, AuthClient::errorMessage(response));
-                    return;
-                }
-                const auto when = response.json().value("scheduled_for").toString();
-                // The server already ended every session; the Secret Key stays for a restore
-                setKnownDeletion(m_accountId, when);
-                const auto date = QLocale().toString(QDateTime::fromString(when, Qt::ISODate).toLocalTime().date(),
-                                                     QLocale::LongFormat);
-                endSession(tr("Your account is locked and will be deleted on %1. Sign in before then to restore it.")
-                               .arg(date));
-                done(when, {});
-            });
+            guard->setKnownDeletion(guard->m_accountId, *when);
+            const auto date = QLocale().toString(QDateTime::fromString(*when, Qt::ISODate).toLocalTime().date(),
+                                                 QLocale::LongFormat);
+            guard->endSession(
+                tr("Your account is locked and will be deleted on %1. Sign in before then to restore it.").arg(date));
+            done(*when, {});
         });
-    });
 }
 
 void AccountManager::restoreAccount(const QString& password, std::function<void(const QString& error)> done)
 {
-    if (m_serviceAccount || m_deletionScheduledFor.isEmpty()) {
+    if (m_serviceAccount || m_deletionScheduledFor.isEmpty() || !m_core) {
         done(tr("This account isn't scheduled for deletion."));
         return;
     }
+    auto pw = std::make_shared<rust::Vec<uint8_t>>(secretOf(password));
+    auto token = std::make_shared<QString>();
     QPointer<AccountManager> guard(this);
-    verifyPassword(password, [this, guard, done](const QString& error) {
-        if (!guard) {
-            return;
-        }
-        if (!error.isEmpty()) {
-            done(error);
-            return;
-        }
-        freshToken([this, guard, done](bool ok) {
+    runCore(
+        m_core,
+        [pw, token](CoreSession& c) {
+            c.acct().restore_account(std::move(*pw), *ov::new_cancel_token());
+            // The token without `del`, which opens vaults again
+            auto bytes = c.acct().access_token(false, *ov::new_cancel_token());
+            *token = takeText(bytes);
+        },
+        [guard, token, done](const CoreError& e) {
             if (!guard) {
                 return;
             }
-            if (!ok) {
-                done(tr("Your session has ended. Sign in again."));
+            if (!e.ok()) {
+                if (guard->sessionEndedBy(e)) {
+                    done(tr("Your session has ended. Sign in again."));
+                    return;
+                }
+                done(wrongKey(e) ? tr("That master password is wrong.")
+                                                                                     : guard->messageFor(e));
                 return;
             }
-            m_client->cancelDeletion([this, guard, done](const AuthClient::Response& response) {
-                if (!guard) {
-                    return;
-                }
-                if (!response.isSuccess()) {
-                    done(AuthClient::errorMessage(response));
-                    return;
-                }
-                // A token without `del`, which opens vaults again
-                freshToken([this, guard, done](bool) {
-                    if (!guard) {
-                        return;
-                    }
-                    setPendingDeletion({});
-                    reloadVaults();
-                    startEvents();
-                    done({});
-                });
-            });
+            guard->takeToken(*token);
+            guard->setPendingDeletion({});
+            guard->reloadVaults();
+            guard->startEvents();
+            done({});
         });
-    });
 }
 
 void AccountManager::transferVault(const QString& vaultId,

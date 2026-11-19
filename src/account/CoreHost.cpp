@@ -559,4 +559,23 @@ namespace CoreHost
                                   std::make_unique<QtLog>());
         });
     }
+
+    std::unique_ptr<ov::HttpTransport> Factory::makeTransport() const
+    {
+        return http ? http() : std::make_unique<Transport>();
+    }
+
+    std::unique_ptr<ov::Clock> Factory::makeClock() const
+    {
+        return clock ? clock() : std::make_unique<SystemClock>();
+    }
+
+    rust::Box<ov::Client> Factory::newClient(ov::ClientConfig config) const
+    {
+        return CoreHost::newClient(std::move(config),
+                                   makeTransport(),
+                                   store ? store() : nullptr,
+                                   cache ? cache() : nullptr,
+                                   makeClock());
+    }
 } // namespace CoreHost

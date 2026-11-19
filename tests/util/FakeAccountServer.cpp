@@ -17,9 +17,14 @@
 
 #include "FakeAccountServer.h"
 
+#include <ovcore.h>
+
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QSemaphore>
 #include <QJsonDocument>
 #include <QUrlQuery>
+#include <QThread>
 #include <QUuid>
 
 using namespace AccountCrypto;
@@ -74,37 +79,18 @@ namespace FakeAccount
         return kdf;
     }
 
-    // The record is the password's hash; logging in compares hashes
-    bool FakeOpaqueClient::createRegistrationRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* request)
+    namespace
     {
-        *sec = password;
-        *request = "request";
-        return true;
-    }
+        rust::Slice<const uint8_t> slice(const QByteArray& data)
+        {
+            return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
+        }
 
-    bool
-    FakeOpaqueClient::finalizeRegistration(const SecureBytes& sec, const QByteArray&, const Ids&, QByteArray* record)
-    {
-        *record = sha256(fromSecure(sec));
-        return true;
-    }
-
-    bool FakeOpaqueClient::createCredentialRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* ke1)
-    {
-        *sec = password;
-        *ke1 = sha256(fromSecure(password));
-        return true;
-    }
-
-    bool FakeOpaqueClient::recoverCredentials(const QByteArray& ke2,
-                                              const SecureBytes&,
-                                              const Ids&,
-                                              QByteArray* authU,
-                                              SecureBytes*)
-    {
-        *authU = "auth";
-        return ke2 == "ok";
-    }
+        QByteArray toByteArray(const rust::Vec<uint8_t>& data)
+        {
+            return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+        }
+    } // namespace
 
     QString Server::next(const QString& prefix)
     {
@@ -392,12 +378,24 @@ namespace FakeAccount
         if (path == "auth/register/start") {
             const auto session = server.next("reg-");
             server.registrations.insert(session, json.value("email").toString());
-            reply(200, {{"session_id", session}, {"response", toBase64Url(QByteArray("pub"))}, {"user_id", uuid()}});
+            QByteArray response;
+            try {
+                const auto step = ov::opaque_server_registration_response(slice(b64("request")));
+                server.registrationStates.insert(session, toByteArray(step.state));
+                response = toByteArray(step.message);
+            } catch (const rust::Error&) {
+            }
+            reply(200, {{"session_id", session}, {"response", toBase64Url(response)}, {"user_id", uuid()}});
         } else if (path == "auth/register/finish") {
+            const auto session = json.value("session_id").toString();
             Server::User user;
             user.id = uuid();
-            user.email = server.registrations.take(json.value("session_id").toString());
-            user.record = b64("record");
+            user.email = server.registrations.take(session);
+            try {
+                user.record =
+                    toByteArray(ov::opaque_server_store_record(slice(server.registrationStates.take(session)), slice(b64("record"))));
+            } catch (const rust::Error&) {
+            }
             user.kdf = json.value("kdf").toObject();
             user.keyset = json.value("keyset").toObject();
             server.users.insert(user.email.toLower(), user);
@@ -408,14 +406,34 @@ namespace FakeAccount
             server.directory.insert("user:" + user.id, entry);
             reply(201, server.newSession(user));
         } else if (path == "auth/login/start") {
-            const auto email = json.value("email").toString().toLower();
-            const bool ok = server.users.contains(email) && server.users.value(email).record == b64("ke1");
+            const auto email = json.value("email").toString().trimmed().toLower();
             const auto session = server.next("login-");
-            server.logins.insert(session, {email, ok});
-            reply(200, {{"session_id", session}, {"ke2", toBase64Url(QByteArray(ok ? "ok" : "bad"))}});
+            QByteArray ke2 = "bad";
+            const auto record = server.users.value(email).record;
+            if (!record.isEmpty()) {
+                try {
+                    const auto step = ov::opaque_server_credential_response(slice(b64("ke1")),
+                                                                             slice(record),
+                                                                             slice(email.toUtf8()),
+                                                                             slice(QUrl(Issuer).host().toUtf8()),
+                                                                             slice(QByteArray("ov-opaque-v1")));
+                    server.loginStates.insert(session, {email, toByteArray(step.state)});
+                    ke2 = toByteArray(step.message);
+                } catch (const rust::Error&) {
+                }
+            }
+            reply(200, {{"session_id", session}, {"ke2", toBase64Url(ke2)}});
         } else if (path == "auth/login/finish") {
-            const auto login = server.logins.take(json.value("session_id").toString());
-            if (!login.second) {
+            const auto login = server.loginStates.take(json.value("session_id").toString());
+            bool ok = !login.second.isEmpty();
+            if (ok) {
+                try {
+                    ov::opaque_server_user_auth(slice(login.second), slice(b64("auth_u")));
+                } catch (const rust::Error&) {
+                    ok = false;
+                }
+            }
+            if (!ok) {
                 error(401, "unauthorized");
             } else if (server.users.value(login.first).mfa) {
                 const auto token = server.next("mfa-");
@@ -1282,9 +1300,83 @@ namespace FakeAccount
         deliverLater(response, std::move(callback));
     }
 
+    Transport::Transport(QSharedPointer<Server> server)
+        : m_server(std::move(server))
+    {
+    }
+
+    ov::HttpResponse Transport::send(const ov::HttpRequest& req, ov::TransportFailure& failure) const
+    {
+        static const char* const Verbs[] = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"};
+        const QByteArray verb = Verbs[static_cast<int>(req.method)];
+        const QUrl url(QString::fromUtf8(req.url.data(), static_cast<int>(req.url.size())));
+        AuthClient::Headers headers;
+        for (const auto& header : req.headers) {
+            headers.append({QByteArray(header.name.data(), static_cast<int>(header.name.size())),
+                            QByteArray(header.value.data(), static_cast<int>(header.value.size()))});
+        }
+        const auto body = req.has_body ? toByteArray(req.body) : QByteArray();
+        AuthClient::Response response;
+        if (url.host() != QUrl(Issuer).host()) {
+            failure.kind = ov::TransportErrorKind::Offline;
+            failure.message = "no such host";
+            return {};
+        }
+        // The fake server lives on the GUI thread, like the tests that look into it
+        QSemaphore answered;
+        auto server = m_server;
+        const auto handle = [&, server] {
+            auto* client = new FakeAuthClient(server);
+            client->dispatch(verb, url, headers, body, [&, client](const AuthClient::Response& r) {
+                response = r;
+                client->deleteLater();
+                answered.release();
+            });
+        };
+        if (QThread::currentThread() == qApp->thread()) {
+            handle();
+            while (!answered.tryAcquire()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+            }
+        } else {
+            QMetaObject::invokeMethod(qApp, handle, Qt::QueuedConnection);
+            answered.acquire();
+        }
+        if (response.status == 0) {
+            failure.kind = ov::TransportErrorKind::Offline;
+            const auto message = response.networkError.toStdString();
+            failure.message = rust::String(message.data(), message.size());
+            return {};
+        }
+        ov::HttpResponse out;
+        out.status = static_cast<std::uint16_t>(response.status);
+        ov::Header contentType;
+        contentType.name = "Content-Type";
+        contentType.value = "application/json";
+        out.headers.push_back(std::move(contentType));
+        for (auto c : response.body) {
+            out.body.push_back(static_cast<uint8_t>(c));
+        }
+        return out;
+    }
+
+    std::unique_ptr<ov::ByteStream> Transport::open_stream(const ov::HttpRequest&, ov::TransportFailure& failure) const
+    {
+        failure.kind = ov::TransportErrorKind::Offline;
+        failure.message = "no event stream on the fake server";
+        return nullptr;
+    }
+
+    CoreHost::Factory host(const QSharedPointer<Server>& server)
+    {
+        CoreHost::Factory factory;
+        factory.http = [server] { return std::make_unique<Transport>(server); };
+        return factory;
+    }
+
     AccountManager* createManager(const QSharedPointer<Server>& server, QObject* parent)
     {
-        auto* manager = new AccountManager(new FakeAuthClient(server), std::make_unique<FakeOpaqueClient>(), parent);
+        auto* manager = new AccountManager(host(server), parent);
         manager->setNewAccountKdf(testKdf());
         manager->setEventStreamEnabled(false);
         return manager;

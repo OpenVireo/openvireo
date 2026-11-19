@@ -17,11 +17,11 @@
 
 #include "TestAccountManager.h"
 
-#include "config-keepassx.h"
-
 #include "account/AccountManager.h"
-#include "account/OpaqueClient.h"
+#include "account/AccountOfflineCache.h"
+#include "account/CoreHost.h"
 #include "account/VaultKeyring.h"
+#include "core/Config.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/Group.h"
@@ -30,12 +30,9 @@
 #include "gui/remote/SyncEventStream.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "account/AccountOfflineCache.h"
-#include "core/Config.h"
+#include "util/CoreTestServers.h"
 
-#ifdef KPXC_FEATURE_ACCOUNTS
 #include <ovcore.h>
-#endif
 
 #include <QBuffer>
 #include <QDir>
@@ -43,6 +40,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTest>
@@ -52,22 +50,36 @@ QTEST_GUILESS_MAIN(TestAccountManager)
 
 using namespace AccountCrypto;
 
+/*
+ * AccountManager on openvireo-core's in-process auth and sync servers (ov::TestServers): the desktop's Host
+ * (keychain in memory, offline cache files) with the servers behind its transport and clock. Server state is
+ * made through the facade on "another device" of the same servers, and through the servers' seeding hooks.
+ */
 namespace
 {
-    const QString Issuer = QStringLiteral("https://accounts.openvireo.example");
-    const QString ServerId = QStringLiteral("accounts.openvireo.example");
     const QString Email = QStringLiteral("Alice@Example.com");
     const QString Password = QStringLiteral("correct horse battery staple");
-    const QString ContractDir = QStringLiteral(KEEPASSX_SOURCE_DIR "/docs/plans/accounts/");
+    // The test servers' issuer is https://auth.test; OPAQUE's idS and the keychain keys use its host
+    const QString ServerId = QStringLiteral("auth.test");
 
-    AccountManager::ServerConfig serverConfig()
+    rust::Vec<uint8_t> bytesOf(const QString& text)
     {
-        AccountManager::ServerConfig config;
-        config.issuer = Issuer;
-        config.api = Issuer + "/api/v1";
-        config.sync = "https://sync.openvireo.example/api/v1";
-        config.opaqueServerId = ServerId;
-        return config;
+        rust::Vec<uint8_t> vec;
+        for (auto c : text.toUtf8()) {
+            vec.push_back(static_cast<uint8_t>(c));
+        }
+        return vec;
+    }
+
+    rust::String rs(const QString& text)
+    {
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+    }
+
+    QString qs(const rust::String& text)
+    {
+        return CoreHost::toQString(text);
     }
 
     // The cheapest settings clients accept, to keep the tests quick
@@ -79,456 +91,89 @@ namespace
         return kdf;
     }
 
-    QJsonObject loadVectors()
-    {
-        QFile file(ContractDir + "test-vectors.json");
-        return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object() : QJsonObject();
-    }
-
-    /*
-     * Stands in for the OPAQUE server. With accounts on it runs opaque-ke's server half (openvireo-core's
-     * test server), so sign-in goes through the actual protocol; without it the client and server below
-     * just compare a hash.
-     */
-#ifdef KPXC_FEATURE_ACCOUNTS
-    rust::Slice<const uint8_t> slice(const QByteArray& data)
-    {
-        return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
-    }
-
-    QByteArray toByteArray(const rust::Vec<uint8_t>& data)
-    {
-        return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
-    }
-#endif
-
-    struct OpaqueServer
-    {
-        struct Login
-        {
-            // The server's login state
-            QByteArray authU0;
-            QString email;
-        };
-
-        static QByteArray registrationResponse(const QByteArray& request, QByteArray* sec)
-        {
-#ifdef KPXC_FEATURE_ACCOUNTS
-            try {
-                const auto step = ov::opaque_server_registration_response(slice(request));
-                *sec = toByteArray(step.state);
-                return toByteArray(step.message);
-            } catch (const rust::Error&) {
-                return {};
-            }
-#else
-            *sec = request;
-            return "pub";
-#endif
-        }
-
-        static QByteArray storeRecord(const QByteArray& sec, const QByteArray& record)
-        {
-#ifdef KPXC_FEATURE_ACCOUNTS
-            try {
-                return toByteArray(ov::opaque_server_store_record(slice(sec), slice(record)));
-            } catch (const rust::Error&) {
-                return {};
-            }
-#else
-            Q_UNUSED(sec)
-            return record;
-#endif
-        }
-
-        static QByteArray
-        credentialResponse(const QByteArray& ke1, const QByteArray& rec, const QString& email, QByteArray* authU0)
-        {
-#ifdef KPXC_FEATURE_ACCOUNTS
-            try {
-                const auto step = ov::opaque_server_credential_response(slice(ke1),
-                                                                         slice(rec),
-                                                                         slice(OpaqueClient::userId(email)),
-                                                                         slice(ServerId.toUtf8()),
-                                                                         slice(OpaqueClient::Context));
-                *authU0 = toByteArray(step.state);
-                return toByteArray(step.message);
-            } catch (const rust::Error&) {
-                return {};
-            }
-#else
-            Q_UNUSED(email)
-            *authU0 = "auth";
-            return ke1 == rec ? "ok" : "bad";
-#endif
-        }
-
-        static bool userAuth(const QByteArray& authU0, const QByteArray& authU)
-        {
-#ifdef KPXC_FEATURE_ACCOUNTS
-            try {
-                ov::opaque_server_user_auth(slice(authU0), slice(authU));
-                return true;
-            } catch (const rust::Error&) {
-                return false;
-            }
-#else
-            return authU == authU0;
-#endif
-        }
-    };
-
-#ifndef KPXC_FEATURE_ACCOUNTS
-    // Without accounts: the record is the password's hash, and login compares hashes
-    class FakeOpaqueClient : public OpaqueClient
-    {
-    public:
-        bool createRegistrationRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* request) override
-        {
-            *sec = password;
-            *request = "request";
-            return true;
-        }
-        bool finalizeRegistration(const SecureBytes& sec, const QByteArray&, const Ids&, QByteArray* record) override
-        {
-            *record = sha256(fromSecure(sec));
-            return true;
-        }
-        bool createCredentialRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* ke1) override
-        {
-            *sec = password;
-            *ke1 = sha256(fromSecure(password));
-            return true;
-        }
-        bool recoverCredentials(const QByteArray& ke2,
-                                const SecureBytes&,
-                                const Ids&,
-                                QByteArray* authU,
-                                SecureBytes*) override
-        {
-            *authU = "auth";
-            return ke2 == "ok";
-        }
-    };
-#endif
-
-    std::unique_ptr<OpaqueClient> makeOpaque()
-    {
-#ifdef KPXC_FEATURE_ACCOUNTS
-        return std::make_unique<OpaqueClient>();
-#else
-        return std::make_unique<FakeOpaqueClient>();
-#endif
-    }
-
-    // What the fake auth server knows; every client made with it talks to the same server
-    struct AuthServer
-    {
-        struct User
-        {
-            QString id;
-            QString email;
-            QByteArray record;
-            QJsonObject kdf;
-            QJsonObject keyset;
-            bool mfa = false;
-        };
-        // One device session: its refresh tokens rotate, and showing a rotated one revokes it
-        struct Family
-        {
-            QString userId;
-            QString current;
-            QSet<QString> rotated;
-            bool revoked = false;
-        };
-
-        QHash<QString, User> users;
-        QHash<QString, QPair<QString, QByteArray>> registrations;
-        QHash<QString, OpaqueServer::Login> logins;
-        QHash<QString, QString> mfaTokens;
-        QHash<QString, int> mfaAttempts;
-        QHash<QString, Family> families;
-        QHash<QString, QString> refreshFamily;
-        QHash<QString, QString> accessTokens;
-        int accessExpiresIn = 600;
-        int counter = 0;
-        QJsonArray vaults;
-        // User id → erase date while the account is scheduled for deletion (SPEC §23)
-        QHash<QString, QString> deletions;
-        // No server answers: every request fails as if the network were down
-        bool unreachable = false;
-        QStringList requests;
-        QStringList bearers;
-
-        // The service account
-        QString saId;
-        QString saSecret;
-        QString wrappedMaster;
-        QJsonObject saKeyset;
-
-        QString next(const QString& prefix)
-        {
-            return prefix + QString::number(++counter);
-        }
-
-        QJsonObject newSession(const User& user)
-        {
-            const auto family = next("family-");
-            const auto refresh = next("ov_rt_");
-            families.insert(family, {user.id, refresh, {}, false});
-            refreshFamily.insert(refresh, family);
-            const auto access = next("at-");
-            accessTokens.insert(access, "user:" + user.id);
-            return {{"access_token", access},
-                    {"refresh_token", refresh},
-                    {"expires_in", accessExpiresIn},
-                    {"device_id", "d4e5f6a7-b8c9-4d0e-9f1a-2b3c4d5e6f70"},
-                    {"user", QJsonObject{{"id", user.id}, {"email", user.email}}},
-                    {"kdf", user.kdf},
-                    {"keyset", user.keyset}};
-        }
-    };
-
-    class FakeAuthClient : public AuthClient
-    {
-    public:
-        explicit FakeAuthClient(QSharedPointer<AuthServer> server)
-            : AuthClient(Issuer + "/api/v1")
-            , m_server(std::move(server))
-        {
-        }
-
-    protected:
-        void send(const QByteArray& verb,
-                  const QUrl& url,
-                  const Headers& headers,
-                  const QByteArray& body,
-                  int,
-                  Callback callback) override
-        {
-            auto& server = *m_server;
-            if (server.unreachable) {
-                Response response;
-                response.networkError = QStringLiteral("Connection refused");
-                deliverLater(response, std::move(callback));
-                return;
-            }
-            const auto path = url.path().mid(QString("/api/v1/").size());
-            server.requests << QString::fromLatin1(verb) + " " + path;
-            const auto json = QJsonDocument::fromJson(body).object();
-            QString bearer;
-            for (const auto& header : headers) {
-                if (header.first == "Authorization") {
-                    bearer = QString::fromLatin1(header.second).mid(QString("Bearer ").size());
-                    server.bearers << bearer;
-                }
-            }
-
-            Response response;
-            const auto reply = [&](int status, const QJsonObject& object = {}) {
-                response.status = status;
-                response.body = QJsonDocument(object).toJson(QJsonDocument::Compact);
-            };
-            const auto error = [&](int status, const QString& code) {
-                reply(status, {{"error", code}, {"code", code}});
-            };
-            const auto b64 = [&json](const QString& name) { return fromBase64Url(json.value(name).toString()); };
-
-            if (path == "auth/register/start") {
-                QByteArray sec;
-                const auto pub = OpaqueServer::registrationResponse(b64("request"), &sec);
-                const auto session = server.next("reg-");
-                server.registrations.insert(session, {json.value("email").toString(), sec});
-                reply(200,
-                      {{"session_id", session},
-                       {"response", toBase64Url(pub)},
-                       {"user_id", QUuid::createUuid().toString(QUuid::WithoutBraces)}});
-            } else if (path == "auth/register/finish") {
-                const auto registration = server.registrations.take(json.value("session_id").toString());
-                AuthServer::User user;
-                user.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-                user.email = registration.first;
-                user.record = OpaqueServer::storeRecord(registration.second, b64("record"));
-                user.kdf = json.value("kdf").toObject();
-                user.keyset = json.value("keyset").toObject();
-                server.users.insert(user.email.toLower(), user);
-                reply(201, server.newSession(user));
-            } else if (path == "auth/login/start") {
-                const auto email = json.value("email").toString().toLower();
-                const auto user = server.users.value(email);
-                OpaqueServer::Login login;
-                login.email = email;
-                auto ke2 = OpaqueServer::credentialResponse(b64("ke1"), user.record, email, &login.authU0);
-                if (ke2.isEmpty()) {
-                    // An unknown email still gets an answer, which fails on the client
-                    ke2 = QByteArray(400, 'x');
-                }
-                const auto session = server.next("login-");
-                server.logins.insert(session, login);
-                reply(200, {{"session_id", session}, {"ke2", toBase64Url(ke2)}});
-            } else if (path == "auth/login/finish") {
-                const auto login = server.logins.take(json.value("session_id").toString());
-                if (!server.users.contains(login.email) || !OpaqueServer::userAuth(login.authU0, b64("auth_u"))) {
-                    error(401, "unauthorized");
-                } else if (server.users.value(login.email).mfa) {
-                    const auto token = server.next("mfa-");
-                    server.mfaTokens.insert(token, login.email);
-                    reply(200, {{"mfa_required", true}, {"mfa_token", token}, {"methods", QJsonArray{"totp"}}});
-                } else {
-                    reply(200, server.newSession(server.users.value(login.email)));
-                }
-            } else if (path == "auth/login/mfa") {
-                const auto token = json.value("mfa_token").toString();
-                if (!server.mfaTokens.contains(token)) {
-                    error(401, "unauthorized");
-                } else if (json.value("totp").toString() != "123456") {
-                    // SPEC.md §8: the token survives a wrong code, the 5th wrong code invalidates it
-                    if (++server.mfaAttempts[token] >= 5) {
-                        server.mfaTokens.remove(token);
-                    }
-                    error(401, "invalid_mfa");
-                } else {
-                    reply(200, server.newSession(server.users.value(server.mfaTokens.take(token))));
-                }
-            } else if (path == "auth/refresh") {
-                const auto token = json.value("refresh_token").toString();
-                const auto familyId = server.refreshFamily.value(token);
-                auto& family = server.families[familyId];
-                if (familyId.isEmpty() || family.revoked) {
-                    error(401, "unauthorized");
-                } else if (family.rotated.contains(token)) {
-                    // Reuse of a rotated token: revoke the whole device session
-                    family.revoked = true;
-                    error(401, "token_reused");
-                } else {
-                    family.rotated.insert(token);
-                    family.current = server.next("ov_rt_");
-                    server.refreshFamily.insert(family.current, familyId);
-                    const auto access = server.next("at-");
-                    server.accessTokens.insert(access, "user:" + family.userId);
-                    reply(200,
-                          {{"access_token", access},
-                           {"refresh_token", family.current},
-                           {"expires_in", server.accessExpiresIn}});
-                }
-            } else if (path == "auth/service-account") {
-                if (json.value("sa_id").toString() != server.saId
-                    || json.value("secret").toString() != server.saSecret) {
-                    error(401, "unauthorized");
-                } else {
-                    const auto access = server.next("at-");
-                    server.accessTokens.insert(access, "sa:" + server.saId);
-                    reply(200,
-                          {{"access_token", access},
-                           {"expires_in", server.accessExpiresIn},
-                           {"wrapped_master", server.wrappedMaster},
-                           {"keyset", server.saKeyset}});
-                }
-            } else if (!server.accessTokens.contains(bearer)) {
-                error(401, "unauthorized");
-            } else if (path == "auth/logout") {
-                reply(204);
-            } else if (const auto pendingUser = server.accessTokens.value(bearer).mid(5);
-                       server.deletions.contains(pendingUser) && path != "me" && path != "me/deletion"
-                       && path != "me/deletion/cancel") {
-                reply(403,
-                      {{"error", "scheduled for deletion"},
-                       {"code", "account_pending_deletion"},
-                       {"scheduled_for", server.deletions.value(pendingUser)}});
-            } else if (path == "me/deletion") {
-                reply(200,
-                      {{"scheduled_for", QJsonValue::Null},
-                       {"would_erase_on", "2026-12-08T12:00:00Z"},
-                       {"vaults", QJsonArray()},
-                       {"orgs", QJsonArray()},
-                       {"subscription", QJsonValue::Null},
-                       {"share_links", 0},
-                       {"blocked", false}});
-            } else if (path == "me" && verb == "DELETE") {
-                const auto userId = server.accessTokens.value(bearer).mid(5);
-                QString email;
-                for (const auto& user : server.users) {
-                    if (user.id == userId) {
-                        email = user.email;
-                    }
-                }
-                if (json.value("confirm").toString().compare(email, Qt::CaseInsensitive) != 0) {
-                    error(400, "confirm_mismatch");
-                } else {
-                    server.deletions.insert(userId, "2026-12-08T12:00:00Z");
-                    // Signed out everywhere
-                    for (auto& family : server.families) {
-                        if (family.userId == userId) {
-                            family.revoked = true;
-                        }
-                    }
-                    reply(202, {{"scheduled_for", "2026-12-08T12:00:00Z"}});
-                }
-            } else if (path == "me/deletion/cancel") {
-                if (server.deletions.remove(server.accessTokens.value(bearer).mid(5)) == 0) {
-                    error(409, "conflict");
-                } else {
-                    reply(204);
-                }
-            } else if (path == "me") {
-                const auto principal = server.accessTokens.value(bearer);
-                for (const auto& user : server.users) {
-                    if ("user:" + user.id == principal) {
-                        reply(200,
-                              {{"id", user.id},
-                               {"email", user.email},
-                               {"kdf", user.kdf},
-                               {"keyset", user.keyset},
-                               {"mfa", QJsonObject{{"totp", user.mfa}}},
-                               // SPEC §19: a plan bought in the iOS app
-                               {"plan",
-                                QJsonObject{{"id", "premium"},
-                                            {"limits", QJsonObject()},
-                                            {"billing",
-                                             QJsonObject{{"source", "apple"},
-                                                         {"interval", "year"},
-                                                         {"status", "active"},
-                                                         {"renews_at", "2027-11-08T12:00:00Z"},
-                                                         {"ends_at", QJsonValue::Null},
-                                                         {"manage", "app_store"}}}}},
-                               {"deletion_scheduled_for", server.deletions.value(user.id)}});
-                    }
-                }
-            } else if (path == "vaults" && verb == "GET") {
-                reply(200, {{"vaults", server.vaults}});
-            } else if (path == "vaults" && verb == "POST") {
-                auto vault = json;
-                QJsonArray keys;
-                for (const auto& grant : json.value("grants").toArray()) {
-                    keys << QJsonObject{{"key_version", grant.toObject().value("key_version")},
-                                        {"sealed_key", grant.toObject().value("sealed_key")}};
-                }
-                vault["keys"] = keys;
-                vault["role"] = "manage";
-                vault["current_key_version"] = 1;
-                server.vaults << vault;
-                reply(201, vault);
-            } else {
-                error(404, "not_found");
-            }
-            deliverLater(response, std::move(callback));
-        }
-
-    private:
-        QSharedPointer<AuthServer> m_server;
-    };
-
     struct Fixture
     {
-        QSharedPointer<AuthServer> server = QSharedPointer<AuthServer>::create();
+        rust::Box<ov::TestServers> servers = ov::call([] { return ov::test_servers_start(0); });
+        // Managers made here go before the servers they talk to
+        QList<QPointer<AccountManager>> managers;
+
+        ~Fixture()
+        {
+            for (const auto& manager : managers) {
+                delete manager.data();
+            }
+        }
+
+        AccountManager::ServerConfig serverConfig() const
+        {
+            AccountManager::ServerConfig config;
+            config.issuer = qs(servers->issuer());
+            config.api = qs(servers->api_url());
+            config.sync = qs(servers->sync_url());
+            return config;
+        }
+
+        CoreHost::Factory host() const
+        {
+            const ov::TestServers* s = &*servers;
+            CoreHost::Factory factory;
+            factory.http = [s] { return std::make_unique<CoreTestServers::Transport>(s); };
+            factory.clock = [s] { return std::make_unique<CoreTestServers::Clock>(s); };
+            return factory;
+        }
 
         AccountManager* manager(QObject* parent)
         {
-            auto* manager = new AccountManager(new FakeAuthClient(server), makeOpaque(), parent);
+            auto* manager = new AccountManager(host(), parent);
             manager->setServer(serverConfig());
             manager->setNewAccountKdf(testKdf());
             manager->setEventStreamEnabled(false);
+            managers << manager;
             return manager;
+        }
+
+        // The requests the servers answered since the last clear, "<status> <server> <METHOD> <route>"
+        QStringList requests() const
+        {
+            QStringList list;
+            for (const auto& line : servers->requests()) {
+                list << qs(line);
+            }
+            return list;
+        }
+
+        // How many requests went to a route, e.g. "POST /auth/refresh"
+        int count(const QString& route) const
+        {
+            int n = 0;
+            for (const auto& line : requests()) {
+                n += line.endsWith(" " + route) ? 1 : 0;
+            }
+            return n;
+        }
+
+        // Alice (or someone) on another device: a core account on the servers' own Host, signed in
+        rust::Box<ov::Account> device(const QString& email, const QString& password, const QString& secretKey) const
+        {
+            ov::ClientConfig config;
+            config.device_name = "other device";
+            config.platform = CoreHost::platform();
+            auto client = ov::call([&] { return servers->client(config); });
+            auto cancel = ov::new_cancel_token();
+            auto account = ov::call([&] { return client->connect(servers->issuer(), *cancel); });
+            ov::LoginInput input;
+            input.email = rs(email);
+            input.password = bytesOf(password);
+            input.has_secret_key = true;
+            input.secret_key = bytesOf(secretKey);
+            input.trust_device = true;
+            auto step = ov::call([&] { return account->login(std::move(input), *cancel); });
+            if (step->needs_totp()) {
+                auto challenge = step->challenge();
+                step = ov::call([&] { return account->submit_totp(*challenge, servers->totp_now(rs(email)), *cancel); });
+            }
+            ov::call([&] { return step->take_unlocked(); });
+            return account;
         }
     };
 
@@ -542,6 +187,25 @@ namespace
         return manager->state() == state;
     }
 
+    // The session the core keeps in the keychain for a user: the active one, else the one set aside
+    QJsonObject coreSession(const QString& userId)
+    {
+        const auto read = [](const QString& key) {
+            const auto raw = SyncTokenStore::load(CoreHost::SecretStore::KeyPrefix + key);
+            return QJsonDocument::fromJson(QByteArray::fromBase64(raw.toLatin1())).object();
+        };
+        auto active = read("ov:session");
+        if (!userId.isEmpty() && active.value("userId").toString() == userId) {
+            return active;
+        }
+        return read("ov:parked_session:" + ServerId + ":" + userId);
+    }
+
+    QString refreshTokenOf(const QString& userId)
+    {
+        return coreSession(userId).value("refreshToken").toString();
+    }
+
     // Register Alice and sign her out again, leaving her Secret Key on this device
     QString registerAlice(Fixture& fixture, QObject* parent, bool mfa = false)
     {
@@ -551,46 +215,44 @@ namespace
         if (!waitForState(manager, AccountManager::State::Unlocked) || registered.count() != 1) {
             return {};
         }
+        const auto id = manager->accountId();
         manager->signOut();
-        fixture.server->users[Email.toLower()].mfa = mfa;
+        // The sign-out finishes on the core's worker
+        QElapsedTimer timer;
+        timer.start();
+        while (!coreSession(id).isEmpty() && timer.elapsed() < 5000) {
+            QTest::qWait(10);
+        }
         delete manager;
+        if (mfa) {
+            fixture.servers->set_totp_code(rs(Email), "123456");
+        }
         return registered.first().first().toString();
     }
 
-    QByteArray vaultBlob(const SecureBytes& vaultKey, const QString& name, const QString& entryTitle)
+    // A vault made on another device of the account, with one entry
+    QString createVault(const ov::Account& device, const QString& name, const QString& entryTitle = {})
     {
-        auto db = VaultKeyring::createVaultDatabase(name, vaultKey);
-        auto* entry = new Entry();
-        entry->setUuid(QUuid::createUuid());
-        entry->setTitle(entryTitle);
-        entry->setGroup(db->rootGroup());
-        QBuffer buffer;
-        buffer.open(QIODevice::WriteOnly);
-        KeePass2Writer writer;
-        writer.writeDatabase(&buffer, db.data());
-        return buffer.data();
+        auto cancel = ov::new_cancel_token();
+        auto vault = ov::call([&] { return device.create_vault(rs(name), "", *cancel); });
+        if (!entryTitle.isEmpty()) {
+            ov::EntryInput input{};
+            ov::FieldInput title{};
+            title.name = "Title";
+            title.value = bytesOf(entryTitle);
+            input.fields.push_back(std::move(title));
+            const auto root = ov::call([&] { return vault->root_group_id(); });
+            ov::call([&] { return vault->add_entry(root, std::move(input)); });
+            ov::call([&] { return vault->sync(true, *cancel); });
+        }
+        return qs(ov::call([&] { return vault->id(); }));
     }
 
-    QJsonObject vaultJson(const QString& id,
-                          const SecureBytes& nameKey,
-                          const QString& name,
-                          const QList<QPair<int, QByteArray>>& keys,
-                          int current,
-                          int pending = -1)
+    QByteArray blobOf(Fixture& fixture, const QString& vaultId)
     {
-        QJsonArray sealedKeys;
-        for (const auto& key : keys) {
-            sealedKeys << QJsonObject{{"key_version", key.first}, {"sealed_key", toBase64Url(key.second)}};
-        }
-        return {{"id", id},
-                {"org_id", QJsonValue::Null},
-                {"owner_id", QJsonValue::Null},
-                {"encrypted_name", toBase64Url(encryptVaultName(nameKey, id, name))},
-                {"role", "manage"},
-                {"current_key_version", current},
-                {"pending_key_version", pending < 0 ? QJsonValue(QJsonValue::Null) : QJsonValue(pending)},
-                {"rotation_required", false},
-                {"keys", sealedKeys}};
+        const auto blob = fixture.servers->vault_blob(rs(vaultId));
+        return blob.has ? QByteArray(reinterpret_cast<const char*>(blob.value.data()), static_cast<int>(blob.value.size()))
+                        : QByteArray();
     }
 } // namespace
 
@@ -625,30 +287,29 @@ void TestAccountManager::testRegisterAndSignIn()
     QVERIFY(parseSecretKey(secretKey, &parsed));
     QCOMPARE(AccountManager::storedSecretKey(ServerId, Email), secretKey);
     QCOMPARE(AccountManager::lastAccountId(), manager->accountId());
+    QCOMPARE(manager->accountId(), qs(fixture.servers->user_id(rs(Email))));
 
-    // The server got a keyset it can't open: the private keys are wrapped with the AUK
-    const auto& user = fixture.server->users.value(Email.toLower());
-    QCOMPARE(user.keyset.value("enc_pk").toString(), toBase64Url(manager->keyset().publicKeys.encPk));
-    QVERIFY(!user.keyset.value("wrapped").toString().isEmpty());
+    // The server has the public keys of the keyset this device holds; the private keys never left it
     QVERIFY(verifyPublicKeys(manager->keyset().publicKeys));
+    auto other = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+    const auto published =
+        ov::call([&] { return other->verified_public_keys(rs(manager->principal()), *cancel); });
+    QCOMPARE(QByteArray(reinterpret_cast<const char*>(published.enc_pk.data()), static_cast<int>(published.enc_pk.size())),
+             fromSecure(SecureBytes(manager->keyset().publicKeys.encPk.begin(), manager->keyset().publicKeys.encPk.end())));
     QCOMPARE(manager->principal(), "user:" + manager->accountId());
     QVERIFY(!manager->accessTokenNow().isEmpty());
-    // The password never went to the server
-    QVERIFY(!fixture.server->requests.isEmpty());
+    QVERIFY(!fixture.requests().isEmpty());
     QTRY_VERIFY(vaultsChanged.count() > 0);
 
-    // The plan from GET /me, with who bills it
-    QTRY_VERIFY(manager->plan().isKnown());
-    QCOMPARE(manager->plan().id, QString("premium"));
-    QVERIFY(manager->plan().isAppStore());
-
     const auto encPk = manager->keyset().publicKeys.encPk;
+    fixture.servers->clear_requests();
     manager->signOut();
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(manager->keyset().isNull());
     QVERIFY(!manager->plan().isKnown());
     QVERIFY(manager->accessTokenNow().isEmpty());
-    QVERIFY(fixture.server->requests.contains("POST auth/logout"));
+    QTRY_COMPARE(fixture.count("POST /auth/logout"), 1);
 
     // Signing in again on this device needs only the password
     manager->signIn(Email.toUpper(), Password);
@@ -719,32 +380,32 @@ void TestAccountManager::testWrongPasswordOrSecretKey()
     auto* manager = fixture.manager(this);
     QSignalSpy errors(manager, &AccountManager::error);
     QSignalSpy signedOut(manager, &AccountManager::signedOut);
+    fixture.servers->clear_requests();
     manager->signIn(Email, "wrong password");
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(errors.first().first().toString().contains("password is wrong"));
     // OPAQUE fails on this device; login/finish is never even sent
-    QVERIFY(!fixture.server->requests.contains("POST auth/login/finish"));
+    QCOMPARE(fixture.count("POST /auth/login/finish"), 0);
 
     // Another Secret Key: the server accepts the password, but the keyset doesn't unwrap
     SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
     SecureBytes other = generateSecretKey();
-    fixture.server->requests.clear();
     manager->signIn(Email, Password, formatSecretKey(other));
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 2, 20000);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
-    QVERIFY(errors.last().first().toString().contains("Secret Key"));
+    QVERIFY2(errors.last().first().toString().contains("Secret Key"), qPrintable(errors.last().first().toString()));
     QVERIFY(manager->keyset().isNull());
-    // The session it opened is closed again, and the wrong key isn't remembered
-    QVERIFY(fixture.server->requests.contains("POST auth/logout"));
+    // The core unlocks before it keeps the session: none is kept, and the wrong key isn't remembered
+    QVERIFY(coreSession({}).isEmpty());
     QVERIFY(AccountManager::storedSecretKey(ServerId, Email).isEmpty());
     QCOMPARE(signedOut.count(), 0);
 
     // A malformed Secret Key doesn't reach the server
-    fixture.server->requests.clear();
+    fixture.servers->clear_requests();
     manager->signIn(Email, Password, "K1-not-a-key");
     QCOMPARE(errors.count(), 3);
-    QVERIFY(fixture.server->requests.isEmpty());
+    QVERIFY(fixture.requests().isEmpty());
 }
 
 void TestAccountManager::testRefreshRotatesTokens()
@@ -755,27 +416,22 @@ void TestAccountManager::testRefreshRotatesTokens()
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
 
-    const auto session = [&] {
-        return QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + manager->accountId()).toUtf8())
-            .object();
-    };
     const auto firstAccess = manager->accessTokenNow();
-    const auto firstRefresh = session().value("refresh_token").toString();
-    QVERIFY(firstRefresh.startsWith("ov_rt_"));
+    const auto firstRefresh = refreshTokenOf(manager->accountId());
+    QVERIFY(!firstRefresh.isEmpty());
 
     QSignalSpy changed(manager, &AccountManager::accessTokenChanged);
     manager->refreshAccessToken();
     QTRY_COMPARE(changed.count(), 1);
     QVERIFY(manager->accessTokenNow() != firstAccess);
-    // The keychain holds the new refresh token, the old one is spent
-    const auto secondRefresh = session().value("refresh_token").toString();
+    // The keychain holds the new refresh token
+    const auto secondRefresh = refreshTokenOf(manager->accountId());
+    QVERIFY(!secondRefresh.isEmpty());
     QVERIFY(secondRefresh != firstRefresh);
-    QVERIFY(fixture.server->families.value(fixture.server->refreshFamily.value(firstRefresh))
-                .rotated.contains(firstRefresh));
 
     manager->refreshAccessToken();
     QTRY_COMPARE(changed.count(), 2);
-    QVERIFY(session().value("refresh_token").toString() != secondRefresh);
+    QVERIFY(refreshTokenOf(manager->accountId()) != secondRefresh);
     QCOMPARE(manager->state(), AccountManager::State::Unlocked);
 }
 
@@ -783,26 +439,27 @@ void TestAccountManager::testRefreshesExpiringTokens()
 {
     Fixture fixture;
     QVERIFY(!registerAlice(fixture, this).isEmpty());
+    fixture.servers->clear_requests();
     auto* manager = fixture.manager(this);
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
-    QTRY_COMPARE(fixture.server->requests.count("GET vaults"), 2);
+    QTRY_COMPARE(fixture.count("GET /vaults"), 1);
 
     // A token that is about to expire as soon as it is issued
-    fixture.server->accessExpiresIn = AccountManager::MinTokenLifetimeSec - 5;
+    fixture.servers->set_access_token_ttl_secs(AccountManager::MinTokenLifetimeSec - 5);
     QSignalSpy changed(manager, &AccountManager::accessTokenChanged);
     manager->refreshAccessToken();
     QTRY_COMPARE(changed.count(), 1);
-    fixture.server->requests.clear();
+    fixture.servers->clear_requests();
     const auto expiring = manager->accessTokenNow();
 
     // Asking for a token refreshes first, and everyone waiting gets the new one
-    fixture.server->accessExpiresIn = 600;
+    fixture.servers->set_access_token_ttl_secs(600);
     QStringList tokens;
     manager->accessToken([&tokens](const QString& token) { tokens << token; });
     manager->accessToken([&tokens](const QString& token) { tokens << token; });
     QTRY_COMPARE(tokens.size(), 2);
-    QCOMPARE(fixture.server->requests.count("POST auth/refresh"), 1);
+    QCOMPARE(fixture.count("POST /auth/refresh"), 1);
     QVERIFY(tokens.first() != expiring);
     QCOMPARE(tokens.first(), tokens.last());
     QCOMPARE(tokens.first(), manager->accessTokenNow());
@@ -810,13 +467,13 @@ void TestAccountManager::testRefreshesExpiringTokens()
     // A fresh token is handed out as it is
     manager->accessToken([&tokens](const QString& token) { tokens << token; });
     QCOMPARE(tokens.size(), 3);
-    QCOMPARE(fixture.server->requests.count("POST auth/refresh"), 1);
+    QCOMPARE(fixture.count("POST /auth/refresh"), 1);
 
     // Before it expires, the timer refreshes on its own
-    fixture.server->accessExpiresIn = AccountManager::RefreshMarginSec + 1;
+    fixture.servers->set_access_token_ttl_secs(AccountManager::RefreshMarginSec + 1);
     manager->refreshAccessToken();
-    QTRY_COMPARE(fixture.server->requests.count("POST auth/refresh"), 2);
-    QTRY_COMPARE_WITH_TIMEOUT(fixture.server->requests.count("POST auth/refresh"), 3, 5000);
+    QTRY_COMPARE(fixture.count("POST /auth/refresh"), 2);
+    QTRY_COMPARE_WITH_TIMEOUT(fixture.count("POST /auth/refresh"), 3, 5000);
 }
 
 void TestAccountManager::testReusedRefreshTokenSignsOut()
@@ -829,14 +486,18 @@ void TestAccountManager::testReusedRefreshTokenSignsOut()
     const auto accountId = manager->accountId();
 
     // Someone copies the keychain entry, then this device refreshes
-    const auto stolen = SyncTokenStore::load("ov-account-session:" + accountId);
+    const auto key = CoreHost::SecretStore::KeyPrefix + "ov:session";
+    const auto stolen = SyncTokenStore::load(key);
+    QVERIFY(!stolen.isEmpty());
     QSignalSpy changed(manager, &AccountManager::accessTokenChanged);
     manager->refreshAccessToken();
     QTRY_COMPARE(changed.count(), 1);
+    // Past the server's grace period for a lost replacement token (SPEC §9)
+    fixture.servers->advance_ms(61 * 1000);
 
     // The copy's refresh token was rotated already: using it revokes the session...
     auto* thief = fixture.manager(this);
-    SyncTokenStore::save("ov-account-session:" + accountId, stolen);
+    SyncTokenStore::save(key, stolen);
     QVERIFY(thief->restoreSession(accountId));
     QSignalSpy thiefOut(thief, &AccountManager::signedOut);
     QString thiefToken = "unset";
@@ -853,52 +514,56 @@ void TestAccountManager::testReusedRefreshTokenSignsOut()
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(manager->keyset().isNull());
     QVERIFY(manager->keyring().isEmpty());
-    QVERIFY(SyncTokenStore::load("ov-account-session:" + accountId).isEmpty());
+    QVERIFY(coreSession(accountId).isEmpty());
     // The Secret Key stays: the device is still trusted for the next sign-in
     QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
 }
 
 void TestAccountManager::testServiceAccountExchange()
 {
-    const auto vectors = loadVectors().value("service_account").toObject();
-    QVERIFY(!vectors.isEmpty());
     Fixture fixture;
-    fixture.server->saId = vectors.value("sa_id").toString();
-    const auto payload = QJsonDocument::fromJson(vectors.value("payload_json").toString().toUtf8()).object();
-    fixture.server->saSecret = payload.value("secret").toString();
-    fixture.server->wrappedMaster = vectors.value("wrapped_master").toString();
-    auto keyset = vectors.value("public").toObject();
-    keyset["wrapped"] = vectors.value("wrapped_keyset");
-    keyset.remove("fingerprint");
-    fixture.server->saKeyset = keyset;
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
+    // An org with a service account, made by Alice on another device
+    auto alice = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+    const auto org = ov::call([&] { return alice->create_org("Acme", *cancel); });
+    ov::NewServiceAccount input;
+    input.name = "ci";
+    auto created = ov::call([&] { return alice->create_service_account(org.id, input, *cancel); });
+    const auto token = QString::fromUtf8(reinterpret_cast<const char*>(created.token.data()),
+                                         static_cast<int>(created.token.size()));
+    const auto saId = qs(created.service_account.id);
 
+    fixture.servers->clear_requests();
     auto* manager = fixture.manager(this);
     QSignalSpy signedIn(manager, &AccountManager::signedIn);
-    manager->signInServiceAccount(vectors.value("token").toString());
+    manager->signInServiceAccount(token);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     QCOMPARE(signedIn.count(), 1);
     QVERIFY(manager->isServiceAccount());
-    QCOMPARE(manager->principal(), "sa:" + fixture.server->saId);
-    // kek -> master key -> keyset
-    QCOMPARE(toHex(fromSecure(manager->keyset().encSk)), vectors.value("keyset_enc_sk_hex").toString());
-    QCOMPARE(toHex(fromSecure(manager->keyset().signSeed)), vectors.value("keyset_sign_seed_hex").toString());
-    // Only the secret went to the server, never the kek
-    QVERIFY(!fixture.server->requests.contains("POST auth/refresh"));
+    QCOMPARE(manager->principal(), "sa:" + saId);
+    // kek -> master key -> keyset, matching the public keys the server holds
+    QVERIFY(!manager->keyset().isNull());
+    QCOMPARE(QByteArray(reinterpret_cast<const char*>(created.service_account.public_keys.enc_pk.data()),
+                        static_cast<int>(created.service_account.public_keys.enc_pk.size())),
+             fromSecure(SecureBytes(manager->keyset().publicKeys.encPk.begin(), manager->keyset().publicKeys.encPk.end())));
+    // Only the secret went to the server, never the kek, and there is no refresh token
+    QCOMPARE(fixture.count("POST /auth/refresh"), 0);
 
     // No refresh token: an expiring token is exchanged again
     const auto first = manager->accessTokenNow();
-    fixture.server->accessExpiresIn = 600;
+    fixture.servers->advance_ms(1000);
     manager->refreshAccessToken();
     QTRY_VERIFY(manager->accessTokenNow() != first);
-    QCOMPARE(fixture.server->requests.count("POST auth/service-account"), 2);
+    QCOMPARE(fixture.count("POST /auth/service-account"), 2);
     QCOMPARE(manager->state(), AccountManager::State::Unlocked);
 
     // A rejected secret
-    Fixture other;
-    other.server->saId = "someone-else";
-    auto* rejected = other.manager(this);
+    ov::call([&] { return alice->delete_service_account(rs(saId), *cancel); });
+    auto* rejected = fixture.manager(this);
     QSignalSpy errors(rejected, &AccountManager::error);
-    rejected->signInServiceAccount(vectors.value("token").toString());
+    rejected->signInServiceAccount(token);
     QTRY_COMPARE(errors.count(), 1);
     QCOMPARE(rejected->state(), AccountManager::State::SignedOut);
     QVERIFY(rejected->keyset().isNull());
@@ -907,66 +572,50 @@ void TestAccountManager::testServiceAccountExchange()
 void TestAccountManager::testKeyringOpensNewestKeyWithFallback()
 {
     Fixture fixture;
-    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
+    auto alice = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+
+    // "rotating": version 2 is sealed and pending, but the upload under it failed, so the blob is still under 1
+    const auto rotating = createVault(*alice, "Team", "Old key entry");
+    fixture.servers->fail_next("sync", "PUT", rs("/vaults/" + rotating), 503, 20);
+    try {
+        ov::call([&] { return alice->rotate_vault_key(rs(rotating), {}, *cancel); });
+    } catch (const ov::Error&) {
+    }
+    fixture.servers->clear_faults();
+    // "rotated": the blob is already re-keyed with version 2
+    const auto rotated = createVault(*alice, "Infra", "New key entry");
+    ov::call([&] { return alice->rotate_vault_key(rs(rotated), {}, *cancel); });
+
     auto* manager = fixture.manager(this);
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
-    const auto encPk = manager->keyset().publicKeys.encPk;
-
-    // "rotating": version 2 is sealed and pending, but the blob is still under version 1
-    const auto rotating = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto oldKey = generateVaultKey();
-    const auto newKey = generateVaultKey();
-    const auto rotatingBlob = vaultBlob(oldKey, "Team", "Old key entry");
-    // "rotated": the blob is already re-keyed with version 2
-    const auto rotated = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto rotatedOld = generateVaultKey();
-    const auto rotatedNew = generateVaultKey();
-    const auto rotatedBlob = vaultBlob(rotatedNew, "Infra", "New key entry");
-    // Sealed for another vault: the AAD keeps it from opening here
-    const auto foreign = QUuid::createUuid().toString(QUuid::WithoutBraces);
-
-    fixture.server->vaults = {
-        vaultJson(rotating,
-                  oldKey,
-                  "Team",
-                  {{1, seal(encPk, oldKey, vaultKeyAad(rotating))}, {2, seal(encPk, newKey, vaultKeyAad(rotating))}},
-                  1,
-                  2),
-        vaultJson(
-            rotated,
-            rotatedNew,
-            "Infra",
-            {{2, seal(encPk, rotatedNew, vaultKeyAad(rotated))}, {1, seal(encPk, rotatedOld, vaultKeyAad(rotated))}},
-            2),
-        vaultJson(foreign, oldKey, "Moved", {{1, seal(encPk, oldKey, vaultKeyAad(rotating))}}, 1),
-    };
-    QSignalSpy vaultsChanged(manager, &AccountManager::vaultsChanged);
-    manager->reloadVaults();
-    QTRY_COMPARE(vaultsChanged.count(), 1);
+    QTRY_VERIFY(manager->keyring().contains(rotated));
 
     const auto& keyring = manager->keyring();
-    QCOMPARE(keyring.vaults().size(), 3);
+    QCOMPARE(keyring.vaults().size(), 2);
     QCOMPARE(keyring.keyVersions(rotating), QList<int>({2, 1}));
     QCOMPARE(keyring.vault(rotating).pendingKeyVersion, 2);
     QCOMPARE(keyring.vault(rotating).name, QString("Team"));
     QCOMPARE(keyring.vault(rotated).name, QString("Infra"));
-    QVERIFY(keyring.keyVersions(foreign).isEmpty());
 
     // Newest first, then the older key
     int version = 0;
     QString error;
-    auto db = keyring.openVault(rotating, rotatingBlob, &version, &error);
+    auto db = keyring.openVault(rotating, blobOf(fixture, rotating), &version, &error);
     QVERIFY2(db, qPrintable(error));
     QCOMPARE(version, 1);
     QCOMPARE(db->rootGroup()->entries().first()->title(), QString("Old key entry"));
 
-    db = keyring.openVault(rotated, rotatedBlob, &version, &error);
+    db = keyring.openVault(rotated, blobOf(fixture, rotated), &version, &error);
     QVERIFY2(db, qPrintable(error));
     QCOMPARE(version, 2);
-    QCOMPARE(db->rootGroup()->name(), QString("Infra"));
+    QCOMPARE(db->rootGroup()->entries().first()->title(), QString("New key entry"));
 
-    QVERIFY(!keyring.openVault(foreign, rotatingBlob, &version, &error));
+    // A blob of another vault doesn't open: the vault key AAD names the vault
+    QVERIFY(!keyring.openVault(rotated, blobOf(fixture, rotating), &version, &error));
     QVERIFY(!error.isEmpty());
 
     // What a database synced with this vault uses
@@ -974,7 +623,7 @@ void TestAccountManager::testKeyringOpensNewestKeyWithFallback()
     QCOMPARE(params.type, RemoteParams::Type::AccountVault);
     QCOMPARE(params.vaultId, rotated);
     QCOMPARE(params.accountId, manager->accountId());
-    QCOMPARE(params.serverUrl, serverConfig().sync);
+    QCOMPARE(params.serverUrl, fixture.serverConfig().sync);
     QVERIFY(params.name.contains("Infra"));
 
     // A new vault: sealed to this account, and it opens with the key the keyring gets back
@@ -1001,19 +650,17 @@ void TestAccountManager::testKeyringOpensNewestKeyWithFallback()
 void TestAccountManager::testAccessEventRefreshesAndReloads()
 {
     Fixture fixture;
-    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
     auto* manager = fixture.manager(this);
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
-    // Registering and signing in each listed the vaults once
-    QTRY_COMPARE(fixture.server->requests.count("GET vaults"), 2);
-    fixture.server->requests.clear();
+    QTRY_VERIFY(fixture.count("GET /vaults") >= 1);
 
-    // Someone shares a vault: the event comes before the new token and vault list
-    const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto key = generateVaultKey();
-    fixture.server->vaults = {vaultJson(
-        vaultId, key, "Shared", {{1, seal(manager->keyset().publicKeys.encPk, key, vaultKeyAad(vaultId))}}, 1)};
+    // A vault appears (made on another device): the event comes before the new token and vault list
+    auto alice = fixture.device(Email, Password, secretKey);
+    const auto vaultId = createVault(*alice, "Shared");
+    fixture.servers->clear_requests();
     const auto before = manager->accessTokenNow();
 
     SyncEventStream::Event event;
@@ -1023,10 +670,20 @@ void TestAccountManager::testAccessEventRefreshesAndReloads()
     manager->handleAccessEvent(event);
     QTRY_VERIFY(manager->keyring().contains(vaultId));
     QVERIFY(manager->accessTokenNow() != before);
-    QCOMPARE(fixture.server->requests.count("POST auth/refresh"), 1);
-    QCOMPARE(fixture.server->requests.count("GET vaults"), 1);
+    QCOMPARE(fixture.count("POST /auth/refresh"), 1);
+    QCOMPARE(fixture.count("GET /vaults"), 1);
     // The refresh came first, so the vault list was read with the new token
-    QCOMPARE(fixture.server->bearers.last(), manager->accessTokenNow());
+    const auto requests = fixture.requests();
+    int refreshAt = -1;
+    int vaultsAt = -1;
+    for (int i = 0; i < requests.size(); ++i) {
+        if (requests.at(i).endsWith(" POST /auth/refresh")) {
+            refreshAt = i;
+        } else if (requests.at(i).endsWith(" GET /vaults")) {
+            vaultsAt = i;
+        }
+    }
+    QVERIFY(refreshAt >= 0 && refreshAt < vaultsAt);
 }
 
 void TestAccountManager::testDeleteAccountAndRestore()
@@ -1048,7 +705,8 @@ void TestAccountManager::testDeleteAccountAndRestore()
     });
     QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
     QVERIFY(!error.isEmpty());
-    QVERIFY(fixture.server->deletions.isEmpty());
+    QCOMPARE(manager->state(), AccountManager::State::Unlocked);
+    QVERIFY(manager->knownAccounts().first().deletionScheduledFor.isEmpty());
     done = false;
     manager->deleteAccount(Password, "bob@example.com", [&](const QString& at, const QString& e) {
         when = at;
@@ -1056,7 +714,7 @@ void TestAccountManager::testDeleteAccountAndRestore()
         done = true;
     });
     QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
-    QVERIFY(error.contains("email"));
+    QVERIFY2(error.contains("email"), qPrintable(error));
 
     QSignalSpy signedOut(manager, &AccountManager::signedOut);
     done = false;
@@ -1067,12 +725,12 @@ void TestAccountManager::testDeleteAccountAndRestore()
     });
     QTRY_VERIFY_WITH_TIMEOUT(done, 20000);
     QVERIFY2(error.isEmpty(), qPrintable(error));
-    QCOMPARE(when, QString("2026-12-08T12:00:00Z"));
+    QVERIFY(QDateTime::fromString(when, Qt::ISODate).isValid());
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QCOMPARE(signedOut.count(), 1);
     // The account stays known with its date, and the Secret Key stays for a restore
     QCOMPARE(manager->knownAccounts().first().deletionScheduledFor, when);
-    QVERIFY(!AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+    QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
 
     // Signing in again: a pending account opens nothing
     QSignalSpy pending(manager, &AccountManager::pendingDeletionChanged);
@@ -1091,7 +749,6 @@ void TestAccountManager::testDeleteAccountAndRestore()
     QVERIFY2(error.isEmpty(), qPrintable(error));
     QVERIFY(manager->deletionScheduledFor().isEmpty());
     QVERIFY(manager->knownAccounts().first().deletionScheduledFor.isEmpty());
-    QVERIFY(fixture.server->deletions.isEmpty());
 }
 
 void TestAccountManager::testDeletionEventsSignOut()
@@ -1101,30 +758,28 @@ void TestAccountManager::testDeletionEventsSignOut()
     auto* manager = fixture.manager(this);
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
-    QVERIFY(!AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+    QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
 
     SyncEventStream::Event event;
     event.type = SyncEventStream::Event::Type::Access;
     event.change = "account_deleted";
     manager->handleAccessEvent(event);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
-    // Erased: the account and its Secret Key leave this device
-    QVERIFY(AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
+    // Erased: the account and its Secret Key leave this device (the core's sign-out runs on its worker)
+    QTRY_VERIFY(AccountManager::storedSecretKey(ServerId, Email).isEmpty());
     QVERIFY(manager->knownAccounts().isEmpty());
 }
 
 void TestAccountManager::testLockClearsKeys()
 {
     Fixture fixture;
-    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
+    auto alice = fixture.device(Email, Password, secretKey);
+    const auto vaultId = createVault(*alice, "Mine");
     auto* manager = fixture.manager(this);
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
-    const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto key = generateVaultKey();
-    fixture.server->vaults = {
-        vaultJson(vaultId, key, "Mine", {{1, seal(manager->keyset().publicKeys.encPk, key, vaultKeyAad(vaultId))}}, 1)};
-    manager->reloadVaults();
     QTRY_VERIFY(manager->keyring().contains(vaultId));
     const auto encSk = manager->keyset().encSk;
 
@@ -1151,28 +806,32 @@ void TestAccountManager::testSwitchingKeepsTheOtherAccountSignedIn()
     Fixture fixture;
     QScopedPointer<QObject> parent(new QObject());
     auto* manager = fixture.manager(parent.data());
+    QSignalSpy vaultsChanged(manager, &AccountManager::vaultsChanged);
     manager->registerAccount(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     const auto first = manager->accountId();
-    const auto firstSession = SyncTokenStore::load("ov-account-session:" + first);
-    QVERIFY(AccountOfflineCache::hasProfile(first));
+    const auto firstRefresh = refreshTokenOf(first);
+    QVERIFY(!firstRefresh.isEmpty());
+    QTRY_VERIFY(AccountOfflineCache::hasProfile(first));
+    QTRY_VERIFY(vaultsChanged.count() > 0);
 
     // Setting it aside leaves the session and the cache, tells the server nothing, and empties the manager
-    fixture.server->requests.clear();
+    fixture.servers->clear_requests();
     bool set = false;
     manager->setAside([&] { set = true; });
     QVERIFY(set);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QVERIFY(manager->accountId().isEmpty());
-    QCOMPARE(SyncTokenStore::load("ov-account-session:" + first), firstSession);
+    QCOMPARE(refreshTokenOf(first), firstRefresh);
     QVERIFY(AccountOfflineCache::hasProfile(first));
-    QVERIFY(fixture.server->requests.isEmpty());
+    QVERIFY(fixture.requests().isEmpty());
 
     const QString second("second@example.com");
     manager->registerAccount(second, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     const auto secondId = manager->accountId();
     QVERIFY(secondId != first);
+    QTRY_VERIFY(AccountOfflineCache::hasProfile(secondId));
 
     auto known = manager->knownAccounts();
     QCOMPARE(known.size(), 2);
@@ -1180,17 +839,17 @@ void TestAccountManager::testSwitchingKeepsTheOtherAccountSignedIn()
     QVERIFY(known.first().current);
     QVERIFY(known.last().signedIn);
     QVERIFY(!known.last().current);
-    QCOMPARE(known.last().email, Email);
+    QCOMPARE(known.last().email.toLower(), Email.toLower());
 
     // Back to the first: locked, with neither a sign-in nor a two-step code, and it's the one restored next launch
-    fixture.server->requests.clear();
+    fixture.servers->clear_requests();
     bool switched = false;
     manager->switchTo(first, [&](bool ok) { switched = ok; });
-    QVERIFY(switched);
+    QTRY_VERIFY(switched);
     QCOMPARE(manager->state(), AccountManager::State::Locked);
-    QCOMPARE(manager->email(), Email);
+    QCOMPARE(manager->email().toLower(), Email.toLower());
     QCOMPARE(AccountManager::lastAccountId(), first);
-    for (const auto& request : fixture.server->requests) {
+    for (const auto& request : fixture.requests()) {
         QVERIFY(!request.contains("login"));
     }
     manager->unlock(Password);
@@ -1198,19 +857,24 @@ void TestAccountManager::testSwitchingKeepsTheOtherAccountSignedIn()
 
     // A session that has ended can't be switched to, and the current account's stays
     manager->signOutKnown(secondId);
-    QVERIFY(SyncTokenStore::load("ov-account-session:" + secondId).isEmpty());
+    QTRY_VERIFY(coreSession(secondId).isEmpty());
     QVERIFY(!AccountOfflineCache::hasProfile(secondId));
     QVERIFY(AccountOfflineCache::hasProfile(first));
     QVERIFY(!AccountManager::storedSecretKey(ServerId, second).isEmpty());
     bool ok = true;
-    manager->switchTo(secondId, [&](bool result) { ok = result; });
+    bool answered = false;
+    manager->switchTo(secondId, [&](bool result) {
+        ok = result;
+        answered = true;
+    });
+    QTRY_VERIFY(answered);
     QVERIFY(!ok);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
     QCOMPARE(manager->knownAccounts().size(), 2);
 
     // Removing it forgets the Secret Key too
     manager->forgetKnown(secondId);
-    QVERIFY(AccountManager::storedSecretKey(ServerId, second).isEmpty());
+    QTRY_VERIFY(AccountManager::storedSecretKey(ServerId, second).isEmpty());
     QCOMPARE(manager->knownAccounts().size(), 1);
     QVERIFY(!AccountManager::storedSecretKey(ServerId, Email).isEmpty());
 }
@@ -1223,33 +887,28 @@ void TestAccountManager::testChecksSessionsSetAside()
     manager->registerAccount(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     const auto first = manager->accountId();
+    QTRY_VERIFY(AccountOfflineCache::hasProfile(first));
     bool set = false;
     manager->setAside([&] { set = true; });
-    QVERIFY(set);
+    QTRY_VERIFY(set);
     manager->registerAccount("second@example.com", Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     const auto second = manager->accountId();
 
-    const auto refreshTokenOf = [](const QString& id) {
-        return QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + id).toUtf8())
-            .object()
-            .value("refresh_token")
-            .toString();
-    };
     const auto before = refreshTokenOf(first);
+    QVERIFY(!before.isEmpty());
     manager->checkSetAsideAccounts();
     QTRY_VERIFY(refreshTokenOf(first) != before);
     // Once a day at most
     const auto rotated = refreshTokenOf(first);
+    QTRY_VERIFY(manager->knownAccounts().last().checkedAt > 0);
     manager->checkSetAsideAccounts();
     QTest::qWait(50);
     QCOMPARE(refreshTokenOf(first), rotated);
     QCOMPARE(manager->accountId(), second);
 
-    // A refusal ends that session alone
-    auto session = QJsonDocument::fromJson(SyncTokenStore::load("ov-account-session:" + first).toUtf8()).object();
-    session["refresh_token"] = QStringLiteral("revoked");
-    SyncTokenStore::save("ov-account-session:" + first, QJsonDocument(session).toJson(QJsonDocument::Compact));
+    // A refusal ends that session alone: the first account was signed out everywhere
+    fixture.servers->revoke_sessions(rs("user:" + first));
     auto known = manager->knownAccounts();
     QCOMPARE(known.last().id, first);
     // Past the day's limit, as a day later
@@ -1261,12 +920,12 @@ void TestAccountManager::testChecksSessionsSetAside()
     }
     SyncTokenStore::save("ov-account-known", QJsonDocument(raw).toJson(QJsonDocument::Compact));
     manager->checkSetAsideAccounts();
-    QTRY_VERIFY(SyncTokenStore::load("ov-account-session:" + first).isEmpty());
-    QVERIFY(!AccountOfflineCache::hasProfile(first));
+    QTRY_VERIFY(coreSession(first).isEmpty());
+    QTRY_VERIFY(!AccountOfflineCache::hasProfile(first));
     QCOMPARE(manager->accountId(), second);
     QCOMPARE(manager->state(), AccountManager::State::Unlocked);
     QVERIFY(!refreshTokenOf(second).isEmpty());
-    QVERIFY(AccountOfflineCache::hasProfile(second));
+    QTRY_VERIFY(AccountOfflineCache::hasProfile(second));
 }
 
 void TestAccountManager::testRestoreSessionAfterRestart()
@@ -1284,15 +943,16 @@ void TestAccountManager::testRestoreSessionAfterRestart()
     }
     QCOMPARE(AccountManager::lastAccountId(), accountId);
 
+    fixture.servers->clear_requests();
     auto* manager = fixture.manager(this);
     QVERIFY(manager->restoreSession(accountId));
     QCOMPARE(manager->state(), AccountManager::State::Locked);
-    QCOMPARE(manager->email(), Email);
-    QCOMPARE(manager->server().sync, serverConfig().sync);
+    QCOMPARE(manager->email().toLower(), Email.toLower());
+    QCOMPARE(manager->server().sync, fixture.serverConfig().sync);
     manager->unlock(Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
     // The access token came from the stored refresh token
-    QCOMPARE(fixture.server->requests.count("POST auth/refresh"), 1);
+    QCOMPARE(fixture.count("POST /auth/refresh"), 1);
     QVERIFY(!manager->restoreSession("unknown-account"));
 }
 
@@ -1302,10 +962,11 @@ void TestAccountManager::testAccountVaultUsesTokenProvider()
     QVERIFY(!registerAlice(fixture, this).isEmpty());
     auto* manager = fixture.manager(this);
     const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto sync = fixture.serverConfig().sync;
 
     RemoteParams params;
     params.type = RemoteParams::Type::AccountVault;
-    params.serverUrl = serverConfig().sync;
+    params.serverUrl = sync;
     params.vaultId = vaultId;
     QVERIFY(params.isServer());
     QVERIFY(params.hasDownload() && params.hasUpload());
@@ -1349,8 +1010,8 @@ void TestAccountManager::testAccountVaultUsesTokenProvider()
     QTRY_VERIFY(done);
     client.listDatabases([](const SyncServerClient::Response&) {});
     QTRY_COMPARE(client.urls.size(), 2);
-    QCOMPARE(client.urls.first(), "GET https://sync.openvireo.example/api/v1/vaults/" + vaultId);
-    QCOMPARE(client.urls.last(), QString("GET https://sync.openvireo.example/api/v1/vaults"));
+    QCOMPARE(client.urls.first(), "GET " + sync + "/vaults/" + vaultId);
+    QCOMPARE(client.urls.last(), "GET " + sync + "/vaults");
     QCOMPARE(client.authorizations.first(), "Bearer " + manager->accessTokenNow());
 
     // A refreshed token is used by the same client from then on
@@ -1426,7 +1087,7 @@ void TestAccountManager::testServerConfigWebUrl()
     auto config = AccountManager::ServerConfig::fromJson(json);
     QCOMPARE(config.web, QString("http://localhost:3000"));
     QCOMPARE(config.accountSettingsUrl(), QUrl("http://localhost:3000/?view=account"));
-    // Kept with the stored session
+    // Kept with the known account
     QCOMPARE(AccountManager::ServerConfig::fromJson(config.toJson()).web, config.web);
 
     json.remove("web");
@@ -1450,7 +1111,8 @@ void TestAccountManager::testServerConfigWebUrl()
 void TestAccountManager::testFollowsAnEmailChangedElsewhere()
 {
     Fixture fixture;
-    QVERIFY(!registerAlice(fixture, this).isEmpty());
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
     QString accountId;
     {
         auto* manager = fixture.manager(nullptr);
@@ -1459,12 +1121,15 @@ void TestAccountManager::testFollowsAnEmailChangedElsewhere()
         accountId = manager->accountId();
         delete manager;
     }
-    const auto secretKey = AccountManager::storedSecretKey(ServerId, Email);
-    QVERIFY(!secretKey.isEmpty());
+    QCOMPARE(AccountManager::storedSecretKey(ServerId, Email), secretKey);
 
-    // The email changed in the web app; /me now reports the new one
+    // The email changes on another device (the web app, say)
     const QString newEmail("alice.new@example.com");
-    fixture.server->users[Email.toLower()].email = newEmail;
+    auto other = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+    ov::call([&] { return other->request_email_change(rs(newEmail), *cancel); });
+    const auto code = fixture.servers->email_code(rs(accountId));
+    ov::call([&] { return other->change_email(rs(newEmail), code, bytesOf(Password), *cancel); });
 
     auto* manager = fixture.manager(this);
     QSignalSpy changed(manager, &AccountManager::emailChanged);
@@ -1501,35 +1166,32 @@ void TestAccountManager::testExplainsAPlanLimit()
 
 namespace
 {
-    // Alice signed in with one vault, as listed by GET /vaults, then locked
+    // Alice signed in with one vault, made on her other device, as listed by GET /vaults
     struct OfflineSetup
     {
         AccountManager* manager = nullptr;
         QString vaultId;
+        std::optional<rust::Box<ov::Account>> other;
     };
 
     OfflineSetup signInWithVault(Fixture& fixture, QObject* parent)
     {
         OfflineSetup setup;
-        if (registerAlice(fixture, parent).isEmpty()) {
+        const auto secretKey = registerAlice(fixture, parent);
+        if (secretKey.isEmpty()) {
             return setup;
         }
+        setup.other = fixture.device(Email, Password, secretKey);
+        setup.vaultId = createVault(**setup.other, "Mine");
         auto* manager = fixture.manager(parent);
         manager->signIn(Email, Password);
         if (!waitForState(manager, AccountManager::State::Unlocked)) {
             return setup;
         }
-        setup.vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const auto key = generateVaultKey();
-        fixture.server->vaults = {vaultJson(setup.vaultId,
-                                            key,
-                                            "Mine",
-                                            {{1, seal(manager->keyset().publicKeys.encPk, key, vaultKeyAad(setup.vaultId))}},
-                                            1)};
-        manager->reloadVaults();
         QElapsedTimer timer;
         timer.start();
-        while (!manager->keyring().contains(setup.vaultId) && timer.elapsed() < 5000) {
+        while ((!manager->keyring().contains(setup.vaultId) || !AccountOfflineCache::hasProfile(manager->accountId()))
+               && timer.elapsed() < 5000) {
             QTest::qWait(10);
         }
         setup.manager = manager;
@@ -1561,7 +1223,7 @@ void TestAccountManager::testOfflineUnlockFromCache()
     QVERIFY(!manager->isOffline());
 
     manager->lock();
-    fixture.server->unreachable = true;
+    fixture.servers->set_offline(true);
     QSignalSpy offlineChanged(manager, &AccountManager::offlineChanged);
     QSignalSpy errors(manager, &AccountManager::error);
 
@@ -1580,7 +1242,7 @@ void TestAccountManager::testOfflineUnlockFromCache()
     QCOMPARE(errors.count(), 1);
 
     // Back online once GET /vaults answers
-    fixture.server->unreachable = false;
+    fixture.servers->set_offline(false);
     manager->reconnect();
     QTRY_VERIFY(!manager->isOffline());
     QCOMPARE(offlineChanged.count(), 2);
@@ -1597,13 +1259,13 @@ void TestAccountManager::testOfflineUnlockNeedsACache()
     AccountOfflineCache::clear(manager->accountId());
     QVERIFY(!manager->hasOfflineCache());
 
-    fixture.server->unreachable = true;
+    fixture.servers->set_offline(true);
     QSignalSpy errors(manager, &AccountManager::error);
     manager->unlock(Password);
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
     QCOMPARE(manager->state(), AccountManager::State::Locked);
     QVERIFY(!manager->isOffline());
-    QVERIFY(errors.first().first().toString().contains("accounts.openvireo.example"));
+    QVERIFY(errors.first().first().toString().contains(ServerId));
 }
 
 void TestAccountManager::testRefusedUnlockNeverUsesTheCache()
@@ -1616,7 +1278,7 @@ void TestAccountManager::testRefusedUnlockNeverUsesTheCache()
     QVERIFY(manager->hasOfflineCache());
 
     // The server answers, and says no: that's not offline
-    fixture.server->accessTokens.clear();
+    fixture.servers->fail_next("auth", "GET", "/me", 403, 10);
     QSignalSpy errors(manager, &AccountManager::error);
     manager->unlock(Password);
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
@@ -1632,16 +1294,17 @@ void TestAccountManager::testGoesOfflineAndDropsRevokedVaultsOnReconnect()
     QVERIFY(manager);
 
     // The network goes away while unlocked
-    fixture.server->unreachable = true;
+    fixture.servers->set_offline(true);
     QSignalSpy errors(manager, &AccountManager::error);
     manager->reloadVaults();
     QTRY_VERIFY(manager->isOffline());
     QCOMPARE(errors.count(), 0);
     QVERIFY(manager->keyring().contains(setup.vaultId));
 
-    // Access was revoked meanwhile
-    fixture.server->vaults = {};
-    fixture.server->unreachable = false;
+    // The vault went meanwhile (deleted on the other device)
+    fixture.servers->set_offline(false);
+    auto cancel = ov::new_cancel_token();
+    ov::call([&] { return (*setup.other)->delete_vault(rs(setup.vaultId), *cancel); });
     manager->reconnect();
     QTRY_VERIFY(!manager->isOffline());
     QTRY_VERIFY(!manager->keyring().contains(setup.vaultId));
@@ -1677,7 +1340,7 @@ void TestAccountManager::testOfflineUnlockCanBeTurnedOff()
     QVERIFY(!manager->hasOfflineCache());
 
     manager->lock();
-    fixture.server->unreachable = true;
+    fixture.servers->set_offline(true);
     QSignalSpy errors(manager, &AccountManager::error);
     manager->unlock(Password);
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);

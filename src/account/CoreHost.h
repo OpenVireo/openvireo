@@ -22,6 +22,7 @@
 
 #include <ovcore.h>
 
+#include <functional>
 #include <memory>
 
 /**
@@ -101,6 +102,22 @@ namespace CoreHost
                                     std::unique_ptr<ov::SecureStore> store = {},
                                     std::unique_ptr<ov::BlobCache> cache = {},
                                     std::unique_ptr<ov::Clock> clock = {});
+
+    /**
+     * Makes the Host parts for a core client. Each part left empty is the production one; tests plug in
+     * ov::TestServers (tests/util/CoreTestServers) or another fake here. AccountManager takes one of these.
+     */
+    struct Factory
+    {
+        std::function<std::unique_ptr<ov::HttpTransport>()> http;
+        std::function<std::unique_ptr<ov::SecureStore>()> store;
+        std::function<std::unique_ptr<ov::BlobCache>()> cache;
+        std::function<std::unique_ptr<ov::Clock>()> clock;
+
+        std::unique_ptr<ov::HttpTransport> makeTransport() const;
+        std::unique_ptr<ov::Clock> makeClock() const;
+        rust::Box<ov::Client> newClient(ov::ClientConfig config) const;
+    };
 
     QString toQString(rust::Str text);
     QString toQString(const rust::String& text);
