@@ -546,7 +546,8 @@ namespace CoreHost
     rust::Box<ov::Client> newClient(ov::ClientConfig config,
                                     std::unique_ptr<ov::HttpTransport> http,
                                     std::unique_ptr<ov::SecureStore> store,
-                                    std::unique_ptr<ov::BlobCache> cache)
+                                    std::unique_ptr<ov::BlobCache> cache,
+                                    std::unique_ptr<ov::Clock> clock)
     {
         config.platform = platform();
         return ov::call([&] {
@@ -554,7 +555,7 @@ namespace CoreHost
                                   http ? std::move(http) : std::make_unique<Transport>(),
                                   store ? std::move(store) : std::make_unique<SecretStore>(),
                                   cache ? std::move(cache) : std::make_unique<FileCache>(),
-                                  std::make_unique<SystemClock>(),
+                                  clock ? std::move(clock) : std::make_unique<SystemClock>(),
                                   std::make_unique<QtLog>());
         });
     }

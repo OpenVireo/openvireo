@@ -42,6 +42,7 @@ private slots:
     void testFileCache();
     void testLibopaqueAccountSignsIn();
     void testAccountVaultMergeKeepsObjects();
+    void testAccountOnTestServers();
 
 private:
     QTcpServer* m_server = nullptr;

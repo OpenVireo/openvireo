@@ -130,7 +130,7 @@ add_unit_test(NAME testaccountcrypto SOURCES TestAccountCrypto.cpp
 add_unit_test(NAME testaccountplan SOURCES TestAccountPlan.cpp
         LIBS ${TEST_LIBRARIES})
 
-add_unit_test(NAME testaccountcore SOURCES TestAccountCore.cpp
+add_unit_test(NAME testaccountcore SOURCES TestAccountCore.cpp util/CoreTestServers.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 
 add_unit_test(NAME testaccountmanager SOURCES TestAccountManager.cpp
