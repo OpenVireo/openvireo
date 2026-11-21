@@ -710,6 +710,20 @@ void TestAccountManager::testDeleteAccountAndRestore()
     manager->signIn(Email, Password);
     QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
 
+    // What would go comes from GET /me/deletion, in the API's shape
+    QJsonObject preview;
+    bool previewed = false;
+    manager->deletionPreview([&](const QJsonObject& p, const QString& e) {
+        QVERIFY2(e.isEmpty(), qPrintable(e));
+        preview = p;
+        previewed = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(previewed, 20000);
+    QVERIFY(!preview.value("would_erase_on").toString().isEmpty());
+    QVERIFY(!preview.value("blocked").toBool());
+    QVERIFY(preview.value("vaults").isArray());
+    QVERIFY(preview.value("orgs").toArray().isEmpty());
+
     // The password is checked on this device first, and the typed email by the server
     QString error;
     QString when;

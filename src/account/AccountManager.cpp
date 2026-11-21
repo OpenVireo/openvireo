@@ -2451,13 +2451,73 @@ void AccountManager::removeErasedAccounts()
 
 void AccountManager::deletionPreview(std::function<void(const QJsonObject& preview, const QString& error)> done)
 {
-    m_client->deletionPreview([done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        done(response.json(), {});
-    });
+    // GET /me/deletion in the core; handed on in the API's JSON shape, which DeleteAccountDialog reads
+    auto preview = std::make_shared<QJsonObject>();
+    QPointer<AccountManager> guard(this);
+    callAccount(
+        this,
+        [preview](const ov::Account& account, const ov::CancelToken& cancel) {
+            const auto p = account.deletion_preview(cancel);
+            const auto vaultRole = [](ov::VaultRole role) {
+                return role == ov::VaultRole::Manage  ? QStringLiteral("manage")
+                       : role == ov::VaultRole::Write ? QStringLiteral("write")
+                                                      : QStringLiteral("read");
+            };
+            const auto orgRole = [](ov::OrgRole role) {
+                return role == ov::OrgRole::Owner   ? QStringLiteral("owner")
+                       : role == ov::OrgRole::Admin ? QStringLiteral("admin")
+                                                    : QStringLiteral("member");
+            };
+            QJsonArray vaults;
+            for (const auto& vault : p.vaults) {
+                QJsonArray shared;
+                for (const auto& share : vault.shared_with) {
+                    shared << QJsonObject{{"principal", qs(share.principal)},
+                                          {"display", qs(share.display)},
+                                          {"role", vaultRole(share.role)}};
+                }
+                vaults << QJsonObject{{"id", qs(vault.id)}, {"name", qs(vault.name)}, {"shared_with", shared}};
+            }
+            QJsonArray orgs;
+            for (const auto& org : p.orgs) {
+                QJsonArray members;
+                for (const auto& member : org.members) {
+                    members << QJsonObject{
+                        {"id", qs(member.id)}, {"email", qs(member.email)}, {"role", orgRole(member.role)}};
+                }
+                orgs << QJsonObject{{"id", qs(org.id)},
+                                    {"name", qs(org.name)},
+                                    {"role", orgRole(org.role)},
+                                    {"outcome",
+                                     org.outcome == ov::DeletionOutcome::Leave    ? QStringLiteral("leave")
+                                     : org.outcome == ov::DeletionOutcome::Delete ? QStringLiteral("delete")
+                                                                                  : QStringLiteral("blocked")},
+                                    {"members", members}};
+            }
+            QJsonObject out{{"would_erase_on", qs(p.erase_on)},
+                            {"vaults", vaults},
+                            {"orgs", orgs},
+                            {"share_links", static_cast<int>(p.share_links)},
+                            {"blocked", p.blocked}};
+            if (!qs(p.scheduled_for).isEmpty()) {
+                out.insert("scheduled_for", qs(p.scheduled_for));
+            }
+            if (p.has_subscription) {
+                out.insert("subscription",
+                           QJsonObject{{"plan", qs(p.subscription.plan)},
+                                       {"period_end", qs(p.subscription.period_end)},
+                                       {"source", qs(p.subscription.source)},
+                                       {"manage", qs(p.subscription.manage)}});
+            }
+            *preview = out;
+        },
+        [guard, preview, done](const CoreError& e) {
+            if (!e.ok()) {
+                done({}, guard ? guard->messageFor(e) : e.message);
+                return;
+            }
+            done(*preview, {});
+        });
 }
 
 void AccountManager::deleteAccount(const QString& password,
@@ -2541,16 +2601,20 @@ void AccountManager::transferVault(const QString& vaultId,
                                    std::function<void(const QString& error)> done)
 {
     QPointer<AccountManager> guard(this);
-    m_client->transferVault(vaultId, principal, [this, guard, done](const AuthClient::Response& response) {
-        if (!guard) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done(AuthClient::errorMessage(response));
-            return;
-        }
-        m_reloadAfterRefresh = true;
-        refreshAccessToken();
-        done({});
-    });
+    callAccount(
+        this,
+        [vaultId, principal](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.transfer_vault(rs(vaultId), rs(principal), cancel);
+        },
+        [guard, done](const CoreError& e) {
+            if (!guard) {
+                return;
+            }
+            if (!e.ok()) {
+                done(guard->messageFor(e));
+                return;
+            }
+            guard->reloadVaults();
+            done({});
+        });
 }
