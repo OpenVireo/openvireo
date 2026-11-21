@@ -21,7 +21,6 @@
 
 #include "account/AccountCrypto.h"
 #include "account/CoreHost.h"
-#include "account/OpaqueClient.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/Group.h"
@@ -388,10 +387,11 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
     const auto login = libopaque.value("login_opaque_ke_client").toObject();
     const auto password = libopaque.value("password").toString().toUtf8();
 
-    // The desktop's ids and context: the email as OpaqueClient sends it, the issuer host
-    const auto user = OpaqueClient::userId(libopaque.value("id_u").toString());
+    // The ids and context the core signs in with (SPEC §8): the email lowercased and trimmed, the issuer host
+    const auto user = libopaque.value("id_u").toString().trimmed().toLower().toUtf8();
     const auto server = libopaque.value("id_s").toString().toUtf8();
-    QCOMPARE(QString::fromUtf8(OpaqueClient::Context), libopaque.value("context").toString());
+    const auto context = QByteArrayLiteral("ov-opaque-v1");
+    QCOMPARE(QString::fromUtf8(context), libopaque.value("context").toString());
 
     auto start = ov::opaque_start_login_seeded(slice(password), slice(hex(login, "client_start_seed_hex")));
     QCOMPARE(toByteArray(start.message).toHex(), hex(login, "ke1_hex").toHex());
@@ -401,7 +401,7 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
                                                   slice(hex(login, "ke2_hex")),
                                                   slice(user),
                                                   slice(server),
-                                                  slice(OpaqueClient::Context),
+                                                  slice(context),
                                                   slice(hex(login, "client_finish_seed_hex")));
     QCOMPARE(toByteArray(finish.auth_u).toHex(), hex(login, "expected_auth_u_hex").toHex());
     QCOMPARE(toByteArray(finish.session_key).toHex(), hex(login, "session_key_hex").toHex());
@@ -417,7 +417,7 @@ void TestAccountCore::testLibopaqueAccountSignsIn()
                                         slice(hex(login, "ke2_hex")),
                                         slice(user),
                                         slice(server),
-                                        slice(OpaqueClient::Context),
+                                        slice(context),
                                         slice(hex(login, "client_finish_seed_hex")));
     } catch (const rust::Error& e) {
         refused = QByteArray(e.what()).startsWith("opaque_failed");

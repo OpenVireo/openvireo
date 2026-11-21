@@ -231,7 +231,6 @@ set(gui_SOURCES
         account/AccountPlan.cpp
         account/CoreHost.cpp
         account/AuthClient.cpp
-        account/OpaqueClient.cpp
         account/ServiceAccountAdmin.cpp
         account/VaultKeyring.cpp
         account/VaultSharing.cpp
