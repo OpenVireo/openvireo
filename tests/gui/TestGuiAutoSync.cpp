@@ -398,6 +398,69 @@ void TestGuiAutoSync::testOpensAnOlderVersion()
     QFile::remove(filePath);
 }
 
+void TestGuiAutoSync::testOpensAnOlderVersionOfAnAccountVault()
+{
+    // An account vault's versions come from its account (Account::vault_history, open_vault_version), never from a
+    // sync server client of its own
+    RemoteParams params;
+    params.name = "OpenVireo account (Team)";
+    params.type = RemoteParams::Type::AccountVault;
+    params.serverUrl = FakeAccount::SyncUrl;
+    params.accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    params.vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto now = QDateTime::currentDateTimeUtc();
+    QString askedVault;
+    qint64 askedRevision = 0;
+    AccountVaultSync::History history;
+    history.list = [now](const QString&,
+                         std::function<void(const QList<AccountVaultSync::Version>&, const QString&)> done) {
+        AccountVaultSync::Version current{2, now, 2048, true};
+        AccountVaultSync::Version older{1, now.addDays(-1), 1024, false};
+        done({current, older}, {});
+    };
+    history.open = [&](const QString& vaultId,
+                       qint64 revision,
+                       const QString& password,
+                       std::function<void(const QByteArray&, const QString&)> done) {
+        askedVault = vaultId;
+        askedRevision = revision;
+        auto version = QSharedPointer<Database>::create();
+        auto key = QSharedPointer<CompositeKey>::create();
+        key->addKey(QSharedPointer<PasswordKey>::create(password));
+        version->setKey(key);
+        addEntry(version.data(), "In the first version");
+        QByteArray data;
+        QVERIFY(VaultKeyring::writeVault(version.data(), &data));
+        done(data, {});
+    };
+    SyncServerClient::setAccountVaultHistory(params.accountId, history);
+    const auto restore = qScopeGuard([&] { SyncServerClient::setAccountVaultHistory(params.accountId, {}); });
+
+    SyncHistoryDialog dialog(params);
+    QSignalSpy opened(&dialog, &SyncHistoryDialog::openRequested);
+    auto* versions = dialog.versionList();
+    QTRY_COMPARE_WITH_TIMEOUT(versions->topLevelItemCount(), 2, 5000);
+    QVERIFY(versions->topLevelItem(0)->text(0).contains("current"));
+    QCOMPARE(versions->topLevelItem(1)->text(0), QString("1"));
+
+    versions->setCurrentItem(versions->topLevelItem(1));
+    dialog.openSelected();
+    QTRY_COMPARE_WITH_TIMEOUT(opened.count(), 1, 5000);
+    QCOMPARE(askedVault, params.vaultId);
+    QCOMPARE(askedRevision, qint64(1));
+    // Under a one-off password that comes with the request: the vault key is never shown
+    const auto filePath = opened.first().at(0).toString();
+    const auto password = opened.first().at(1).toString();
+    QVERIFY(filePath.contains("OpenVireo account (Team) (version 1)"));
+    QVERIFY(password.size() >= 24);
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(QSharedPointer<PasswordKey>::create(password));
+    Database version;
+    QVERIFY(version.open(filePath, key));
+    QCOMPARE(titles(&version), QStringList({"In the first version"}));
+    QFile::remove(filePath);
+}
+
 void TestGuiAutoSync::testOpensAnOlderVersionFromTheVaultCard()
 {
     SKIP_WITHOUT_SERVER();
@@ -484,159 +547,6 @@ void TestGuiAutoSync::testCombinesChangesToDifferentFields()
 
 namespace
 {
-    // An in-memory sync server for account vaults that records the path and token of every request
-    struct VaultServer
-    {
-        QByteArray stored;
-        QString etag;
-        qint64 revision = 0;
-        QStringList requests;
-        QStringList tokens;
-    };
-
-    class FakeVaultClient : public SyncServerClient
-    {
-    public:
-        FakeVaultClient(const RemoteParams& params, QSharedPointer<VaultServer> server)
-            : SyncServerClient(params)
-            , m_server(std::move(server))
-        {
-        }
-
-    protected:
-        void send(const QByteArray& verb,
-                  const QUrl& url,
-                  const Headers& headers,
-                  const QByteArray& body,
-                  int,
-                  Callback callback) override
-        {
-            auto& server = *m_server;
-            server.requests << QString::fromLatin1(verb) + " " + url.path();
-            QString ifMatch, ifNoneMatch, token;
-            for (const auto& header : headers) {
-                if (header.first == "Authorization") {
-                    token = QString::fromLatin1(header.second);
-                } else if (header.first == "If-Match") {
-                    ifMatch = QString::fromLatin1(header.second);
-                } else if (header.first == "If-None-Match") {
-                    ifNoneMatch = QString::fromLatin1(header.second);
-                }
-            }
-            server.tokens << token;
-            Response response;
-            if (token.isEmpty()) {
-                response.status = 401;
-            } else if (verb == "PUT") {
-                if (ifMatch.isEmpty() && ifNoneMatch.isEmpty()) {
-                    response.status = 428;
-                } else if ((ifNoneMatch == "*" && !server.stored.isEmpty())
-                           || (!ifMatch.isEmpty() && ifMatch != server.etag)) {
-                    response.status = 412;
-                } else {
-                    response.status = server.stored.isEmpty() ? 201 : 200;
-                    server.stored = body;
-                    server.etag = etagFor(body);
-                    ++server.revision;
-                }
-            } else if (server.stored.isEmpty()) {
-                response.status = 404;
-            } else if (verb == "HEAD" && ifNoneMatch == server.etag) {
-                response.status = 304;
-            } else {
-                response.status = 200;
-                if (verb == "GET") {
-                    response.body = server.stored;
-                }
-            }
-            if (!server.stored.isEmpty()) {
-                response.etag = server.etag;
-                response.revision = server.revision;
-            }
-            deliverLater(response, std::move(callback));
-        }
-
-    private:
-        QSharedPointer<VaultServer> m_server;
-    };
-} // namespace
-
-void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
-{
-    // No server needed: the sync server client is replaced by an in-memory one
-    using State = DatabaseWidget::SyncStatus::State;
-    auto server = QSharedPointer<VaultServer>::create();
-    SyncServerClient::setFactory(
-        [server](const RemoteParams& params) -> SyncServerClient* { return new FakeVaultClient(params, server); });
-    const auto restoreFactory = qScopeGuard([] { SyncServerClient::setFactory(nullptr); });
-
-    const auto accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    RemoteParams params;
-    params.name = "OpenVireo account";
-    params.type = RemoteParams::Type::AccountVault;
-    // Nothing listens here; the event stream just keeps retrying
-    params.serverUrl = "http://127.0.0.1:9/api/v1";
-    params.accountId = accountId;
-    params.vaultId = vaultId;
-    params.autoSync = true;
-
-    // An account vault: its key is the vault key as a key file, and there is no password
-    const auto vaultKey = AccountCrypto::generateVaultKey();
-    QTemporaryDir dir;
-    auto db = VaultKeyring::createVaultDatabase("Personal", vaultKey);
-    {
-        RemoteSettings settings(db);
-        settings.addRemoteParams(new RemoteParams(params));
-        settings.saveSettings();
-    }
-    QVERIFY(db->saveAs(dir.filePath("vault.kdbx")));
-    // The database carries no token for the vault
-    QVERIFY(!db->metadata()->customData()->value(CustomData::RemoteProgramSettings).contains("Bearer"));
-
-    // Signed out: nothing is sent
-    DatabaseWidget widget(db);
-    addEntry(db.data(), "First");
-    QVERIFY(widget.save());
-    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsToken, 5000);
-    QVERIFY(widget.syncStatus().error.contains("Sign in"));
-    QVERIFY(server->requests.isEmpty());
-
-    // The account signs in: its provider hands out the current access token
-    QString accessToken = "jwt-1";
-    SyncServerClient::setAccountTokenProvider(
-        accountId, [&accessToken](std::function<void(const QString&)> done) { done(accessToken); });
-    const auto signOut = qScopeGuard([accountId] { SyncServerClient::setAccountTokenProvider(accountId, nullptr); });
-    addEntry(db.data(), "Second");
-    QVERIFY(widget.save());
-    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
-    QVERIFY(server->requests.contains("PUT /api/v1/vaults/" + vaultId));
-    for (const auto& request : server->requests) {
-        QVERIFY2(request.contains("/api/v1/vaults/" + vaultId), qPrintable(request));
-    }
-    QVERIFY(!server->tokens.isEmpty());
-    for (const auto& token : server->tokens) {
-        QCOMPARE(token, QString("Bearer jwt-1"));
-    }
-    auto uploaded = VaultKeyring::readVault(server->stored, VaultKeyring::compositeKeyFor(vaultKey));
-    QVERIFY(uploaded);
-    QCOMPARE(titles(uploaded.data()), QStringList({"First", "Second"}));
-
-    // After a refresh the next sync goes out with the new token
-    accessToken = "jwt-2";
-    server->tokens.clear();
-    addEntry(db.data(), "Third");
-    QVERIFY(widget.save());
-    QTRY_VERIFY_WITH_TIMEOUT(server->tokens.contains("Bearer jwt-2"), 10000);
-    QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::Synced, 10000);
-    QVERIFY(!server->tokens.contains("Bearer jwt-1"));
-    uploaded = VaultKeyring::readVault(server->stored, VaultKeyring::compositeKeyFor(vaultKey));
-    QVERIFY(uploaded);
-    QCOMPARE(titles(uploaded.data()), QStringList({"First", "Second", "Third"}));
-}
-
-namespace
-{
     // An account signed up on the fake account server, unlocked
     AccountManager* signUp(const QSharedPointer<FakeAccount::Server>& server, const QString& email)
     {
@@ -660,6 +570,86 @@ namespace
         return db ? titles(db.data()) : QStringList{"<could not open>"};
     }
 } // namespace
+
+void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
+{
+    // Account vaults sync in their account's openvireo-core session, which sends the account's own access token
+    using State = DatabaseWidget::SyncStatus::State;
+    auto server = QSharedPointer<FakeAccount::Server>::create();
+    FakeAccount::installSyncFactory(server);
+    const auto restoreFactory = qScopeGuard([] { FakeAccount::restoreSyncFactory(); });
+    QTemporaryDir dir;
+
+    // A vault of an account that isn't signed in on this device: nothing is sent
+    {
+        RemoteParams params;
+        params.name = "OpenVireo account";
+        params.type = RemoteParams::Type::AccountVault;
+        params.serverUrl = FakeAccount::SyncUrl;
+        params.accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        params.vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        params.autoSync = true;
+        auto db = VaultKeyring::createVaultDatabase("Personal", AccountCrypto::generateVaultKey());
+        {
+            RemoteSettings settings(db);
+            settings.addRemoteParams(new RemoteParams(params));
+            settings.saveSettings();
+        }
+        QVERIFY(db->saveAs(dir.filePath("signed-out.kdbx")));
+        // The database carries no token for the vault
+        QVERIFY(!db->metadata()->customData()->value(CustomData::RemoteProgramSettings).contains("Bearer"));
+        DatabaseWidget widget(db);
+        addEntry(db.data(), "First");
+        QVERIFY(widget.save());
+        QTRY_COMPARE_WITH_TIMEOUT(widget.syncStatus().state, State::NeedsToken, 5000);
+        QVERIFY(widget.syncStatus().error.contains("Sign in"));
+        QVERIFY(server->requests.filter("sync ").isEmpty());
+    }
+
+    // The account signs in: its vaults sync with its token
+    DatabaseTabWidget tabs;
+    auto* account = signUp(server, "alice@example.com");
+    QVERIFY(account);
+    AccountController controller(&tabs, account);
+    controller.createVault("Personal");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
+    QTRY_VERIFY(!account->keyring().isEmpty());
+    const auto vaultId = account->keyring().vaults().first().id;
+    const auto vaultKey = account->keyring().vaultKey(vaultId);
+    auto* widget = controller.vaultWidget(vaultId);
+    QVERIFY(widget);
+    server->requests.clear();
+    server->syncPrincipals.clear();
+    server->syncTokens.clear();
+    addEntry(widget->database().data(), "Second");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(vaultTitles(server, vaultId, vaultKey), QStringList{"Second"}, 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    QVERIFY(server->requests.contains("sync PUT vaults/" + vaultId));
+    for (const auto& request : server->requests.filter("sync ")) {
+        QVERIFY2(request.endsWith("vaults/" + vaultId), qPrintable(request));
+    }
+    QVERIFY(!server->syncPrincipals.isEmpty());
+    for (const auto& principal : server->syncPrincipals) {
+        QCOMPARE(principal, account->principal());
+    }
+    const auto firstToken = server->syncTokens.value(0);
+    QVERIFY(!firstToken.isEmpty());
+    QCOMPARE(server->syncTokens.filter(firstToken).size(), server->syncTokens.size());
+
+    // The server stops taking that token (it expired): the core refreshes, and the sync goes out with the new one
+    server->accessTokens.remove(firstToken);
+    server->syncTokens.clear();
+    addEntry(widget->database().data(), "Third");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(vaultTitles(server, vaultId, vaultKey), QStringList({"Second", "Third"}), 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+    QVERIFY(server->syncTokens.contains(firstToken));
+    QVERIFY(!server->syncTokens.last().isEmpty());
+    QVERIFY(server->syncTokens.last() != firstToken);
+    QCOMPARE(server->accessTokens.value(server->syncTokens.last()).principal, account->principal());
+    controller.lockAccount();
+}
 
 void TestGuiAutoSync::testAccountVaultFollowsAKeyRotation()
 {
@@ -746,9 +736,21 @@ void TestGuiAutoSync::testSharedVaultSyncsWithThisDevicesAccount()
     QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
     auto* widget = controller.vaultWidget(vaultId);
     QVERIFY(widget);
+    // Its settings name Alice's account, as in a copy that came from her device. (A download here names Bob's: the
+    // copy this device keeps drops the account remotes in the server's file and gets its own.)
     RemoteSettings settings(widget->database());
+    settings.loadSettings();
     QCOMPARE(settings.getAllRemoteParams().size(), 1);
-    QCOMPARE(settings.getAllRemoteParams().first()->accountId, alice->accountId());
+    QCOMPARE(settings.getAllRemoteParams().first()->accountId, bob->accountId());
+    {
+        auto params = *settings.getAllRemoteParams().first();
+        settings.removeRemoteParams(params.name);
+        params.accountId = alice->accountId();
+        settings.addRemoteParams(new RemoteParams(params));
+        settings.saveSettings();
+    }
+    QVERIFY(widget->save());
+    QCOMPARE(RemoteSettings(widget->database()).getAllRemoteParams().first()->accountId, alice->accountId());
 
     // Bob's change goes out with Bob's token
     server->requests.clear();

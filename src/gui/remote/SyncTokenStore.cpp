@@ -29,6 +29,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
+#include <QStandardPaths>
+#include <QtGlobal>
 
 #ifdef Q_OS_MACOS
 #include <CoreFoundation/CoreFoundation.h>
@@ -334,6 +336,21 @@ namespace
         return backend;
     }
 
+    // Whether currentBackend() is the default system store, which a test must never reach
+    bool& usingDefaultSystemStore()
+    {
+        static bool system = false;
+        return system;
+    }
+
+    std::unique_ptr<SyncTokenStore::Backend> refusedSystemStore()
+    {
+        qWarning("SyncTokenStore: refusing the system store in a test (QStandardPaths test mode or %s set); "
+                 "using an in-memory store. Call SyncTokenStore::setBackend() in the test.",
+                 SyncTokenStore::TestBinaryVariable);
+        return SyncTokenStore::createMemoryBackend();
+    }
+
     // Tokens already read, so that reloading the remote settings after every change doesn't
     // ask the system store again
     QHash<QString, QString>& cache()
@@ -342,7 +359,7 @@ namespace
         return tokens;
     }
 
-    std::unique_ptr<SyncTokenStore::Backend> createPlatformBackend()
+    std::unique_ptr<SyncTokenStore::Backend> platformBackend()
     {
 #ifdef Q_OS_MACOS
         return std::make_unique<KeychainBackend>();
@@ -368,10 +385,28 @@ QString SyncTokenStore::keyFor(const QUuid& databaseId, const RemoteParams& para
 SyncTokenStore::Backend& SyncTokenStore::backend()
 {
     auto& backend = currentBackend();
-    if (!backend) {
-        backend = createPlatformBackend();
+    if (!backend || (usingDefaultSystemStore() && refusesSystemStore())) {
+        // A test (or test mode switched on after the store was first used) never gets the real store
+        if (refusesSystemStore()) {
+            cache().clear();
+            backend = refusedSystemStore();
+            usingDefaultSystemStore() = false;
+        } else {
+            backend = platformBackend();
+            usingDefaultSystemStore() = true;
+        }
     }
     return *backend;
+}
+
+bool SyncTokenStore::refusesSystemStore()
+{
+    return QStandardPaths::isTestModeEnabled() || qEnvironmentVariableIsSet(TestBinaryVariable);
+}
+
+std::unique_ptr<SyncTokenStore::Backend> SyncTokenStore::createPlatformBackend()
+{
+    return platformBackend();
 }
 
 QString SyncTokenStore::load(const QString& key)
@@ -419,6 +454,7 @@ void SyncTokenStore::setBackend(std::unique_ptr<Backend> backend)
 {
     cache().clear();
     currentBackend() = std::move(backend);
+    usingDefaultSystemStore() = false;
 }
 
 std::unique_ptr<SyncTokenStore::Backend> SyncTokenStore::createMemoryBackend()

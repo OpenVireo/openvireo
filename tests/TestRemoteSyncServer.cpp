@@ -38,8 +38,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QScopeGuard>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QUuid>
@@ -328,8 +330,9 @@ void TestRemoteSyncServer::testPlatformTokenStore()
     if (qEnvironmentVariable("KPXC_TEST_KEYCHAIN") != "1") {
         QSKIP("Set KPXC_TEST_KEYCHAIN=1 to test the platform token store");
     }
-    // A fresh platform store each time, so that reads reach it instead of the cache
-    auto reopen = [] { SyncTokenStore::setBackend(nullptr); };
+    // A fresh platform store each time, so that reads reach it instead of the cache. Asked for by name: the
+    // default store in a test is an in-memory one (testTestsNeverGetTheSystemStore)
+    auto reopen = [] { SyncTokenStore::setBackend(SyncTokenStore::createPlatformBackend()); };
     reopen();
     auto restore = qScopeGuard([] { SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend()); });
     qInfo("Platform token store: %s", qPrintable(SyncTokenStore::description()));
@@ -346,6 +349,53 @@ void TestRemoteSyncServer::testPlatformTokenStore()
     reopen();
     QVERIFY(SyncTokenStore::load(key).isEmpty());
     QVERIFY(SyncTokenStore::remove(key));
+}
+
+void TestRemoteSyncServer::testTestsNeverGetTheSystemStore()
+{
+    // A test that forgets setBackend() (or resets it with nullptr) must never reach the user's Keychain,
+    // Credential Manager or keyring: an earlier test overwrote real account items that way
+    const bool testMode = QStandardPaths::isTestModeEnabled();
+    auto restore = qScopeGuard([testMode] {
+        QStandardPaths::setTestModeEnabled(testMode);
+        qputenv(SyncTokenStore::TestBinaryVariable, "1");
+        SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
+    });
+    const auto memory = SyncTokenStore::createMemoryBackend()->description();
+    const auto key = "openvireo-guard-test-" + QUuid::createUuid().toString(QUuid::Id128);
+    const QRegularExpression warning("SyncTokenStore: refusing the system store in a test");
+
+    // Every test binary is marked before main() runs (tests/util/TestBinaryMarker.cpp)
+    QVERIFY(qEnvironmentVariableIsSet(SyncTokenStore::TestBinaryVariable));
+    QVERIFY(SyncTokenStore::refusesSystemStore());
+    QTest::ignoreMessage(QtWarningMsg, warning);
+    SyncTokenStore::setBackend(nullptr);
+    QCOMPARE(SyncTokenStore::description(), memory);
+    QVERIFY(SyncTokenStore::save(key, "token"));
+    QCOMPARE(SyncTokenStore::load(key), QString("token"));
+    // A fresh default store is a fresh memory one: nothing reached a persistent store
+    QTest::ignoreMessage(QtWarningMsg, warning);
+    SyncTokenStore::setBackend(nullptr);
+    QVERIFY(SyncTokenStore::load(key).isEmpty());
+
+    // QStandardPaths test mode alone is enough
+    qunsetenv(SyncTokenStore::TestBinaryVariable);
+    QStandardPaths::setTestModeEnabled(true);
+    QVERIFY(SyncTokenStore::refusesSystemStore());
+    QTest::ignoreMessage(QtWarningMsg, warning);
+    SyncTokenStore::setBackend(nullptr);
+    QCOMPARE(SyncTokenStore::description(), memory);
+    QVERIFY(SyncTokenStore::load(key).isEmpty());
+    QVERIFY(SyncTokenStore::save(key, "token"));
+    QVERIFY(SyncTokenStore::remove(key));
+
+    // So is the marker alone
+    QStandardPaths::setTestModeEnabled(false);
+    qputenv(SyncTokenStore::TestBinaryVariable, "1");
+    QVERIFY(SyncTokenStore::refusesSystemStore());
+    QTest::ignoreMessage(QtWarningMsg, warning);
+    SyncTokenStore::setBackend(nullptr);
+    QCOMPARE(SyncTokenStore::description(), memory);
 }
 
 void TestRemoteSyncServer::testSyncServerCycle()

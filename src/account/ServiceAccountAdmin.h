@@ -91,7 +91,6 @@ public:
         QDateTime expiresAt;
         bool disabled = false;
 
-        static ServiceAccount fromJson(const QJsonObject& json);
     };
 
     struct Secret
@@ -196,19 +195,11 @@ public:
     static constexpr int AuditPageSize = 50;
 
 private:
-    // Every SA master key of the org this account holds, sealed to `member` (SaMasterGrant)
-    void sealMasterKeys(const QString& orgId,
-                        const Member& member,
-                        std::function<void(const QJsonArray& masterKeys, const QString& error)> done);
-    // Manage on every org vault this account manages, for a new owner or admin
-    void grantManagedVaults(const QString& orgId, const Member& member, Done done);
-
-    // {id, name, secret_hash, prefix, wrapped_master, expires_at} and the token for it
-    QJsonObject newSecret(const QString& saId,
-                          const AccountCrypto::SecureBytes& master,
-                          const QString& name,
-                          const QDateTime& expiresAt,
-                          QString* token) const;
+    // Runs a call on the account's core session; signed_out without one
+    void call(AccountManager::AccountWork work, AccountManager::AccountDone done);
+    // call() for operations that only succeed or fail
+    void simple(AccountManager::AccountWork work, Done done);
+    QString messageFor(const AccountManager::CoreError& error) const;
 
     QPointer<AccountManager> m_account;
 };

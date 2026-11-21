@@ -25,12 +25,104 @@
 #include <QDateTime>
 #include <QObject>
 #include <QSet>
+#include <QStringList>
 #include <QUrl>
 
 #include <functional>
 
 class QNetworkAccessManager;
 class QNetworkReply;
+
+/**
+ * An account vault synced through its account's openvireo-core session (Account::sync_vault_kdbx): the account
+ * downloads, merges three-way and uploads in one call, and hands back the merged file. AccountManager registers
+ * one per signed-in account with SyncServerClient::setAccountVaultSyncer(); SyncEngine uses it for account
+ * vaults instead of its own download, merge and upload.
+ */
+struct AccountVaultSync
+{
+    struct Request
+    {
+        QString vaultId;
+        // The local copy as a KDBX file under any of the vault's key versions
+        QByteArray kdbx;
+        // The server's bytes from this device's last sync, the merge base; empty: the one the core kept
+        QByteArray base;
+        bool localChanged = true;
+        // Continue although the server looks rolled back or lost the vault ("sync anyway")
+        bool acceptServerState = false;
+    };
+    enum class Outcome
+    {
+        Unchanged,
+        Pulled,
+        Uploaded,
+        Created
+    };
+    struct Conflict
+    {
+        // 32 hex digits
+        QString uuid;
+        // 0 edited on both, 1 deleted here and edited there, 2 edited here and deleted there
+        int kind = 0;
+        QString title;
+        QStringList fields;
+    };
+    struct Result
+    {
+        // The core's wire code (server_rolled_back, server_lost_database, network_error, ...); empty on success
+        QString errorCode;
+        QString error;
+        // The merged file, to keep as the local copy, under `keyFile` (the vault key as a raw key file; a secret)
+        QByteArray kdbx;
+        QByteArray keyFile;
+        Outcome outcome = Outcome::Unchanged;
+        QString etag;
+        QList<Conflict> conflicts;
+        bool hasClockOffset = false;
+        // How far this computer's clock is ahead of the server's
+        qint64 clockOffsetMsec = 0;
+
+        bool ok() const
+        {
+            return errorCode.isEmpty();
+        }
+    };
+    using Done = std::function<void(const Result& result)>;
+    // Cancels the sync it was returned for; `done` then reports `aborted`
+    using Cancel = std::function<void()>;
+    // Starts a sync; `done` is called later on the thread that owns the account
+    using Syncer = std::function<Cancel(const Request& request, Done done)>;
+
+    // The versions of an account vault the sync server keeps (Account::vault_history), newest first
+    struct Version
+    {
+        qint64 revision = 0;
+        QDateTime savedAt;
+        // -1 when the server doesn't say
+        qint64 size = -1;
+        bool current = false;
+    };
+    struct History
+    {
+        // Lists the versions; `done` gets them, or an error message
+        std::function<void(const QString& vaultId,
+                           std::function<void(const QList<Version>&, const QString& error)> done)>
+            list;
+        // Downloads one version (Account::open_vault_version) as a KDBX file under `password` alone; `done` gets
+        // the file, or an error message
+        std::function<void(const QString& vaultId,
+                           qint64 revision,
+                           const QString& password,
+                           std::function<void(const QByteArray& kdbx, const QString& error)> done)>
+            open;
+
+        explicit operator bool() const
+        {
+            return list && open;
+        }
+    };
+};
 
 /**
  * Asynchronous REST client for the KeePassXC sync server (see keepassxc-sync-server).
@@ -78,13 +170,24 @@ public:
     void setTokenProvider(AccessTokenProvider provider);
     // The provider for `params`: its own, its account's, or one handing out its static token
     static AccessTokenProvider tokenProviderFor(const RemoteParams& params);
-    // Whether a request for `params` would carry a token: a static token, or a signed-in account
+    // Whether `params` can sync: a static token, or a signed-in account (or service account) that holds the vault
     static bool hasCredentials(const RemoteParams& params);
+    // Whether requests for `params` can carry a token of their own (an account vault: its account's provider); a
+    // service account's vaults sync without one (hasCredentials() through their syncer) and have no event stream
+    static bool hasAccessToken(const RemoteParams& params);
     // Account vaults of `accountId` use this provider from now on; nullptr when the account signs out
     static void setAccountTokenProvider(const QString& accountId, AccessTokenProvider provider);
     // The account on this device that holds a vault, whose provider wins over the account id in the vault's
     // settings: those are synced with the vault, so a vault someone shared names their account. Empty forgets it.
     static void setVaultAccount(const QString& vaultId, const QString& accountId);
+    // Account vaults of `accountId` sync through this from now on; nullptr when the account signs out
+    static void setAccountVaultSyncer(const QString& accountId, AccountVaultSync::Syncer syncer);
+    // The syncer for an account vault (its holder's, as for tokens), or nullptr when no account syncs it
+    static AccountVaultSync::Syncer accountVaultSyncerFor(const RemoteParams& params);
+    // The versions of `accountId`'s vaults come from here from now on; an empty History when it signs out
+    static void setAccountVaultHistory(const QString& accountId, AccountVaultSync::History history);
+    // The history of an account vault (its holder's, as for tokens), or an empty one
+    static AccountVaultSync::History accountVaultHistoryFor(const RemoteParams& params);
 
     // HEAD with If-None-Match: 304 when the server still has that version
     void check(const QString& etag, Callback callback);

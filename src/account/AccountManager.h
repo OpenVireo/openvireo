@@ -20,42 +20,53 @@
 
 #include "AccountCrypto.h"
 #include "AccountPlan.h"
-#include "AuthClient.h"
-#include "OpaqueClient.h"
+#include "CoreHost.h"
 #include "VaultKeyring.h"
 
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncEventStream.h"
+#include "gui/remote/SyncServerClient.h"
 
 #include <QObject>
 #include <QPointer>
+#include <QThreadPool>
 #include <QTimer>
 #include <QUrl>
 #include <QUuid>
 
 #include <memory>
 
+class CompositeKey;
 class Database;
 class QuickUnlockInterface;
 
 /**
- * One KeePassXC account on this device (docs/plans/accounts/SPEC.md): signing up and in with OPAQUE and
- * the Secret Key, the access token and its refresh, the account keyset and the vault keys.
+ * One OpenVireo account on this device (docs/plans/accounts/SPEC.md). The session itself (sign-up and sign-in
+ * with OPAQUE and the Secret Key, unlock, the tokens and their refresh, sessions set aside) runs in
+ * openvireo-core's ov::Account, on a worker thread; this class keeps the Qt API and signals around it.
  *
  *   SignedOut ──signIn()──▶ SigningIn ──▶ [NeedsMfa ──submitMfa()──▶] Unlocked ──lock()──▶ Locked
  *       ▲                                                               │  ▲                 │
  *       └──────────── signOut(), or the session was revoked ────────────┘  └────unlock()─────┘
  *
  * The keyset (and with it every vault key) is only in memory while Unlocked and is wiped by lock().
- * The refresh token and the Secret Key stay in the device's keychain (SyncTokenStore), so after a
- * restart restoreSession() gets back to Locked and unlock() only needs the master password.
+ * The core keeps the refresh token and the Secret Key in the device's keychain (CoreHost::SecretStore), so after
+ * a restart restoreSession() gets back to Locked and unlock() only needs the master password.
  *
- * Access tokens live 10 minutes. They are refreshed a minute before they expire, when a request finds
- * one that is about to, and whenever the sync server announces an access change (SPEC §11). Presenting
- * a rotated refresh token makes the server revoke the session, which signs this device out.
+ * Access tokens live 10 minutes. The core refreshes them a minute before they expire, and this manager asks it to
+ * whenever the sync server announces an access change (SPEC §11). It is the only refresher: everything else
+ * borrows the core's token through accessToken(). Presenting a rotated refresh token makes the server revoke
+ * the session, which signs this device out.
  *
- * Account vaults get their tokens from this manager: it registers itself as the token provider of
- * its account with SyncServerClient while signed in.
+ * Account vaults are kept as KDBX files (KeePassXC Databases) under the vault key as a raw key file. The core
+ * lists the vaults, hands out each one's key (Account::vault_kdbx_credentials), downloads and creates them, and
+ * syncs the files (Account::sync_vault_kdbx): this manager registers itself with SyncServerClient as its account's
+ * token provider (for the vaults' event streams), vault syncer and vault history while signed in, and SyncEngine
+ * syncs through it.
+ *
+ * A service account signed in with its token runs on ov::ServiceAccount instead, in a core session of its own: the
+ * core exchanges the token's secret, unwraps the keyset and keeps both, so keyset() stays empty and no access token
+ * leaves the core. Its vaults download and sync through that session too.
  *
  * Quick Unlock (Touch ID, Windows Hello, Polkit) works as it does for databases: after the master password
  * unlocks the account once, the AUK is handed to the platform's Quick Unlock provider, which keeps it
@@ -147,8 +158,8 @@ public:
     static constexpr int MinTokenLifetimeSec = 30;
 
     explicit AccountManager(QObject* parent = nullptr);
-    // For tests: a client that doesn't use the network and another OPAQUE implementation
-    AccountManager(AuthClient* client, std::unique_ptr<OpaqueClient> opaque, QObject* parent = nullptr);
+    // For tests: the core's Host (transport, clock, keychain, cache) from `host` instead of the real ones
+    explicit AccountManager(CoreHost::Factory host, QObject* parent = nullptr);
     ~AccountManager() override;
 
     void setServer(const ServerConfig& config);
@@ -174,7 +185,6 @@ public:
     QString accessTokenNow() const;
     const AccountCrypto::Keyset& keyset() const;
     const VaultKeyring& keyring() const;
-    AuthClient* client() const;
     // The orgs this account belongs to, as of the last reloadVaults(); empty while locked
     QList<Org> orgs() const;
     // Unlocked from this device's offline cache because the servers couldn't be reached (SPEC §20).
@@ -223,9 +233,32 @@ public:
 
     using CreateVaultCallback =
         std::function<void(const QString& vaultId, QSharedPointer<Database> db, const QString& error)>;
-    // Create a personal vault: its key is sealed to this account. `done` gets the empty vault database
-    // to save and upload with If-None-Match: *, or an error.
+    // Create a vault: its key is sealed to this account (and in an org to its owners and admins), and the core
+    // uploads it empty with If-None-Match: *. `done` gets the vault database to save as the local copy, or an error.
     void createVault(const QString& name, CreateVaultCallback done);
+    void createVault(const QString& name, const QString& orgId, CreateVaultCallback done);
+    using DownloadVaultCallback =
+        std::function<void(QSharedPointer<Database> db, const QString& errorCode, const QString& error)>;
+    // Download a vault this device has no copy of yet; `db` is under the vault's newest key. `errorCode` is the
+    // core's wire code: not_found when nothing was uploaded yet.
+    void downloadVault(const QString& vaultId, DownloadVaultCallback done);
+    // Sync a vault file in the core (SyncEngine calls this through SyncServerClient::accountVaultSyncerFor())
+    AccountVaultSync::Cancel syncVault(const AccountVaultSync::Request& request, AccountVaultSync::Done done);
+    // The versions of an account vault the sync server keeps (Account::vault_history), newest first
+    void vaultHistory(const QString& vaultId,
+                      std::function<void(const QList<AccountVaultSync::Version>& versions, const QString& error)> done);
+    // One of them (Account::open_vault_version) as a KDBX file under `password` alone
+    void openVaultVersion(const QString& vaultId,
+                          qint64 revision,
+                          const QString& password,
+                          std::function<void(const QByteArray& kdbx, const QString& error)> done);
+    // The composite key of a vault's newest key version: the vault key as a raw key file; null without it
+    QSharedPointer<CompositeKey> vaultKey(const QString& vaultId) const;
+    // A vault key (a raw 32-byte key file) as a KeePassXC composite key
+    static QSharedPointer<CompositeKey> vaultCompositeKey(const QByteArray& keyFile);
+    // A core vault (account or service account) as the KDBX file this device keeps, everything in it, under
+    // `credentials` (Account::vault_kdbx_credentials). Blocking: call it on the core's worker.
+    static QByteArray vaultFile(const ov::Vault& vault, ov::KdbxCredentials credentials, const ov::CancelToken& cancel);
 
     // Account deletion (SPEC §23). The erase date while the signed-in account is pending: it opens no
     // vaults until restoreAccount().
@@ -301,51 +334,100 @@ signals:
     // The signed-in account turned out to be pending deletion, or was restored
     void pendingDeletionChanged();
 
+public:
+    // What a worker reads from the core after a sign-in or unlock
+    struct SessionInfo;
+    // A failed core call (ov::Error), as plain Qt data
+    struct CoreError
+    {
+        QString code;
+        QString message;
+        QString details;
+        // The server's own code when it isn't a wire code (account_pending_deletion, ...)
+        QString serverCode;
+        int status = 0;
+        bool ok() const
+        {
+            return code.isEmpty();
+        }
+    };
+
+    // The vault list as a worker read it from the core
+    struct VaultList;
+
+    // A call on the signed-in account's openvireo-core session; it runs on the core's worker thread
+    using AccountWork = std::function<void(const ov::Account& account, const ov::CancelToken& cancel)>;
+    using AccountDone = std::function<void(const CoreError& error)>;
+    // Runs `work` with the unlocked account, then `done` on this thread unless `context` is gone; a session the
+    // core ended (refused refresh) signs this device out. signed_out without an unlocked account.
+    void callAccount(QObject* context, AccountWork work, AccountDone done);
+    // The message to show for a failed core call
+    QString errorMessage(const CoreError& error) const;
+
 private:
     struct Pending;
+    struct CoreSession;
+    struct EventLoop;
+    enum class CoreEnd
+    {
+        // The core ended the session already (refused refresh)
+        None,
+        // Sign out: the server is told, the offline data goes
+        SignOut,
+        // As SignOut, and the Secret Key and device id go too
+        Forget
+    };
 
     void setState(State state);
     void fail(const QString& message);
-    void finishLogin(const QJsonObject& session);
-    void deriveKeyset(const QJsonObject& kdfJson,
-                      const QJsonObject& wrappedKeyset,
-                      std::function<void(bool ok, const QString& error)> done);
+    void finishSignIn(const SessionInfo& info, bool registering);
     void finishUnlock(bool offline);
     void setOffline(bool offline);
     void scheduleReconnect();
     // GET /me's kdf, keyset and orgs into the offline cache, and the orgs into orgs()
-    void takeProfile(const QJsonObject& me);
-    QString unreachableMessage(const AuthClient::Response& response) const;
+    void takeProfile(const ov::Profile& profile);
+    QString unreachableMessage() const;
+    QString messageFor(const CoreError& error) const;
+    // A refused refresh ended the session in the core: end it here too. True when it did.
+    bool sessionEndedBy(const CoreError& error);
     void followEmail(const QString& email);
     void reloadOrgs();
     QUuid quickUnlockId() const;
     void rememberAuk(const SecureBytes& auk);
     void forgetAuk();
-    void setTokens(const QString& accessToken, const QString& refreshToken, int expiresIn);
-    void exchangeServiceAccount();
+    void takeToken(const QString& token);
+    void finishTokenRequest(const CoreError& error);
+    void openServiceAccount(const ServerConfig& config, const QString& token);
+    void takeServiceAccountVaults(const VaultList& list);
     void finishRefresh(bool ok);
-    void endSession(const QString& reason);
-    void saveSession() const;
+    void endSession(const QString& reason, CoreEnd end = CoreEnd::None);
     void startEvents();
     void stopEvents();
+    void takeCoreEvent(const ov::AccountEvent& event);
+    void takeVaultList(const VaultList& list);
+    void registerAccountHooks();
+    void unregisterAccountHooks();
     QString defaultServerId() const;
-    OpaqueClient::Ids opaqueIds(const QString& email) const;
 
+    // The core client and account for `config`, without network; null when the config isn't usable
+    std::shared_ptr<CoreSession> makeCore(const ServerConfig& config) const;
+    // The core session that syncs: the service account's while one is signed in, else the account's
+    std::shared_ptr<CoreSession> vaultCore() const;
+    // Runs `work` on this manager's worker (one at a time, in order), then `done` on this thread
+    void runCore(std::shared_ptr<CoreSession> core,
+                 std::function<void(CoreSession&)> work,
+                 std::function<void(const CoreError&)> done);
     void rememberCurrentAccount() const;
-    // Runs `done` once no refresh is rotating a token this device holds
-    void whenTokensSettled(std::function<void()> done);
-    void finishSetAsideCheck();
     void setPendingDeletion(const QString& scheduledFor);
     void setKnownDeletion(const QString& accountId, const QString& scheduledFor) const;
-    void verifyPassword(const QString& password, std::function<void(const QString& error)> done);
-    void freshToken(std::function<void(bool ok)> done);
 
-    static QString sessionKey(const QString& accountId);
-    static QString secretKeyKey(const QString& serverId, const QString& email);
-    static QString deviceKey(const QString& serverId, const QString& email);
-
-    AuthClient* m_client;
-    std::unique_ptr<OpaqueClient> m_opaque;
+    CoreHost::Factory m_host;
+    // Session-state queries that need no account (SPEC §21)
+    std::shared_ptr<CoreSession> m_local;
+    std::shared_ptr<CoreSession> m_core;
+    QThreadPool m_pool;
+    int m_inFlight = 0;
+    bool m_destroying = false;
     ServerConfig m_config;
     AccountCrypto::KdfParams m_newAccountKdf;
     bool m_eventsEnabled = true;
@@ -355,17 +437,16 @@ private:
     QString m_email;
     QString m_deviceId;
     bool m_serviceAccount = false;
-    AccountCrypto::ServiceAccountToken m_saToken;
+    // A service account signed in with its token (ov::ServiceAccount): its own client, separate from m_core
+    std::shared_ptr<CoreSession> m_saCore;
 
+    // The last token the core handed out, and when it expires on this device's clock
     QString m_accessToken;
-    QString m_refreshToken;
     qint64 m_accessTokenExpiry = 0;
     QTimer m_refreshTimer;
     bool m_refreshing = false;
     bool m_reloadAfterRefresh = false;
     QList<std::function<void(const QString&)>> m_tokenWaiters;
-    int m_setAsideChecks = 0;
-    QList<std::function<void()>> m_setAsideCheckWaiters;
 
     std::unique_ptr<Pending> m_pending;
     AccountCrypto::Keyset m_keyset;
@@ -373,7 +454,8 @@ private:
     QList<Org> m_orgs;
     AccountPlan::Plan m_plan;
     QuickUnlockInterface* m_quickUnlock = nullptr;
-    QPointer<SyncEventStream> m_events;
+    // The core's event stream (Account::subscribe), read on a thread of its own
+    std::shared_ptr<EventLoop> m_events;
 
     bool m_offline = false;
     QString m_deletionScheduledFor;

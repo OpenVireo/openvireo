@@ -229,8 +229,7 @@ set(gui_SOURCES
         account/AccountManager.cpp
         account/AccountOfflineCache.cpp
         account/AccountPlan.cpp
-        account/AuthClient.cpp
-        account/OpaqueClient.cpp
+        account/CoreHost.cpp
         account/ServiceAccountAdmin.cpp
         account/VaultKeyring.cpp
         account/VaultSharing.cpp
@@ -442,10 +441,8 @@ target_link_libraries(keepassxc_gui
         ${fdosecrets_LIB}
         ${keeshare_LIB}
         ${sshagent_LIB})
-if(KPXC_FEATURE_ACCOUNTS)
-    target_include_directories(keepassxc_gui SYSTEM PRIVATE ${OPAQUE_INCLUDE_DIRS})
-    target_link_libraries(keepassxc_gui ${OPAQUE_LIBRARIES})
-endif()
+# openvireo-core (cmake/OpenVireoCore.cmake): <ovcore.h> and the static library
+target_link_libraries(keepassxc_gui ovcore)
 
 if(APPLE)
     target_link_libraries(keepassxc_gui "-framework Foundation -framework AppKit -framework Carbon -framework Security -framework LocalAuthentication -framework ScreenCaptureKit")

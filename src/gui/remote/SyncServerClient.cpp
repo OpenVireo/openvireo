@@ -41,6 +41,10 @@ namespace
     QHash<QString, AccessTokenProvider> g_accountProviders;
     // Vault id -> the account on this device that holds it (same mutex)
     QHash<QString, QString> g_vaultAccounts;
+    // Account id -> how the account syncs its vaults (same mutex)
+    QHash<QString, AccountVaultSync::Syncer> g_accountSyncers;
+    // Account id -> where its vaults' versions come from (same mutex)
+    QHash<QString, AccountVaultSync::History> g_accountHistories;
 
     // The provider for an account vault; call with the mutex held
     AccessTokenProvider accountProviderLocked(const QString& accountId, const QString& vaultId)
@@ -117,6 +121,15 @@ AccessTokenProvider SyncServerClient::tokenProviderFor(const RemoteParams& param
 
 bool SyncServerClient::hasCredentials(const RemoteParams& params)
 {
+    if (hasAccessToken(params)) {
+        return true;
+    }
+    // A service account syncs its vaults in its core session, without handing out its token
+    return static_cast<bool>(accountVaultSyncerFor(params));
+}
+
+bool SyncServerClient::hasAccessToken(const RemoteParams& params)
+{
     if (params.tokenProvider) {
         return true;
     }
@@ -145,6 +158,52 @@ void SyncServerClient::setVaultAccount(const QString& vaultId, const QString& ac
     } else {
         g_vaultAccounts.insert(vaultId, accountId);
     }
+}
+
+void SyncServerClient::setAccountVaultSyncer(const QString& accountId, AccountVaultSync::Syncer syncer)
+{
+    QMutexLocker locker(&g_accountProvidersMutex);
+    if (syncer) {
+        g_accountSyncers.insert(accountId, std::move(syncer));
+    } else {
+        g_accountSyncers.remove(accountId);
+    }
+}
+
+AccountVaultSync::Syncer SyncServerClient::accountVaultSyncerFor(const RemoteParams& params)
+{
+    if (params.type != RemoteParams::Type::AccountVault || params.tokenProvider) {
+        return {};
+    }
+    QMutexLocker locker(&g_accountProvidersMutex);
+    const auto holder = g_vaultAccounts.value(params.vaultId);
+    if (!holder.isEmpty() && g_accountSyncers.contains(holder)) {
+        return g_accountSyncers.value(holder);
+    }
+    return g_accountSyncers.value(params.accountId);
+}
+
+void SyncServerClient::setAccountVaultHistory(const QString& accountId, AccountVaultSync::History history)
+{
+    QMutexLocker locker(&g_accountProvidersMutex);
+    if (history) {
+        g_accountHistories.insert(accountId, std::move(history));
+    } else {
+        g_accountHistories.remove(accountId);
+    }
+}
+
+AccountVaultSync::History SyncServerClient::accountVaultHistoryFor(const RemoteParams& params)
+{
+    if (params.type != RemoteParams::Type::AccountVault || params.tokenProvider) {
+        return {};
+    }
+    QMutexLocker locker(&g_accountProvidersMutex);
+    const auto holder = g_vaultAccounts.value(params.vaultId);
+    if (!holder.isEmpty() && g_accountHistories.contains(holder)) {
+        return g_accountHistories.value(holder);
+    }
+    return g_accountHistories.value(params.accountId);
 }
 
 SyncServerClient::~SyncServerClient()

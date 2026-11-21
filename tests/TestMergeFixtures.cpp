@@ -286,7 +286,14 @@ void TestMergeFixtures::testFixtures()
         }
     }
 
+#ifdef KPXC_MERGE_FIXTURES_VIA_CORE
+    // testmergefixturescore: the account-vault merge, in openvireo-core
+    bool merged = false;
+    SyncEngine::mergeAccountVault(local.data(), remote.data(), base.data(), &merged);
+    QVERIFY(merged);
+#else
     SyncEngine::mergeDatabases(local.data(), remote.data(), base.data());
+#endif
     const auto result = project(local.data());
     // Both sides end up the same
     auto remoteResult = project(remote.data());

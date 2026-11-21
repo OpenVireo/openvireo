@@ -17,6 +17,9 @@
 
 #include "TestSyncEngine.h"
 
+#include "account/AccountManager.h"
+#include "account/CoreHost.h"
+#include "account/VaultKeyring.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/Group.h"
@@ -25,13 +28,16 @@
 #include "crypto/Crypto.h"
 #include "crypto/kdf/AesKdf.h"
 #include "gui/remote/SyncEngine.h"
+#include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 #include "mock/MockClock.h"
+#include "util/CoreTestServers.h"
 
 #include <QFile>
 #include <QRegularExpression>
 #include <QScopeGuard>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QThread>
@@ -342,6 +348,9 @@ namespace
 void TestSyncEngine::initTestCase()
 {
     QVERIFY(Crypto::init());
+    // The account-vault cases keep their offline cache under AppDataLocation, and never touch the real Keychain
+    QStandardPaths::setTestModeEnabled(true);
+    SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
 }
 
 void TestSyncEngine::testStateStoreRoundTrip()
@@ -1442,4 +1451,254 @@ void TestSyncEngine::testMeasuresTheClockAgainstTheServer()
     QVERIFY(f.sync().value(0).toBool());
     QVERIFY(qAbs(f.engine->clockOffsetMsec() + 10 * 60 * 1000) < 1500);
     QVERIFY(SyncEngine::isClockSkewed(f.engine->clockOffsetMsec()));
+}
+
+// ---- account vaults, synced in openvireo-core
+
+namespace
+{
+    /*
+     * An account signed up on openvireo-core's test servers, with one vault, and a local copy of it per "device"
+     * (SyncEngine syncs it through the account, see SyncServerClient::accountVaultSyncerFor()).
+     */
+    struct CoreFixture
+    {
+        rust::Box<ov::TestServers> servers = ov::call([] { return ov::test_servers_start(0); });
+        QTemporaryDir dir;
+        QScopedPointer<AccountManager> account;
+        QString vaultId;
+
+        struct Device
+        {
+            QSharedPointer<Database> local;
+            QScopedPointer<SyncEngine> engine;
+
+            QList<QVariant> sync(bool acceptServerState = false)
+            {
+                QSignalSpy finished(engine.data(), &SyncEngine::finished);
+                if (acceptServerState) {
+                    engine->syncAcceptingServerState();
+                } else {
+                    engine->sync();
+                }
+                if (finished.isEmpty() && !finished.wait(10000)) {
+                    return {};
+                }
+                return finished.takeFirst();
+            }
+        };
+
+        bool setUp()
+        {
+            const ov::TestServers* s = &*servers;
+            CoreHost::Factory host;
+            host.http = [s] { return std::make_unique<CoreTestServers::Transport>(s); };
+            host.clock = [s] { return std::make_unique<CoreTestServers::Clock>(s); };
+            account.reset(new AccountManager(host));
+            AccountManager::ServerConfig config;
+            config.issuer = CoreHost::toQString(servers->issuer());
+            config.api = CoreHost::toQString(servers->api_url());
+            config.sync = CoreHost::toQString(servers->sync_url());
+            account->setServer(config);
+            auto kdf = AccountCrypto::KdfParams::generate();
+            kdf.memoryKiB = AccountCrypto::KdfParams::MinMemoryKiB;
+            kdf.iterations = AccountCrypto::KdfParams::MinIterations;
+            account->setNewAccountKdf(kdf);
+            account->setEventStreamEnabled(false);
+            account->registerAccount("alice@example.com", "correct horse battery staple");
+            if (!QTest::qWaitFor([this] { return account->state() == AccountManager::State::Unlocked; }, 20000)) {
+                return false;
+            }
+            QSharedPointer<Database> created;
+            QString error;
+            bool done = false;
+            account->createVault("Personal", [&](const QString& id, QSharedPointer<Database> db, const QString& e) {
+                vaultId = id;
+                created = db;
+                error = e;
+                done = true;
+            });
+            if (!QTest::qWaitFor([&done] { return done; }, 20000) || !created) {
+                qWarning("Could not create the vault: %s", qPrintable(error));
+                return false;
+            }
+            return created->saveAs(dir.filePath("first.kdbx"), Database::Atomic, {}, &error);
+        }
+
+        // A device with a copy of the vault as it was created
+        Device* device(const QString& name)
+        {
+            auto* device = new Device;
+            const auto path = dir.filePath(name + ".kdbx");
+            if (!QFile::exists(path)) {
+                QFile::copy(dir.filePath("first.kdbx"), path);
+            }
+            device->local = QSharedPointer<Database>::create();
+            if (!device->local->open(path, account->vaultKey(vaultId))) {
+                delete device;
+                return nullptr;
+            }
+            RemoteParams params = account->vaultRemoteParams(vaultId);
+            device->engine.reset(new SyncEngine(device->local,
+                                                SyncServerClient::create(params),
+                                                SyncStateStore(dir.filePath(name + "-state.json"))));
+            auto* db = device->local.data();
+            device->engine->setSaveHandler([db](QString* error) { return db->save(Database::Atomic, {}, error); });
+            return device;
+        }
+
+        // The titles in the server's copy, opened with the vault's newest key
+        QStringList serverTitles() const
+        {
+            auto blob = servers->vault_blob(rs(vaultId));
+            if (!blob.has) {
+                return {"<nothing uploaded>"};
+            }
+            QByteArray data(reinterpret_cast<const char*>(blob.value.data()), static_cast<int>(blob.value.size()));
+            auto db = VaultKeyring::readVault(data, account->vaultKey(vaultId));
+            return db ? titles(db.data()) : QStringList{"<could not open>"};
+        }
+
+        // Another device adds an entry to the server's copy and uploads it
+        bool addOnOtherDevice(const QString& title)
+        {
+            auto blob = servers->vault_blob(rs(vaultId));
+            if (!blob.has) {
+                return false;
+            }
+            QByteArray data(reinterpret_cast<const char*>(blob.value.data()), static_cast<int>(blob.value.size()));
+            auto db = VaultKeyring::readVault(data, account->vaultKey(vaultId));
+            if (!db) {
+                return false;
+            }
+            addEntry(db.data(), title);
+            QByteArray out;
+            if (!VaultKeyring::writeVault(db.data(), &out)) {
+                return false;
+            }
+            servers->put_vault_blob(rs(vaultId),
+                                    rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(out.constData()),
+                                                               static_cast<size_t>(out.size())));
+            return true;
+        }
+
+        static rust::String rs(const QString& text)
+        {
+            const auto utf8 = text.toUtf8();
+            return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+        }
+    };
+} // namespace
+
+void TestSyncEngine::testAccountVaultSyncsInTheCore()
+{
+    CoreFixture f;
+    QVERIFY(f.setUp());
+    QScopedPointer<CoreFixture::Device> laptop(f.device("laptop"));
+    QVERIFY(laptop);
+
+    // The edit goes up through the account's core session, not this engine's own client
+    addEntry(laptop->local.data(), "From the laptop");
+    QVERIFY(laptop->local->save(Database::Atomic));
+    auto result = laptop->sync();
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QCOMPARE(f.serverTitles(), QStringList{"From the laptop"});
+    QVERIFY(!laptop->local->isModified());
+    QCOMPARE(laptop->engine->state(), SyncEngine::State::Idle);
+
+    // Another device's entry and an unsaved one here merge, both ways
+    QVERIFY(f.addOnOtherDevice("From the phone"));
+    auto* own = findEntry(laptop->local.data(), "From the laptop");
+    addEntry(laptop->local.data(), "Unsaved");
+    result = laptop->sync();
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QCOMPARE(titles(laptop->local.data()), QStringList({"From the laptop", "From the phone", "Unsaved"}));
+    QCOMPARE(f.serverTitles(), QStringList({"From the laptop", "From the phone", "Unsaved"}));
+    // The open database keeps its entry objects, and is saved as it came back
+    QCOMPARE(findEntry(laptop->local.data(), "From the laptop"), own);
+    QVERIFY(!laptop->local->isModified());
+    Database saved;
+    QVERIFY(saved.open(laptop->local->filePath(), f.account->vaultKey(f.vaultId)));
+    QCOMPARE(titles(&saved), QStringList({"From the laptop", "From the phone", "Unsaved"}));
+
+    // Nothing changed on either side: nothing is uploaded
+    const auto revision = ov::call([&] { return f.servers->vault_revision(CoreFixture::rs(f.vaultId)); });
+    result = laptop->sync();
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QCOMPARE(ov::call([&] { return f.servers->vault_revision(CoreFixture::rs(f.vaultId)); }), revision);
+}
+
+void TestSyncEngine::testAccountVaultKeepsEditsMadeDuringTheSync()
+{
+    CoreFixture f;
+    QVERIFY(f.setUp());
+    QScopedPointer<CoreFixture::Device> laptop(f.device("laptop"));
+    QVERIFY(laptop);
+    addEntry(laptop->local.data(), "Before");
+    QVERIFY(laptop->sync().value(0).toBool());
+
+    // An edit (and a save) while the core has the copy without it
+    QSignalSpy finished(laptop->engine.data(), &SyncEngine::finished);
+    addEntry(laptop->local.data(), "Sent");
+    laptop->engine->sync();
+    QVERIFY(laptop->engine->isBusy());
+    addEntry(laptop->local.data(), "During");
+    QVERIFY(laptop->local->save(Database::Atomic));
+
+    // It stays, and a second sync uploads it
+    QTRY_VERIFY_WITH_TIMEOUT(finished.size() >= 2, 20000);
+    QVERIFY(finished.at(0).at(0).toBool());
+    QVERIFY(finished.at(1).at(0).toBool());
+    QCOMPARE(titles(laptop->local.data()), QStringList({"Before", "During", "Sent"}));
+    QCOMPARE(f.serverTitles(), QStringList({"Before", "During", "Sent"}));
+}
+
+void TestSyncEngine::testAccountVaultReportsARollback()
+{
+    CoreFixture f;
+    QVERIFY(f.setUp());
+    QScopedPointer<CoreFixture::Device> laptop(f.device("laptop"));
+    QVERIFY(laptop);
+    addEntry(laptop->local.data(), "One");
+    QVERIFY(laptop->sync().value(0).toBool());
+    addEntry(laptop->local.data(), "Two");
+    QVERIFY(laptop->sync().value(0).toBool());
+    const auto revision = ov::call([&] { return f.servers->vault_revision(CoreFixture::rs(f.vaultId)); });
+    QVERIFY(revision >= 2);
+
+    // The server goes back to an older version: nothing merges until the user decides
+    ov::call([&] { return f.servers->rollback_vault(CoreFixture::rs(f.vaultId), revision - 1); });
+    auto result = laptop->sync();
+    QVERIFY(!result.isEmpty());
+    QVERIFY(!result.value(0).toBool());
+    QCOMPARE(laptop->engine->state(), SyncEngine::State::NeedsAttention);
+    QCOMPARE(laptop->engine->attention(), SyncEngine::Attention::ServerRolledBack);
+    QCOMPARE(titles(laptop->local.data()), QStringList({"One", "Two"}));
+
+    // "Sync anyway" merges with what the server has now and uploads the result
+    result = laptop->sync(true);
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QCOMPARE(laptop->engine->attention(), SyncEngine::Attention::None);
+    QCOMPARE(f.serverTitles(), QStringList({"One", "Two"}));
+}
+
+void TestSyncEngine::testAccountVaultReportsALostVault()
+{
+    CoreFixture f;
+    QVERIFY(f.setUp());
+    QScopedPointer<CoreFixture::Device> laptop(f.device("laptop"));
+    QVERIFY(laptop);
+    addEntry(laptop->local.data(), "Kept");
+    QVERIFY(laptop->sync().value(0).toBool());
+
+    ov::call([&] { return f.servers->lose_vault(CoreFixture::rs(f.vaultId)); });
+    auto result = laptop->sync();
+    QVERIFY(!result.value(0).toBool());
+    QCOMPARE(laptop->engine->state(), SyncEngine::State::NeedsAttention);
+    QCOMPARE(laptop->engine->attention(), SyncEngine::Attention::ServerLostDatabase);
+
+    // Uploading it again is the user's call
+    result = laptop->sync(true);
+    QVERIFY2(result.value(0).toBool(), qPrintable(result.value(1).toString()));
+    QCOMPARE(f.serverTitles(), QStringList{"Kept"});
 }

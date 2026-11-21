@@ -17,9 +17,14 @@
 
 #include "FakeAccountServer.h"
 
+#include <ovcore.h>
+
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QSemaphore>
 #include <QJsonDocument>
 #include <QUrlQuery>
+#include <QThread>
 #include <QUuid>
 
 using namespace AccountCrypto;
@@ -74,37 +79,18 @@ namespace FakeAccount
         return kdf;
     }
 
-    // The record is the password's hash; logging in compares hashes
-    bool FakeOpaqueClient::createRegistrationRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* request)
+    namespace
     {
-        *sec = password;
-        *request = "request";
-        return true;
-    }
+        rust::Slice<const uint8_t> slice(const QByteArray& data)
+        {
+            return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
+        }
 
-    bool
-    FakeOpaqueClient::finalizeRegistration(const SecureBytes& sec, const QByteArray&, const Ids&, QByteArray* record)
-    {
-        *record = sha256(fromSecure(sec));
-        return true;
-    }
-
-    bool FakeOpaqueClient::createCredentialRequest(const SecureBytes& password, SecureBytes* sec, QByteArray* ke1)
-    {
-        *sec = password;
-        *ke1 = sha256(fromSecure(password));
-        return true;
-    }
-
-    bool FakeOpaqueClient::recoverCredentials(const QByteArray& ke2,
-                                              const SecureBytes&,
-                                              const Ids&,
-                                              QByteArray* authU,
-                                              SecureBytes*)
-    {
-        *authU = "auth";
-        return ke2 == "ok";
-    }
+        QByteArray toByteArray(const rust::Vec<uint8_t>& data)
+        {
+            return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+        }
+    } // namespace
 
     QString Server::next(const QString& prefix)
     {
@@ -257,17 +243,20 @@ namespace FakeAccount
     }
 
     FakeAuthClient::FakeAuthClient(QSharedPointer<Server> server)
-        : AuthClient(Issuer + "/api/v1")
-        , m_server(std::move(server))
+        : m_server(std::move(server))
     {
     }
 
-    void FakeAuthClient::send(const QByteArray& verb,
-                              const QUrl& url,
-                              const Headers& headers,
-                              const QByteArray& body,
-                              int,
-                              Callback callback)
+    void FakeAuthClient::deliverLater(const Response& response, Callback callback)
+    {
+        QMetaObject::invokeMethod(this, [response, callback] { callback(response); }, Qt::QueuedConnection);
+    }
+
+    void FakeAuthClient::dispatch(const QByteArray& verb,
+                                  const QUrl& url,
+                                  const Headers& headers,
+                                  const QByteArray& body,
+                                  Callback callback)
     {
         auto& server = *m_server;
         Response response;
@@ -283,6 +272,21 @@ namespace FakeAccount
         // {"error": message, "code": code}, as the real server answers
         const auto error = [&](int status, const QString& code, const QString& message = {}) {
             reply(status, {{"error", message.isEmpty() ? code : message}, {"code", code}});
+        };
+        // A share link as its owner sees it (the API's Share)
+        const auto shareJson = [](const Server::Share& share) {
+            const auto status = share.revoked ? "ended" : share.ct.isEmpty() ? "pending" : "active";
+            return QJsonObject{{"id", share.id},
+                               {"vault_id", share.vaultId.isEmpty() ? QJsonValue() : QJsonValue(share.vaultId)},
+                               {"ref", share.ref.isEmpty() ? QJsonValue() : QJsonValue(share.ref)},
+                               {"passcode", share.request.value("kdf").isObject()},
+                               {"max_opens", share.request.value("max_opens")},
+                               {"opens", 0},
+                               {"opened_at", QJsonArray()},
+                               {"created_at", share.createdAt},
+                               {"expires_at", share.expiresAt},
+                               {"status", status},
+                               {"end_reason", share.revoked ? QJsonValue("revoked") : QJsonValue()}};
         };
 
         if (url.path() == "/.well-known/openvireo-configuration") {
@@ -392,12 +396,24 @@ namespace FakeAccount
         if (path == "auth/register/start") {
             const auto session = server.next("reg-");
             server.registrations.insert(session, json.value("email").toString());
-            reply(200, {{"session_id", session}, {"response", toBase64Url(QByteArray("pub"))}, {"user_id", uuid()}});
+            QByteArray response;
+            try {
+                const auto step = ov::opaque_server_registration_response(slice(b64("request")));
+                server.registrationStates.insert(session, toByteArray(step.state));
+                response = toByteArray(step.message);
+            } catch (const rust::Error&) {
+            }
+            reply(200, {{"session_id", session}, {"response", toBase64Url(response)}, {"user_id", uuid()}});
         } else if (path == "auth/register/finish") {
+            const auto session = json.value("session_id").toString();
             Server::User user;
             user.id = uuid();
-            user.email = server.registrations.take(json.value("session_id").toString());
-            user.record = b64("record");
+            user.email = server.registrations.take(session);
+            try {
+                user.record =
+                    toByteArray(ov::opaque_server_store_record(slice(server.registrationStates.take(session)), slice(b64("record"))));
+            } catch (const rust::Error&) {
+            }
             user.kdf = json.value("kdf").toObject();
             user.keyset = json.value("keyset").toObject();
             server.users.insert(user.email.toLower(), user);
@@ -408,14 +424,34 @@ namespace FakeAccount
             server.directory.insert("user:" + user.id, entry);
             reply(201, server.newSession(user));
         } else if (path == "auth/login/start") {
-            const auto email = json.value("email").toString().toLower();
-            const bool ok = server.users.contains(email) && server.users.value(email).record == b64("ke1");
+            const auto email = json.value("email").toString().trimmed().toLower();
             const auto session = server.next("login-");
-            server.logins.insert(session, {email, ok});
-            reply(200, {{"session_id", session}, {"ke2", toBase64Url(QByteArray(ok ? "ok" : "bad"))}});
+            QByteArray ke2 = "bad";
+            const auto record = server.users.value(email).record;
+            if (!record.isEmpty()) {
+                try {
+                    const auto step = ov::opaque_server_credential_response(slice(b64("ke1")),
+                                                                             slice(record),
+                                                                             slice(email.toUtf8()),
+                                                                             slice(QUrl(Issuer).host().toUtf8()),
+                                                                             slice(QByteArray("ov-opaque-v1")));
+                    server.loginStates.insert(session, {email, toByteArray(step.state)});
+                    ke2 = toByteArray(step.message);
+                } catch (const rust::Error&) {
+                }
+            }
+            reply(200, {{"session_id", session}, {"ke2", toBase64Url(ke2)}});
         } else if (path == "auth/login/finish") {
-            const auto login = server.logins.take(json.value("session_id").toString());
-            if (!login.second) {
+            const auto login = server.loginStates.take(json.value("session_id").toString());
+            bool ok = !login.second.isEmpty();
+            if (ok) {
+                try {
+                    ov::opaque_server_user_auth(slice(login.second), slice(b64("auth_u")));
+                } catch (const rust::Error&) {
+                    ok = false;
+                }
+            }
+            if (!ok) {
                 error(401, "unauthorized");
             } else if (server.users.value(login.first).mfa) {
                 const auto token = server.next("mfa-");
@@ -503,13 +539,12 @@ namespace FakeAccount
                 share.owner = caller;
                 share.vaultId = vaultId;
                 share.request = json;
+                share.createdAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+                share.expiresAt =
+                    QDateTime::currentDateTimeUtc().addSecs(json.value("expires_in").toInt()).toString(Qt::ISODate);
                 server.shares.insert(share.id, share);
                 server.shareOrder.prepend(share.id);
-                reply(201,
-                      {{"id", share.id},
-                       {"status", "pending"},
-                       {"expires_at",
-                        QDateTime::currentDateTimeUtc().addSecs(json.value("expires_in").toInt()).toString(Qt::ISODate)}});
+                reply(201, shareJson(share));
             }
         } else if (parts.value(0) == "shares" && parts.size() == 2 && verb == "PUT") {
             auto& share = server.shares[parts.value(1)];
@@ -518,22 +553,14 @@ namespace FakeAccount
             } else {
                 share.ct = b64("ct");
                 share.ref = json.value("ref").toString();
-                reply(200, {{"id", share.id}, {"status", "active"}});
+                reply(200, shareJson(share));
             }
         } else if (path == "shares" && verb == "GET") {
             QJsonArray list;
             for (const auto& id : server.shareOrder) {
                 const auto& share = server.shares[id];
                 if (share.owner == caller && !share.ct.isEmpty()) {
-                    list << QJsonObject{{"id", share.id},
-                                        {"vault_id", share.vaultId.isEmpty() ? QJsonValue() : QJsonValue(share.vaultId)},
-                                        {"ref", share.ref},
-                                        {"passcode", share.request.contains("kdf")},
-                                        {"max_opens", share.request.value("max_opens")},
-                                        {"opens", 0},
-                                        {"opened_at", QJsonArray()},
-                                        {"status", share.revoked ? "ended" : "active"},
-                                        {"end_reason", share.revoked ? QJsonValue("revoked") : QJsonValue()}};
+                    list << shareJson(share);
                 }
             }
             reply(200, {{"shares", list}});
@@ -708,6 +735,14 @@ namespace FakeAccount
                 server.log(caller, "vault.key.rotate", vault.id);
                 reply(202);
             }
+        } else if (parts.value(0) == "vaults" && parts.size() == 2 && verb == "PATCH") {
+            // Rename: the name encrypted under the current key (openvireo-core re-encrypts it after a rotation)
+            auto& vault = server.vaults[parts.value(1)];
+            if (json.contains("encrypted_name")) {
+                vault.encryptedName = json.value("encrypted_name").toString();
+            }
+            server.log(caller, "vault.rename", vault.id, vault.orgId);
+            reply(200, vaultJson(vault));
         } else if (parts.value(0) == "vaults" && parts.value(2) == "keys" && parts.value(4) == "activate") {
             auto& vault = server.vaults[parts.value(1)];
             const auto version = parts.value(3).toInt();
@@ -780,6 +815,7 @@ namespace FakeAccount
                   {{"id", org.id},
                    {"name", org.name},
                    {"role", server.orgMember(org.id, caller.mid(5))->role},
+                   {"item_share_links", org.shareLinks},
                    {"created_at", now()}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 3 && verb == "GET") {
             QJsonArray members;
@@ -859,7 +895,8 @@ namespace FakeAccount
                   {{"id", org.id},
                    {"name", org.name},
                    {"role", server.orgMember(org.id, caller.mid(5))->role},
-                   {"item_share_links", org.shareLinks}});
+                   {"item_share_links", org.shareLinks},
+                   {"created_at", now()}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 4 && verb == "PATCH") {
             const auto orgId = parts.value(1);
             const auto role = json.value("role").toString();
@@ -1201,6 +1238,7 @@ namespace FakeAccount
             }
         }
         server.syncPrincipals << server.accessTokens.value(token).principal;
+        server.syncTokens << token;
         Response response;
         const auto parts = path.split('/');
         const auto blobRequest = [&](Server::Blob* blob, bool exists, bool vault) {
@@ -1282,9 +1320,110 @@ namespace FakeAccount
         deliverLater(response, std::move(callback));
     }
 
+    Transport::Transport(QSharedPointer<Server> server)
+        : m_server(std::move(server))
+    {
+    }
+
+    ov::HttpResponse Transport::send(const ov::HttpRequest& req, ov::TransportFailure& failure) const
+    {
+        static const char* const Verbs[] = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"};
+        const QByteArray verb = Verbs[static_cast<int>(req.method)];
+        const QUrl url(QString::fromUtf8(req.url.data(), static_cast<int>(req.url.size())));
+        FakeAuthClient::Headers headers;
+        for (const auto& header : req.headers) {
+            headers.append({QByteArray(header.name.data(), static_cast<int>(header.name.size())),
+                            QByteArray(header.value.data(), static_cast<int>(header.value.size()))});
+        }
+        const auto body = req.has_body ? toByteArray(req.body) : QByteArray();
+        const bool sync = url.host() == QUrl(SyncUrl).host();
+        if (!sync && url.host() != QUrl(Issuer).host()) {
+            failure.kind = ov::TransportErrorKind::Offline;
+            failure.message = "no such host";
+            return {};
+        }
+        int status = 0;
+        QByteArray responseBody;
+        QString networkError;
+        QList<QPair<QByteArray, QByteArray>> responseHeaders;
+        // The fake server lives on the GUI thread, like the tests that look into it
+        QSemaphore answered;
+        auto server = m_server;
+        const auto handle = [&, server] {
+            if (sync) {
+                auto* client = new FakeSyncClient(RemoteParams(), server);
+                client->dispatch(verb, url, headers, body, [&, client](const SyncServerClient::Response& r) {
+                    status = r.status;
+                    responseBody = r.body;
+                    networkError = r.networkError;
+                    if (!r.etag.isEmpty()) {
+                        responseHeaders.append(qMakePair(QByteArray("ETag"), r.etag.toLatin1()));
+                    }
+                    if (r.revision >= 0) {
+                        responseHeaders.append(qMakePair(QByteArray("X-Database-Revision"), QByteArray::number(r.revision)));
+                    }
+                    responseHeaders.append(qMakePair(QByteArray("Content-Type"), QByteArray("application/octet-stream")));
+                    client->deleteLater();
+                    answered.release();
+                });
+                return;
+            }
+            auto* client = new FakeAuthClient(server);
+            client->dispatch(verb, url, headers, body, [&, client](const FakeAuthClient::Response& r) {
+                status = r.status;
+                responseBody = r.body;
+                networkError = r.networkError;
+                responseHeaders.append(qMakePair(QByteArray("Content-Type"), QByteArray("application/json")));
+                client->deleteLater();
+                answered.release();
+            });
+        };
+        if (QThread::currentThread() == qApp->thread()) {
+            handle();
+            while (!answered.tryAcquire()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+            }
+        } else {
+            QMetaObject::invokeMethod(qApp, handle, Qt::QueuedConnection);
+            answered.acquire();
+        }
+        if (status == 0) {
+            failure.kind = ov::TransportErrorKind::Offline;
+            const auto message = networkError.toStdString();
+            failure.message = rust::String(message.data(), message.size());
+            return {};
+        }
+        ov::HttpResponse out;
+        out.status = static_cast<std::uint16_t>(status);
+        for (const auto& header : responseHeaders) {
+            ov::Header h;
+            h.name = rust::String(header.first.constData(), static_cast<size_t>(header.first.size()));
+            h.value = rust::String(header.second.constData(), static_cast<size_t>(header.second.size()));
+            out.headers.push_back(std::move(h));
+        }
+        for (auto c : responseBody) {
+            out.body.push_back(static_cast<uint8_t>(c));
+        }
+        return out;
+    }
+
+    std::unique_ptr<ov::ByteStream> Transport::open_stream(const ov::HttpRequest&, ov::TransportFailure& failure) const
+    {
+        failure.kind = ov::TransportErrorKind::Offline;
+        failure.message = "no event stream on the fake server";
+        return nullptr;
+    }
+
+    CoreHost::Factory host(const QSharedPointer<Server>& server)
+    {
+        CoreHost::Factory factory;
+        factory.http = [server] { return std::make_unique<Transport>(server); };
+        return factory;
+    }
+
     AccountManager* createManager(const QSharedPointer<Server>& server, QObject* parent)
     {
-        auto* manager = new AccountManager(new FakeAuthClient(server), std::make_unique<FakeOpaqueClient>(), parent);
+        auto* manager = new AccountManager(host(server), parent);
         manager->setNewAccountKdf(testKdf());
         manager->setEventStreamEnabled(false);
         return manager;

@@ -51,6 +51,13 @@ parts:
       - -DWITH_TESTS=OFF
       - -DWITH_XC_ALL=ON
       - -DWITH_XC_UPDATECHECK=OFF
+    # openvireo-core is built from source (cmake/OpenVireoCore.cmake) and needs a newer Rust than core22 has
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup toolchain install stable --profile minimal
+      rustup default stable
+      craftctl default
     build-packages:
       - g++
       - libbotan-2-dev

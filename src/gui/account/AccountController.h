@@ -153,6 +153,10 @@ private slots:
 
 private:
     void addVaultTab(const QString& vaultId, const QSharedPointer<Database>& db, int keyVersion, bool inBackground);
+    // The local copy doesn't open with the vault's newest key (a rotation while this device was away): openvireo-core
+    // syncs it, which opens it with any key version, and hands it back under the newest
+    void rekeyLocalCopy(const QString& vaultId, bool inBackground);
+    void downloadVault(const QString& vaultId, bool inBackground);
     // The vault's remote, so it syncs as an account vault whatever device created it
     bool ensureAccountRemote(const QSharedPointer<Database>& db, const QString& vaultId) const;
     void closeVaultTabs();

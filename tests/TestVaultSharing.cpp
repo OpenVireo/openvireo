@@ -381,15 +381,15 @@ void TestVaultSharing::testFinishesAPendingRotation()
     // The old key still opens the blob, so nobody is locked out
     QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId, 1)));
 
-    // Rotating again finishes it with the pending key instead of starting another
+    // Rotating again finishes it with the pending key first (version 2), then runs the rotation asked for from there
     QString error;
     QVERIFY2(
         run(
             f.sharing.data(), [&](VaultSharing* s, VaultSharing::Done done) { s->rotate(vaultId, {}, done); }, &error),
         qPrintable(error));
-    QCOMPARE(f.server->vaults.value(vaultId).current, 2);
+    QCOMPARE(f.server->vaults.value(vaultId).current, 3);
     QCOMPARE(f.server->vaults.value(vaultId).pending, -1);
-    QTRY_VERIFY(f.alice->keyring().vault(vaultId).currentKeyVersion == 2);
+    QTRY_VERIFY(f.alice->keyring().vault(vaultId).currentKeyVersion == 3);
     QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId)));
 }
 
@@ -470,8 +470,19 @@ void TestVaultSharing::testMovesADatabaseToTheAccount()
     QCOMPARE(argon->rounds(), VaultKeyring::VaultKdfIterations);
     QVERIFY(!VaultKeyring::readVault(f.server->blobs.value(vaultId).data, password));
 
-    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays
-    RemoteSettings settings(uploaded);
+    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays. The core
+    // uploads the database's custom data without sync server and account vault remotes, so the upload carries the
+    // command remote, and the account remote is on the copy this device keeps (and goes up with its next sync).
+    {
+        RemoteSettings uploadedSettings(uploaded);
+        uploadedSettings.loadSettings();
+        QStringList uploadedRemotes;
+        for (const auto* params : uploadedSettings.getAllRemoteParams()) {
+            uploadedRemotes << params->name;
+        }
+        QCOMPARE(uploadedRemotes, QStringList({"scp"}));
+    }
+    RemoteSettings settings(vault);
     settings.loadSettings();
     QStringList remotes;
     for (const auto* params : settings.getAllRemoteParams()) {
@@ -1298,7 +1309,8 @@ void TestVaultSharing::testMakesShareLinks()
     const auto& stored = f.server->shares.value(share.id);
     QCOMPARE(stored.vaultId, vaultId);
     QCOMPARE(stored.request.value("max_opens").toInt(), 1);
-    QVERIFY(!stored.request.contains("kdf"));
+    // No passcode: no KDF (openvireo-core sends "kdf": null where the C++ client left it out)
+    QVERIFY(!stored.request.value("kdf").isObject());
     QVERIFY(!stored.ct.contains("hunter2-wifi"));
     QCOMPARE((stored.ct.size() - 41) % SharePad, 0);
     const auto linkKey = secureFromBase64Url(share.url.section('#', 1));
@@ -1363,13 +1375,14 @@ void TestVaultSharing::testShareLinksFollowTheOrgPolicy()
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
 
-    QCOMPARE(shares.blockedReason(vaultId), QString("In your organization only owners and admins can make share links."));
+    // The org's policy comes with GET /me, which may answer after GET /vaults
+    QTRY_COMPARE(shares.blockedReason(vaultId), QString("In your organization only owners and admins can make share links."));
     f.server->orgs[org.id].members.first().role = "admin";
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
-    QVERIFY(shares.blockedReason(vaultId).isEmpty());
+    QTRY_VERIFY(shares.blockedReason(vaultId).isEmpty());
     f.server->orgs[org.id].shareLinks = "off";
     f.alice->reloadVaults();
     QVERIFY(vaults.wait(5000));
-    QCOMPARE(shares.blockedReason(vaultId), QString("Your organization has turned share links off."));
+    QTRY_COMPARE(shares.blockedReason(vaultId), QString("Your organization has turned share links off."));
 }

@@ -19,6 +19,8 @@
 
 #include "SyncServerClient.h"
 
+#include "crypto/Random.h"
+
 #include <QDateTime>
 #include <QDialogButtonBox>
 #include <QDir>
@@ -29,6 +31,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QLocale>
+#include <QPointer>
 #include <QPushButton>
 #include <QTreeWidget>
 #include <QUuid>
@@ -42,6 +45,7 @@ namespace
 SyncHistoryDialog::SyncHistoryDialog(const RemoteParams& params, QWidget* parent)
     : QDialog(parent)
     , m_params(params)
+    , m_history(SyncServerClient::accountVaultHistoryFor(params))
     , m_client(new SyncServerClient(params, this))
     , m_versions(new QTreeWidget(this))
     , m_status(new QLabel(this))
@@ -55,7 +59,9 @@ SyncHistoryDialog::SyncHistoryDialog(const RemoteParams& params, QWidget* parent
     auto* intro = new QLabel(tr("The sync server keeps the latest versions of \"%1\". Opening one shows it in its "
                                 "own tab, where you can copy entries from it or merge it into this database. "
                                 "Nothing on the server changes.")
-                                 .arg(params.remoteDatabaseId()),
+                                 .arg(params.type == RemoteParams::Type::AccountVault && !params.name.isEmpty()
+                                          ? params.name
+                                          : params.remoteDatabaseId()),
                              this);
     intro->setWordWrap(true);
 
@@ -112,27 +118,54 @@ void SyncHistoryDialog::showStatus(const QString& text)
 void SyncHistoryDialog::loadVersions()
 {
     showStatus(tr("Loading…"));
+    if (m_history) {
+        QPointer<SyncHistoryDialog> guard(this);
+        m_history.list(m_params.vaultId,
+                       [guard](const QList<AccountVaultSync::Version>& versions, const QString& error) {
+                           if (!guard) {
+                               return;
+                           }
+                           if (!error.isEmpty()) {
+                               guard->showStatus(error);
+                               return;
+                           }
+                           guard->showVersions(versions);
+                       });
+        return;
+    }
     m_client->history([this](const SyncServerClient::Response& response) {
         if (response.status != 200) {
             showStatus(SyncServerClient::errorMessage(response));
             return;
         }
-        const auto versions = QJsonDocument::fromJson(response.body).object().value("versions").toArray();
+        QList<AccountVaultSync::Version> versions;
         bool current = true;
-        for (const auto& value : versions) {
-            const auto version = value.toObject();
-            const auto revision = version.value("revision").toVariant().toLongLong();
-            const auto saved = QDateTime::fromString(version.value("updatedAt").toString(), Qt::ISODateWithMs);
-            auto* item = new QTreeWidgetItem(m_versions);
+        for (const auto& value : QJsonDocument::fromJson(response.body).object().value("versions").toArray()) {
+            const auto json = value.toObject();
+            AccountVaultSync::Version version;
+            version.revision = json.value("revision").toVariant().toLongLong();
+            version.savedAt = QDateTime::fromString(json.value("updatedAt").toString(), Qt::ISODateWithMs);
+            version.size = json.value("size").toVariant().toLongLong();
             // The server lists the newest version first, which is the one devices sync with
-            item->setText(0, current ? tr("%1 (current)").arg(revision) : QString::number(revision));
-            item->setText(1, QLocale().toString(saved.toLocalTime(), QLocale::ShortFormat));
-            item->setText(2, QLocale().formattedDataSize(version.value("size").toVariant().toLongLong()));
-            item->setData(0, RevisionRole, revision);
+            version.current = current;
             current = false;
+            versions << version;
         }
-        showStatus(versions.isEmpty() ? tr("The server has no versions of this database.") : QString());
+        showVersions(versions);
     });
+}
+
+void SyncHistoryDialog::showVersions(const QList<AccountVaultSync::Version>& versions)
+{
+    for (const auto& version : versions) {
+        auto* item = new QTreeWidgetItem(m_versions);
+        item->setText(0,
+                      version.current ? tr("%1 (current)").arg(version.revision) : QString::number(version.revision));
+        item->setText(1, QLocale().toString(version.savedAt.toLocalTime(), QLocale::ShortFormat));
+        item->setText(2, version.size < 0 ? QString() : QLocale().formattedDataSize(version.size));
+        item->setData(0, RevisionRole, version.revision);
+    }
+    showStatus(versions.isEmpty() ? tr("The server has no versions of this database.") : QString());
 }
 
 void SyncHistoryDialog::openSelected()
@@ -145,25 +178,51 @@ void SyncHistoryDialog::openSelected()
     setCanOpen(false);
     showStatus(tr("Downloading version %1…").arg(revision));
 
+    if (m_history) {
+        // The version comes under a one-off password: the vault key is random and never shown
+        const auto password = QString::fromLatin1(randomGen()->randomArray(24).toBase64(QByteArray::Base64UrlEncoding));
+        QPointer<SyncHistoryDialog> guard(this);
+        m_history.open(m_params.vaultId,
+                       revision,
+                       password,
+                       [guard, revision, password](const QByteArray& kdbx, const QString& error) {
+                           if (!guard) {
+                               return;
+                           }
+                           guard->setCanOpen(true);
+                           if (!error.isEmpty()) {
+                               guard->showStatus(error);
+                               return;
+                           }
+                           guard->saveVersion(revision, kdbx, password);
+                       });
+        return;
+    }
     m_client->downloadRevision(revision, [this, revision](const SyncServerClient::Response& response) {
         setCanOpen(true);
         if (response.status != 200) {
             showStatus(SyncServerClient::errorMessage(response));
             return;
         }
-        // A folder of its own, so the name can say which version it is; it outlives the dialog
-        // because the tab keeps using the file
-        const auto dir = QDir::temp().filePath("OpenVireo-version-" + QUuid::createUuid().toString(QUuid::Id128));
-        const auto filePath =
-            QDir(dir).filePath(tr("%1 (version %2).kdbx").arg(m_params.remoteDatabaseId()).arg(revision));
-        QFile file(filePath);
-        if (!QDir().mkpath(dir) || !file.open(QIODevice::WriteOnly)
-            || file.write(response.body) != response.body.size()) {
-            showStatus(tr("Could not save the downloaded version: %1").arg(file.errorString()));
-            return;
-        }
-        file.close();
-        emit openRequested(filePath);
-        accept();
+        saveVersion(revision, response.body, {});
     });
+}
+
+void SyncHistoryDialog::saveVersion(qint64 revision, const QByteArray& data, const QString& password)
+{
+    // A folder of its own, so the name can say which version it is; it outlives the dialog because the tab keeps
+    // using the file
+    const auto dir = QDir::temp().filePath("OpenVireo-version-" + QUuid::createUuid().toString(QUuid::Id128));
+    const auto name = m_params.type == RemoteParams::Type::AccountVault && !m_params.name.isEmpty()
+                          ? m_params.name
+                          : m_params.remoteDatabaseId();
+    const auto filePath = QDir(dir).filePath(tr("%1 (version %2).kdbx").arg(name).arg(revision));
+    QFile file(filePath);
+    if (!QDir().mkpath(dir) || !file.open(QIODevice::WriteOnly) || file.write(data) != data.size()) {
+        showStatus(tr("Could not save the downloaded version: %1").arg(file.errorString()));
+        return;
+    }
+    file.close();
+    emit openRequested(filePath, password);
+    accept();
 }
