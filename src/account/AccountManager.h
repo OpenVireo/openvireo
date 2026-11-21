@@ -61,7 +61,12 @@ class QuickUnlockInterface;
  * Account vaults are kept as KDBX files (KeePassXC Databases) under the vault key as a raw key file. The core
  * lists the vaults, hands out each one's key (Account::vault_kdbx_credentials), downloads and creates them, and
  * syncs the files (Account::sync_vault_kdbx): this manager registers itself with SyncServerClient as its account's
- * token provider and vault syncer while signed in, and SyncEngine syncs through it.
+ * token provider (for the vaults' event streams), vault syncer and vault history while signed in, and SyncEngine
+ * syncs through it.
+ *
+ * A service account signed in with its token runs on ov::ServiceAccount instead, in a core session of its own: the
+ * core exchanges the token's secret, unwraps the keyset and keeps both, so keyset() stays empty and no access token
+ * leaves the core. Its vaults download and sync through that session too.
  *
  * Quick Unlock (Touch ID, Windows Hello, Polkit) works as it does for databases: after the master password
  * unlocks the account once, the AUK is handed to the platform's Quick Unlock provider, which keeps it
