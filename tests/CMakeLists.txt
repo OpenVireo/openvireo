@@ -27,10 +27,11 @@ configure_file(config-keepassx-tests.h.in ${CMAKE_CURRENT_BINARY_DIR}/config-kee
 
 function(add_unit_test)
     cmake_parse_arguments(TEST "" "NAME" "SOURCES;LIBS;LAUNCHER" ${ARGN})
-    add_executable(${TEST_NAME} ${TEST_SOURCES})
+    # TestBinaryMarker: the default token store is in memory in every test, never the user's Keychain
+    add_executable(${TEST_NAME} ${TEST_SOURCES} ${CMAKE_SOURCE_DIR}/tests/util/TestBinaryMarker.cpp)
     target_link_libraries(${TEST_NAME} ${TEST_LIBS})
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_LAUNCHER} ${TEST_NAME})
-    set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "LANG=en_US.UTF-8")
+    set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "LANG=en_US.UTF-8;OPENVIREO_TEST_BINARY=1")
 endfunction()
 
 # Regression coverage for the Windows Arm64 windeployqt host-triplet resolution
