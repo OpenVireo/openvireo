@@ -80,6 +80,9 @@ public:
     // (e.g. sealed for another key version of the account) are left out.
     void setVaults(const QList<Vault>& vaults, const SecureBytes& encSk);
     void setVaults(const QJsonArray& vaults, const SecureBytes& encSk);
+    // Replaces the vaults with these, whose names and keys openvireo-core decrypted already: vault id -> its newest
+    // key version and key
+    void setVaults(const QList<Vault>& vaults, const QHash<QString, QPair<int, SecureBytes>>& keys);
     // Forgets every vault key, e.g. when the account locks
     void clear();
 

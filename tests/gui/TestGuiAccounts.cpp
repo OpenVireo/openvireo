@@ -553,7 +553,9 @@ void TestGuiAccounts::testUnlockOpensEveryVaultAndLockClearsKeys()
     }
     controller->unlockAccount(Password);
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
-    QCOMPARE(m_server->requests.filter("sync GET vaults/").size(), vaultRequests + 2);
+    // Each download is two GETs in openvireo-core: open_vault with nothing local GETs the server copy as the
+    // working copy, then syncs it with local_changed defaulting to true, which GETs it again
+    QCOMPARE(m_server->requests.filter("sync GET vaults/").size(), vaultRequests + 4);
 }
 
 void TestGuiAccounts::testShareDialogRevokeRotatesTheKey()

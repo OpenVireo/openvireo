@@ -134,6 +134,8 @@ private:
     void startRotation(const QSharedPointer<Rotation>& rotation);
     void rekey(const QSharedPointer<Rotation>& rotation, int attempt);
     void activate(const QSharedPointer<Rotation>& rotation);
+    // createVault() in openvireo-core
+    void createInCore(const QString& name, const QString& orgId, VaultCallback done);
     void createFromDatabase(const QSharedPointer<Database>& db,
                             const QString& name,
                             const QString& orgId,

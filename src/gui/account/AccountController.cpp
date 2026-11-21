@@ -498,25 +498,27 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
     const auto path = vaultFilePath(vaultId);
     QDir().mkpath(QFileInfo(path).absolutePath());
 
-    // The local copy first, with the newest key that opens it
+    // The local copy first, with the vault's newest key (Account::vault_kdbx_credentials)
     if (QFile::exists(path)) {
         QString error;
-        for (const auto version : keyring.keyVersions(vaultId)) {
+        if (const auto key = m_account->vaultKey(vaultId)) {
             auto db = QSharedPointer<Database>::create();
-            if (db->open(path, keyring.compositeKey(vaultId, version), &error)) {
-                addVaultTab(vaultId, db, version, inBackground);
+            if (db->open(path, key, &error)) {
+                addVaultTab(vaultId, db, keyring.vault(vaultId).currentKeyVersion, inBackground);
                 return;
             }
         }
-        // Only an older key (that this account no longer holds) opens it, e.g. after a rotation while this
-        // device was offline. Keep it aside instead of losing changes that weren't synced.
-        const auto aside = path + ".old-key";
-        QFile::remove(aside);
-        QFile::rename(path, aside);
-        emit message(tr("The local copy of \"%1\" is under an older key and was kept as %2. The vault is "
-                        "downloaded again.")
-                         .arg(keyring.vault(vaultId).name, QDir::toNativeSeparators(aside)),
-                     MessageWidget::Warning);
+        if (!m_account->isOffline()) {
+            rekeyLocalCopy(vaultId, inBackground);
+            return;
+        }
+        if (!inBackground) {
+            emit message(tr("The local copy of \"%1\" is under an older key of the vault. It opens once OpenVireo is "
+                            "back online.")
+                             .arg(keyring.vault(vaultId).name),
+                         MessageWidget::Information);
+        }
+        return;
     }
 
     if (m_account->isOffline()) {
@@ -529,63 +531,115 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
                      MessageWidget::Information);
         return;
     }
+    downloadVault(vaultId, inBackground);
+}
+
+void AccountController::downloadVault(const QString& vaultId, bool inBackground)
+{
+    const auto path = vaultFilePath(vaultId);
     m_opening.insert(vaultId);
-    emit busyChanged(tr("Downloading \"%1\"…").arg(keyring.vault(vaultId).name));
-    auto* client = SyncServerClient::create(m_account->vaultRemoteParams(vaultId), this);
+    emit busyChanged(tr("Downloading \"%1\"…").arg(m_account->keyring().vault(vaultId).name));
     QPointer<AccountController> guard(this);
-    client->download([guard, client, vaultId, path, inBackground](const SyncServerClient::Response& response) {
-        client->deleteLater();
+    m_account->downloadVault(
+        vaultId,
+        [guard, vaultId, path, inBackground](
+            QSharedPointer<Database> db, const QString& errorCode, const QString& error) {
+            if (!guard) {
+                return;
+            }
+            guard->m_opening.remove(vaultId);
+            emit guard->busyChanged({});
+            if (guard->m_account->state() != AccountManager::State::Unlocked) {
+                return;
+            }
+            const auto& keyring = guard->m_account->keyring();
+            const auto vault = keyring.vault(vaultId);
+            if (errorCode == "not_found") {
+                if (vault.role == "read") {
+                    emit guard->message(tr("Nothing was uploaded to \"%1\" yet.").arg(vault.name),
+                                        MessageWidget::Information);
+                    return;
+                }
+                // A vault created elsewhere whose first upload never happened: this device makes it
+                const auto key = keyring.vaultKey(vaultId);
+                if (key.empty()) {
+                    emit guard->message(tr("This account holds no key for \"%1\".").arg(vault.name),
+                                        MessageWidget::Error);
+                    return;
+                }
+                db = VaultKeyring::createVaultDatabase(vault.name, key);
+            } else if (!db) {
+                emit guard->message(tr("Could not download \"%1\": %2").arg(vault.name, error), MessageWidget::Error);
+                return;
+            }
+            guard->ensureAccountRemote(db, vaultId);
+            QString saveError;
+            if (!db->saveAs(path, Database::Atomic, {}, &saveError)) {
+                emit guard->message(tr("Could not save a local copy of \"%1\": %2").arg(vault.name, saveError),
+                                    MessageWidget::Error);
+                return;
+            }
+            guard->addVaultTab(vaultId, db, vault.currentKeyVersion, inBackground);
+        });
+}
+
+void AccountController::rekeyLocalCopy(const QString& vaultId, bool inBackground)
+{
+    const auto path = vaultFilePath(vaultId);
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        emit message(tr("Could not read the local copy of \"%1\": %2")
+                         .arg(m_account->keyring().vault(vaultId).name, file.errorString()),
+                     MessageWidget::Error);
+        return;
+    }
+    AccountVaultSync::Request request;
+    request.vaultId = vaultId;
+    request.kdbx = file.readAll();
+    file.close();
+    request.localChanged = true;
+    m_opening.insert(vaultId);
+    QPointer<AccountController> guard(this);
+    m_account->syncVault(request, [guard, vaultId, path, inBackground](const AccountVaultSync::Result& result) {
         if (!guard) {
             return;
         }
         guard->m_opening.remove(vaultId);
-        emit guard->busyChanged({});
         if (guard->m_account->state() != AccountManager::State::Unlocked) {
             return;
         }
-        const auto& keyring = guard->m_account->keyring();
-        const auto vault = keyring.vault(vaultId);
-        if (response.status == 404) {
-            if (vault.role == "read") {
-                emit guard->message(tr("Nothing was uploaded to \"%1\" yet.").arg(vault.name),
-                                    MessageWidget::Information);
+        const auto vault = guard->m_account->keyring().vault(vaultId);
+        if (!result.ok()) {
+            if (result.errorCode == "kdbx_error" || result.errorCode == "vault_key_mismatch"
+                || result.errorCode == "decryption_failed" || result.errorCode == "no_vault_key") {
+                // Only a key this account no longer holds opens it. Keep it aside instead of losing changes that
+                // weren't synced, and download the vault again.
+                const auto aside = path + ".old-key";
+                QFile::remove(aside);
+                QFile::rename(path, aside);
+                emit guard->message(tr("The local copy of \"%1\" is under an older key and was kept as %2. The vault "
+                                       "is downloaded again.")
+                                        .arg(vault.name, QDir::toNativeSeparators(aside)),
+                                    MessageWidget::Warning);
+                guard->downloadVault(vaultId, inBackground);
                 return;
             }
-            // A vault created elsewhere whose first upload never happened: this device makes it
-            auto db = VaultKeyring::createVaultDatabase(vault.name, keyring.vaultKey(vaultId, vault.currentKeyVersion));
-            guard->ensureAccountRemote(db, vaultId);
-            QString error;
-            if (!db->saveAs(path, Database::Atomic, {}, &error)) {
-                emit guard->message(error, MessageWidget::Error);
-                return;
-            }
-            guard->addVaultTab(vaultId, db, vault.currentKeyVersion, inBackground);
+            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, result.error), MessageWidget::Error);
             return;
         }
-        if (response.status != 200) {
-            emit guard->message(
-                tr("Could not download \"%1\": %2").arg(vault.name, SyncServerClient::errorMessage(response)),
-                MessageWidget::Error);
-            return;
-        }
-        int version = 0;
-        QString error;
-        if (!keyring.openVault(vaultId, response.body, &version, &error)) {
-            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, error), MessageWidget::Error);
-            return;
-        }
-        QSaveFile file(path);
-        if (!file.open(QIODevice::WriteOnly) || file.write(response.body) != response.body.size() || !file.commit()) {
-            emit guard->message(tr("Could not save a local copy of \"%1\": %2").arg(vault.name, file.errorString()),
+        QSaveFile out(path);
+        if (!out.open(QIODevice::WriteOnly) || out.write(result.kdbx) != result.kdbx.size() || !out.commit()) {
+            emit guard->message(tr("Could not save a local copy of \"%1\": %2").arg(vault.name, out.errorString()),
                                 MessageWidget::Error);
             return;
         }
         auto db = QSharedPointer<Database>::create();
-        if (!db->open(path, keyring.compositeKey(vaultId, version), &error)) {
-            emit guard->message(error, MessageWidget::Error);
+        QString error;
+        if (!db->open(path, AccountManager::vaultCompositeKey(result.keyFile), &error)) {
+            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, error), MessageWidget::Error);
             return;
         }
-        guard->addVaultTab(vaultId, db, version, inBackground);
+        guard->addVaultTab(vaultId, db, vault.currentKeyVersion, inBackground);
     });
 }
 
@@ -594,16 +648,7 @@ void AccountController::addVaultTab(const QString& vaultId,
                                     int keyVersion,
                                     bool inBackground)
 {
-    const auto& keyring = m_account->keyring();
-    bool changed = ensureAccountRemote(db, vaultId);
-    const auto current = keyring.vault(vaultId).currentKeyVersion;
-    if (keyVersion != current && keyring.compositeKey(vaultId, current)) {
-        // Opened with the key from before a rotation; the server's copy is under the new one
-        db->setKey(keyring.compositeKey(vaultId, current), true, true);
-        keyVersion = current;
-        changed = true;
-    }
-    if (changed) {
+    if (ensureAccountRemote(db, vaultId)) {
         db->save();
     }
     m_vaultVersions.insert(vaultId, keyVersion);

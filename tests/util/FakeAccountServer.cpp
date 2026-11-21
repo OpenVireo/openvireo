@@ -1219,6 +1219,7 @@ namespace FakeAccount
             }
         }
         server.syncPrincipals << server.accessTokens.value(token).principal;
+        server.syncTokens << token;
         Response response;
         const auto parts = path.split('/');
         const auto blobRequest = [&](Server::Blob* blob, bool exists, bool vault) {
@@ -1316,19 +1317,44 @@ namespace FakeAccount
                             QByteArray(header.value.data(), static_cast<int>(header.value.size()))});
         }
         const auto body = req.has_body ? toByteArray(req.body) : QByteArray();
-        AuthClient::Response response;
-        if (url.host() != QUrl(Issuer).host()) {
+        const bool sync = url.host() == QUrl(SyncUrl).host();
+        if (!sync && url.host() != QUrl(Issuer).host()) {
             failure.kind = ov::TransportErrorKind::Offline;
             failure.message = "no such host";
             return {};
         }
+        int status = 0;
+        QByteArray responseBody;
+        QString networkError;
+        QList<QPair<QByteArray, QByteArray>> responseHeaders;
         // The fake server lives on the GUI thread, like the tests that look into it
         QSemaphore answered;
         auto server = m_server;
         const auto handle = [&, server] {
+            if (sync) {
+                auto* client = new FakeSyncClient(RemoteParams(), server);
+                client->dispatch(verb, url, headers, body, [&, client](const SyncServerClient::Response& r) {
+                    status = r.status;
+                    responseBody = r.body;
+                    networkError = r.networkError;
+                    if (!r.etag.isEmpty()) {
+                        responseHeaders.append(qMakePair(QByteArray("ETag"), r.etag.toLatin1()));
+                    }
+                    if (r.revision >= 0) {
+                        responseHeaders.append(qMakePair(QByteArray("X-Database-Revision"), QByteArray::number(r.revision)));
+                    }
+                    responseHeaders.append(qMakePair(QByteArray("Content-Type"), QByteArray("application/octet-stream")));
+                    client->deleteLater();
+                    answered.release();
+                });
+                return;
+            }
             auto* client = new FakeAuthClient(server);
             client->dispatch(verb, url, headers, body, [&, client](const AuthClient::Response& r) {
-                response = r;
+                status = r.status;
+                responseBody = r.body;
+                networkError = r.networkError;
+                responseHeaders.append(qMakePair(QByteArray("Content-Type"), QByteArray("application/json")));
                 client->deleteLater();
                 answered.release();
             });
@@ -1342,19 +1368,21 @@ namespace FakeAccount
             QMetaObject::invokeMethod(qApp, handle, Qt::QueuedConnection);
             answered.acquire();
         }
-        if (response.status == 0) {
+        if (status == 0) {
             failure.kind = ov::TransportErrorKind::Offline;
-            const auto message = response.networkError.toStdString();
+            const auto message = networkError.toStdString();
             failure.message = rust::String(message.data(), message.size());
             return {};
         }
         ov::HttpResponse out;
-        out.status = static_cast<std::uint16_t>(response.status);
-        ov::Header contentType;
-        contentType.name = "Content-Type";
-        contentType.value = "application/json";
-        out.headers.push_back(std::move(contentType));
-        for (auto c : response.body) {
+        out.status = static_cast<std::uint16_t>(status);
+        for (const auto& header : responseHeaders) {
+            ov::Header h;
+            h.name = rust::String(header.first.constData(), static_cast<size_t>(header.first.size()));
+            h.value = rust::String(header.second.constData(), static_cast<size_t>(header.second.size()));
+            out.headers.push_back(std::move(h));
+        }
+        for (auto c : responseBody) {
             out.body.push_back(static_cast<uint8_t>(c));
         }
         return out;

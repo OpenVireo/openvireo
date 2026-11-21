@@ -36,6 +36,7 @@
 
 #include <QBuffer>
 #include <QDir>
+#include <QDirIterator>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
@@ -596,17 +597,27 @@ void TestAccountManager::testKeyringOpensNewestKeyWithFallback()
 
     const auto& keyring = manager->keyring();
     QCOMPARE(keyring.vaults().size(), 2);
-    QCOMPARE(keyring.keyVersions(rotating), QList<int>({2, 1}));
+    // The core hands out each vault's newest key; older versions stay inside it
+    QCOMPARE(keyring.keyVersions(rotating), QList<int>({2}));
     QCOMPARE(keyring.vault(rotating).pendingKeyVersion, 2);
     QCOMPARE(keyring.vault(rotating).name, QString("Team"));
     QCOMPARE(keyring.vault(rotated).name, QString("Infra"));
 
-    // Newest first, then the older key
+    // A copy under the older key opens through a sync in the core, which tries the newest key first, then the
+    // older one, and hands the file back with the key it is under
     int version = 0;
     QString error;
-    auto db = keyring.openVault(rotating, blobOf(fixture, rotating), &version, &error);
+    QVERIFY(!keyring.openVault(rotating, blobOf(fixture, rotating), &version, &error));
+    std::optional<AccountVaultSync::Result> synced;
+    AccountVaultSync::Request request;
+    request.vaultId = rotating;
+    request.kdbx = blobOf(fixture, rotating);
+    request.localChanged = false;
+    manager->syncVault(request, [&](const AccountVaultSync::Result& result) { synced = result; });
+    QTRY_VERIFY_WITH_TIMEOUT(synced.has_value(), 10000);
+    QVERIFY2(synced->ok(), qPrintable(synced->error));
+    auto db = VaultKeyring::readVault(synced->kdbx, AccountManager::vaultCompositeKey(synced->keyFile), &error);
     QVERIFY2(db, qPrintable(error));
-    QCOMPARE(version, 1);
     QCOMPARE(db->rootGroup()->entries().first()->title(), QString("Old key entry"));
 
     db = keyring.openVault(rotated, blobOf(fixture, rotated), &version, &error);
@@ -1214,10 +1225,23 @@ void TestAccountManager::testOfflineUnlockFromCache()
     file.close();
     QVERIFY(cached.contains("\"keyset\""));
     QVERIFY(cached.contains("\"kdf\""));
-    QVERIFY(cached.contains(setup.vaultId.toUtf8()));
     QVERIFY(!cached.contains("Mine"));
     QVERIFY(!cached.contains(toBase64Url(manager->keyset().encSk).toUtf8()));
     QVERIFY(!cached.contains(AccountManager::storedSecretKey(ServerId, Email).toUtf8()));
+    // The vault list (encrypted names, sealed keys) is in the core's cache beside it
+    QByteArray coreCache;
+    QDirIterator files(AccountOfflineCache::accountsRoot() + "/" + manager->accountId() + "/core",
+                       QDir::Files,
+                       QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        QFile part(files.next());
+        QVERIFY(part.open(QIODevice::ReadOnly));
+        coreCache += part.readAll();
+    }
+    QVERIFY(coreCache.contains(setup.vaultId.toUtf8()));
+    QVERIFY(!coreCache.contains("Mine"));
+    QVERIFY(!coreCache.contains(toBase64Url(manager->keyset().encSk).toUtf8()));
+    QVERIFY(!coreCache.contains(AccountManager::storedSecretKey(ServerId, Email).toUtf8()));
     QVERIFY(!(file.permissions() & (QFileDevice::ReadOther | QFileDevice::ReadGroup)));
     QVERIFY(manager->hasOfflineCache());
     QVERIFY(!manager->isOffline());
@@ -1308,8 +1332,13 @@ void TestAccountManager::testGoesOfflineAndDropsRevokedVaultsOnReconnect()
     manager->reconnect();
     QTRY_VERIFY(!manager->isOffline());
     QTRY_VERIFY(!manager->keyring().contains(setup.vaultId));
-    const auto cache = AccountOfflineCache::load(manager->accountId());
-    QVERIFY(cache.value("vaults").toArray().isEmpty());
+    // The vault list the core keeps for offline unlock dropped it too
+    QDirIterator files(AccountOfflineCache::accountsRoot() + "/" + manager->accountId() + "/core/meta", QDir::Files);
+    while (files.hasNext()) {
+        QFile part(files.next());
+        QVERIFY(part.open(QIODevice::ReadOnly));
+        QVERIFY2(!part.readAll().contains(setup.vaultId.toUtf8()), qPrintable(part.fileName()));
+    }
 }
 
 void TestAccountManager::testSessionEndWipesTheOfflineCache()

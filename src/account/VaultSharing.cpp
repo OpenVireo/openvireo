@@ -604,7 +604,61 @@ void VaultSharing::createVault(const QString& name, const QString& orgId, VaultC
         done({}, {}, tr("Unlock your account first."));
         return;
     }
-    createFromDatabase(QSharedPointer<Database>::create(), name, orgId, done);
+    emit progress(tr("Creating the vault…"));
+    QPointer<VaultSharing> guard(this);
+    if (!orgId.isEmpty()) {
+        // The core refuses keys without a valid signature too, but its error doesn't say whose they are.
+        // CONTRACT-REQUEST: name the member (details) in create_vault's invalid_public_keys.
+        m_account->client()->orgMembers(orgId, [guard, name, orgId, done](const AuthClient::Response& response) {
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (response.isSuccess()) {
+                const auto self = guard->m_account->principal();
+                for (const auto& value : response.json().value("members").toArray()) {
+                    const auto member = value.toObject();
+                    const auto role = member.value("role").toString();
+                    const auto principal = "user:" + member.value("user_id").toString();
+                    if (principal == self || (role != "owner" && role != "admin")
+                        || member.value("status").toString() != "confirmed" || !member.value("public").isObject()) {
+                        continue;
+                    }
+                    bool ok = false;
+                    const auto keys = PublicKeys::fromJson(member.value("public").toObject(), &ok);
+                    if (!ok || !verifyPublicKeys(keys)) {
+                        done({},
+                             {},
+                             tr("The public keys of %1 don't carry a valid signature, so the vault wasn't created.")
+                                 .arg(member.value("email").toString()));
+                        return;
+                    }
+                }
+            }
+            guard->createInCore(name, orgId, done);
+        });
+        return;
+    }
+    createInCore(name, orgId, done);
+}
+
+void VaultSharing::createInCore(const QString& name, const QString& orgId, VaultCallback done)
+{
+    // openvireo-core seals the new key, uploads the empty vault and hands back its file
+    QPointer<VaultSharing> guard(this);
+    m_account->createVault(
+        name.trimmed(), orgId, [guard, done](const QString& vaultId, QSharedPointer<Database> db, const QString& error) {
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!error.isEmpty()) {
+                done({}, {}, error);
+                return;
+            }
+            auto params = guard->m_account->vaultRemoteParams(vaultId);
+            params.name = tr("OpenVireo account");
+            setAccountRemote(db, params);
+            done(vaultId, db, {});
+        });
 }
 
 void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
