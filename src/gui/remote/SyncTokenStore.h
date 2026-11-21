@@ -62,8 +62,17 @@ public:
     static bool remove(const QString& key);
     static QString description();
 
-    // Replaces the platform's store, for tests; nullptr restores it
+    // Replaces the platform's store, for tests; nullptr restores the default (memory in tests, see below)
     static void setBackend(std::unique_ptr<Backend> backend);
+    // The system store (Keychain, Credential Manager, keyring or the token file). Never the default in
+    // tests: only for a test that opts in to writing to the real store.
+    static std::unique_ptr<Backend> createPlatformBackend();
+    // True in a test (QStandardPaths test mode, or a binary that sets TestBinaryVariable, as every unit
+    // test does): the default store is then an in-memory one, with a warning, so that a test that forgot
+    // setBackend() never reads or overwrites the user's real tokens and account keys
+    static bool refusesSystemStore();
+    // Set by every test binary at start-up (tests/util/TestBinaryMarker.cpp), inherited by what it runs
+    static constexpr const char* TestBinaryVariable = "OPENVIREO_TEST_BINARY";
     // An in-memory store, for tests
     static std::unique_ptr<Backend> createMemoryBackend();
     // The private file, for tests
