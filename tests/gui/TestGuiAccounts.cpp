@@ -553,9 +553,7 @@ void TestGuiAccounts::testUnlockOpensEveryVaultAndLockClearsKeys()
     }
     controller->unlockAccount(Password);
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
-    // Each download is two GETs in openvireo-core: open_vault with nothing local GETs the server copy as the
-    // working copy, then syncs it with local_changed defaulting to true, which GETs it again
-    QCOMPARE(m_server->requests.filter("sync GET vaults/").size(), vaultRequests + 4);
+    QCOMPARE(m_server->requests.filter("sync GET vaults/").size(), vaultRequests + 2);
 }
 
 void TestGuiAccounts::testShareDialogRevokeRotatesTheKey()
@@ -703,8 +701,10 @@ void TestGuiAccounts::testServiceAccountsDialog()
     dialog->tokenDialog()->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Close)->click();
     QTRY_VERIFY(!dialog->tokenDialog());
 
-    // Grant the vault read-only
+    // Grant the vault read-only, once the card has loaded what the new service account can open (the vault list
+    // fills in after the dialog stops being busy: granting before that finds no vault to grant)
     QTRY_VERIFY(!dialog->isBusy());
+    QTRY_COMPARE(child<QComboBox>(dialog, "vaultCombo")->count(), 1);
     child<QComboBox>(dialog, "vaultCombo")->setCurrentIndex(0);
     child<QComboBox>(dialog, "vaultRoleCombo")->setCurrentIndex(0);
     dialog->grantSelectedVault();
