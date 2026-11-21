@@ -24,12 +24,16 @@
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Entry.h"
+#include "core/EntryAttachments.h"
 #include "core/Group.h"
+#include "core/Metadata.h"
 #include "crypto/Crypto.h"
 #include "format/KeePass2Writer.h"
 #include "gui/remote/SyncEventStream.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "keys/CompositeKey.h"
+#include "keys/PasswordKey.h"
 #include "util/CoreTestServers.h"
 
 #include <ovcore.h>
@@ -541,6 +545,15 @@ void TestAccountManager::testServiceAccountExchange()
                                          static_cast<int>(created.token.size()));
     const auto saId = qs(created.service_account.id);
 
+    // An org vault granted to it read-only
+    auto vault = ov::call([&] { return alice->create_vault("Deploy", org.id, *cancel); });
+    const auto vaultId = qs(vault->id());
+    ov::Grantee grantee;
+    grantee.kind = ov::GranteeKind::Principal;
+    grantee.value = rs("sa:" + saId);
+    ov::call([&] { return alice->share_vault(rs(vaultId), grantee, ov::VaultRole::Read, *cancel); });
+    auto aliceKey = ov::call([&] { return alice->vault_kdbx_credentials(rs(vaultId), *cancel); });
+
     fixture.servers->clear_requests();
     auto* manager = fixture.manager(this);
     QSignalSpy signedIn(manager, &AccountManager::signedIn);
@@ -549,21 +562,29 @@ void TestAccountManager::testServiceAccountExchange()
     QCOMPARE(signedIn.count(), 1);
     QVERIFY(manager->isServiceAccount());
     QCOMPARE(manager->principal(), "sa:" + saId);
-    // kek -> master key -> keyset, matching the public keys the server holds
-    QVERIFY(!manager->keyset().isNull());
-    QCOMPARE(QByteArray(reinterpret_cast<const char*>(created.service_account.public_keys.enc_pk.data()),
-                        static_cast<int>(created.service_account.public_keys.enc_pk.size())),
-             fromSecure(SecureBytes(manager->keyset().publicKeys.encPk.begin(), manager->keyset().publicKeys.encPk.end())));
-    // Only the secret went to the server, never the kek, and there is no refresh token
+    // kek -> master key -> keyset in openvireo-core, which keeps them: the vault key it unsealed is Alice's
+    QVERIFY(manager->keyset().isNull());
+    QVERIFY(manager->keyring().contains(vaultId));
+    QCOMPARE(manager->keyring().vault(vaultId).role, QString("read"));
+    QCOMPARE(manager->keyring().vault(vaultId).name, QString("Deploy"));
+    QCOMPARE(fromSecure(manager->keyring().vaultKey(vaultId)),
+             QByteArray(reinterpret_cast<const char*>(aliceKey.key_file.data()),
+                        static_cast<int>(aliceKey.key_file.size())));
+    ov::wipe(aliceKey.key_file);
+    // Only the secret went to the server, never the kek, and there is no refresh token; the token stays in the core
+    QCOMPARE(fixture.count("POST /auth/service-account"), 1);
     QCOMPARE(fixture.count("POST /auth/refresh"), 0);
+    QVERIFY(manager->accessTokenNow().isEmpty());
 
     // No refresh token: an expiring token is exchanged again
-    const auto first = manager->accessTokenNow();
-    fixture.servers->advance_ms(1000);
-    manager->refreshAccessToken();
-    QTRY_VERIFY(manager->accessTokenNow() != first);
+    fixture.servers->advance_ms(10 * 60 * 1000);
+    QSignalSpy vaultsChanged(manager, &AccountManager::vaultsChanged);
+    manager->reloadVaults();
+    QTRY_COMPARE(vaultsChanged.count(), 1);
     QCOMPARE(fixture.count("POST /auth/service-account"), 2);
+    QCOMPARE(fixture.count("POST /auth/refresh"), 0);
     QCOMPARE(manager->state(), AccountManager::State::Unlocked);
+    QVERIFY(manager->keyring().contains(vaultId));
 
     // A rejected secret
     ov::call([&] { return alice->delete_service_account(rs(saId), *cancel); });
@@ -661,6 +682,128 @@ void TestAccountManager::testKeyringOpensNewestKeyWithFallback()
     QVERIFY(writer.writeDatabase(&buffer, created.data()));
     QVERIFY(manager->keyring().openVault(createdId, buffer.data(), &version));
     QCOMPARE(version, 1);
+}
+
+void TestAccountManager::testDownloadKeepsTheWholeVault()
+{
+    Fixture fixture;
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
+    auto alice = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+
+    // On another device: an entry with an attachment and an older version, and a command remote
+    auto vault = ov::call([&] { return alice->create_vault("Files", "", *cancel); });
+    const auto vaultId = qs(ov::call([&] { return vault->id(); }));
+    const auto root = ov::call([&] { return vault->root_group_id(); });
+    ov::EntryInput input{};
+    ov::FieldInput title{};
+    title.name = "Title";
+    title.value = bytesOf("First title");
+    input.fields.push_back(std::move(title));
+    const auto entryId = qs(ov::call([&] { return vault->add_entry(root, std::move(input)); }));
+    ov::call([&] { return vault->set_attachment(rs(entryId), "notes.txt", bytesOf("attached")); });
+    ov::EntryInput edit{};
+    ov::FieldInput renamed{};
+    renamed.name = "Title";
+    renamed.value = bytesOf("Second title");
+    edit.fields.push_back(std::move(renamed));
+    ov::call([&] { return vault->edit_entry(rs(entryId), std::move(edit)); });
+    ov::call([&] {
+        return vault->set_meta_custom_data(
+            "KPXC_REMOTE_SYNC_SETTINGS", true, R"([{"name":"scp","downloadCommand":"scp a b"}])");
+    });
+    ov::call([&] { return vault->sync(true, *cancel); });
+
+    auto* manager = fixture.manager(this);
+    manager->signIn(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QTRY_VERIFY(manager->keyring().contains(vaultId));
+
+    // The copy this device keeps is the vault as it is, not an export of its entries: same UUIDs, the
+    // attachment, the history and the database's custom data
+    QSharedPointer<Database> db;
+    QString error;
+    bool finished = false;
+    manager->downloadVault(vaultId, [&](QSharedPointer<Database> downloaded, const QString&, const QString& e) {
+        db = downloaded;
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(finished, 10000);
+    QVERIFY2(db, qPrintable(error));
+    QCOMPARE(db->rootGroup()->entries().size(), 1);
+    const auto* entry = db->rootGroup()->entries().first();
+    const auto normalized = [](QString id) { return id.remove('-').remove('{').remove('}').toLower(); };
+    QCOMPARE(normalized(entry->uuid().toString()), normalized(entryId));
+    QCOMPARE(entry->title(), QString("Second title"));
+    QCOMPARE(entry->attachments()->value("notes.txt"), QByteArray("attached"));
+    QVERIFY(!entry->historyItems().isEmpty());
+    QCOMPARE(entry->historyItems().last()->title(), QString("First title"));
+    QVERIFY(db->metadata()->customData()->value("KPXC_REMOTE_SYNC_SETTINGS").contains("scp"));
+    QCOMPARE(normalized(db->rootGroup()->uuid().toString()), normalized(qs(root)));
+}
+
+void TestAccountManager::testListsAndOpensVaultVersions()
+{
+    Fixture fixture;
+    const auto secretKey = registerAlice(fixture, this);
+    QVERIFY(!secretKey.isEmpty());
+    auto alice = fixture.device(Email, Password, secretKey);
+    auto cancel = ov::new_cancel_token();
+    // Two versions on the server: the entry's first title, then its second
+    const auto vaultId = createVault(*alice, "Versions", "First version");
+    auto vault = ov::call([&] { return alice->open_vault(rs(vaultId), *cancel); });
+    const auto entryId = ov::call([&] { return vault->entries(false); })[0].id;
+    ov::EntryInput edit{};
+    ov::FieldInput title{};
+    title.name = "Title";
+    title.value = bytesOf("Second version");
+    edit.fields.push_back(std::move(title));
+    ov::call([&] { return vault->edit_entry(entryId, std::move(edit)); });
+    ov::call([&] { return vault->sync(true, *cancel); });
+
+    auto* manager = fixture.manager(this);
+    manager->signIn(Email, Password);
+    QVERIFY(waitForState(manager, AccountManager::State::Unlocked));
+    QTRY_VERIFY(manager->keyring().contains(vaultId));
+
+    // Newest first, the current one marked: the empty vault, its first entry, the entry renamed
+    QList<AccountVaultSync::Version> versions;
+    QString error;
+    bool finished = false;
+    manager->vaultHistory(vaultId, [&](const QList<AccountVaultSync::Version>& list, const QString& e) {
+        versions = list;
+        error = e;
+        finished = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(finished, 10000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QCOMPARE(versions.size(), 3);
+    QVERIFY(versions.first().current);
+    QVERIFY(!versions.at(1).current);
+    QVERIFY(versions.at(0).revision > versions.at(1).revision);
+    QVERIFY(versions.at(1).revision > versions.at(2).revision);
+    QVERIFY(versions.first().savedAt.isValid());
+
+    // An older one opens under the password it was asked for, as the whole database
+    QByteArray kdbx;
+    finished = false;
+    manager->openVaultVersion(
+        vaultId, versions.at(1).revision, "one-off", [&](const QByteArray& data, const QString& e) {
+            kdbx = data;
+            error = e;
+            finished = true;
+        });
+    QTRY_VERIFY_WITH_TIMEOUT(finished, 10000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(QSharedPointer<PasswordKey>::create("one-off"));
+    auto db = VaultKeyring::readVault(kdbx, key, &error);
+    QVERIFY2(db, qPrintable(error));
+    QCOMPARE(db->rootGroup()->entries().size(), 1);
+    QCOMPARE(db->rootGroup()->entries().first()->title(), QString("First version"));
+    QCOMPARE(db->rootGroup()->entries().first()->uuid().toString(QUuid::Id128), qs(entryId).remove('-').toLower());
 }
 
 void TestAccountManager::testAccessEventRefreshesAndReloads()
@@ -1179,19 +1322,22 @@ void TestAccountManager::testFollowsAnEmailChangedElsewhere()
 
 void TestAccountManager::testExplainsAPlanLimit()
 {
-    AuthClient::Response response;
-    response.status = 402;
-    response.body = QJsonDocument(QJsonObject{{"error", "The free plan allows 1 personal vaults"},
-                                              {"code", "plan_limit"},
-                                              {"upgrade_url", "https://accounts.example/subscription/pricing"}})
-                        .toJson(QJsonDocument::Compact);
-    QCOMPARE(AuthClient::errorMessage(response),
+    // The core's error for a 402 plan_limit: the server's message, its upgrade_url in the details
+    AccountManager manager;
+    AccountManager::CoreError error;
+    error.code = "plan_limit";
+    error.status = 402;
+    error.message = "The free plan allows 1 personal vaults";
+    error.details = R"({"upgrade_url":"https://accounts.example/subscription/pricing"})";
+    QCOMPARE(manager.errorMessage(error),
              QString("The free plan allows 1 personal vaults. Change your plan at "
                      "https://accounts.example/subscription/pricing"));
 
     // Any other 402 is shown as it is
-    response.body = R"({"error":"nope","code":"invalid_request"})";
-    QCOMPARE(AuthClient::errorMessage(response), QString("The account server responded with HTTP 402: nope"));
+    error.code = "invalid_request";
+    error.message = "nope";
+    error.details.clear();
+    QCOMPARE(manager.errorMessage(error), QString("The account server responded with HTTP 402: nope"));
 }
 
 namespace

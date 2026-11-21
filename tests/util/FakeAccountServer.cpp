@@ -243,17 +243,20 @@ namespace FakeAccount
     }
 
     FakeAuthClient::FakeAuthClient(QSharedPointer<Server> server)
-        : AuthClient(Issuer + "/api/v1")
-        , m_server(std::move(server))
+        : m_server(std::move(server))
     {
     }
 
-    void FakeAuthClient::send(const QByteArray& verb,
-                              const QUrl& url,
-                              const Headers& headers,
-                              const QByteArray& body,
-                              int,
-                              Callback callback)
+    void FakeAuthClient::deliverLater(const Response& response, Callback callback)
+    {
+        QMetaObject::invokeMethod(this, [response, callback] { callback(response); }, Qt::QueuedConnection);
+    }
+
+    void FakeAuthClient::dispatch(const QByteArray& verb,
+                                  const QUrl& url,
+                                  const Headers& headers,
+                                  const QByteArray& body,
+                                  Callback callback)
     {
         auto& server = *m_server;
         Response response;
@@ -1327,7 +1330,7 @@ namespace FakeAccount
         static const char* const Verbs[] = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"};
         const QByteArray verb = Verbs[static_cast<int>(req.method)];
         const QUrl url(QString::fromUtf8(req.url.data(), static_cast<int>(req.url.size())));
-        AuthClient::Headers headers;
+        FakeAuthClient::Headers headers;
         for (const auto& header : req.headers) {
             headers.append({QByteArray(header.name.data(), static_cast<int>(header.name.size())),
                             QByteArray(header.value.data(), static_cast<int>(header.value.size()))});
@@ -1366,7 +1369,7 @@ namespace FakeAccount
                 return;
             }
             auto* client = new FakeAuthClient(server);
-            client->dispatch(verb, url, headers, body, [&, client](const AuthClient::Response& r) {
+            client->dispatch(verb, url, headers, body, [&, client](const FakeAuthClient::Response& r) {
                 status = r.status;
                 responseBody = r.body;
                 networkError = r.networkError;

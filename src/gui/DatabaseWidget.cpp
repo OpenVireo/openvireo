@@ -2028,7 +2028,7 @@ void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
         return;
     }
     delete m_syncEvents.data();
-    if (!params || !SyncServerClient::hasCredentials(*params)) {
+    if (!params || !SyncServerClient::hasAccessToken(*params)) {
         m_syncScheduler->setPollInterval(SyncScheduler::DefaultPollIntervalMsec);
         return;
     }
@@ -2067,8 +2067,8 @@ void DatabaseWidget::showServerHistory(const RemoteParams* params)
     }
     auto* dialog = new SyncHistoryDialog(*params, this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-    connect(dialog, &SyncHistoryDialog::openRequested, this, [this](const QString& filePath) {
-        emit requestOpenDatabase(filePath, false, {}, {});
+    connect(dialog, &SyncHistoryDialog::openRequested, this, [this](const QString& filePath, const QString& password) {
+        emit requestOpenDatabase(filePath, false, password, {});
     });
     connect(this, &DatabaseWidget::databaseLockRequested, dialog, &QDialog::reject);
 

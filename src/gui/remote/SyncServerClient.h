@@ -93,6 +93,35 @@ struct AccountVaultSync
     using Cancel = std::function<void()>;
     // Starts a sync; `done` is called later on the thread that owns the account
     using Syncer = std::function<Cancel(const Request& request, Done done)>;
+
+    // The versions of an account vault the sync server keeps (Account::vault_history), newest first
+    struct Version
+    {
+        qint64 revision = 0;
+        QDateTime savedAt;
+        // -1 when the server doesn't say
+        qint64 size = -1;
+        bool current = false;
+    };
+    struct History
+    {
+        // Lists the versions; `done` gets them, or an error message
+        std::function<void(const QString& vaultId,
+                           std::function<void(const QList<Version>&, const QString& error)> done)>
+            list;
+        // Downloads one version (Account::open_vault_version) as a KDBX file under `password` alone; `done` gets
+        // the file, or an error message
+        std::function<void(const QString& vaultId,
+                           qint64 revision,
+                           const QString& password,
+                           std::function<void(const QByteArray& kdbx, const QString& error)> done)>
+            open;
+
+        explicit operator bool() const
+        {
+            return list && open;
+        }
+    };
 };
 
 /**
@@ -141,8 +170,11 @@ public:
     void setTokenProvider(AccessTokenProvider provider);
     // The provider for `params`: its own, its account's, or one handing out its static token
     static AccessTokenProvider tokenProviderFor(const RemoteParams& params);
-    // Whether a request for `params` would carry a token: a static token, or a signed-in account
+    // Whether `params` can sync: a static token, or a signed-in account (or service account) that holds the vault
     static bool hasCredentials(const RemoteParams& params);
+    // Whether requests for `params` can carry a token of their own (an account vault: its account's provider); a
+    // service account's vaults sync without one (hasCredentials() through their syncer) and have no event stream
+    static bool hasAccessToken(const RemoteParams& params);
     // Account vaults of `accountId` use this provider from now on; nullptr when the account signs out
     static void setAccountTokenProvider(const QString& accountId, AccessTokenProvider provider);
     // The account on this device that holds a vault, whose provider wins over the account id in the vault's
@@ -152,6 +184,10 @@ public:
     static void setAccountVaultSyncer(const QString& accountId, AccountVaultSync::Syncer syncer);
     // The syncer for an account vault (its holder's, as for tokens), or nullptr when no account syncs it
     static AccountVaultSync::Syncer accountVaultSyncerFor(const RemoteParams& params);
+    // The versions of `accountId`'s vaults come from here from now on; an empty History when it signs out
+    static void setAccountVaultHistory(const QString& accountId, AccountVaultSync::History history);
+    // The history of an account vault (its holder's, as for tokens), or an empty one
+    static AccountVaultSync::History accountVaultHistoryFor(const RemoteParams& params);
 
     // HEAD with If-None-Match: 304 when the server still has that version
     void check(const QString& etag, Callback callback);

@@ -265,23 +265,32 @@ void VaultSharing::grant(const QString& vaultId, const Recipient& recipient, con
                  .arg(recipient.displayName()));
         return;
     }
-    // The core seals the vault's current key to the recipient's keys (fetched and checked again: the facade takes a
-    // principal, not keys; CONTRACT-REQUEST: share_vault taking the keys the user compared) and grants `role`
+    // The core fetches the recipient's keys again and seals the vault's current key to them only if they are still
+    // the ones the user compared (share_vault_with_keys), then grants `role`
     const auto principal = recipient.principal;
+    const auto keys = recipient.publicKeys;
+    const auto name = recipient.displayName();
     QPointer<VaultSharing> guard(this);
     m_account->callAccount(
         this,
-        [vaultId, principal, role](const ov::Account& account, const ov::CancelToken& cancel) {
+        [vaultId, principal, role, keys](const ov::Account& account, const ov::CancelToken& cancel) {
             ov::Grantee grantee;
             grantee.kind = ov::GranteeKind::Principal;
             grantee.value = rs(principal);
-            account.share_vault(rs(vaultId), grantee, roleOf(role), cancel);
+            ov::PublicKeys confirmed;
+            confirmed.enc_pk = bytesOf(keys.encPk);
+            confirmed.sign_pk = bytesOf(keys.signPk);
+            confirmed.sig = bytesOf(keys.sig);
+            confirmed.fingerprint = rs(AccountCrypto::fingerprint(keys));
+            account.share_vault_with_keys(rs(vaultId), grantee, roleOf(role), confirmed, cancel);
         },
-        [guard, done](const AccountManager::CoreError& error) {
+        [guard, done, name](const AccountManager::CoreError& error) {
             if (!error.ok()) {
                 done(false,
                      error.code == "conflict" ? tr("The vault's key changed in the meantime. Reload and try again.")
-                                              : guard->messageFor(error));
+                     : error.code == "invalid_public_keys"
+                         ? tr("The public keys of %1 changed since you checked them. Nothing was shared.").arg(name)
+                         : guard->messageFor(error));
                 return;
             }
             done(true, {});
@@ -330,7 +339,8 @@ void VaultSharing::rotate(const QString& vaultId, const QStringList& remove, Don
     }
     emit progress(tr("Rotating the vault key…"));
     // The core seals a new key to every remaining member (the removed ones lose access at once), re-keys the blob
-    // (again on 412) and activates the new version; a rotation this account left pending is finished first
+    // (again on 412) and activates the new version; a rotation this account holds the pending key for (another of
+    // its devices, or this one, stopped before activating) is finished first
     QPointer<VaultSharing> guard(this);
     m_account->callAccount(
         this,
@@ -347,15 +357,15 @@ void VaultSharing::rotate(const QString& vaultId, const QStringList& remove, Don
             }
             guard->m_account->reloadVaults();
             if (!error.ok()) {
-                // CONTRACT-REQUEST: rotate_vault_key finishes a rotation this account left pending (the server
-                // answers 409 to a new one). Until then the user is told, and the old key keeps working.
+                // rotation_pending: someone else's rotation is pending and this account doesn't hold its key. The old
+                // key keeps working until it is activated or, after 24 hours, the server lets a new one replace it.
                 done(false,
                      error.code == "too_many_conflicts"
                          ? tr("Other devices kept uploading the vault, so its new key isn't active yet. Rotate it "
                               "again.")
-                     : error.code == "conflict"
-                         ? tr("An earlier key rotation of this vault hasn't finished. Try again after 24 hours, when "
-                              "the server drops it.")
+                     : error.serverCode == "rotation_pending"
+                         ? tr("Another member's key rotation of this vault hasn't finished. Try again after 24 hours, "
+                              "when the server drops it.")
                          : guard->messageFor(error));
                 return;
             }
@@ -418,66 +428,23 @@ void VaultSharing::createVault(const QString& name, const QString& orgId, VaultC
     }
     emit progress(tr("Creating the vault…"));
     QPointer<VaultSharing> guard(this);
-    checkOrgKeys(orgId, [guard, name, orgId, done](const QString& error) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!error.isEmpty()) {
-            done({}, {}, error);
-            return;
-        }
-        // openvireo-core seals the new key, uploads the empty vault and hands back its file
-        guard->m_account->createVault(
-            name.trimmed(),
-            orgId,
-            [guard, done](const QString& vaultId, QSharedPointer<Database> db, const QString& error) {
-                if (!guard || !guard->m_account) {
-                    return;
-                }
-                if (!error.isEmpty()) {
-                    done({}, {}, error);
-                    return;
-                }
-                auto params = guard->m_account->vaultRemoteParams(vaultId);
-                params.name = tr("OpenVireo account");
-                setAccountRemote(db, params);
-                done(vaultId, db, {});
-            });
-    });
-}
-
-void VaultSharing::checkOrgKeys(const QString& orgId, std::function<void(const QString& error)> done)
-{
-    if (orgId.isEmpty()) {
-        done({});
-        return;
-    }
-    // The core refuses keys without a valid signature too, but its error doesn't say whose they are.
-    // CONTRACT-REQUEST: name the member (details) in create_vault's and import_kdbx's invalid_public_keys.
-    const auto self = m_account->accountId();
-    auto forged = std::make_shared<QString>();
-    m_account->callAccount(
-        this,
-        [orgId, self, forged](const ov::Account& account, const ov::CancelToken& cancel) {
-            for (const auto& member : account.org_members(rs(orgId), cancel)) {
-                if (CoreHost::toQString(member.user_id) == self
-                    || (member.role != ov::OrgRole::Owner && member.role != ov::OrgRole::Admin)
-                    || member.status != ov::MemberStatus::Confirmed || !member.has_public_keys) {
-                    continue;
-                }
-                if (!verifyPublicKeys(publicKeysOf(member.public_keys))) {
-                    *forged = CoreHost::toQString(member.email);
-                    return;
-                }
-            }
-        },
-        [forged, done](const AccountManager::CoreError&) {
-            // Without the list the core's own check still applies
-            done(forged->isEmpty()
-                     ? QString()
-                     : tr("The public keys of %1 don't carry a valid signature, so the vault wasn't created.")
-                           .arg(*forged));
-        });
+    // openvireo-core checks the keys of an org's owners and admins (naming one whose keys don't verify, before
+    // anything is created), seals the new key, uploads the empty vault and hands back its file
+    m_account->createVault(name.trimmed(),
+                           orgId,
+                           [guard, done](const QString& vaultId, QSharedPointer<Database> db, const QString& error) {
+                               if (!guard || !guard->m_account) {
+                                   return;
+                               }
+                               if (!error.isEmpty()) {
+                                   done({}, {}, error);
+                                   return;
+                               }
+                               auto params = guard->m_account->vaultRemoteParams(vaultId);
+                               params.name = tr("OpenVireo account");
+                               setAccountRemote(db, params);
+                               done(vaultId, db, {});
+                           });
 }
 
 void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
@@ -486,20 +453,10 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
                                       VaultCallback done)
 {
     const auto vaultName = name.trimmed().isEmpty() ? db->rootGroup()->name() : name.trimmed();
-    // The database's other remotes (scp, ...) stay with it; the core's import leaves database-level custom data out,
-    // so they are put back on the vault file
-    auto kept = std::make_shared<QList<RemoteParams>>();
-    {
-        RemoteSettings settings(db);
-        settings.loadSettings();
-        for (const auto* params : settings.getAllRemoteParams()) {
-            if (!params->isServer()) {
-                *kept << *params;
-            }
-        }
-    }
     // The core reads the database under a throwaway password, re-keys it to a fresh vault key (sealed to this account
-    // and in an org to its owners and admins), creates the vault and uploads it
+    // and in an org to its owners and admins, whose keys it checks first), creates the vault and uploads it. The
+    // database's custom data comes along, so its other remotes (scp, ...) stay with it; the core leaves out the sync
+    // server and account vault remotes.
     const auto password = QString::fromLatin1(randomGen()->randomArray(32).toHex());
     auto key = QSharedPointer<CompositeKey>::create();
     key->addKey(QSharedPointer<PasswordKey>::create(password));
@@ -528,72 +485,53 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
     auto imported = std::make_shared<Imported>();
     auto input = std::make_shared<QByteArray>(data);
     QPointer<VaultSharing> guard(this);
-    checkOrgKeys(orgId, [guard, input, password, vaultName, orgId, imported, kept, done](const QString& keysError) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!keysError.isEmpty()) {
-            done({}, {}, keysError);
-            return;
-        }
-        guard->m_account->callAccount(
-            guard,
-            [input, password, vaultName, orgId, imported](const ov::Account& account, const ov::CancelToken& cancel) {
-                ov::KdbxCredentials credentials;
-                credentials.has_password = true;
-                credentials.password = bytesOf(password.toUtf8());
-                ov::ImportMode mode;
-                mode.kind = ov::ImportModeKind::NewVault;
-                mode.name = rs(vaultName);
-                mode.org_id = rs(orgId);
-                auto outcome = account.import_kdbx(bytesOf(*input), std::move(credentials), mode, cancel);
-                imported->vaultId = CoreHost::toQString(outcome.vault->id());
-                if (outcome.has_upload_error || !outcome.uploaded) {
-                    imported->uploadError = CoreHost::toQString(outcome.upload_error.message);
-                }
-                auto vaultCredentials = account.vault_kdbx_credentials(outcome.vault->id(), cancel);
-                imported->keyFile = toBytes(vaultCredentials.key_file);
-                auto kdbx = outcome.vault->export_kdbx(std::move(vaultCredentials), {}, cancel);
-                imported->kdbx = toBytes(kdbx);
-                ov::wipe(kdbx);
-            },
-            [guard, imported, kept, done](const AccountManager::CoreError& error) {
-                const auto scrub = qScopeGuard([imported] {
-                    Botan::secure_scrub_memory(imported->keyFile.data(), static_cast<size_t>(imported->keyFile.size()));
-                });
-                if (!guard || !guard->m_account) {
-                    return;
-                }
-                if (!error.ok()) {
-                    done({}, {}, guard->messageFor(error));
-                    return;
-                }
-                guard->m_account->reloadVaults();
-                if (!imported->uploadError.isEmpty()) {
-                    done({}, {}, tr("The vault was created, but its first upload failed: %1").arg(imported->uploadError));
-                    return;
-                }
-                QString readError;
-                auto vault = VaultKeyring::readVault(
-                    imported->kdbx, AccountManager::vaultCompositeKey(imported->keyFile), &readError);
-                if (!vault) {
-                    done({}, {}, readError);
-                    return;
-                }
-                if (!kept->isEmpty()) {
-                    RemoteSettings settings(vault);
-                    settings.loadSettings();
-                    for (const auto& params : *kept) {
-                        settings.addRemoteParams(new RemoteParams(params));
-                    }
-                    settings.saveSettings();
-                }
-                auto params = guard->m_account->vaultRemoteParams(imported->vaultId);
-                params.name = tr("OpenVireo account");
-                setAccountRemote(vault, params);
-                done(imported->vaultId, vault, {});
+    m_account->callAccount(
+        this,
+        [input, password, vaultName, orgId, imported](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::KdbxCredentials credentials;
+            credentials.has_password = true;
+            credentials.password = bytesOf(password.toUtf8());
+            ov::ImportMode mode;
+            mode.kind = ov::ImportModeKind::NewVault;
+            mode.name = rs(vaultName);
+            mode.org_id = rs(orgId);
+            auto outcome = account.import_kdbx(bytesOf(*input), std::move(credentials), mode, cancel);
+            imported->vaultId = CoreHost::toQString(outcome.vault->id());
+            if (outcome.has_upload_error || !outcome.uploaded) {
+                imported->uploadError = CoreHost::toQString(outcome.upload_error.message);
+            }
+            auto vaultCredentials = account.vault_kdbx_credentials(outcome.vault->id(), cancel);
+            imported->keyFile = toBytes(vaultCredentials.key_file);
+            imported->kdbx = AccountManager::vaultFile(*outcome.vault, std::move(vaultCredentials), cancel);
+        },
+        [guard, imported, done](const AccountManager::CoreError& error) {
+            const auto scrub = qScopeGuard([imported] {
+                Botan::secure_scrub_memory(imported->keyFile.data(), static_cast<size_t>(imported->keyFile.size()));
             });
-    });
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!error.ok()) {
+                done({}, {}, guard->messageFor(error));
+                return;
+            }
+            guard->m_account->reloadVaults();
+            if (!imported->uploadError.isEmpty()) {
+                done({}, {}, tr("The vault was created, but its first upload failed: %1").arg(imported->uploadError));
+                return;
+            }
+            QString readError;
+            auto vault = VaultKeyring::readVault(
+                imported->kdbx, AccountManager::vaultCompositeKey(imported->keyFile), &readError);
+            if (!vault) {
+                done({}, {}, readError);
+                return;
+            }
+            auto params = guard->m_account->vaultRemoteParams(imported->vaultId);
+            params.name = tr("OpenVireo account");
+            setAccountRemote(vault, params);
+            done(imported->vaultId, vault, {});
+        });
 }
 
 QString VaultSharing::messageFor(const AccountManager::CoreError& error) const

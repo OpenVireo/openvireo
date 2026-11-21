@@ -381,15 +381,16 @@ void TestVaultSharing::testFinishesAPendingRotation()
     // The old key still opens the blob, so nobody is locked out
     QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId, 1)));
 
-    // Rotating again would finish it with the pending key; openvireo-core doesn't yet (CONTRACT-REQUEST), so the
-    // server refuses a second rotation and the user is told, with nothing changed
+    // Rotating again finishes it with the pending key first (version 2), then runs the rotation asked for from there
     QString error;
-    QVERIFY(!run(
-        f.sharing.data(), [&](VaultSharing* s, VaultSharing::Done done) { s->rotate(vaultId, {}, done); }, &error));
-    QVERIFY2(error.contains("hasn't finished"), qPrintable(error));
-    QCOMPARE(f.server->vaults.value(vaultId).current, 1);
-    QCOMPARE(f.server->vaults.value(vaultId).pending, 2);
-    QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId, 1)));
+    QVERIFY2(
+        run(
+            f.sharing.data(), [&](VaultSharing* s, VaultSharing::Done done) { s->rotate(vaultId, {}, done); }, &error),
+        qPrintable(error));
+    QCOMPARE(f.server->vaults.value(vaultId).current, 3);
+    QCOMPARE(f.server->vaults.value(vaultId).pending, -1);
+    QTRY_VERIFY(f.alice->keyring().vault(vaultId).currentKeyVersion == 3);
+    QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId)));
 }
 
 void TestVaultSharing::testMovesADatabaseToTheAccount()
@@ -469,14 +470,17 @@ void TestVaultSharing::testMovesADatabaseToTheAccount()
     QCOMPARE(argon->rounds(), VaultKeyring::VaultKdfIterations);
     QVERIFY(!VaultKeyring::readVault(f.server->blobs.value(vaultId).data, password));
 
-    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays. The local
-    // copy carries the remotes: openvireo-core's import uploads the vault without database-level custom data.
+    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays. The core
+    // uploads the database's custom data without sync server and account vault remotes, so the upload carries the
+    // command remote, and the account remote is on the copy this device keeps (and goes up with its next sync).
     {
         RemoteSettings uploadedSettings(uploaded);
         uploadedSettings.loadSettings();
+        QStringList uploadedRemotes;
         for (const auto* params : uploadedSettings.getAllRemoteParams()) {
-            QVERIFY2(params->name != "home", qPrintable(params->name));
+            uploadedRemotes << params->name;
         }
+        QCOMPARE(uploadedRemotes, QStringList({"scp"}));
     }
     RemoteSettings settings(vault);
     settings.loadSettings();

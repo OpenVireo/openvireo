@@ -19,7 +19,6 @@
 #define KEEPASSXC_FAKEACCOUNTSERVER_H
 
 #include "account/AccountManager.h"
-#include "account/AuthClient.h"
 #include "account/CoreHost.h"
 #include "gui/remote/SyncServerClient.h"
 
@@ -220,25 +219,31 @@ namespace FakeAccount
                                                int version = -1) const;
     };
 
-    class FakeAuthClient : public AuthClient
+    // Answers one request as the account server would (FakeAccount::Transport hands it the core's requests)
+    class FakeAuthClient : public QObject
     {
     public:
-        explicit FakeAuthClient(QSharedPointer<Server> server);
-        // send() for FakeAccount::Transport
-        void dispatch(const QByteArray& verb, const QUrl& url, const Headers& headers, const QByteArray& body, Callback callback)
+        struct Response
         {
-            send(verb, url, headers, body, TimeoutMsec, std::move(callback));
-        }
+            // 0 when the server can't be reached (networkError says why)
+            int status = 0;
+            QByteArray body;
+            QString networkError;
+        };
+        using Callback = std::function<void(const Response&)>;
+        using Headers = QList<QPair<QByteArray, QByteArray>>;
 
-    protected:
-        void send(const QByteArray& verb,
-                  const QUrl& url,
-                  const Headers& headers,
-                  const QByteArray& body,
-                  int timeoutMsec,
-                  Callback callback) override;
+        explicit FakeAuthClient(QSharedPointer<Server> server);
+        void dispatch(const QByteArray& verb,
+                      const QUrl& url,
+                      const Headers& headers,
+                      const QByteArray& body,
+                      Callback callback);
 
     private:
+        // Answers on the next turn of the event loop, as a network reply would
+        void deliverLater(const Response& response, Callback callback);
+
         QSharedPointer<Server> m_server;
     };
 

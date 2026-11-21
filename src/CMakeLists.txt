@@ -230,7 +230,6 @@ set(gui_SOURCES
         account/AccountOfflineCache.cpp
         account/AccountPlan.cpp
         account/CoreHost.cpp
-        account/AuthClient.cpp
         account/ServiceAccountAdmin.cpp
         account/VaultKeyring.cpp
         account/VaultSharing.cpp

@@ -31,10 +31,10 @@ class Database;
 /**
  * The vault keys an unlocked account holds: vault id -> the composite key of each key version.
  *
- * Built from GET /api/v1/vaults, whose sealed keys are unsealed with the account's keyset. A vault has
- * a current key version and, while it is being rotated, a pending one (SPEC §7). The blob is re-keyed
- * between the two, so a vault is opened with the newest key first and then the older one, which
- * keeps it readable whichever step a rotation stopped at.
+ * Filled from openvireo-core (Account::vaults or ServiceAccount::vaults, and each vault's newest key from
+ * vault_kdbx_credentials): the core unseals the keys with the keyset it keeps. A vault has a current key version
+ * and, while it is being rotated, a pending one (SPEC §7); older keys stay in the core, which re-keys a local copy
+ * under one of them when it syncs it.
  *
  * A vault's composite key is the vault key as a raw 32-byte key file, with no password.
  */
@@ -43,29 +43,18 @@ class VaultKeyring
 public:
     using SecureBytes = AccountCrypto::SecureBytes;
 
-    struct SealedKey
-    {
-        int version = 0;
-        QByteArray sealedKey;
-    };
-
     struct Vault
     {
         QString id;
         QString orgId;
-        QString ownerId;
-        QByteArray encryptedName;
         // read, write or manage
         QString role;
         int currentKeyVersion = 0;
         // -1 when no rotation is pending
         int pendingKeyVersion = -1;
         bool rotationRequired = false;
-        QList<SealedKey> keys;
-        // Decrypted once the keys are unsealed, empty when no key could decrypt it
+        // As openvireo-core decrypted it; empty when no key could
         QString name;
-
-        static Vault fromJson(const QJsonObject& json, bool* ok = nullptr);
     };
 
     // KDF settings of vault files (SPEC §7): the key has full entropy, so a costly KDF adds nothing
@@ -76,10 +65,6 @@ public:
     VaultKeyring() = default;
     ~VaultKeyring();
 
-    // Replaces the vaults with these, unsealing their keys with `encSk`. Keys that don't unseal
-    // (e.g. sealed for another key version of the account) are left out.
-    void setVaults(const QList<Vault>& vaults, const SecureBytes& encSk);
-    void setVaults(const QJsonArray& vaults, const SecureBytes& encSk);
     // Replaces the vaults with these, whose names and keys openvireo-core decrypted already: vault id -> its newest
     // key version and key
     void setVaults(const QList<Vault>& vaults, const QHash<QString, QPair<int, SecureBytes>>& keys);

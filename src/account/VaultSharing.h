@@ -134,8 +134,6 @@ private:
                             const QString& name,
                             const QString& orgId,
                             VaultCallback done);
-    // In an org, the owners' and admins' keys carry a valid signature; `done` gets an error naming one that doesn't
-    void checkOrgKeys(const QString& orgId, std::function<void(const QString& error)> done);
     QString messageFor(const AccountManager::CoreError& error) const;
 
     QPointer<AccountManager> m_account;

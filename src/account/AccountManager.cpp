@@ -59,6 +59,8 @@ struct AccountManager::CoreSession
 {
     rust::Box<ov::Client> client;
     std::optional<rust::Box<ov::Account>> account;
+    // Set instead of `account` for a service account signed in with its token
+    std::optional<rust::Box<ov::ServiceAccount>> serviceAccount;
 
     const ov::Account& acct() const
     {
@@ -66,6 +68,13 @@ struct AccountManager::CoreSession
             throw std::runtime_error("signed_out: no account server");
         }
         return **account;
+    }
+    const ov::ServiceAccount& sa() const
+    {
+        if (!serviceAccount) {
+            throw std::runtime_error("signed_out: no service account");
+        }
+        return **serviceAccount;
     }
 };
 
@@ -141,6 +150,13 @@ namespace
     // While offline the servers are tried again after this long, doubling up to the maximum
     constexpr int FirstReconnectDelaySec = 15;
     constexpr int MaxReconnectDelaySec = 5 * 60;
+
+    // The name this device signs in as (the server lists it among the account's devices)
+    QString deviceName()
+    {
+        const auto name = QSysInfo::machineHostName();
+        return name.isEmpty() ? QSysInfo::prettyProductName() : name;
+    }
 
     QString insecureServerMessage(const QString& url)
     {
@@ -317,6 +333,72 @@ namespace
         return out;
     }
 
+    AccountManager::ServerConfig configOf(const ov::ServerConfig& c)
+    {
+        AccountManager::ServerConfig config;
+        config.issuer = CoreHost::toQString(c.issuer);
+        config.api = CoreHost::toQString(c.api);
+        config.sync = CoreHost::toQString(c.sync);
+        config.web = CoreHost::toQString(c.web);
+        config.share = CoreHost::toQString(c.share);
+        config.opaqueServerId = CoreHost::toQString(c.opaque_ids);
+        if (c.has_kdf_min) {
+            config.kdfMinMemoryKiB = qMax<quint32>(KdfParams::MinMemoryKiB, c.kdf_min_m);
+            config.kdfMinIterations = qMax<quint32>(KdfParams::MinIterations, c.kdf_min_t);
+        }
+        return config;
+    }
+
+    // A plan in the API's JSON shape, for AccountPlan::parse() and the offline copy of the org list
+    QJsonValue planJson(bool has, const ov::Plan& plan)
+    {
+        if (!has) {
+            return {};
+        }
+        QJsonObject json{{"id", CoreHost::toQString(plan.id)}};
+        if (plan.has_billing) {
+            const auto text = [](const rust::String& value) {
+                const auto out = CoreHost::toQString(value);
+                return out.isEmpty() ? QJsonValue() : QJsonValue(out);
+            };
+            json["billing"] = QJsonObject{{"source", text(plan.billing.source)},
+                                          {"interval", text(plan.billing.interval)},
+                                          {"status", text(plan.billing.status)},
+                                          {"manage", text(plan.billing.manage)},
+                                          {"renews_at", text(plan.billing.renews_at)},
+                                          {"ends_at", text(plan.billing.ends_at)}};
+        }
+        return json;
+    }
+
+    // GET /me's orgs in the API's JSON shape (parseOrgs() reads it, the offline cache keeps it)
+    QJsonArray orgsJson(const rust::Vec<ov::OrgMembership>& orgs)
+    {
+        QJsonArray out;
+        for (const auto& org : orgs) {
+            QJsonObject json{{"id", CoreHost::toQString(org.id)},
+                             {"name", CoreHost::toQString(org.name)},
+                             {"role",
+                              org.role == ov::OrgRole::Owner   ? "owner"
+                              : org.role == ov::OrgRole::Admin ? "admin"
+                                                               : "member"},
+                             {"status",
+                              org.status == ov::MemberStatus::Invited    ? "invited"
+                              : org.status == ov::MemberStatus::Accepted ? "accepted"
+                                                                         : "confirmed"}};
+            if (org.has_item_share_links) {
+                json["item_share_links"] = org.item_share_links == ov::ShareLinkPolicy::Off        ? "off"
+                                           : org.item_share_links == ov::ShareLinkPolicy::Managers ? "managers"
+                                                                                                   : "on";
+            }
+            if (org.has_plan) {
+                json["plan"] = planJson(true, org.plan);
+            }
+            out << json;
+        }
+        return out;
+    }
+
     // The token's lifetime from its own claims, so it doesn't matter whose clock issued it
     qint64 lifetimeOf(const QString& token)
     {
@@ -403,6 +485,30 @@ namespace
         }
     }
 
+    // A service account's granted vaults with each one's newest key, as the core unsealed them
+    void loadServiceAccountVaults(const ov::ServiceAccount& sa, AccountManager::VaultList& out)
+    {
+        auto cancel = ov::new_cancel_token();
+        for (const auto& info : sa.vaults(true, *cancel)) {
+            VaultKeyring::Vault vault;
+            vault.id = qs(info.id);
+            vault.name = qs(info.name);
+            vault.role = roleName(info.role);
+            // The core hands out the newest key only; it re-keys older local copies when it syncs them
+            vault.currentKeyVersion = 1;
+            out.vaults << vault;
+            try {
+                auto credentials = sa.vault_kdbx_credentials(info.id, *cancel);
+                if (credentials.has_key_file) {
+                    out.keys.insert(vault.id, qMakePair(vault.currentKeyVersion, takeSecure(credentials.key_file)));
+                }
+                ov::wipe(credentials.password);
+            } catch (const std::exception& e) {
+                qWarning("No key for vault %s: %s", qPrintable(vault.id), e.what());
+            }
+        }
+    }
+
     Keyset keysetOf(const SecureBytes& secret)
     {
         if (secret.size() != 64) {
@@ -422,18 +528,14 @@ AccountManager::AccountManager(QObject* parent)
 AccountManager::AccountManager(CoreHost::Factory host, QObject* parent)
     : QObject(parent)
     , m_host(std::move(host))
-    , m_client(new AuthClient())
 {
     // One core call at a time, in the order they were made: a sign-out can't overtake the sign-in after it
     m_pool.setMaxThreadCount(1);
     m_pool.setExpiryTimeout(-1);
-    m_client->setParent(this);
-    m_client->setTransport(std::shared_ptr<ov::HttpTransport>(m_host.makeTransport()));
-    m_client->setTokenProvider(tokenProvider());
     try {
         ov::ClientConfig config;
-        config.device_name = rs(AuthClient::DeviceInfo::current().name);
-        m_local = std::make_shared<CoreSession>(CoreSession{m_host.newClient(config), std::nullopt});
+        config.device_name = rs(deviceName());
+        m_local = std::make_shared<CoreSession>(CoreSession{m_host.newClient(config), std::nullopt, std::nullopt});
     } catch (const std::exception& e) {
         qWarning("openvireo-core client: %s", e.what());
     }
@@ -471,13 +573,10 @@ AccountManager::~AccountManager()
     // Calls under way finish (their results go nowhere): their Host may not outlive this manager. A test Host can
     // need this thread's event loop to answer, so it keeps turning meanwhile.
     m_destroying = true;
-    m_client->abort();
     stopEvents();
     while (!m_pool.waitForDone(5)) {
         QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     }
-    delete m_client;
-    m_client = nullptr;
 }
 
 std::shared_ptr<AccountManager::CoreSession> AccountManager::makeCore(const ServerConfig& config) const
@@ -487,12 +586,13 @@ std::shared_ptr<AccountManager::CoreSession> AccountManager::makeCore(const Serv
     }
     try {
         ov::ClientConfig clientConfig;
-        clientConfig.device_name = rs(AuthClient::DeviceInfo::current().name);
+        clientConfig.device_name = rs(deviceName());
         // The core keeps its offline copies (profile, vault list, vaults) only when allowed (SPEC §20)
         clientConfig.offline = AccountOfflineCache::isEnabled();
         clientConfig.has_server = true;
         clientConfig.server = coreConfig(config);
-        auto core = std::make_shared<CoreSession>(CoreSession{m_host.newClient(clientConfig), std::nullopt});
+        auto core =
+            std::make_shared<CoreSession>(CoreSession{m_host.newClient(clientConfig), std::nullopt, std::nullopt});
         // With the server given this reads the keychain only, no network
         auto cancel = ov::new_cancel_token();
         core->account = ov::call([&] { return core->client->connect(clientConfig.server.issuer, *cancel); });
@@ -589,7 +689,6 @@ void AccountManager::setServer(const ServerConfig& config)
 {
     const bool same = m_core && config.toJson() == m_config.toJson();
     m_config = config;
-    m_client->setApiUrl(config.api);
     if (!same) {
         m_core = makeCore(config);
     }
@@ -612,17 +711,7 @@ void AccountManager::discover(const QString& issuerUrl)
     runCore(
         m_local,
         [result, issuer](CoreSession& core) {
-            const auto c = core.client->discover(rs(issuer), *ov::new_cancel_token());
-            result->issuer = qs(c.issuer);
-            result->api = qs(c.api);
-            result->sync = qs(c.sync);
-            result->web = qs(c.web);
-            result->share = qs(c.share);
-            result->opaqueServerId = qs(c.opaque_ids);
-            if (c.has_kdf_min) {
-                result->kdfMinMemoryKiB = qMax<quint32>(KdfParams::MinMemoryKiB, c.kdf_min_m);
-                result->kdfMinIterations = qMax<quint32>(KdfParams::MinIterations, c.kdf_min_t);
-            }
+            *result = configOf(core.client->discover(rs(issuer), *ov::new_cancel_token()));
         },
         [this, result](const CoreError& e) {
             if (!e.ok()) {
@@ -949,6 +1038,34 @@ QString AccountManager::messageFor(const CoreError& error) const
             message += ' ' + tr("Change your plan at %1").arg(url);
         }
         return message;
+    }
+    if (error.code == "rate_limited") {
+        return tr("Too many attempts. Wait a minute and try again.");
+    }
+    const auto code = error.serverCode.isEmpty() ? error.code : error.serverCode;
+    const auto details = QJsonDocument::fromJson(error.details.toUtf8()).object();
+    if (error.code == "invalid_public_keys" && !details.value("email").toString().isEmpty()) {
+        // contract-v1.8: create_vault and import_kdbx name the org owner or admin whose keys don't verify
+        return tr("The public keys of %1 don't carry a valid signature. Nothing was changed.")
+            .arg(details.value("email").toString());
+    }
+    // Account deletion (SPEC §23)
+    if (code == "confirm_mismatch") {
+        return tr("That isn't this account's email. Nothing was deleted.");
+    }
+    if (code == "deletion_blocked") {
+        QStringList names;
+        for (const auto& org : details.value("orgs").toArray()) {
+            names << org.toObject().value("name").toString();
+        }
+        return tr("You're the only owner of %1. Make someone else an owner, or delete it, first.")
+            .arg(names.isEmpty() ? tr("an organization") : names.join(", "));
+    }
+    if (code == "not_a_member") {
+        return tr("They need access to the vault before it can be given to them.");
+    }
+    if (code == "account_pending_deletion") {
+        return tr("This account is scheduled for deletion. Restore it first.");
     }
     if (error.status > 0) {
         return tr("The account server responded with HTTP %1: %2").arg(error.status).arg(error.message);
@@ -1543,13 +1660,23 @@ void AccountManager::reconnect()
     reloadVaults();
 }
 
-void AccountManager::takeProfile(const QJsonObject& me)
+void AccountManager::takeProfile(const ov::Profile& profile)
 {
-    m_orgs = parseOrgs(me.value("orgs").toArray());
-    m_plan = AccountPlan::parse(me.value("plan"));
-    setPendingDeletion(me.value("deletion_scheduled_for").toString());
-    AccountOfflineCache::saveProfile(
-        m_accountId, me.value("kdf").toObject(), me.value("keyset").toObject(), me.value("orgs").toArray());
+    const auto orgs = orgsJson(profile.orgs);
+    m_orgs = parseOrgs(orgs);
+    m_plan = AccountPlan::parse(planJson(profile.has_plan, profile.plan));
+    setPendingDeletion(qs(profile.deletion_scheduled_for));
+    // The KDF and the keyset's public keys as GET /me has them (contract-v1.8 Profile), beside the org list
+    const QJsonObject kdf{{"alg", qs(profile.kdf.alg)},
+                          {"salt", qs(profile.kdf.salt)},
+                          {"m", static_cast<qint64>(profile.kdf.m)},
+                          {"t", static_cast<qint64>(profile.kdf.t)},
+                          {"p", static_cast<qint64>(profile.kdf.p)}};
+    PublicKeys keys;
+    keys.encPk = toBytes(profile.public_keys.enc_pk);
+    keys.signPk = toBytes(profile.public_keys.sign_pk);
+    keys.sig = toBytes(profile.public_keys.sig);
+    AccountOfflineCache::saveProfile(m_accountId, kdf, keys.toJson(), orgs);
 }
 
 void AccountManager::lock()
@@ -1611,7 +1738,11 @@ void AccountManager::endSession(const QString& reason, CoreEnd end)
     }
     m_accessToken.clear();
     m_accessTokenExpiry = 0;
-    m_saToken = {};
+    if (m_saCore && m_saCore->serviceAccount) {
+        // Wipes its keyset and vault keys; a call still under way fails with signed_out
+        m_saCore->sa().close();
+    }
+    m_saCore.reset();
     m_keyring.clear();
     m_keyset.clear();
     m_accountId.clear();
@@ -1687,12 +1818,8 @@ void AccountManager::accessToken(std::function<void(const QString&)> done)
         return;
     }
     if (m_serviceAccount) {
-        if (m_saToken.secret.empty()) {
-            done({});
-            return;
-        }
-        m_tokenWaiters << done;
-        exchangeServiceAccount();
+        // A service account's token stays in its core session, which syncs its vaults
+        done({});
         return;
     }
     if (m_accountId.isEmpty() || !m_core) {
@@ -1742,7 +1869,7 @@ void AccountManager::refreshAccessToken()
         return;
     }
     if (m_serviceAccount) {
-        exchangeServiceAccount();
+        // The core exchanges the service account's secret again when its token is about to expire
         return;
     }
     if (m_accountId.isEmpty() || !m_core) {
@@ -1814,84 +1941,103 @@ void AccountManager::signInServiceAccount(const QString& token)
     }
     endSession({});
     m_serviceAccount = true;
-    m_saToken = parsed;
     m_accountId = parsed.saId;
     setState(State::SigningIn);
-    if (m_config.issuer.isEmpty() || QUrl(m_config.issuer) != QUrl(parsed.url)) {
-        // The token names its server: ask it where its API is
-        m_client->discover(parsed.url, [this](const AuthClient::Response& response) {
-            const auto config = ServerConfig::fromJson(response.json());
-            if (!response.isSuccess() || !config.isValid()) {
-                endSession({});
-                emit error(AuthClient::errorMessage(response));
-                return;
-            }
-            if (const auto insecure = config.insecureUrl(); !insecure.isEmpty()) {
-                endSession({});
-                emit error(insecureServerMessage(insecure));
-                return;
-            }
-            setServer(config);
-            exchangeServiceAccount();
-        });
-        return;
-    }
-    exchangeServiceAccount();
-}
-
-void AccountManager::exchangeServiceAccount()
-{
-    if (m_refreshing || m_saToken.secret.empty()) {
-        return;
-    }
-    m_refreshing = true;
-    m_client->exchangeServiceAccount(
-        m_saToken.saId, toBase64Url(m_saToken.secret), [this](const AuthClient::Response& response) {
-            m_refreshing = false;
-            if (!response.isSuccess()) {
-                const bool first = m_state == State::SigningIn;
-                const auto message = AuthClient::errorMessage(response);
-                if (first || response.status == 401) {
-                    endSession(tr("The service account token was rejected."));
-                    emit error(message);
-                } else {
-                    m_refreshTimer.start(30 * 1000);
-                    finishRefresh(false);
-                }
-                return;
-            }
-            const auto json = response.json();
-            const auto token = json.value("access_token").toString();
-            const auto expiresIn = json.value("expires_in").toInt();
-            const bool changed = token != m_accessToken;
-            m_accessToken = token;
-            m_accessTokenExpiry = now() + (expiresIn > 0 ? expiresIn : lifetimeOf(token));
-            m_refreshTimer.start(qMax<qint64>(1, m_accessTokenExpiry - now() - RefreshMarginSec) * 1000);
-            if (changed) {
-                emit accessTokenChanged();
-            }
-            if (m_keyset.isNull()) {
-                // kek -> SA master key -> SA keyset; the server holds neither the kek nor the master key
-                SecureBytes master;
-                Keyset keyset;
-                if (!unwrap(m_saToken.kek,
-                            fromBase64Url(json.value("wrapped_master").toString()),
-                            saMasterAad(m_saToken.saId),
-                            &master)
-                    || !unwrapKeyset(master, json.value("keyset").toObject(), &keyset)) {
-                    endSession({});
-                    emit error(tr("The service account's keys could not be decrypted."));
+    if (!m_config.isValid() || QUrl(m_config.issuer) != QUrl(parsed.url)) {
+        if (!m_local) {
+            endSession({});
+            emit error(tr("This build of OpenVireo can't sign in to accounts."));
+            return;
+        }
+        // The token names its server: ask it where its API is (and check the addresses) before the secret goes out
+        auto result = std::make_shared<ServerConfig>();
+        const auto issuer = parsed.url;
+        const auto saId = parsed.saId;
+        runCore(
+            m_local,
+            [result, issuer](CoreSession& core) {
+                *result = configOf(core.client->discover(rs(issuer), *ov::new_cancel_token()));
+            },
+            [this, result, token, saId](const CoreError& e) {
+                if (m_state != State::SigningIn || !m_serviceAccount || m_accountId != saId) {
                     return;
                 }
-                m_keyset = keyset;
-                SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
-                setState(State::Unlocked);
-                emit signedIn();
-                reloadVaults();
-                startEvents();
+                if (!e.ok() || !result->isValid()) {
+                    endSession({});
+                    emit error(!e.ok() ? messageFor(e) : tr("The server isn't an OpenVireo account server."));
+                    return;
+                }
+                if (const auto insecure = result->insecureUrl(); !insecure.isEmpty()) {
+                    endSession({});
+                    emit error(insecureServerMessage(insecure));
+                    return;
+                }
+                setServer(*result);
+                openServiceAccount(*result, token);
+            });
+        return;
+    }
+    openServiceAccount(m_config, token);
+}
+
+void AccountManager::openServiceAccount(const ServerConfig& config, const QString& token)
+{
+    std::shared_ptr<CoreSession> core;
+    try {
+        ov::ClientConfig clientConfig;
+        clientConfig.device_name = rs(deviceName());
+        // A service account keeps nothing on this device
+        clientConfig.offline = false;
+        clientConfig.has_server = true;
+        clientConfig.server = coreConfig(config);
+        core = std::make_shared<CoreSession>(CoreSession{m_host.newClient(clientConfig), std::nullopt, std::nullopt});
+    } catch (const std::exception& e) {
+        qWarning("openvireo-core service account: %s", e.what());
+    }
+    const auto saId = m_accountId;
+    auto secret = std::make_shared<rust::Vec<uint8_t>>(secretOf(token));
+    auto list = std::make_shared<VaultList>();
+    // The core trades the token's secret for an access token, unwraps the keyset with the token's kek (the server
+    // holds neither the kek nor the master key), lists the granted vaults and unseals their keys. It exchanges the
+    // secret again whenever the access token is about to expire: a service account has no refresh token.
+    runCore(
+        core,
+        [secret, list](CoreSession& c) {
+            auto cancel = ov::new_cancel_token();
+            c.serviceAccount = ov::service_account_from_token(*c.client, std::move(*secret), *cancel);
+            loadServiceAccountVaults(c.sa(), *list);
+        },
+        [this, core, saId, list](const CoreError& e) {
+            if (m_state != State::SigningIn || !m_serviceAccount || m_accountId != saId) {
+                if (core && core->serviceAccount) {
+                    core->sa().close();
+                }
+                return;
             }
-            finishRefresh(true);
+            if (!e.ok()) {
+                endSession(tr("The service account token was rejected."));
+                emit error(e.code == "decryption_failed" ? tr("The service account's keys could not be decrypted.")
+                                                         : messageFor(e));
+                return;
+            }
+            m_saCore = core;
+            m_keyring.setVaults(list->vaults, list->keys);
+            registerAccountHooks();
+            setState(State::Unlocked);
+            emit signedIn();
+            emit vaultsChanged();
         });
+}
+
+void AccountManager::takeServiceAccountVaults(const VaultList& list)
+{
+    m_keyring.setVaults(list.vaults, list.keys);
+    emit vaultsChanged();
+}
+
+std::shared_ptr<AccountManager::CoreSession> AccountManager::vaultCore() const
+{
+    return m_serviceAccount ? m_saCore : m_core;
 }
 
 // --------------------------------------------------------------------------------------------- vaults
@@ -1902,18 +2048,26 @@ void AccountManager::reloadVaults()
         return;
     }
     if (m_serviceAccount) {
-        // Service accounts sign in through AuthClient for now: their vault keys come from GET /vaults directly
-        m_client->listVaults([this](const AuthClient::Response& response) {
-            if (m_state != State::Unlocked || !m_serviceAccount) {
-                return;
-            }
-            if (!response.isSuccess()) {
-                emit error(AuthClient::errorMessage(response));
-                return;
-            }
-            m_keyring.setVaults(response.json().value("vaults").toArray(), m_keyset.encSk);
-            emit vaultsChanged();
-        });
+        // GET /vaults through the service account's core session, which unseals the keys
+        auto list = std::make_shared<VaultList>();
+        auto core = m_saCore;
+        runCore(
+            core,
+            [list](CoreSession& c) { loadServiceAccountVaults(c.sa(), *list); },
+            [this, list, core](const CoreError& e) {
+                if (core != m_saCore || m_state != State::Unlocked) {
+                    return;
+                }
+                if (!e.ok()) {
+                    if (e.code == "unauthorized") {
+                        // The secret was revoked or the service account deleted
+                        endSession(tr("The service account token was rejected."));
+                    }
+                    emit error(messageFor(e));
+                    return;
+                }
+                takeServiceAccountVaults(*list);
+            });
         return;
     }
     auto list = std::make_shared<VaultList>();
@@ -1981,22 +2135,34 @@ void AccountManager::reloadOrgs()
     if (m_serviceAccount) {
         return;
     }
-    m_client->me([this](const AuthClient::Response& response) {
-        if (m_state != State::Unlocked || !response.isSuccess()) {
-            return;
-        }
-        const auto json = response.json();
-        followEmail(json.value("email").toString());
-        const auto encPk = fromBase64Url(json.value("keyset").toObject().value("enc_pk").toString());
-        if (!encPk.isEmpty() && encPk != m_keyset.publicKeys.encPk) {
-            // A new keyset (account recovery): the vault keys in memory are sealed to the old one
-            lock();
-            emit error(tr("Your account's keys changed on another device. Unlock it again."));
-            return;
-        }
-        takeProfile(json);
-        emit orgsChanged();
-    });
+    // GET /me in the core, which keeps the profile for offline unlock and follows an email change
+    auto profile = std::make_shared<std::optional<ov::Profile>>();
+    auto core = m_core;
+    runCore(
+        core,
+        [profile](CoreSession& c) { profile->emplace(c.acct().me(*ov::new_cancel_token())); },
+        [this, profile, core](const CoreError& e) {
+            if (core != m_core || m_state != State::Unlocked) {
+                return;
+            }
+            if (!e.ok() || !profile->has_value()) {
+                if (!e.ok() && !sessionEndedBy(e)) {
+                    qWarning("GET /me: %s", qPrintable(messageFor(e)));
+                }
+                return;
+            }
+            const auto& me = **profile;
+            followEmail(qs(me.email));
+            const auto encPk = toBytes(me.public_keys.enc_pk);
+            if (!encPk.isEmpty() && encPk != m_keyset.publicKeys.encPk) {
+                // A new keyset (account recovery): the vault keys in memory are sealed to the old one
+                lock();
+                emit error(tr("Your account's keys changed on another device. Unlock it again."));
+                return;
+            }
+            takeProfile(me);
+            emit orgsChanged();
+        });
 }
 
 void AccountManager::handleAccessEvent(const SyncEventStream::Event& event)
@@ -2068,9 +2234,7 @@ void AccountManager::createVault(const QString& name, const QString& orgId, Crea
             created->vaultId = qs(vault->id());
             auto credentials = c.acct().vault_kdbx_credentials(rs(created->vaultId), *cancel);
             created->keyFile = toBytes(credentials.key_file);
-            auto kdbx = vault->export_kdbx(std::move(credentials), {}, *cancel);
-            created->kdbx = toBytes(kdbx);
-            ov::wipe(kdbx);
+            created->kdbx = vaultFile(*vault, std::move(credentials), *cancel);
             loadVaultList(c.acct(), created->list, false);
         },
         [guard, created, core, done](const CoreError& e) {
@@ -2108,7 +2272,8 @@ void AccountManager::createVault(const QString& name, const QString& orgId, Crea
 
 void AccountManager::downloadVault(const QString& vaultId, DownloadVaultCallback done)
 {
-    if (m_state != State::Unlocked || m_serviceAccount || !m_core) {
+    const auto core = vaultCore();
+    if (m_state != State::Unlocked || !core) {
         done({}, QStringLiteral("signed_out"), tr("Unlock your account first."));
         return;
     }
@@ -2116,15 +2281,16 @@ void AccountManager::downloadVault(const QString& vaultId, DownloadVaultCallback
     auto keyFile = std::make_shared<QByteArray>();
     QPointer<AccountManager> guard(this);
     runCore(
-        m_core,
+        core,
         [vaultId, kdbx, keyFile](CoreSession& c) {
             auto cancel = ov::new_cancel_token();
-            auto vault = c.acct().open_vault(rs(vaultId), *cancel);
-            auto credentials = c.acct().vault_kdbx_credentials(rs(vaultId), *cancel);
+            // A service account downloads with its own token (refresh: the server's current copy)
+            auto vault = c.serviceAccount ? c.sa().open_vault(rs(vaultId), true, *cancel)
+                                          : c.acct().open_vault(rs(vaultId), *cancel);
+            auto credentials = c.serviceAccount ? c.sa().vault_kdbx_credentials(rs(vaultId), *cancel)
+                                                : c.acct().vault_kdbx_credentials(rs(vaultId), *cancel);
             *keyFile = toBytes(credentials.key_file);
-            auto data = vault->export_kdbx(std::move(credentials), {}, *cancel);
-            *kdbx = toBytes(data);
-            ov::wipe(data);
+            *kdbx = vaultFile(*vault, std::move(credentials), *cancel);
         },
         [guard, kdbx, keyFile, done](const CoreError& e) {
             const auto scrub = qScopeGuard([keyFile] {
@@ -2158,8 +2324,8 @@ AccountVaultSync::Cancel AccountManager::syncVault(const AccountVaultSync::Reque
 {
     auto cancel = std::make_shared<rust::Box<ov::CancelToken>>(ov::new_cancel_token());
     auto result = std::make_shared<AccountVaultSync::Result>();
-    auto core = m_core;
-    if (m_state != State::Unlocked || m_serviceAccount || !core) {
+    auto core = vaultCore();
+    if (m_state != State::Unlocked || !core) {
         result->errorCode = QStringLiteral("signed_out");
         result->error = tr("Unlock your account first.");
         QTimer::singleShot(0, this, [result, done] { done(*result); });
@@ -2173,12 +2339,19 @@ AccountVaultSync::Cancel AccountManager::syncVault(const AccountVaultSync::Reque
             ov::SyncOptions options;
             options.local_changed = req->localChanged;
             options.accept_server_state = req->acceptServerState;
-            auto synced = c.acct().sync_vault_kdbx(rs(req->vaultId),
-                                                   bytesOf(req->kdbx),
-                                                   !req->base.isEmpty(),
-                                                   bytesOf(req->base),
-                                                   options,
-                                                   **cancel);
+            // A service account keeps no offline copy: the merge base is what this device last synced, if anything
+            auto synced = c.serviceAccount ? c.sa().sync_vault_kdbx(rs(req->vaultId),
+                                                                    bytesOf(req->kdbx),
+                                                                    !req->base.isEmpty(),
+                                                                    bytesOf(req->base),
+                                                                    options,
+                                                                    **cancel)
+                                           : c.acct().sync_vault_kdbx(rs(req->vaultId),
+                                                                      bytesOf(req->kdbx),
+                                                                      !req->base.isEmpty(),
+                                                                      bytesOf(req->base),
+                                                                      options,
+                                                                      **cancel);
             result->kdbx = toBytes(synced.kdbx);
             ov::wipe(synced.kdbx);
             result->keyFile = toBytes(synced.credentials.key_file);
@@ -2232,9 +2405,84 @@ AccountVaultSync::Cancel AccountManager::syncVault(const AccountVaultSync::Reque
     return [cancel] { (*cancel)->cancel(); };
 }
 
+void AccountManager::vaultHistory(
+    const QString& vaultId,
+    std::function<void(const QList<AccountVaultSync::Version>& versions, const QString& error)> done)
+{
+    auto versions = std::make_shared<QList<AccountVaultSync::Version>>();
+    QPointer<AccountManager> guard(this);
+    callAccount(
+        this,
+        [vaultId, versions](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& row : account.vault_history(rs(vaultId), cancel)) {
+                AccountVaultSync::Version version;
+                version.revision = static_cast<qint64>(row.revision);
+                version.savedAt = QDateTime::fromString(qs(row.saved_at), Qt::ISODateWithMs);
+                version.size = row.has_size ? static_cast<qint64>(row.size) : -1;
+                version.current = row.is_current;
+                *versions << version;
+            }
+        },
+        [guard, versions, done](const CoreError& e) {
+            if (!e.ok()) {
+                done({}, guard ? guard->messageFor(e) : e.message);
+                return;
+            }
+            done(*versions, {});
+        });
+}
+
+void AccountManager::openVaultVersion(const QString& vaultId,
+                                      qint64 revision,
+                                      const QString& password,
+                                      std::function<void(const QByteArray& kdbx, const QString& error)> done)
+{
+    auto kdbx = std::make_shared<QByteArray>();
+    auto secret = std::make_shared<rust::Vec<uint8_t>>(secretOf(password));
+    QPointer<AccountManager> guard(this);
+    callAccount(
+        this,
+        [vaultId, revision, kdbx, secret](const ov::Account& account, const ov::CancelToken& cancel) {
+            // The core downloads the version and opens it with whichever of the vault's keys it is under
+            auto version = account.open_vault_version(rs(vaultId), static_cast<uint64_t>(revision), cancel);
+            ov::KdbxCredentials credentials{};
+            credentials.has_password = true;
+            credentials.password = std::move(*secret);
+            *kdbx = vaultFile(*version, std::move(credentials), cancel);
+        },
+        [guard, kdbx, done](const CoreError& e) {
+            if (!e.ok()) {
+                done({}, guard ? guard->messageFor(e) : e.message);
+                return;
+            }
+            done(*kdbx, {});
+        });
+}
+
 QSharedPointer<CompositeKey> AccountManager::vaultKey(const QString& vaultId) const
 {
     return m_keyring.compositeKey(vaultId);
+}
+
+QByteArray
+AccountManager::vaultFile(const ov::Vault& vault, ov::KdbxCredentials credentials, const ov::CancelToken& cancel)
+{
+    // Not Vault::export_kdbx: that is the web app's "export groups", copying only the entries' fields under new
+    // UUIDs (no history, attachments or custom data), and a local copy made that way would sync as every entry
+    // deleted and added again. copy_without_remotes keeps the whole database (the remotes of account vaults and sync
+    // servers aside; the vault's own is added by whoever keeps the file), under the vault files' light KDF: the key
+    // is random (SPEC §7).
+    auto copy = vault.copy_without_remotes(std::move(credentials));
+    ov::KdbxKdf kdf{};
+    kdf.kind = ov::KdbxKdfKind::Argon2id;
+    kdf.memory = VaultKeyring::VaultKdfMemoryKiB * 1024;
+    kdf.iterations = VaultKeyring::VaultKdfIterations;
+    kdf.parallelism = VaultKeyring::VaultKdfParallelism;
+    copy->set_kdf(kdf);
+    auto bytes = copy->save_local(cancel);
+    const auto out = toBytes(bytes);
+    ov::wipe(bytes);
+    return out;
 }
 
 QSharedPointer<CompositeKey> AccountManager::vaultCompositeKey(const QByteArray& keyFile)
@@ -2248,9 +2496,9 @@ QSharedPointer<CompositeKey> AccountManager::vaultCompositeKey(const QByteArray&
 
 void AccountManager::registerAccountHooks()
 {
-    SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
-    if (m_serviceAccount) {
-        return;
+    if (!m_serviceAccount) {
+        // The vaults' event streams use the account's token; a service account's stays in its core session
+        SyncServerClient::setAccountTokenProvider(m_accountId, tokenProvider());
     }
     QPointer<AccountManager> guard(this);
     SyncServerClient::setAccountVaultSyncer(
@@ -2265,12 +2513,37 @@ void AccountManager::registerAccountHooks()
             }
             return guard->syncVault(request, std::move(done));
         });
+    if (m_serviceAccount) {
+        // A service account's core session has no vault history
+        return;
+    }
+    AccountVaultSync::History history;
+    history.list = [guard](const QString& vaultId,
+                           std::function<void(const QList<AccountVaultSync::Version>&, const QString&)> done) {
+        if (!guard) {
+            done({}, tr("Sign in to your OpenVireo account to see this vault's versions."));
+            return;
+        }
+        guard->vaultHistory(vaultId, std::move(done));
+    };
+    history.open = [guard](const QString& vaultId,
+                           qint64 revision,
+                           const QString& password,
+                           std::function<void(const QByteArray&, const QString&)> done) {
+        if (!guard) {
+            done({}, tr("Sign in to your OpenVireo account to open this version."));
+            return;
+        }
+        guard->openVaultVersion(vaultId, revision, password, std::move(done));
+    };
+    SyncServerClient::setAccountVaultHistory(m_accountId, history);
 }
 
 void AccountManager::unregisterAccountHooks()
 {
     SyncServerClient::setAccountTokenProvider(m_accountId, nullptr);
     SyncServerClient::setAccountVaultSyncer(m_accountId, nullptr);
+    SyncServerClient::setAccountVaultHistory(m_accountId, {});
 }
 
 void AccountManager::startEvents()
