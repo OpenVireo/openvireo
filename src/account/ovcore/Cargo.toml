@@ -22,7 +22,7 @@ path = "src/lib.rs"
 test-server = ["ov-ffi-cpp/test-server"]
 
 [dependencies]
-ov-ffi-cpp = { git = "https://github.com/openvireo/openvireo-core", rev = "ca2f211bf81919b1c0bf15e2bad630054094ab03" }
+ov-ffi-cpp = { git = "https://github.com/openvireo/openvireo-core", rev = "80ae01b13f284ee2a92d31bcaa4424b535b8df94" }
 
 # Debug builds of the desktop still run the KDFs (Argon2id, AES-KDF) at full speed
 [profile.dev]

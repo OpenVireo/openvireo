@@ -281,13 +281,25 @@ namespace
         return CoreHost::toQString(text);
     }
 
-    // The keyset didn't unwrap on this device: the password or the Secret Key is wrong. The core reports it as
-    // unauthorized (401), like an OPAQUE refusal, and only its message tells them apart.
-    // CONTRACT-REQUEST: a distinct code (or details) for "the keyset didn't unwrap".
+    // The reason in a sign-in error's details (contract-v1.7): keyset_unwrap_failed or opaque_refused
+    QString signInReason(const AccountManager::CoreError& e)
+    {
+        return QJsonDocument::fromJson(e.details.toUtf8()).object().value("reason").toString();
+    }
+
+    // The keyset didn't unwrap on this device: the password or the Secret Key is wrong
     bool wrongKey(const AccountManager::CoreError& e)
     {
         return e.code == "decryption_failed" || e.code == "invalid_secret_key"
-               || (e.code == "unauthorized" && e.message.contains("Secret Key"));
+               || (e.code == "unauthorized" && signInReason(e) == "keyset_unwrap_failed");
+    }
+
+    // At sign-in the server accepted the password (OPAQUE) and only then did the keyset not unwrap: the Secret Key is
+    // wrong. The core logged the new session out again.
+    bool wrongSecretKey(const AccountManager::CoreError& e)
+    {
+        return e.code == "invalid_secret_key"
+               || (e.code == "unauthorized" && signInReason(e) == "keyset_unwrap_failed");
     }
 
     ov::ServerConfig coreConfig(const AccountManager::ServerConfig& config)
@@ -1027,9 +1039,10 @@ void AccountManager::signIn(const QString& email, const QString& password, const
             }
             if (!e.ok()) {
                 // A wrong password (or an unknown email) fails OPAQUE on this device: unauthorized either way
-                fail(wrongKey(e)                 ? tr("The Secret Key or the master password is wrong.")
+                fail(wrongSecretKey(e)          ? tr("The Secret Key is wrong.")
+                     : wrongKey(e)              ? tr("The Secret Key or the master password is wrong.")
                      : e.code == "unauthorized" ? tr("The email address or the master password is wrong.")
-                         : messageFor(e));
+                                                : messageFor(e));
                 return;
             }
             if (info->mfa) {
@@ -1073,9 +1086,9 @@ void AccountManager::submitMfa(const QString& totp)
             }
             if (!e.ok()) {
                 fail(e.code == "mfa_expired" ? tr("The sign-in expired or the code was wrong too often. Sign in again.")
-                     : wrongKey(e)
-                         ? tr("The Secret Key or the master password is wrong.")
-                         : messageFor(e));
+                     : wrongSecretKey(e)    ? tr("The Secret Key is wrong.")
+                     : wrongKey(e)          ? tr("The Secret Key or the master password is wrong.")
+                                            : messageFor(e));
                 return;
             }
             finishSignIn(*info, false);
