@@ -1,0 +1,34 @@
+# The desktop's link to openvireo-core (cmake/OpenVireoCore.cmake builds it with Corrosion).
+#
+# A wrapper with no code of its own: it links the core's C++ binding, ov-ffi-cpp (header <ovcore.h>,
+# namespace ov), from one pinned commit, so this Cargo.lock pins the whole core. ov-ffi-cpp's build
+# script exports the headers to OV_CXX_INCLUDE_DIR.
+#
+# To move to a newer core: change `rev` and run `cargo update -p ov-ffi-cpp`.
+
+[package]
+name = "ov-desktop"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-only OR GPL-3.0-only"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[features]
+# opaque-ke's server half and the seeded OPAQUE steps, for the desktop's tests (WITH_TESTS)
+test-server = ["ov-ffi-cpp/test-server"]
+
+[dependencies]
+ov-ffi-cpp = { git = "https://github.com/openvireo/openvireo-core", rev = "966606d344e970062589a423eb70c9d20137f605" }
+
+# Debug builds of the desktop still run the KDFs (Argon2id, AES-KDF) at full speed
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3

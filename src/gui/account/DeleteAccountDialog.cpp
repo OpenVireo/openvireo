@@ -19,7 +19,6 @@
 
 #include "account/AccountManager.h"
 #include "account/AccountPlan.h"
-#include "account/AuthClient.h"
 #include "account/ServiceAccountAdmin.h"
 #include "gui/MessageBox.h"
 #include "gui/MessageWidget.h"
@@ -37,6 +36,15 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVBoxLayout>
+
+namespace
+{
+    rust::String rs(const QString& text)
+    {
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+    }
+} // namespace
 
 namespace
 {
@@ -278,17 +286,24 @@ void DeleteAccountDialog::fill()
             }
             setBusy(true);
             QPointer<DeleteAccountDialog> guard(this);
-            m_account->client()->deleteOrg(orgId, [guard](const AuthClient::Response& response) {
-                if (!guard) {
-                    return;
-                }
-                guard->setBusy(false);
-                if (!response.isSuccess()) {
-                    guard->m_message->showMessage(AuthClient::errorMessage(response), MessageWidget::Error);
-                    return;
-                }
-                guard->reload();
-            });
+            m_account->callAccount(
+                this,
+                [orgId](const ov::Account& account, const ov::CancelToken& cancel) {
+                    account.delete_org(rs(orgId), cancel);
+                },
+                [guard](const AccountManager::CoreError& error) {
+                    if (!guard) {
+                        return;
+                    }
+                    guard->setBusy(false);
+                    if (!error.ok()) {
+                        guard->m_message->showMessage(
+                            guard->m_account ? guard->m_account->errorMessage(error) : error.message,
+                            MessageWidget::Error);
+                        return;
+                    }
+                    guard->reload();
+                });
         });
     }
 

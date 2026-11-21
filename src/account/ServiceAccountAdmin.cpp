@@ -22,63 +22,239 @@
 #include "VaultSharing.h"
 
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSharedPointer>
 #include <QUrl>
-#include <QUuid>
 
 using namespace AccountCrypto;
 
 namespace
 {
-    QDateTime timestamp(const QJsonValue& value)
+    using CoreError = AccountManager::CoreError;
+
+    QDateTime timestamp(const rust::String& value)
     {
-        return value.isString() ? QDateTime::fromString(value.toString(), Qt::ISODate) : QDateTime();
+        const auto text = CoreHost::toQString(value);
+        return text.isEmpty() ? QDateTime() : QDateTime::fromString(text, Qt::ISODate);
     }
 
-    QJsonValue timestampJson(const QDateTime& time)
+    rust::String timestampText(const QDateTime& time)
     {
-        return time.isValid() ? QJsonValue(time.toUTC().toString(Qt::ISODate)) : QJsonValue(QJsonValue::Null);
+        const auto text = time.isValid() ? time.toUTC().toString(Qt::ISODate).toUtf8() : QByteArray();
+        return rust::String(text.constData(), static_cast<size_t>(text.size()));
     }
 
-    QString responseError(const AuthClient::Response& response)
+    rust::String rs(const QString& text)
     {
-        return response.isSuccess() ? QString() : AuthClient::errorMessage(response);
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
     }
 
-    // Runs `step` on each item, one after the other, then `finish`
-    template <typename T>
-    void inTurn(const QList<T>& items,
-                int index,
-                const std::function<void(const T&, std::function<void()>)>& step,
-                const std::function<void()>& finish)
+    QByteArray toBytes(const rust::Vec<uint8_t>& data)
     {
-        if (index >= items.size()) {
-            finish();
-            return;
+        return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+    }
+
+    rust::Vec<uint8_t> bytesOf(const QByteArray& data)
+    {
+        rust::Vec<uint8_t> out;
+        out.reserve(static_cast<size_t>(data.size()));
+        for (auto c : data) {
+            out.push_back(static_cast<uint8_t>(c));
         }
-        step(items.at(index), [items, index, step, finish] { inTurn(items, index + 1, step, finish); });
+        return out;
+    }
+
+    QString orgRoleName(ov::OrgRole role)
+    {
+        switch (role) {
+        case ov::OrgRole::Owner:
+            return QStringLiteral("owner");
+        case ov::OrgRole::Admin:
+            return QStringLiteral("admin");
+        default:
+            return QStringLiteral("member");
+        }
+    }
+
+    ov::OrgRole orgRoleOf(const QString& role)
+    {
+        return role == "owner" ? ov::OrgRole::Owner : role == "admin" ? ov::OrgRole::Admin : ov::OrgRole::Member;
+    }
+
+    QString statusName(ov::MemberStatus status)
+    {
+        switch (status) {
+        case ov::MemberStatus::Invited:
+            return QStringLiteral("invited");
+        case ov::MemberStatus::Accepted:
+            return QStringLiteral("accepted");
+        default:
+            return QStringLiteral("confirmed");
+        }
+    }
+
+    ov::MemberStatus statusOf(const QString& status)
+    {
+        return status == "invited"    ? ov::MemberStatus::Invited
+               : status == "accepted" ? ov::MemberStatus::Accepted
+                                      : ov::MemberStatus::Confirmed;
+    }
+
+    QString shareLinksName(ov::ShareLinkPolicy policy)
+    {
+        switch (policy) {
+        case ov::ShareLinkPolicy::Off:
+            return QStringLiteral("off");
+        case ov::ShareLinkPolicy::Managers:
+            return QStringLiteral("managers");
+        default:
+            return QStringLiteral("on");
+        }
+    }
+
+    ov::VaultRole vaultRoleOf(const QString& role)
+    {
+        return role == "manage" ? ov::VaultRole::Manage : role == "write" ? ov::VaultRole::Write : ov::VaultRole::Read;
+    }
+
+    PublicKeys publicKeysOf(const ov::PublicKeys& keys)
+    {
+        PublicKeys out;
+        out.encPk = toBytes(keys.enc_pk);
+        out.signPk = toBytes(keys.sign_pk);
+        out.sig = toBytes(keys.sig);
+        return out;
+    }
+
+    ov::PublicKeys corePublicKeys(const PublicKeys& keys)
+    {
+        ov::PublicKeys out;
+        out.enc_pk = bytesOf(keys.encPk);
+        out.sign_pk = bytesOf(keys.signPk);
+        out.sig = bytesOf(keys.sig);
+        out.fingerprint = rs(keys.isNull() ? QString() : fingerprint(keys));
+        return out;
+    }
+
+    AccountPlan::Plan planOf(bool has, const ov::Plan& plan)
+    {
+        AccountPlan::Plan out;
+        if (!has) {
+            return out;
+        }
+        out.id = CoreHost::toQString(plan.id);
+        out.hasBilling = plan.has_billing;
+        if (plan.has_billing) {
+            out.billing.source = CoreHost::toQString(plan.billing.source);
+            out.billing.interval = CoreHost::toQString(plan.billing.interval);
+            out.billing.status = CoreHost::toQString(plan.billing.status);
+            out.billing.manage = CoreHost::toQString(plan.billing.manage);
+            out.billing.renewsAt = timestamp(plan.billing.renews_at);
+            out.billing.endsAt = timestamp(plan.billing.ends_at);
+        }
+        return out;
+    }
+
+    AccountManager::Org orgOf(const ov::Org& org)
+    {
+        AccountManager::Org out;
+        out.id = CoreHost::toQString(org.id);
+        out.name = CoreHost::toQString(org.name);
+        out.role = orgRoleName(org.role);
+        out.shareLinks = org.has_item_share_links ? shareLinksName(org.item_share_links) : QStringLiteral("on");
+        out.plan = planOf(org.has_plan, org.plan);
+        return out;
+    }
+
+    ServiceAccountAdmin::Member memberOf(const ov::Member& member)
+    {
+        ServiceAccountAdmin::Member out;
+        out.userId = CoreHost::toQString(member.user_id);
+        out.email = CoreHost::toQString(member.email);
+        out.role = orgRoleName(member.role);
+        out.status = statusName(member.status);
+        if (member.has_public_keys) {
+            out.publicKeys = publicKeysOf(member.public_keys);
+            out.verified = verifyPublicKeys(out.publicKeys);
+        }
+        return out;
+    }
+
+    ov::Member coreMember(const ServiceAccountAdmin::Member& member)
+    {
+        ov::Member out;
+        out.user_id = rs(member.userId);
+        out.email = rs(member.email);
+        out.role = orgRoleOf(member.role);
+        out.status = statusOf(member.status);
+        out.has_public_keys = !member.publicKeys.isNull();
+        out.public_keys = corePublicKeys(member.publicKeys);
+        return out;
+    }
+
+    ServiceAccountAdmin::ServiceAccount serviceAccountOf(const ov::ServiceAccountInfo& info)
+    {
+        ServiceAccountAdmin::ServiceAccount account;
+        account.id = CoreHost::toQString(info.id);
+        account.orgId = CoreHost::toQString(info.org_id);
+        account.name = CoreHost::toQString(info.name);
+        if (info.has_public_keys) {
+            account.publicKeys = publicKeysOf(info.public_keys);
+        }
+        account.createdBy = CoreHost::toQString(info.created_by);
+        account.createdAt = timestamp(info.created_at);
+        account.expiresAt = timestamp(info.expires_at);
+        account.disabled = info.disabled;
+        return account;
+    }
+
+    ov::ExpiryChange expiryChange(const QDateTime& expiresAt)
+    {
+        ov::ExpiryChange change;
+        change.kind = expiresAt.isValid() ? ov::ExpiryKind::At : ov::ExpiryKind::Never;
+        change.at = timestampText(expiresAt);
+        return change;
+    }
+
+    QString tokenText(rust::Vec<uint8_t>& token)
+    {
+        const auto text = QString::fromUtf8(reinterpret_cast<const char*>(token.data()), static_cast<int>(token.size()));
+        ov::wipe(token);
+        return text;
     }
 } // namespace
-
-ServiceAccountAdmin::ServiceAccount ServiceAccountAdmin::ServiceAccount::fromJson(const QJsonObject& json)
-{
-    ServiceAccount account;
-    account.id = json.value("id").toString();
-    account.orgId = json.value("org_id").toString();
-    account.name = json.value("name").toString();
-    account.publicKeys = PublicKeys::fromJson(json.value("public").toObject());
-    account.createdBy = json.value("created_by").toString();
-    account.createdAt = timestamp(json.value("created_at"));
-    account.expiresAt = timestamp(json.value("expires_at"));
-    account.disabled = json.value("disabled").toBool();
-    return account;
-}
 
 ServiceAccountAdmin::ServiceAccountAdmin(AccountManager* account, QObject* parent)
     : QObject(parent)
     , m_account(account)
 {
+}
+
+QString ServiceAccountAdmin::messageFor(const CoreError& error) const
+{
+    return m_account ? m_account->errorMessage(error) : error.message;
+}
+
+void ServiceAccountAdmin::call(AccountManager::AccountWork work, AccountManager::AccountDone done)
+{
+    if (!m_account) {
+        CoreError error;
+        error.code = QStringLiteral("signed_out");
+        error.message = tr("Not signed in.");
+        done(error);
+        return;
+    }
+    m_account->callAccount(this, std::move(work), std::move(done));
+}
+
+void ServiceAccountAdmin::simple(AccountManager::AccountWork work, Done done)
+{
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(std::move(work), [guard, done](const CoreError& error) {
+        done(error.ok(), error.ok() ? QString() : (guard ? guard->messageFor(error) : error.message));
+    });
 }
 
 void ServiceAccountAdmin::createOrg(const QString& name, OrgCallback done)
@@ -91,79 +267,76 @@ void ServiceAccountAdmin::createOrg(const QString& name, OrgCallback done)
         done({}, tr("Give the organization a name."));
         return;
     }
+    auto org = std::make_shared<Org>();
     QPointer<ServiceAccountAdmin> guard(this);
-    m_account->client()->createOrg(name.trimmed(), [guard, done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
-        Org org{json.value("id").toString(),
-                json.value("name").toString(),
-                json.value("role").toString("owner"),
-                {},
-                QStringLiteral("on"),
-                {}};
-        if (guard && guard->m_account) {
-            guard->m_account->reloadVaults();
-        }
-        done(org, {});
-    });
+    const auto trimmed = name.trimmed();
+    call(
+        [trimmed, org](const ov::Account& account, const ov::CancelToken& cancel) {
+            *org = orgOf(account.create_org(rs(trimmed), cancel));
+        },
+        [guard, org, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            if (org->role.isEmpty()) {
+                org->role = QStringLiteral("owner");
+            }
+            if (guard && guard->m_account) {
+                guard->m_account->reloadVaults();
+            }
+            done(*org, {});
+        });
 }
 
 void ServiceAccountAdmin::loadOrgs(OrgsCallback done)
 {
-    if (!m_account) {
-        done({}, tr("Not signed in."));
-        return;
-    }
-    m_account->client()->me([done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<Org> orgs;
-        for (const auto& value : response.json().value("orgs").toArray()) {
-            const auto json = value.toObject();
-            // Invited or accepted members hold no keys yet
-            if (json.contains("status") && json.value("status").toString() != "confirmed") {
-                continue;
+    auto orgs = std::make_shared<QList<Org>>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgs](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& membership : account.orgs(cancel)) {
+                // Invited or accepted members hold no keys yet
+                if (membership.status != ov::MemberStatus::Confirmed) {
+                    continue;
+                }
+                Org org;
+                org.id = CoreHost::toQString(membership.id);
+                org.name = CoreHost::toQString(membership.name);
+                org.role = orgRoleName(membership.role);
+                org.status = statusName(membership.status);
+                org.shareLinks = membership.has_item_share_links ? shareLinksName(membership.item_share_links)
+                                                                  : QStringLiteral("on");
+                org.plan = planOf(membership.has_plan, membership.plan);
+                *orgs << org;
             }
-            Org org{json.value("id").toString(),
-                    json.value("name").toString(),
-                    json.value("role").toString(),
-                    json.value("status").toString(),
-                    json.value("item_share_links").toString("on"),
-                    {}};
-            org.plan = AccountPlan::parse(json.value("plan"));
-            orgs << org;
-        }
-        done(orgs, {});
-    });
+        },
+        [guard, orgs, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*orgs, {});
+        });
 }
 
 void ServiceAccountAdmin::listMembers(const QString& orgId, MembersCallback done)
 {
-    m_account->client()->orgMembers(orgId, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<Member> members;
-        for (const auto& value : response.json().value("members").toArray()) {
-            const auto json = value.toObject();
-            Member member;
-            member.userId = json.value("user_id").toString();
-            member.email = json.value("email").toString();
-            member.role = json.value("role").toString();
-            member.status = json.value("status").toString();
-            bool ok = false;
-            member.publicKeys = PublicKeys::fromJson(json.value("public").toObject(), &ok);
-            member.verified = ok && verifyPublicKeys(member.publicKeys);
-            members << member;
-        }
-        done(members, {});
-    });
+    auto members = std::make_shared<QList<Member>>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, members](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& member : account.org_members(rs(orgId), cancel)) {
+                *members << memberOf(member);
+            }
+        },
+        [guard, members, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*members, {});
+        });
 }
 
 QList<QPair<QString, QString>> ServiceAccountAdmin::orgVaults(const QString& orgId) const
@@ -195,108 +368,45 @@ void ServiceAccountAdmin::confirmMember(const QString& orgId,
              tr("The public keys of %1 don't carry a valid signature. Nothing was sealed to them.").arg(member.email));
         return;
     }
-    // Owners and admins get every org vault with manage; a regular member what the admin picked
-    const auto& keyring = m_account->keyring();
-    QJsonArray grants;
-    for (const auto& vault : orgVaults(orgId)) {
-        QString role = member.isAdmin() ? QStringLiteral("manage") : vaults.value(vault.first);
-        if (role.isEmpty()) {
-            continue;
-        }
-        if (!member.isAdmin() && role != "read" && role != "write" && role != "manage") {
-            done(false, tr("Unknown role: %1").arg(role));
-            return;
-        }
-        const auto current = keyring.vault(vault.first).currentKeyVersion;
-        const auto key = keyring.vaultKey(vault.first, current);
-        if (key.empty()) {
-            continue;
-        }
-        auto grant = AuthClient::grant(
-            member.principal(), role, current, seal(member.publicKeys.encPk, key, vaultKeyAad(vault.first)));
-        grant["vault_id"] = vault.first;
-        grants << grant;
-    }
-
-    QPointer<ServiceAccountAdmin> guard(this);
-    auto send = [guard, orgId, member, grants, done](const QJsonArray& masterKeys) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        guard->m_account->client()->confirmMember(
-            orgId, member.userId, grants, masterKeys, [guard, done](const AuthClient::Response& response) {
-                if (!response.isSuccess()) {
-                    done(false, AuthClient::errorMessage(response));
-                    return;
-                }
-                if (guard && guard->m_account) {
-                    guard->m_account->reloadVaults();
-                }
-                done(true, {});
-            });
-    };
+    // Owners and admins get every org vault this account manages with manage, and the org's SA master keys (the core
+    // does both); a regular member what the admin picked
+    QList<QPair<QString, QString>> grants;
     if (!member.isAdmin()) {
-        send({});
-        return;
+        for (const auto& vault : orgVaults(orgId)) {
+            const auto role = vaults.value(vault.first);
+            if (role.isEmpty()) {
+                continue;
+            }
+            if (role != "read" && role != "write" && role != "manage") {
+                done(false, tr("Unknown role: %1").arg(role));
+                return;
+            }
+            grants << qMakePair(vault.first, role);
+        }
     }
-    // An admin can issue secrets for every service account, so they get each master key too
-    sealMasterKeys(orgId, member, [send, done](const QJsonArray& masterKeys, const QString& error) {
-        if (!error.isEmpty()) {
-            done(false, error);
-            return;
-        }
-        send(masterKeys);
-    });
-}
-
-void ServiceAccountAdmin::sealMasterKeys(const QString& orgId,
-                                         const Member& member,
-                                         std::function<void(const QJsonArray&, const QString&)> done)
-{
     QPointer<ServiceAccountAdmin> guard(this);
-    list(orgId, [guard, member, done](const QList<ServiceAccount>& accounts, const QString& error) {
-        if (!guard) {
-            return;
-        }
-        if (!error.isEmpty()) {
-            done({}, error);
-            return;
-        }
-        if (accounts.isEmpty()) {
-            done({}, {});
-            return;
-        }
-        struct Gather
-        {
-            QJsonArray masterKeys;
-            int left = 0;
-        };
-        auto gather = QSharedPointer<Gather>::create();
-        gather->left = accounts.size();
-        for (const auto& account : accounts) {
-            // Only owners and admins get their sealed copy; one this account doesn't hold is skipped
-            guard->m_account->client()->getServiceAccount(
-                account.id, [guard, gather, member, done, saId = account.id](const AuthClient::Response& response) {
-                    if (!guard || !guard->m_account) {
-                        return;
-                    }
-                    SecureBytes master;
-                    if (response.isSuccess()
-                        && unseal(guard->m_account->keyset().encSk,
-                                  fromBase64Url(response.json().value("master_key").toString()),
-                                  saMasterAad(saId),
-                                  &master)) {
-                        gather->masterKeys << QJsonObject{
-                            {"sa_id", saId},
-                            {"principal", member.principal()},
-                            {"sealed_key", toBase64Url(seal(member.publicKeys.encPk, master, saMasterAad(saId)))}};
-                    }
-                    if (--gather->left == 0) {
-                        done(gather->masterKeys, {});
-                    }
-                });
-        }
-    });
+    call(
+        [orgId, member, grants](const ov::Account& account, const ov::CancelToken& cancel) {
+            rust::Vec<ov::VaultGrantRequest> requests;
+            for (const auto& grant : grants) {
+                ov::VaultGrantRequest request;
+                request.vault_id = rs(grant.first);
+                request.role = vaultRoleOf(grant.second);
+                requests.push_back(std::move(request));
+            }
+            account.confirm_member(rs(orgId), coreMember(member), std::move(requests), cancel);
+        },
+        [guard, done](const CoreError& error) {
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!error.ok()) {
+                done(false, guard->messageFor(error));
+                return;
+            }
+            guard->m_account->reloadVaults();
+            done(true, {});
+        });
 }
 
 QStringList ServiceAccountAdmin::assignableRoles(const QString& role)
@@ -332,81 +442,23 @@ void ServiceAccountAdmin::setMemberRole(const QString& orgId, const Member& memb
              tr("The public keys of %1 don't carry a valid signature. Nothing was sealed to them.").arg(member.email));
         return;
     }
+    // Promoting hands over the SA master keys and manage on every org vault this account manages, in the core
     QPointer<ServiceAccountAdmin> guard(this);
-    auto send = [guard, orgId, member, role, promote, done](const QJsonArray& masterKeys) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        guard->m_account->client()->setMemberRole(
-            orgId,
-            member.userId,
-            role,
-            masterKeys,
-            [guard, orgId, member, promote, done](const AuthClient::Response& response) {
-                if (!guard || !guard->m_account) {
-                    return;
-                }
-                if (!response.isSuccess()) {
-                    done(false,
-                         response.status == 409 ? tr("An organization needs at least one owner.")
-                                                : AuthClient::errorMessage(response));
-                    return;
-                }
-                if (!promote) {
-                    guard->m_account->reloadVaults();
-                    done(true, {});
-                    return;
-                }
-                guard->grantManagedVaults(orgId, member, done);
-            });
-    };
-    if (!promote) {
-        send({});
-        return;
-    }
-    sealMasterKeys(orgId, member, [send, done](const QJsonArray& masterKeys, const QString& error) {
-        if (!error.isEmpty()) {
-            done(false, error);
-            return;
-        }
-        send(masterKeys);
-    });
-}
-
-void ServiceAccountAdmin::grantManagedVaults(const QString& orgId, const Member& member, Done done)
-{
-    VaultSharing::Recipient recipient;
-    recipient.principal = member.principal();
-    recipient.email = member.email;
-    recipient.publicKeys = member.publicKeys;
-    recipient.verified = member.verified;
-    QStringList vaultIds;
-    for (const auto& vault : orgVaults(orgId)) {
-        vaultIds << vault.first;
-    }
-    auto* sharing = new VaultSharing(m_account, this);
-    auto errors = QSharedPointer<QStringList>::create();
-    QPointer<ServiceAccountAdmin> guard(this);
-    inTurn<QString>(
-        vaultIds,
-        0,
-        [sharing, recipient, errors](const QString& vaultId, std::function<void()> next) {
-            sharing->grant(vaultId, recipient, "manage", [errors, next](bool ok, const QString& error) {
-                if (!ok) {
-                    *errors << error;
-                }
-                next();
-            });
+    call(
+        [orgId, member, role](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.set_member_role(rs(orgId), coreMember(member), orgRoleOf(role), cancel);
         },
-        [guard, sharing, errors, done] {
-            sharing->deleteLater();
-            if (guard && guard->m_account) {
-                guard->m_account->reloadVaults();
+        [guard, done](const CoreError& error) {
+            if (!guard || !guard->m_account) {
+                return;
             }
-            done(errors->isEmpty(),
-                 errors->isEmpty() ? QString()
-                                   : tr("The role changed, but not every vault could be shared: %1")
-                                         .arg(errors->join(QStringLiteral("; "))));
+            guard->m_account->reloadVaults();
+            if (!error.ok()) {
+                done(false,
+                     error.status == 409 ? tr("An organization needs at least one owner.") : guard->messageFor(error));
+                return;
+            }
+            done(true, {});
         });
 }
 
@@ -416,84 +468,69 @@ void ServiceAccountAdmin::removeMember(const QString& orgId, const QString& user
         done({}, {}, tr("Unlock your account first."));
         return;
     }
+    // The core removes the member, then rotates the vaults the server flagged that this account manages
+    struct Report
+    {
+        QStringList rotated;
+        QList<QPair<QString, QString>> failed;
+    };
+    auto report = std::make_shared<Report>();
     QPointer<ServiceAccountAdmin> guard(this);
-    m_account->client()->removeMember(orgId, userId, [guard, orgId, done](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done({},
-                 {},
-                 response.status == 409 ? tr("An organization needs at least one owner.")
-                                        : AuthClient::errorMessage(response));
-            return;
-        }
-        // The server flagged the vaults the member could open; rotate the ones this account manages
-        guard->m_account->client()->listVaults([guard, orgId, done](const AuthClient::Response& response) {
+    call(
+        [orgId, userId, report](const ov::Account& account, const ov::CancelToken& cancel) {
+            auto result = account.remove_member(rs(orgId), rs(userId), cancel);
+            for (const auto& id : result.rotated) {
+                report->rotated << CoreHost::toQString(id);
+            }
+            for (const auto& failure : result.failed) {
+                report->failed << qMakePair(CoreHost::toQString(failure.vault_id),
+                                            CoreHost::toQString(failure.error.message));
+            }
+        },
+        [guard, report, done](const CoreError& error) {
             if (!guard || !guard->m_account) {
                 return;
             }
-            if (!response.isSuccess()) {
-                done({}, {}, AuthClient::errorMessage(response));
+            if (!error.ok()) {
+                done({},
+                     {},
+                     error.status == 409 ? tr("An organization needs at least one owner.") : guard->messageFor(error));
                 return;
             }
-            QList<VaultKeyring::Vault> flagged;
-            for (const auto& value : response.json().value("vaults").toArray()) {
-                const auto vault = VaultKeyring::Vault::fromJson(value.toObject());
-                if (vault.orgId == orgId && vault.rotationRequired && vault.role == "manage") {
-                    flagged << vault;
-                }
+            QStringList failed;
+            for (const auto& failure : report->failed) {
+                const auto& keyring = guard->m_account->keyring();
+                const auto name = keyring.contains(failure.first) ? keyring.vault(failure.first).name : failure.first;
+                failed << QStringLiteral("%1: %2").arg(name, failure.second);
             }
-            auto* sharing = new VaultSharing(guard->m_account, guard);
-            auto rotated = QSharedPointer<QStringList>::create();
-            auto failed = QSharedPointer<QStringList>::create();
-            inTurn<VaultKeyring::Vault>(
-                flagged,
-                0,
-                [guard, sharing, rotated, failed](const VaultKeyring::Vault& vault, std::function<void()> next) {
-                    const auto name = guard && guard->m_account && guard->m_account->keyring().contains(vault.id)
-                                          ? guard->m_account->keyring().vault(vault.id).name
-                                          : vault.id;
-                    sharing->rotate(vault.id, {}, [rotated, failed, next, id = vault.id, name](bool ok, const QString& error) {
-                        if (ok) {
-                            *rotated << id;
-                        } else {
-                            *failed << QStringLiteral("%1: %2").arg(name, error);
-                        }
-                        next();
-                    });
-                },
-                [guard, sharing, rotated, failed, done] {
-                    sharing->deleteLater();
-                    if (guard && guard->m_account) {
-                        guard->m_account->reloadVaults();
-                    }
-                    done(*rotated, *failed, {});
-                });
+            guard->m_account->reloadVaults();
+            done(report->rotated, failed, {});
         });
-    });
 }
 
 void ServiceAccountAdmin::listInvitations(const QString& orgId, InvitationsCallback done)
 {
-    m_account->client()->listInvitations(orgId, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<Invitation> invitations;
-        for (const auto& value : response.json().value("invitations").toArray()) {
-            const auto json = value.toObject();
-            Invitation invitation;
-            invitation.id = json.value("id").toString();
-            invitation.email = json.value("email").toString();
-            invitation.role = json.value("role").toString();
-            invitation.expiresAt = timestamp(json.value("expires_at"));
-            invitation.invitedBy = json.value("invited_by").toString();
-            invitations << invitation;
-        }
-        done(invitations, {});
-    });
+    auto invitations = std::make_shared<QList<Invitation>>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, invitations](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& row : account.invitations(rs(orgId), cancel)) {
+                Invitation invitation;
+                invitation.id = CoreHost::toQString(row.id);
+                invitation.email = CoreHost::toQString(row.email);
+                invitation.role = orgRoleName(row.role);
+                invitation.expiresAt = timestamp(row.expires_at);
+                invitation.invitedBy = CoreHost::toQString(row.invited_by);
+                *invitations << invitation;
+            }
+        },
+        [guard, invitations, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*invitations, {});
+        });
 }
 
 void ServiceAccountAdmin::invite(const QString& orgId, const QString& email, const QString& role, Done done)
@@ -506,20 +543,28 @@ void ServiceAccountAdmin::invite(const QString& orgId, const QString& email, con
         done(false, tr("Unknown role: %1").arg(role));
         return;
     }
-    m_account->client()->invite(orgId, email.trimmed(), role, [done](const AuthClient::Response& response) {
-        if (response.status == 409) {
-            done(false, tr("That account is already a member of the organization."));
-            return;
-        }
-        done(response.isSuccess(), responseError(response));
-    });
+    const auto trimmed = email.trimmed();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, trimmed, role](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.invite(rs(orgId), rs(trimmed), orgRoleOf(role), cancel);
+        },
+        [guard, done](const CoreError& error) {
+            if (error.status == 409) {
+                done(false, tr("That account is already a member of the organization."));
+                return;
+            }
+            done(error.ok(), error.ok() ? QString() : (guard ? guard->messageFor(error) : error.message));
+        });
 }
 
 void ServiceAccountAdmin::cancelInvitation(const QString& orgId, const QString& invitationId, Done done)
 {
-    m_account->client()->cancelInvitation(orgId, invitationId, [done](const AuthClient::Response& response) {
-        done(response.isSuccess(), responseError(response));
-    });
+    simple(
+        [orgId, invitationId](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.cancel_invitation(rs(orgId), rs(invitationId), cancel);
+        },
+        done);
 }
 
 QString ServiceAccountAdmin::invitationToken(const QString& linkOrToken)
@@ -548,66 +593,51 @@ void ServiceAccountAdmin::acceptInvitation(const QString& linkOrToken, Done done
         return;
     }
     QPointer<ServiceAccountAdmin> guard(this);
-    m_account->client()->acceptInvitation(token, [guard, done](const AuthClient::Response& response) {
-        if (response.status == 410) {
-            done(false, tr("The invitation was already used or has expired. Ask for a new one."));
-            return;
-        }
-        if (response.status == 403) {
-            done(false, tr("The invitation is for another email address. Sign in with that account to accept it."));
-            return;
-        }
-        if (response.status == 409) {
-            done(false, tr("You are already a member of this organization."));
-            return;
-        }
-        if (!response.isSuccess()) {
-            done(false, AuthClient::errorMessage(response));
-            return;
-        }
-        if (guard && guard->m_account) {
-            guard->m_account->reloadVaults();
-        }
-        done(true, {});
-    });
+    call(
+        [token](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.accept_invitation(bytesOf(token.toUtf8()), cancel);
+        },
+        [guard, done](const CoreError& error) {
+            if (error.status == 410) {
+                done(false, tr("The invitation was already used or has expired. Ask for a new one."));
+                return;
+            }
+            if (error.status == 403) {
+                done(false, tr("The invitation is for another email address. Sign in with that account to accept it."));
+                return;
+            }
+            if (error.status == 409) {
+                done(false, tr("You are already a member of this organization."));
+                return;
+            }
+            if (!error.ok()) {
+                done(false, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            if (guard && guard->m_account) {
+                guard->m_account->reloadVaults();
+            }
+            done(true, {});
+        });
 }
 
 void ServiceAccountAdmin::list(const QString& orgId, ListCallback done)
 {
-    m_account->client()->listServiceAccounts(orgId, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<ServiceAccount> accounts;
-        for (const auto& value : response.json().value("service_accounts").toArray()) {
-            accounts << ServiceAccount::fromJson(value.toObject());
-        }
-        done(accounts, {});
-    });
-}
-
-QJsonObject ServiceAccountAdmin::newSecret(const QString& saId,
-                                           const SecureBytes& master,
-                                           const QString& name,
-                                           const QDateTime& expiresAt,
-                                           QString* token) const
-{
-    ServiceAccountToken parts;
-    parts.url = m_account->server().issuer;
-    parts.saId = saId;
-    parts.secret = randomSecure(KeySize);
-    parts.kek = randomSecure(KeySize);
-    *token = buildServiceAccountToken(parts);
-    QJsonObject secret{{"id", QUuid::createUuid().toString(QUuid::WithoutBraces)},
-                       {"secret_hash", parts.secretHash()},
-                       {"prefix", parts.secretPrefix()},
-                       {"wrapped_master", toBase64Url(wrap(parts.kek, master, saMasterAad(saId)))},
-                       {"expires_at", timestampJson(expiresAt)}};
-    if (!name.isEmpty()) {
-        secret["name"] = name;
-    }
-    return secret;
+    auto accounts = std::make_shared<QList<ServiceAccount>>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, accounts](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& info : account.service_accounts(rs(orgId), cancel)) {
+                *accounts << serviceAccountOf(info);
+            }
+        },
+        [guard, accounts, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*accounts, {});
+        });
 }
 
 void ServiceAccountAdmin::create(const QString& orgId,
@@ -623,125 +653,91 @@ void ServiceAccountAdmin::create(const QString& orgId,
         done({}, {}, tr("Give the service account a name."));
         return;
     }
-    QPointer<ServiceAccountAdmin> guard(this);
-    // The master key is sealed to every owner and admin, so that any of them can issue secrets later
-    m_account->client()->orgMembers(orgId, [guard, orgId, name, expiresAt, done](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done({}, {}, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto saId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const auto master = randomSecure(KeySize);
-        auto keyset = generateKeyset();
-
-        QJsonArray masterKeys;
-        bool sealedToSelf = false;
-        const auto self = guard->m_account->principal();
-        for (const auto& value : response.json().value("members").toArray()) {
-            const auto member = value.toObject();
-            const auto role = member.value("role").toString();
-            if ((role != "owner" && role != "admin") || member.value("status").toString("confirmed") != "confirmed") {
-                continue;
-            }
-            const auto principal = "user:" + member.value("user_id").toString();
-            bool ok = false;
-            const auto keys = principal == self ? guard->m_account->keyset().publicKeys
-                                                : PublicKeys::fromJson(member.value("public").toObject(), &ok);
-            if (principal != self && (!ok || !verifyPublicKeys(keys))) {
-                // Never seal to keys that aren't self-signed; that admin can be given the key later
-                continue;
-            }
-            masterKeys << QJsonObject{{"sa_id", saId},
-                                      {"principal", principal},
-                                      {"sealed_key", toBase64Url(seal(keys.encPk, master, saMasterAad(saId)))}};
-            sealedToSelf |= principal == self;
-        }
-        if (!sealedToSelf) {
-            masterKeys << QJsonObject{
-                {"sa_id", saId},
-                {"principal", self},
-                {"sealed_key",
-                 toBase64Url(seal(guard->m_account->keyset().publicKeys.encPk, master, saMasterAad(saId)))}};
-        }
-
+    // The core makes the keyset and master key, seals the master key to every owner and admin and issues the first
+    // secret, whose token is shown once
+    struct Created
+    {
+        ServiceAccount account;
         QString token;
-        const auto secret = guard->newSecret(saId, master, QObject::tr("First secret"), expiresAt, &token);
-        QJsonObject body{{"id", saId},
-                         {"name", name.trimmed()},
-                         {"expires_at", timestampJson(expiresAt)},
-                         {"keyset", wrappedKeysetJson(master, keyset)},
-                         {"master_keys", masterKeys},
-                         {"secret", secret}};
-        auto publicKeys = keyset.publicKeys;
-        keyset.clear();
-        guard->m_account->client()->createServiceAccount(
-            orgId, body, [orgId, saId, name, publicKeys, expiresAt, token, done](const AuthClient::Response& response) {
-                if (!response.isSuccess()) {
-                    done({}, {}, AuthClient::errorMessage(response));
-                    return;
-                }
-                auto account = ServiceAccount::fromJson(response.json());
-                if (account.id.isEmpty()) {
-                    account.id = saId;
-                    account.orgId = orgId;
-                    account.name = name.trimmed();
-                    account.expiresAt = expiresAt;
-                }
-                if (account.publicKeys.isNull()) {
-                    account.publicKeys = publicKeys;
-                }
-                done(account, token, {});
-            });
-    });
+    };
+    auto created = std::make_shared<Created>();
+    const auto trimmed = name.trimmed();
+    const auto secretName = tr("First secret");
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, trimmed, expiresAt, secretName, created](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::NewServiceAccount input;
+            input.name = rs(trimmed);
+            input.expires_at = timestampText(expiresAt);
+            input.secret_name = rs(secretName);
+            auto result = account.create_service_account(rs(orgId), input, cancel);
+            created->account = serviceAccountOf(result.service_account);
+            created->token = tokenText(result.token);
+        },
+        [guard, created, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, {}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(created->account, created->token, {});
+        });
 }
 
 void ServiceAccountAdmin::setExpiry(const QString& saId, const QDateTime& expiresAt, Done done)
 {
-    m_account->client()->updateServiceAccount(
-        saId, {{"expires_at", timestampJson(expiresAt)}}, [done](const AuthClient::Response& response) {
-            done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-        });
+    simple(
+        [saId, expiresAt](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::ServiceAccountUpdate update;
+            update.expires_at = expiryChange(expiresAt);
+            account.update_service_account(rs(saId), update, cancel);
+        },
+        done);
 }
 
 void ServiceAccountAdmin::setDisabled(const QString& saId, bool disabled, Done done)
 {
-    m_account->client()->updateServiceAccount(
-        saId, {{"disabled", disabled}}, [done](const AuthClient::Response& response) {
-            done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-        });
+    simple(
+        [saId, disabled](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::ServiceAccountUpdate update;
+            update.expires_at.kind = ov::ExpiryKind::Keep;
+            update.has_disabled = true;
+            update.disabled = disabled;
+            account.update_service_account(rs(saId), update, cancel);
+        },
+        done);
 }
 
 void ServiceAccountAdmin::remove(const QString& saId, Done done)
 {
-    m_account->client()->deleteServiceAccount(saId, [done](const AuthClient::Response& response) {
-        done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-    });
+    simple([saId](const ov::Account& account,
+                  const ov::CancelToken& cancel) { account.delete_service_account(rs(saId), cancel); },
+           done);
 }
 
 void ServiceAccountAdmin::listSecrets(const QString& saId, SecretsCallback done)
 {
-    m_account->client()->listServiceAccountSecrets(saId, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<Secret> secrets;
-        for (const auto& value : response.json().value("secrets").toArray()) {
-            const auto json = value.toObject();
-            Secret secret;
-            secret.id = json.value("id").toString();
-            secret.name = json.value("name").toString();
-            secret.prefix = json.value("prefix").toString();
-            secret.createdAt = timestamp(json.value("created_at"));
-            secret.lastUsedAt = timestamp(json.value("last_used_at"));
-            secret.expiresAt = timestamp(json.value("expires_at"));
-            secrets << secret;
-        }
-        done(secrets, {});
-    });
+    auto secrets = std::make_shared<QList<Secret>>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [saId, secrets](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& row : account.service_account_secrets(rs(saId), cancel)) {
+                Secret secret;
+                secret.id = CoreHost::toQString(row.id);
+                secret.name = CoreHost::toQString(row.name);
+                secret.prefix = CoreHost::toQString(row.prefix);
+                secret.createdAt = timestamp(row.created_at);
+                secret.lastUsedAt = timestamp(row.last_used_at);
+                secret.expiresAt = timestamp(row.expires_at);
+                *secrets << secret;
+            }
+        },
+        [guard, secrets, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*secrets, {});
+        });
 }
 
 void ServiceAccountAdmin::issueSecret(const QString& saId,
@@ -753,37 +749,25 @@ void ServiceAccountAdmin::issueSecret(const QString& saId,
         done({}, {}, tr("Unlock your account first."));
         return;
     }
+    auto token = std::make_shared<QString>();
     QPointer<ServiceAccountAdmin> guard(this);
-    m_account->client()->getServiceAccount(
-        saId, [guard, saId, name, expiresAt, done](const AuthClient::Response& response) {
-            if (!guard || !guard->m_account) {
+    call(
+        [saId, name, expiresAt, token](const ov::Account& account, const ov::CancelToken& cancel) {
+            auto issued = account.issue_service_account_secret(rs(saId), rs(name), timestampText(expiresAt), cancel);
+            *token = tokenText(issued.token);
+        },
+        [guard, saId, token, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({},
+                     {},
+                     error.code == "decryption_failed" || error.code == "no_vault_key"
+                         ? tr("You don't hold this service account's master key. Ask another owner or admin.")
+                         : (guard ? guard->messageFor(error) : error.message));
                 return;
             }
-            if (!response.isSuccess()) {
-                done({}, {}, AuthClient::errorMessage(response));
-                return;
-            }
-            const auto json = response.json();
-            SecureBytes master;
-            if (!unseal(guard->m_account->keyset().encSk,
-                        fromBase64Url(json.value("master_key").toString()),
-                        saMasterAad(saId),
-                        &master)
-                || master.size() != KeySize) {
-                done({}, {}, tr("You don't hold this service account's master key. Ask another owner or admin."));
-                return;
-            }
-            QString token;
-            const auto secret = guard->newSecret(saId, master, name, expiresAt, &token);
-            const auto account = ServiceAccount::fromJson(json);
-            guard->m_account->client()->issueServiceAccountSecret(
-                saId, secret, [account, token, done](const AuthClient::Response& response) {
-                    if (!response.isSuccess()) {
-                        done({}, {}, AuthClient::errorMessage(response));
-                        return;
-                    }
-                    done(account, token, {});
-                });
+            ServiceAccount account;
+            account.id = saId;
+            done(account, *token, {});
         });
 }
 
@@ -792,17 +776,20 @@ void ServiceAccountAdmin::setSecretExpiry(const QString& saId,
                                           const QDateTime& expiresAt,
                                           Done done)
 {
-    m_account->client()->updateServiceAccountSecret(
-        saId, secretId, {{"expires_at", timestampJson(expiresAt)}}, [done](const AuthClient::Response& response) {
-            done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-        });
+    simple(
+        [saId, secretId, expiresAt](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.set_secret_expiry(rs(saId), rs(secretId), expiryChange(expiresAt), cancel);
+        },
+        done);
 }
 
 void ServiceAccountAdmin::revokeSecret(const QString& saId, const QString& secretId, Done done)
 {
-    m_account->client()->revokeServiceAccountSecret(saId, secretId, [done](const AuthClient::Response& response) {
-        done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-    });
+    simple(
+        [saId, secretId](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.revoke_secret(rs(saId), rs(secretId), cancel);
+        },
+        done);
 }
 
 void ServiceAccountAdmin::grantVault(const ServiceAccount& account,
@@ -843,33 +830,33 @@ void ServiceAccountAdmin::vaultAccess(const ServiceAccount& account, AccessCallb
         done({}, {});
         return;
     }
-    struct Pending
+    struct Found
     {
-        int left = 0;
         QHash<QString, QString> roles;
         QString error;
     };
-    auto pending = QSharedPointer<Pending>::create();
-    pending->left = vaultIds.size();
+    auto found = std::make_shared<Found>();
     const auto principal = "sa:" + account.id;
-    for (const auto& vaultId : vaultIds) {
-        m_account->client()->vaultAccess(vaultId,
-                                         [pending, principal, vaultId, done](const AuthClient::Response& response) {
-                                             if (!response.isSuccess()) {
-                                                 pending->error = AuthClient::errorMessage(response);
-                                             } else {
-                                                 for (const auto& value : response.json().value("access").toArray()) {
-                                                     const auto row = value.toObject();
-                                                     if (row.value("principal").toString() == principal) {
-                                                         pending->roles.insert(vaultId, row.value("role").toString());
-                                                     }
-                                                 }
-                                             }
-                                             if (--pending->left == 0) {
-                                                 done(pending->roles, pending->error);
-                                             }
-                                         });
-    }
+    call(
+        [vaultIds, principal, found](const ov::Account& core, const ov::CancelToken& cancel) {
+            for (const auto& vaultId : vaultIds) {
+                try {
+                    for (const auto& member : core.members(rs(vaultId), cancel)) {
+                        if (CoreHost::toQString(member.principal) == principal) {
+                            found->roles.insert(vaultId,
+                                                member.role == ov::VaultRole::Write ? QStringLiteral("write")
+                                                : member.role == ov::VaultRole::Manage ? QStringLiteral("manage")
+                                                                                         : QStringLiteral("read"));
+                        }
+                    }
+                } catch (const std::exception& e) {
+                    found->error = QString::fromUtf8(e.what());
+                }
+            }
+        },
+        [found, done](const CoreError& error) {
+            done(found->roles, error.ok() ? found->error : error.message);
+        });
 }
 
 void ServiceAccountAdmin::revokeVault(const ServiceAccount& account, const QString& vaultId, Done done)
@@ -883,47 +870,54 @@ void ServiceAccountAdmin::revokeVault(const ServiceAccount& account, const QStri
 
 void ServiceAccountAdmin::setShareLinks(const QString& orgId, const QString& policy, OrgCallback done)
 {
-    if (!m_account) {
-        done({}, tr("Not signed in."));
-        return;
-    }
-    m_account->client()->updateOrg(orgId, {{"item_share_links", policy}}, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
-        done(Org{json.value("id").toString(),
-                 json.value("name").toString(),
-                 json.value("role").toString(),
-                 {},
-                 json.value("item_share_links").toString("on"),
-                 {}},
-             {});
-    });
+    auto org = std::make_shared<Org>();
+    const auto value = policy == "off" ? ov::ShareLinkPolicy::Off
+                       : policy == "managers" ? ov::ShareLinkPolicy::Managers
+                                              : ov::ShareLinkPolicy::On;
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, value, org](const ov::Account& account, const ov::CancelToken& cancel) {
+            *org = orgOf(account.set_org_share_links(rs(orgId), value, cancel));
+        },
+        [guard, org, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(*org, {});
+        });
 }
 
 void ServiceAccountAdmin::auditLog(const QString& orgId, const QString& before, AuditCallback done)
 {
-    m_account->client()->auditLog(orgId, before, AuditPageSize, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, {}, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
+    struct Page
+    {
         QList<AuditEvent> events;
-        for (const auto& value : json.value("events").toArray()) {
-            const auto row = value.toObject();
-            AuditEvent event;
-            event.id = row.value("id").toString();
-            event.at = timestamp(row.value("at"));
-            event.actor = row.value("actor").toString();
-            event.action = row.value("action").toString();
-            event.target = row.value("target").toString();
-            event.ip = row.value("ip").toString();
-            event.details = row.value("details").toObject();
-            events << event;
-        }
-        done(events, json.value("next").toString(), {});
-    });
+        QString next;
+    };
+    auto page = std::make_shared<Page>();
+    QPointer<ServiceAccountAdmin> guard(this);
+    call(
+        [orgId, before, page](const ov::Account& account, const ov::CancelToken& cancel) {
+            auto result = account.audit_log(rs(orgId), rs(before), true, AuditPageSize, cancel);
+            for (const auto& row : result.events) {
+                AuditEvent event;
+                event.id = CoreHost::toQString(row.id);
+                event.at = timestamp(row.at);
+                event.actor = CoreHost::toQString(row.actor);
+                event.action = CoreHost::toQString(row.action);
+                event.target = CoreHost::toQString(row.target);
+                event.ip = CoreHost::toQString(row.ip);
+                event.details = QJsonDocument::fromJson(CoreHost::toQString(row.details).toUtf8()).object();
+                page->events << event;
+            }
+            page->next = CoreHost::toQString(result.next);
+        },
+        [guard, page, done](const CoreError& error) {
+            if (!error.ok()) {
+                done({}, {}, guard ? guard->messageFor(error) : error.message);
+                return;
+            }
+            done(page->events, page->next, {});
+        });
 }

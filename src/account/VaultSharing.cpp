@@ -22,48 +22,76 @@
 
 #include "core/Database.h"
 #include "core/Group.h"
+#include "crypto/Random.h"
 #include "crypto/kdf/Argon2Kdf.h"
 #include "gui/remote/RemoteSettings.h"
-#include "gui/remote/SyncServerClient.h"
+#include "keys/CompositeKey.h"
+#include "keys/PasswordKey.h"
 
-#include <QJsonArray>
-#include <QTimer>
-#include <QUuid>
+#include <botan/mem_ops.h>
+
+#include <QScopeGuard>
 
 using namespace AccountCrypto;
 
-// A rotation in progress (SPEC §7)
-struct VaultSharing::Rotation
-{
-    QString vaultId;
-    QStringList remove;
-    int version = 0;
-    SecureBytes newKey;
-    // The keys the blob may still be under, newest first
-    QList<SecureBytes> oldKeys;
-    // Finishing a rotation left pending; `remove` is rotated out afterwards
-    bool resumed = false;
-    Done done;
-};
-
 namespace
 {
-    // How long to wait for the access token that carries a new vault
-    constexpr int TokenWaitMsec = 30 * 1000;
-
-    QList<SecureBytes> unsealKeys(const VaultKeyring::Vault& vault, const SecureBytes& encSk, int onlyVersion = -1)
+    rust::String rs(const QString& text)
     {
-        QList<SecureBytes> keys;
-        for (const auto& sealed : vault.keys) {
-            if (onlyVersion >= 0 && sealed.version != onlyVersion) {
-                continue;
-            }
-            SecureBytes key;
-            if (unseal(encSk, sealed.sealedKey, vaultKeyAad(vault.id), &key) && key.size() == KeySize) {
-                keys << key;
-            }
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+    }
+
+    rust::Vec<uint8_t> bytesOf(const QByteArray& data)
+    {
+        rust::Vec<uint8_t> out;
+        out.reserve(static_cast<size_t>(data.size()));
+        for (auto c : data) {
+            out.push_back(static_cast<uint8_t>(c));
         }
-        return keys;
+        return out;
+    }
+
+    QByteArray toBytes(const rust::Vec<uint8_t>& data)
+    {
+        return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
+    }
+
+    ov::VaultRole roleOf(const QString& role)
+    {
+        return role == "manage" ? ov::VaultRole::Manage : role == "write" ? ov::VaultRole::Write : ov::VaultRole::Read;
+    }
+
+    QString roleName(ov::VaultRole role)
+    {
+        switch (role) {
+        case ov::VaultRole::Manage:
+            return QStringLiteral("manage");
+        case ov::VaultRole::Write:
+            return QStringLiteral("write");
+        default:
+            return QStringLiteral("read");
+        }
+    }
+
+    PublicKeys publicKeysOf(const ov::PublicKeys& keys)
+    {
+        PublicKeys out;
+        out.encPk = toBytes(keys.enc_pk);
+        out.signPk = toBytes(keys.sign_pk);
+        out.sig = toBytes(keys.sig);
+        return out;
+    }
+
+    VaultSharing::Recipient recipientOf(const ov::ShareRecipient& found)
+    {
+        VaultSharing::Recipient recipient;
+        recipient.principal = CoreHost::toQString(found.principal);
+        recipient.email = CoreHost::toQString(found.email);
+        recipient.name = CoreHost::toQString(found.name);
+        recipient.publicKeys = publicKeysOf(found.public_keys);
+        recipient.verified = verifyPublicKeys(recipient.publicKeys);
+        return recipient;
     }
 
     // The account vault remote, in place of the database's sync server remotes
@@ -94,18 +122,6 @@ QString VaultSharing::Recipient::displayName() const
     return name.isEmpty() ? principal : name;
 }
 
-VaultSharing::Recipient VaultSharing::Recipient::fromJson(const QJsonObject& json)
-{
-    Recipient recipient;
-    recipient.principal = json.value("principal").toString();
-    recipient.email = json.value("email").toString();
-    recipient.name = json.value("name").toString();
-    bool ok = false;
-    recipient.publicKeys = PublicKeys::fromJson(json, &ok);
-    recipient.verified = ok && verifyPublicKeys(recipient.publicKeys);
-    return recipient;
-}
-
 QStringList VaultSharing::roles()
 {
     return {"read", "write", "manage"};
@@ -128,15 +144,22 @@ void VaultSharing::lookupRecipient(const QString& email, RecipientCallback done)
         done({}, tr("Not signed in."));
         return;
     }
-    m_account->client()->lookupUser(email, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({},
-                 response.status == 404 ? tr("There is no OpenVireo account with this email address.")
-                                        : AuthClient::errorMessage(response));
-            return;
-        }
-        done(Recipient::fromJson(response.json()), {});
-    });
+    auto found = std::make_shared<Recipient>();
+    QPointer<VaultSharing> guard(this);
+    m_account->callAccount(
+        this,
+        [email, found](const ov::Account& account, const ov::CancelToken& cancel) {
+            *found = recipientOf(account.look_up(rs(email), cancel));
+        },
+        [guard, found, done](const AccountManager::CoreError& error) {
+            if (!error.ok()) {
+                done({},
+                     error.code == "not_found" ? tr("There is no OpenVireo account with this email address.")
+                                               : guard->messageFor(error));
+                return;
+            }
+            done(*found, {});
+        });
 }
 
 void VaultSharing::recipientFor(const QString& principal, RecipientCallback done)
@@ -154,57 +177,27 @@ void VaultSharing::recipientFor(const QString& principal, RecipientCallback done
         done(self, {});
         return;
     }
-    m_account->client()->publicKey(principal, [principal, done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        auto recipient = Recipient::fromJson(response.json());
-        // Only trust the keys for the principal they were asked for
-        if (recipient.principal.isEmpty()) {
-            recipient.principal = principal;
-        } else if (recipient.principal != principal) {
-            recipient.verified = false;
-        }
-        done(recipient, {});
-    });
-}
-
-void VaultSharing::collectRecipients(const QStringList& principals,
-                                     std::function<void(const QList<Recipient>&, const QString&)> done)
-{
-    if (principals.isEmpty()) {
-        done({}, {});
-        return;
-    }
-    struct Gather
-    {
-        QHash<QString, Recipient> found;
-        QString error;
-        int left = 0;
-    };
-    auto gather = QSharedPointer<Gather>::create();
-    gather->left = principals.size();
-    for (const auto& principal : principals) {
-        recipientFor(principal, [gather, principals, done](const Recipient& recipient, const QString& error) {
-            if (!error.isEmpty() && gather->error.isEmpty()) {
-                gather->error = error;
-            }
-            if (error.isEmpty()) {
-                gather->found.insert(recipient.principal, recipient);
-            }
-            if (--gather->left > 0) {
+    auto found = std::make_shared<Recipient>();
+    QPointer<VaultSharing> guard(this);
+    m_account->callAccount(
+        this,
+        [principal, found](const ov::Account& account, const ov::CancelToken& cancel) {
+            *found = recipientOf(account.recipient(rs(principal), "", cancel));
+        },
+        [guard, principal, found, done](const AccountManager::CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard->messageFor(error));
                 return;
             }
-            QList<Recipient> ordered;
-            for (const auto& name : principals) {
-                if (gather->found.contains(name)) {
-                    ordered << gather->found.value(name);
-                }
+            auto recipient = *found;
+            // Only trust the keys for the principal they were asked for
+            if (recipient.principal.isEmpty()) {
+                recipient.principal = principal;
+            } else if (recipient.principal != principal) {
+                recipient.verified = false;
             }
-            done(ordered, gather->error);
+            done(recipient, {});
         });
-    }
 }
 
 void VaultSharing::loadMembers(const QString& vaultId, MembersCallback done)
@@ -213,57 +206,47 @@ void VaultSharing::loadMembers(const QString& vaultId, MembersCallback done)
         done({}, tr("Not signed in."));
         return;
     }
+    const auto self = m_account->principal();
+    const auto selfEmail = m_account->email();
+    const auto selfKeys = m_account->keyset().publicKeys;
+    auto members = std::make_shared<QList<Member>>();
     QPointer<VaultSharing> guard(this);
-    m_account->client()->vaultAccess(vaultId, [guard, done](const AuthClient::Response& response) {
-        if (!guard) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        // During a rotation a member can have a row per key version: list them once, with the newest
-        QList<Member> members;
-        QHash<QString, int> index;
-        for (const auto& value : response.json().value("access").toArray()) {
-            const auto row = value.toObject();
-            Member member;
-            member.principal = row.value("principal").toString();
-            member.role = row.value("role").toString();
-            member.keyVersion = row.value("key_version").toInt();
-            member.display = row.value("display").toString();
-            member.grantedBy = row.value("granted_by").toString();
-            member.grantedAt = QDateTime::fromString(row.value("granted_at").toString(), Qt::ISODate);
-            if (member.principal.isEmpty()) {
-                continue;
-            }
-            if (index.contains(member.principal)) {
-                auto& existing = members[index.value(member.principal)];
-                if (member.keyVersion > existing.keyVersion) {
-                    existing = member;
+    m_account->callAccount(
+        this,
+        [vaultId, members, self, selfEmail, selfKeys](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& row : account.members(rs(vaultId), cancel)) {
+                Member member;
+                member.principal = CoreHost::toQString(row.principal);
+                member.role = roleName(row.role);
+                member.keyVersion = static_cast<int>(row.key_version);
+                member.display = CoreHost::toQString(row.display);
+                if (member.principal.isEmpty()) {
+                    continue;
                 }
-                continue;
-            }
-            index.insert(member.principal, members.size());
-            members << member;
-        }
-        QStringList principals;
-        for (const auto& member : members) {
-            principals << member.principal;
-        }
-        guard->collectRecipients(principals, [members, done](const QList<Recipient>& recipients, const QString&) {
-            // Members whose keys can't be fetched are still listed, without a fingerprint
-            auto result = members;
-            for (auto& member : result) {
-                for (const auto& recipient : recipients) {
-                    if (recipient.principal == member.principal) {
-                        member.keys = recipient;
+                if (member.principal == self) {
+                    member.keys.principal = self;
+                    member.keys.email = selfEmail;
+                    member.keys.publicKeys = selfKeys;
+                    member.keys.verified = verifyPublicKeys(selfKeys);
+                } else {
+                    try {
+                        // The core checks the self-signature, and refuses keys without one
+                        member.keys = recipientOf(account.recipient(row.principal, row.display, cancel));
+                    } catch (const std::exception&) {
+                        // Members whose keys can't be fetched are still listed, without a fingerprint
+                        member.keys = {};
                     }
                 }
+                *members << member;
             }
-            done(result, {});
+        },
+        [guard, members, done](const AccountManager::CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard->messageFor(error));
+                return;
+            }
+            done(*members, {});
         });
-    });
 }
 
 void VaultSharing::grant(const QString& vaultId, const Recipient& recipient, const QString& role, Done done)
@@ -282,39 +265,57 @@ void VaultSharing::grant(const QString& vaultId, const Recipient& recipient, con
                  .arg(recipient.displayName()));
         return;
     }
-    const auto& keyring = m_account->keyring();
-    const auto vault = keyring.vault(vaultId);
-    const auto key = keyring.vaultKey(vaultId, vault.currentKeyVersion);
-    if (key.empty()) {
-        done(false, tr("This device doesn't hold the vault's current key. Reload the vaults and try again."));
-        return;
-    }
-    const auto sealed = seal(recipient.publicKeys.encPk, key, vaultKeyAad(vaultId));
-    const QJsonArray grants{AuthClient::grant(recipient.principal, role, vault.currentKeyVersion, sealed)};
-    m_account->client()->grantAccess(vaultId, grants, [done](const AuthClient::Response& response) {
-        if (!response.isSuccess()) {
-            done(false,
-                 response.status == 409 ? tr("The vault's key changed in the meantime. Reload and try again.")
-                                        : AuthClient::errorMessage(response));
-            return;
-        }
-        done(true, {});
-    });
+    // The core fetches the recipient's keys again and seals the vault's current key to them only if they are still
+    // the ones the user compared (share_vault_with_keys), then grants `role`
+    const auto principal = recipient.principal;
+    const auto keys = recipient.publicKeys;
+    const auto name = recipient.displayName();
+    QPointer<VaultSharing> guard(this);
+    m_account->callAccount(
+        this,
+        [vaultId, principal, role, keys](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::Grantee grantee;
+            grantee.kind = ov::GranteeKind::Principal;
+            grantee.value = rs(principal);
+            ov::PublicKeys confirmed;
+            confirmed.enc_pk = bytesOf(keys.encPk);
+            confirmed.sign_pk = bytesOf(keys.signPk);
+            confirmed.sig = bytesOf(keys.sig);
+            confirmed.fingerprint = rs(AccountCrypto::fingerprint(keys));
+            account.share_vault_with_keys(rs(vaultId), grantee, roleOf(role), confirmed, cancel);
+        },
+        [guard, done, name](const AccountManager::CoreError& error) {
+            if (!error.ok()) {
+                done(false,
+                     error.code == "conflict" ? tr("The vault's key changed in the meantime. Reload and try again.")
+                     : error.code == "invalid_public_keys"
+                         ? tr("The public keys of %1 changed since you checked them. Nothing was shared.").arg(name)
+                         : guard->messageFor(error));
+                return;
+            }
+            done(true, {});
+        });
 }
 
 void VaultSharing::changeRole(const QString& vaultId, const QString& principal, const QString& role, Done done)
 {
+    if (!m_account || m_account->state() != AccountManager::State::Unlocked) {
+        done(false, tr("Unlock your account first."));
+        return;
+    }
+    if (!roles().contains(role)) {
+        done(false, tr("Unknown role: %1").arg(role));
+        return;
+    }
     QPointer<VaultSharing> guard(this);
-    recipientFor(principal, [guard, vaultId, role, done](const Recipient& recipient, const QString& error) {
-        if (!guard) {
-            return;
-        }
-        if (!error.isEmpty()) {
-            done(false, error);
-            return;
-        }
-        guard->grant(vaultId, recipient, role, done);
-    });
+    m_account->callAccount(
+        this,
+        [vaultId, principal, role](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.change_role(rs(vaultId), rs(principal), roleOf(role), cancel);
+        },
+        [guard, done](const AccountManager::CoreError& error) {
+            done(error.ok(), error.ok() ? QString() : guard->messageFor(error));
+        });
 }
 
 void VaultSharing::revoke(const QString& vaultId, const QStringList& principals, Done done)
@@ -336,218 +337,39 @@ void VaultSharing::rotate(const QString& vaultId, const QStringList& remove, Don
         done(false, tr("Unlock your account first."));
         return;
     }
-    emit progress(tr("Checking the vault…"));
+    emit progress(tr("Rotating the vault key…"));
+    // The core seals a new key to every remaining member (the removed ones lose access at once), re-keys the blob
+    // (again on 412) and activates the new version; a rotation this account holds the pending key for (another of
+    // its devices, or this one, stopped before activating) is finished first
     QPointer<VaultSharing> guard(this);
-    m_account->client()->getVault(vaultId, [guard, vaultId, remove, done](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done(false, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto vault = VaultKeyring::Vault::fromJson(response.json());
-        if (vault.role != "manage") {
-            done(false, tr("Only members who manage a vault can change who has access."));
-            return;
-        }
-        const auto& encSk = guard->m_account->keyset().encSk;
-        auto rotation = QSharedPointer<Rotation>::create();
-        rotation->vaultId = vaultId;
-        rotation->remove = remove;
-        rotation->done = done;
-
-        if (vault.pendingKeyVersion > vault.currentKeyVersion) {
-            // A rotation that stopped after its grants were stored: finish it before starting another
-            const auto pending = unsealKeys(vault, encSk, vault.pendingKeyVersion);
-            if (pending.isEmpty()) {
-                done(false,
-                     tr("Another member is rotating this vault's key. Try again once they are done, or after "
-                        "24 hours."));
-                return;
+    m_account->callAccount(
+        this,
+        [vaultId, remove](const ov::Account& account, const ov::CancelToken& cancel) {
+            rust::Vec<rust::String> principals;
+            for (const auto& principal : remove) {
+                principals.push_back(rs(principal));
             }
-            rotation->resumed = true;
-            rotation->version = vault.pendingKeyVersion;
-            rotation->newKey = pending.first();
-            rotation->oldKeys = unsealKeys(vault, encSk, vault.currentKeyVersion);
-            guard->rekey(rotation, 1);
-            return;
-        }
-
-        rotation->version = vault.currentKeyVersion + 1;
-        rotation->newKey = generateVaultKey();
-        rotation->oldKeys = unsealKeys(vault, encSk);
-        if (rotation->oldKeys.isEmpty()) {
-            done(false, tr("This device doesn't hold the vault's key."));
-            return;
-        }
-        guard->startRotation(rotation);
-    });
-}
-
-void VaultSharing::startRotation(const QSharedPointer<Rotation>& rotation)
-{
-    emit progress(tr("Sealing a new key for the remaining members…"));
-    QPointer<VaultSharing> guard(this);
-    m_account->client()->vaultAccess(rotation->vaultId, [guard, rotation](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            rotation->done(false, AuthClient::errorMessage(response));
-            return;
-        }
-        // Every remaining member keeps their role under the new key; the caller is always one of them
-        const auto self = guard->m_account->principal();
-        QStringList principals{self};
-        QHash<QString, QString> roles{{self, "manage"}};
-        for (const auto& value : response.json().value("access").toArray()) {
-            const auto row = value.toObject();
-            const auto principal = row.value("principal").toString();
-            if (principal.isEmpty() || rotation->remove.contains(principal)) {
-                continue;
-            }
-            if (!principals.contains(principal)) {
-                principals << principal;
-            }
-            if (principal != self) {
-                roles.insert(principal, row.value("role").toString());
-            }
-        }
-        guard->collectRecipients(
-            principals, [guard, rotation, roles](const QList<Recipient>& recipients, const QString& error) {
-                if (!guard || !guard->m_account) {
-                    return;
-                }
-                if (!error.isEmpty()) {
-                    rotation->done(false, error);
-                    return;
-                }
-                QJsonArray grants;
-                for (const auto& recipient : recipients) {
-                    if (!recipient.verified) {
-                        rotation->done(false,
-                                       tr("The public keys of %1 don't carry a valid signature, so no new key was "
-                                          "sealed for them. Nothing was changed.")
-                                           .arg(recipient.displayName()));
-                        return;
-                    }
-                    const auto sealed =
-                        seal(recipient.publicKeys.encPk, rotation->newKey, vaultKeyAad(rotation->vaultId));
-                    grants << AuthClient::grant(
-                        recipient.principal, roles.value(recipient.principal), rotation->version, sealed);
-                }
-                guard->m_account->client()->startRotation(
-                    rotation->vaultId,
-                    rotation->version,
-                    grants,
-                    rotation->remove,
-                    [guard, rotation](const AuthClient::Response& response) {
-                        if (!guard) {
-                            return;
-                        }
-                        if (!response.isSuccess()) {
-                            rotation->done(false,
-                                           response.status == 409
-                                               ? tr("The vault's members or key changed in the meantime. Try "
-                                                    "again.")
-                                               : AuthClient::errorMessage(response));
-                            return;
-                        }
-                        guard->rekey(rotation, 1);
-                    });
-            });
-    });
-}
-
-void VaultSharing::rekey(const QSharedPointer<Rotation>& rotation, int attempt)
-{
-    emit progress(tr("Re-encrypting the vault with the new key…"));
-    auto* client = SyncServerClient::create(m_account->vaultRemoteParams(rotation->vaultId), this);
-    QPointer<VaultSharing> guard(this);
-    client->download([guard, client, rotation, attempt](const SyncServerClient::Response& response) {
-        client->deleteLater();
-        if (!guard) {
-            return;
-        }
-        if (response.status == 404) {
-            // No blob was ever uploaded, so there is nothing to re-key
-            guard->activate(rotation);
-            return;
-        }
-        if (response.status != 200) {
-            rotation->done(false,
-                           tr("The new key is stored but the vault wasn't re-encrypted: %1. Rotate it again to "
-                              "finish.")
-                               .arg(SyncServerClient::errorMessage(response)));
-            return;
-        }
-        const auto newKey = VaultKeyring::compositeKeyFor(rotation->newKey);
-        if (VaultKeyring::readVault(response.body, newKey)) {
-            // An earlier attempt already uploaded it
-            guard->activate(rotation);
-            return;
-        }
-        QSharedPointer<Database> db;
-        QString error;
-        for (const auto& key : rotation->oldKeys) {
-            db = VaultKeyring::readVault(response.body, VaultKeyring::compositeKeyFor(key), &error);
-            if (db) {
-                break;
-            }
-        }
-        if (!db) {
-            rotation->done(false, tr("The vault on the server could not be opened: %1").arg(error));
-            return;
-        }
-        db->setKey(newKey);
-        QByteArray data;
-        if (!VaultKeyring::writeVault(db.data(), &data, &error)) {
-            rotation->done(false, error);
-            return;
-        }
-        auto* upload = SyncServerClient::create(guard->m_account->vaultRemoteParams(rotation->vaultId), guard);
-        upload->upload(data, response.etag, [guard, upload, rotation, attempt](const SyncServerClient::Response& put) {
-            upload->deleteLater();
-            if (!guard) {
-                return;
-            }
-            if (put.status == 412 && attempt < MaxUploadAttempts) {
-                // Another device saved in between: re-key what it uploaded
-                guard->rekey(rotation, attempt + 1);
-                return;
-            }
-            if (put.status != 200 && put.status != 201) {
-                rotation->done(false,
-                               tr("The new key is stored but the vault wasn't re-encrypted: %1. Rotate it again "
-                                  "to finish.")
-                                   .arg(SyncServerClient::errorMessage(put)));
-                return;
-            }
-            guard->activate(rotation);
-        });
-    });
-}
-
-void VaultSharing::activate(const QSharedPointer<Rotation>& rotation)
-{
-    emit progress(tr("Activating the new key…"));
-    QPointer<VaultSharing> guard(this);
-    m_account->client()->activateKey(
-        rotation->vaultId, rotation->version, [guard, rotation](const AuthClient::Response& response) {
+            account.rotate_vault_key(rs(vaultId), std::move(principals), cancel);
+        },
+        [guard, done](const AccountManager::CoreError& error) {
             if (!guard || !guard->m_account) {
                 return;
             }
-            if (!response.isSuccess()) {
-                rotation->done(false, AuthClient::errorMessage(response));
-                return;
-            }
             guard->m_account->reloadVaults();
-            if (rotation->resumed && !rotation->remove.isEmpty()) {
-                guard->rotate(rotation->vaultId, rotation->remove, rotation->done);
+            if (!error.ok()) {
+                // rotation_pending: someone else's rotation is pending and this account doesn't hold its key. The old
+                // key keeps working until it is activated or, after 24 hours, the server lets a new one replace it.
+                done(false,
+                     error.code == "too_many_conflicts"
+                         ? tr("Other devices kept uploading the vault, so its new key isn't active yet. Rotate it "
+                              "again.")
+                     : error.serverCode == "rotation_pending"
+                         ? tr("Another member's key rotation of this vault hasn't finished. Try again after 24 hours, "
+                              "when the server drops it.")
+                         : guard->messageFor(error));
                 return;
             }
-            rotation->done(true, {});
+            done(true, {});
         });
 }
 
@@ -604,7 +426,25 @@ void VaultSharing::createVault(const QString& name, const QString& orgId, VaultC
         done({}, {}, tr("Unlock your account first."));
         return;
     }
-    createFromDatabase(QSharedPointer<Database>::create(), name, orgId, done);
+    emit progress(tr("Creating the vault…"));
+    QPointer<VaultSharing> guard(this);
+    // openvireo-core checks the keys of an org's owners and admins (naming one whose keys don't verify, before
+    // anything is created), seals the new key, uploads the empty vault and hands back its file
+    m_account->createVault(name.trimmed(),
+                           orgId,
+                           [guard, done](const QString& vaultId, QSharedPointer<Database> db, const QString& error) {
+                               if (!guard || !guard->m_account) {
+                                   return;
+                               }
+                               if (!error.isEmpty()) {
+                                   done({}, {}, error);
+                                   return;
+                               }
+                               auto params = guard->m_account->vaultRemoteParams(vaultId);
+                               params.name = tr("OpenVireo account");
+                               setAccountRemote(db, params);
+                               done(vaultId, db, {});
+                           });
 }
 
 void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
@@ -612,133 +452,89 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
                                       const QString& orgId,
                                       VaultCallback done)
 {
-    const auto vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto vaultKey = generateVaultKey();
     const auto vaultName = name.trimmed().isEmpty() ? db->rootGroup()->name() : name.trimmed();
-
-    // The vault key as a key file, a cheap KDF (the key has full entropy) and the vault name as the root group
+    // The core reads the database under a throwaway password, re-keys it to a fresh vault key (sealed to this account
+    // and in an org to its owners and admins, whose keys it checks first), creates the vault and uploads it. The
+    // database's custom data comes along, so its other remotes (scp, ...) stay with it; the core leaves out the sync
+    // server and account vault remotes.
+    const auto password = QString::fromLatin1(randomGen()->randomArray(32).toHex());
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(QSharedPointer<PasswordKey>::create(password));
+    // The password has full entropy: a cheap KDF, as for vault files
     auto kdf = QSharedPointer<Argon2Kdf>::create(Argon2Kdf::Type::Argon2id);
     kdf->setMemory(VaultKeyring::VaultKdfMemoryKiB);
     kdf->setRounds(VaultKeyring::VaultKdfIterations);
     kdf->setParallelism(VaultKeyring::VaultKdfParallelism);
     db->setKdf(kdf);
-    db->setKey(VaultKeyring::compositeKeyFor(vaultKey), true, true);
-    db->rootGroup()->setName(vaultName);
-    auto params = m_account->vaultRemoteParams(vaultId);
-    params.name = tr("OpenVireo account");
-    setAccountRemote(db, params);
-
-    emit progress(tr("Creating the vault…"));
-    // Key version 1, sealed to this account, which is among the grantees (SPEC §7)
-    const auto self = m_account->principal();
-    const auto sealed = seal(m_account->keyset().publicKeys.encPk, vaultKey, vaultKeyAad(vaultId));
-    QJsonArray grants{AuthClient::grant(self, "manage", 1, sealed)};
-    if (orgId.isEmpty()) {
-        createWithGrants(db, vaultId, {}, vaultName, vaultKey, grants, done);
-        return;
-    }
-
-    // An org vault is sealed to every confirmed owner and admin as well, with manage; the server refuses
-    // one that leaves any of them out (SPEC §7)
-    QPointer<VaultSharing> guard(this);
-    m_account->client()->orgMembers(
-        orgId,
-        [guard, db, vaultId, orgId, vaultName, vaultKey, grants, self, done](const AuthClient::Response& response) mutable {
-            if (!guard || !guard->m_account) {
-                return;
-            }
-            if (!response.isSuccess()) {
-                done({}, {}, AuthClient::errorMessage(response));
-                return;
-            }
-            for (const auto& value : response.json().value("members").toArray()) {
-                const auto member = value.toObject();
-                const auto role = member.value("role").toString();
-                const auto principal = "user:" + member.value("user_id").toString();
-                if (principal == self || (role != "owner" && role != "admin")
-                    || member.value("status").toString() != "confirmed" || !member.value("public").isObject()) {
-                    continue;
-                }
-                bool ok = false;
-                const auto keys = PublicKeys::fromJson(member.value("public").toObject(), &ok);
-                if (!ok || !verifyPublicKeys(keys)) {
-                    // Never seal to keys that aren't self-signed
-                    done({},
-                         {},
-                         tr("The public keys of %1 don't carry a valid signature, so the vault wasn't created.")
-                             .arg(member.value("email").toString()));
-                    return;
-                }
-                grants << AuthClient::grant(principal, "manage", 1, seal(keys.encPk, vaultKey, vaultKeyAad(vaultId)));
-            }
-            guard->createWithGrants(db, vaultId, orgId, vaultName, vaultKey, grants, done);
-        });
-}
-
-void VaultSharing::createWithGrants(const QSharedPointer<Database>& db,
-                                    const QString& vaultId,
-                                    const QString& orgId,
-                                    const QString& vaultName,
-                                    const SecureBytes& vaultKey,
-                                    const QJsonArray& grants,
-                                    VaultCallback done)
-{
-    QPointer<VaultSharing> guard(this);
-    m_account->client()->createVault(vaultId,
-                                     orgId,
-                                     encryptVaultName(vaultKey, vaultId, vaultName),
-                                     grants,
-                                     [guard, vaultId, db, done](const AuthClient::Response& response) {
-                                         if (!guard || !guard->m_account) {
-                                             return;
-                                         }
-                                         if (!response.isSuccess()) {
-                                             done({}, {}, AuthClient::errorMessage(response));
-                                             return;
-                                         }
-                                         // The sync server accepts the upload once the access token lists the new vault
-                                         auto* account = guard->m_account.data();
-                                         auto* waiter = new QObject(guard);
-                                         auto proceed = [guard, waiter, vaultId, db, done] {
-                                             if (!waiter->property("done").toBool()) {
-                                                 waiter->setProperty("done", true);
-                                                 waiter->deleteLater();
-                                                 if (guard) {
-                                                     guard->uploadNewVault(vaultId, db, done);
-                                                 }
-                                             }
-                                         };
-                                         connect(account, &AccountManager::accessTokenChanged, waiter, proceed);
-                                         QTimer::singleShot(TokenWaitMsec, waiter, proceed);
-                                         account->refreshAccessToken();
-                                     });
-}
-
-void VaultSharing::uploadNewVault(const QString& vaultId, const QSharedPointer<Database>& db, VaultCallback done)
-{
-    emit progress(tr("Uploading the vault…"));
+    db->setKey(key, true, true);
     QByteArray data;
     QString error;
     if (!VaultKeyring::writeVault(db.data(), &data, &error)) {
         done({}, {}, error);
         return;
     }
-    auto* client = SyncServerClient::create(m_account->vaultRemoteParams(vaultId), this);
+
+    emit progress(tr("Creating the vault…"));
+    struct Imported
+    {
+        QString vaultId;
+        QByteArray kdbx;
+        QByteArray keyFile;
+        QString uploadError;
+    };
+    auto imported = std::make_shared<Imported>();
+    auto input = std::make_shared<QByteArray>(data);
     QPointer<VaultSharing> guard(this);
-    // If-None-Match: *, creating the blob
-    client->upload(data, {}, [guard, client, vaultId, db, done](const SyncServerClient::Response& response) {
-        client->deleteLater();
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (response.status != 200 && response.status != 201) {
-            done({},
-                 {},
-                 tr("The vault was created, but its first upload failed: %1")
-                     .arg(SyncServerClient::errorMessage(response)));
-            return;
-        }
-        guard->m_account->reloadVaults();
-        done(vaultId, db, {});
-    });
+    m_account->callAccount(
+        this,
+        [input, password, vaultName, orgId, imported](const ov::Account& account, const ov::CancelToken& cancel) {
+            ov::KdbxCredentials credentials;
+            credentials.has_password = true;
+            credentials.password = bytesOf(password.toUtf8());
+            ov::ImportMode mode;
+            mode.kind = ov::ImportModeKind::NewVault;
+            mode.name = rs(vaultName);
+            mode.org_id = rs(orgId);
+            auto outcome = account.import_kdbx(bytesOf(*input), std::move(credentials), mode, cancel);
+            imported->vaultId = CoreHost::toQString(outcome.vault->id());
+            if (outcome.has_upload_error || !outcome.uploaded) {
+                imported->uploadError = CoreHost::toQString(outcome.upload_error.message);
+            }
+            auto vaultCredentials = account.vault_kdbx_credentials(outcome.vault->id(), cancel);
+            imported->keyFile = toBytes(vaultCredentials.key_file);
+            imported->kdbx = AccountManager::vaultFile(*outcome.vault, std::move(vaultCredentials), cancel);
+        },
+        [guard, imported, done](const AccountManager::CoreError& error) {
+            const auto scrub = qScopeGuard([imported] {
+                Botan::secure_scrub_memory(imported->keyFile.data(), static_cast<size_t>(imported->keyFile.size()));
+            });
+            if (!guard || !guard->m_account) {
+                return;
+            }
+            if (!error.ok()) {
+                done({}, {}, guard->messageFor(error));
+                return;
+            }
+            guard->m_account->reloadVaults();
+            if (!imported->uploadError.isEmpty()) {
+                done({}, {}, tr("The vault was created, but its first upload failed: %1").arg(imported->uploadError));
+                return;
+            }
+            QString readError;
+            auto vault = VaultKeyring::readVault(
+                imported->kdbx, AccountManager::vaultCompositeKey(imported->keyFile), &readError);
+            if (!vault) {
+                done({}, {}, readError);
+                return;
+            }
+            auto params = guard->m_account->vaultRemoteParams(imported->vaultId);
+            params.name = tr("OpenVireo account");
+            setAccountRemote(vault, params);
+            done(imported->vaultId, vault, {});
+        });
+}
+
+QString VaultSharing::messageFor(const AccountManager::CoreError& error) const
+{
+    return m_account ? m_account->errorMessage(error) : error.message;
 }

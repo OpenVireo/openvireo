@@ -628,14 +628,11 @@ elseif(BOTAN_VERSION VERSION_LESS "2.19.1")
 endif()
 include_directories(SYSTEM ${BOTAN_INCLUDE_DIR})
 
-# KeePassXC accounts sign in with OPAQUE through the libopaque C core (with liboprf and libsodium).
-# Everything else about accounts only needs Botan, so builds without these libraries still have it.
-find_package(Opaque)
-option(KPXC_FEATURE_ACCOUNTS "OPAQUE sign-in to OpenVireo accounts; needs libopaque, liboprf and libsodium" ${OPAQUE_FOUND})
-if(KPXC_FEATURE_ACCOUNTS AND NOT OPAQUE_FOUND)
-    message(FATAL_ERROR "KPXC_FEATURE_ACCOUNTS needs libopaque, liboprf and libsodium; set OPAQUE_ROOT to where they are installed")
-endif()
-add_feature_info("Accounts" KPXC_FEATURE_ACCOUNTS "Sign in to OpenVireo accounts (OPAQUE)")
+# OpenVireo accounts run on openvireo-core (account crypto, OPAQUE sign-in, the account-vault sync merge),
+# built from source with Corrosion from a pinned commit; that needs a Rust toolchain (cargo, rustc).
+include(OpenVireoCore)
+option(KPXC_FEATURE_ACCOUNTS "Sign in to OpenVireo accounts (OPAQUE through openvireo-core)" ON)
+add_feature_info("Accounts" KPXC_FEATURE_ACCOUNTS "Sign in to OpenVireo accounts (OPAQUE through openvireo-core)")
 # The hosted account server offered on the start screen; clients find its sync server through
 # <server>/.well-known/openvireo-configuration
 set(KPXC_DEFAULT_ACCOUNT_SERVER "https://accounts.openvireo.com" CACHE STRING "Issuer URL of the default OpenVireo account server")

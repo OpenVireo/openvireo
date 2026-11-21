@@ -30,6 +30,7 @@
 
 #include <functional>
 
+class CompositeKey;
 class Database;
 class Entry;
 class QTemporaryDir;
@@ -74,6 +75,12 @@ struct SyncConflict
  * The merge and the save are delegated to the owner (DatabaseWidget), which knows how to
  * save with the user's settings. Opening the downloaded database runs on the GUI thread,
  * like unlocking does.
+ *
+ * Account vaults whose account is signed in on this device (SyncServerClient::accountVaultSyncerFor()) sync in
+ * openvireo-core instead: the local database goes over as a KDBX file, the account's core session downloads,
+ * merges three-way, uploads (retrying on 412) and checks for rollbacks, and the merged file comes back into the
+ * database in place (its groups and entries stay, so the window keeps its selection), under the key the core
+ * returns (a key rotation). The states and signals are the same, without WaitingForUnlock.
  */
 class SyncEngine : public QObject
 {
@@ -154,7 +161,20 @@ public:
     // field by field first: a field changed on one side only takes that change, and only a field both
     // changed differently falls back to the newer one. An entry changed on one side only keeps that
     // change even when the device's clock made it look older.
+    //
+    // Account vaults (files under the accounts folder) merge in openvireo-core, see mergeAccountVault(); other
+    // databases with KeePassXC's Merger here.
     static Merger::ChangeList mergeDatabases(Database* local, Database* remote, const Database* base = nullptr);
+    // The same merge run by openvireo-core (ov-merge, which every OpenVireo client uses) on serialized copies of
+    // the three databases. The result goes back into `local` and `remote` in place: their group and entry
+    // objects stay, so the window keeps its selection by UUID. `ok` is false when the core couldn't merge; then
+    // nothing was changed.
+    static Merger::ChangeList
+    mergeAccountVault(Database* local,
+                      Database* remote,
+                      const Database* base = nullptr,
+                      bool* ok = nullptr,
+                      bool* remoteChanged = nullptr);
     // The fields `local` and `remote` both changed differently since `base`, by name
     static QStringList conflictingFields(const Entry* local, const Entry* remote, const Entry* base);
     // Entry modification times, to be compared with the next sync's copies
@@ -198,6 +218,12 @@ signals:
     void finished(bool success, const QString& error);
 
 private:
+    // mergeDatabases() with KeePassXC's Merger
+    static Merger::ChangeList mergeHere(Database* local, Database* remote, const Database* base);
+    // The account-vault path (openvireo-core): send the local copy, then take the merged file back in
+    void startCoreSync();
+    void finishCoreSync(const AccountVaultSync::Result& result);
+    void applyCoreResult();
     void setState(State state);
     void start();
     bool hasLocalChanges() const;
@@ -245,6 +271,17 @@ private:
     bool m_baseOpened = false;
     // Bumped when a sync ends, so databases that finish opening afterwards are dropped
     quint64 m_openRun = 0;
+
+    // The account-vault path: how the account syncs, the call under way, what it sent and what came back
+    AccountVaultSync::Syncer m_coreSyncer;
+    AccountVaultSync::Cancel m_coreCancel;
+    QByteArray m_coreSent;
+    QSharedPointer<const CompositeKey> m_coreSentKey;
+    // The window holds edits the last sync didn't upload (made while the core synced): sync again
+    bool m_coreLocalAhead = false;
+    // The database was saved after its copy went to the core
+    bool m_coreSavedSince = false;
+    QScopedPointer<AccountVaultSync::Result> m_coreResult;
 
     bool m_retryOnNetworkError = false;
     int m_backoffMsec = 0;

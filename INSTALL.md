@@ -86,8 +86,8 @@ OpenVireo comes with a variety of build options that can turn on/off features. E
 -DKPXC_FEATURE_NETWORK=[ON|OFF] Include code that reaches out to external networks (e.g. downloading icons) (default: ON)
 -DKPXC_FEATURE_UPDATES=[ON|OFF] Include automatic update checks; disable for managed distributions (requires networking) (default: ON)
 -DKPXC_FEATURE_DOCS=[ON|OFF] Build offline documentation; requires asciidoctor tool (default: ON)
--DKPXC_FEATURE_ACCOUNTS=[ON|OFF] Sign in to OpenVireo accounts with OPAQUE; requires libopaque, liboprf and libsodium (default: ON when they are found)
--DOPAQUE_ROOT=[path] Where libopaque and liboprf are installed, if not in a standard location
+-DKPXC_FEATURE_ACCOUNTS=[ON|OFF] Sign in to OpenVireo accounts with OPAQUE (default: ON)
+-DOPENVIREO_CORE_SOURCE_DIR=[path] Build a local openvireo-core checkout instead of the pinned commit (development only)
 
 -DWITH_TESTS=[ON|OFF] Enable/Disable building of unit tests (default: ON)
 -DWITH_GUI_TESTS=[ON|OFF] Enable/Disable building of GUI tests (default: OFF)
@@ -107,28 +107,18 @@ OpenVireo comes with a variety of build options that can turn on/off features. E
 Note: Even though you can build the application with all TCP/IP networking code disabled, we still require and link against
 Qt6's network library to use local named pipes on all operating systems.
 
-### OpenVireo accounts (OPAQUE)
+### OpenVireo accounts (openvireo-core)
 
-Signing in to an OpenVireo account uses OPAQUE through the C core of [libopaque](https://github.com/stef/libopaque),
-which needs [liboprf](https://github.com/stef/liboprf) and libsodium (1.0.19 or newer). Without them OpenVireo builds
-as usual and only account sign-in is unavailable. The versions are pinned by the accounts spec
-(`docs/plans/accounts/SPEC.md`, §8). To build them as static libraries on macOS or Linux:
+The OpenVireo account code (account crypto, OPAQUE sign-in, the account-vault sync merge) runs on
+[openvireo-core](https://github.com/openvireo/openvireo-core), the Rust library every OpenVireo client shares.
+CMake builds it from source with [Corrosion](https://github.com/corrosion-rs/corrosion), at the commit pinned in
+`src/account/ovcore/Cargo.toml` and `Cargo.lock`, so a build needs a Rust toolchain (`cargo` and `rustc`, a
+recent stable release; [rustup](https://rustup.rs) is the easiest way to get one). Configuring downloads
+Corrosion, and the first build downloads the core's sources with cargo; for an offline build, run
+`cargo vendor` in `src/account/ovcore` beforehand and point cargo at the vendored sources.
 
-```shell
-# macOS: brew install libsodium pkgconf; Debian/Ubuntu: apt install libsodium-dev pkgconf
-git clone https://github.com/stef/liboprf && git -C liboprf checkout f925b87
-git clone https://github.com/stef/libopaque && git -C libopaque checkout 6e9ac92
-PREFIX=$PWD/opaque-prefix && mkdir -p $PREFIX/include/oprf $PREFIX/lib
-(cd liboprf/src && make CC=cc liboprf.a) && cp liboprf/src/*.h $PREFIX/include/oprf/ && cp liboprf/src/liboprf.a $PREFIX/lib/
-(cd libopaque/src && CPATH=$PREFIX/include:$(pkgconf --variable=includedir libsodium) \
-    make CC=cc OPRFHOME=$PWD/../../liboprf/src libopaque.a) \
-  && cp libopaque/src/opaque.h $PREFIX/include/ && cp libopaque/src/libopaque.a $PREFIX/lib/
-cmake -DOPAQUE_ROOT=$PREFIX -DKPXC_FEATURE_ACCOUNTS=ON ..
-```
-
-On Windows, vcpkg builds them from the `libopaque` overlay port in `utils/vcpkg_ports`. Both libraries use C99 variable
-length arrays, which MSVC does not support, so the port compiles them with clang-cl; install the "C++ Clang tools for
-Windows" component of Visual Studio.
+Corrosion builds one Rust target per configure. On macOS, build one architecture at a time
+(`-DCMAKE_OSX_ARCHITECTURES=arm64` or `x86_64`, with `rustup target add aarch64-apple-darwin x86_64-apple-darwin`).
 
 ## Installation
 

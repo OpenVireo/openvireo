@@ -34,6 +34,7 @@ private slots:
     void testTokenMovesFromFileToSystemStore();
     void testTokensAreReadOnce();
     void testPlatformTokenStore();
+    void testTestsNeverGetTheSystemStore();
     void testSyncServerCycle();
     void testSyncServerRejectsBadToken();
     void testSyncEngineTwoDevices();

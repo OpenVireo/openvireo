@@ -17,24 +17,19 @@
 
 #include "AccountCrypto.h"
 
-#include "config-keepassx.h"
-#include "crypto/Random.h"
-
 #include <QCryptographicHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 
-#include <botan/aead.h>
-#include <botan/ed25519.h>
-#include <botan/mac.h>
 #include <botan/mem_ops.h>
-#include <botan/pubkey.h>
-#include <botan/pwdhash.h>
-#ifdef WITH_BOTAN3
-#include <botan/x25519.h>
-#else
-#include <botan/curve25519.h>
-#endif
+
+#include <ovcore.h>
+
+
+/*
+ * The crypto itself runs in openvireo-core (ov-crypto, through <ovcore.h>), the same code
+ * the web, iOS and CLI clients use. This file converts between Qt types and the core's byte buffers.
+ */
 
 namespace AccountCrypto
 {
@@ -43,83 +38,59 @@ namespace AccountCrypto
     namespace
     {
         const QByteArray PublicKeysContext = QByteArrayLiteral("ov-pubkeys-v1");
-        const QByteArray FingerprintContext = QByteArrayLiteral("ov-fp-v1");
         const QByteArray SealInfo = QByteArrayLiteral("ov-seal-v1");
         const QByteArray AukInfo = QByteArrayLiteral("ov-auk-v1");
-        const QByteArray VaultNameInfo = QByteArrayLiteral("ov-vault-name-v1");
-        const QString SecretKeyPrefix = QStringLiteral("K1");
-        const char CrockfordAlphabet[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-        const QString ServiceAccountPrefix = QStringLiteral("ov_sa_");
 
-        const uint8_t* bytes(const QByteArray& data)
+        rust::Slice<const uint8_t> slice(const QByteArray& data)
         {
-            return reinterpret_cast<const uint8_t*>(data.constData());
+            return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
         }
 
-        QByteArray toByteArray(const std::vector<uint8_t>& data)
+        rust::Slice<const uint8_t> slice(const SecureBytes& data)
+        {
+            return {data.data(), data.size()};
+        }
+
+        QByteArray toByteArray(const rust::Vec<uint8_t>& data)
         {
             return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
         }
 
-        QByteArray randomBytes(int size)
+        // Moves a secret out of the core's buffer and wipes the buffer
+        SecureBytes takeSecure(rust::Vec<uint8_t>&& data)
         {
-            return randomGen()->randomArray(size);
+            SecureBytes secure(data.begin(), data.end());
+            ov::wipe(data);
+            return secure;
         }
 
-        // XChaCha20-Poly1305 (the 24-byte nonce selects the X variant in Botan's ChaCha20Poly1305)
-        bool
-        aead(bool encrypt, const SecureBytes& key, const QByteArray& nonce, const QByteArray& aad, SecureBytes& buffer)
+        // The wire code at the start of a core error, "decryption_failed: ..." (rust-core-tasks.md §2.4)
+        Error errorOf(const rust::Error& e)
         {
-            try {
-#ifdef WITH_BOTAN3
-                const auto direction = encrypt ? Botan::Cipher_Dir::Encryption : Botan::Cipher_Dir::Decryption;
-#else
-                const auto direction = encrypt ? Botan::ENCRYPTION : Botan::DECRYPTION;
-#endif
-                auto cipher = Botan::AEAD_Mode::create_or_throw("ChaCha20Poly1305", direction);
-                cipher->set_key(key.data(), key.size());
-                cipher->set_associated_data(bytes(aad), static_cast<size_t>(aad.size()));
-                cipher->start(bytes(nonce), static_cast<size_t>(nonce.size()));
-                cipher->finish(buffer);
-                return true;
-            } catch (std::exception&) {
-                return false;
+            const auto code = QByteArray(e.what()).split(':').value(0);
+            if (code == "unsupported_version") {
+                return Error::UnsupportedVersion;
             }
+            if (code == "decryption_failed" || code == "low_order_point") {
+                return Error::DecryptionFailed;
+            }
+            return Error::InvalidInput;
         }
 
-        // The X25519 shared secret, empty when it is all zeros (a low-order public key)
-        SecureBytes x25519(const SecureBytes& secretKey, const QByteArray& publicKey)
+        bool fail(Error* error, Error reason)
         {
-            if (secretKey.size() != KeySize || publicKey.size() != KeySize) {
-                return {};
+            if (error) {
+                *error = reason;
             }
-            try {
-                Botan::X25519_PrivateKey key(secretKey);
-                Botan::PK_Key_Agreement agreement(key, *randomGen()->getRng(), "Raw");
-                auto shared =
-                    agreement.derive_key(0, bytes(publicKey), static_cast<size_t>(publicKey.size())).bits_of();
-                SecureBytes zeros(shared.size(), 0);
-                if (shared.size() != KeySize
-                    || Botan::constant_time_compare(shared.data(), zeros.data(), shared.size())) {
-                    return {};
-                }
-                return shared;
-            } catch (std::exception&) {
-                return {};
-            }
+            return false;
         }
 
         bool constantTimeEquals(const QByteArray& a, const QByteArray& b)
         {
             return a.size() == b.size()
-                   && Botan::constant_time_compare(bytes(a), bytes(b), static_cast<size_t>(a.size()));
-        }
-
-        QString jsonString(const QString& value)
-        {
-            // A one-element array is the shortest way to get Qt to escape a string as JSON
-            auto json = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
-            return QString::fromUtf8(json.mid(1, json.size() - 2));
+                   && Botan::constant_time_compare(reinterpret_cast<const uint8_t*>(a.constData()),
+                                                   reinterpret_cast<const uint8_t*>(b.constData()),
+                                                   static_cast<size_t>(a.size()));
         }
 
         QJsonObject decodeJsonPart(const QString& part, bool* ok)
@@ -191,7 +162,7 @@ namespace AccountCrypto
 
     SecureBytes randomSecure(int size)
     {
-        return randomGen()->getRng()->random_vec(static_cast<size_t>(size));
+        return takeSecure(ov::random_bytes(static_cast<size_t>(size)));
     }
 
     QByteArray sha256(const QByteArray& data)
@@ -206,107 +177,51 @@ namespace AccountCrypto
 
     SecureBytes hkdf(const SecureBytes& ikm, const QByteArray& salt, const QByteArray& info, int length)
     {
-        auto hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-        const auto hashLength = static_cast<int>(hmac->output_length());
-        // Extract
-        const QByteArray actualSalt = salt.isEmpty() ? QByteArray(hashLength, '\0') : salt;
-        hmac->set_key(bytes(actualSalt), static_cast<size_t>(actualSalt.size()));
-        hmac->update(ikm.data(), ikm.size());
-        const auto prk = hmac->final();
-        // Expand
-        hmac->set_key(prk.data(), prk.size());
-        SecureBytes okm;
-        SecureBytes block;
-        for (uint8_t counter = 1; static_cast<int>(okm.size()) < length; ++counter) {
-            hmac->update(block.data(), block.size());
-            hmac->update(bytes(info), static_cast<size_t>(info.size()));
-            hmac->update(counter);
-            block = hmac->final();
-            okm.insert(okm.end(), block.begin(), block.end());
+        try {
+            return takeSecure(ov::hkdf_sha256(slice(ikm), slice(salt), slice(info), static_cast<size_t>(length)));
+        } catch (const rust::Error&) {
+            return {};
         }
-        okm.resize(static_cast<size_t>(length));
-        return okm;
     }
 
     SecureBytes generateSecretKey()
     {
-        return randomSecure(SecretKeySize);
+        try {
+            return takeSecure(ov::generate_secret_key());
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     QString formatSecretKey(const SecureBytes& secretKey)
     {
-        if (secretKey.size() != SecretKeySize) {
+        try {
+            auto text = ov::format_secret_key(slice(secretKey));
+            auto result = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
+            Botan::secure_scrub_memory(const_cast<char*>(text.data()), text.size());
+            return result;
+        } catch (const rust::Error&) {
             return {};
         }
-        // 128 bits big-endian, padded with two zero bits to 26 characters of 5 bits
-        QString digits;
-        quint32 buffer = 0;
-        int bits = 0;
-        for (auto byte : secretKey) {
-            buffer = (buffer << 8) | byte;
-            bits += 8;
-            while (bits >= 5) {
-                bits -= 5;
-                digits += QLatin1Char(CrockfordAlphabet[(buffer >> bits) & 0x1f]);
-            }
-        }
-        if (bits > 0) {
-            digits += QLatin1Char(CrockfordAlphabet[(buffer << (5 - bits)) & 0x1f]);
-        }
-        return QStringLiteral("%1-%2-%3-%4-%5-%6")
-            .arg(SecretKeyPrefix,
-                 digits.mid(0, 6),
-                 digits.mid(6, 5),
-                 digits.mid(11, 5),
-                 digits.mid(16, 5),
-                 digits.mid(21, 5));
     }
 
     bool parseSecretKey(const QString& text, SecureBytes* secretKey)
     {
-        QString normalized;
-        for (auto c : text.toUpper()) {
-            if (c.isSpace() || c == '-') {
-                continue;
-            }
-            if (c == 'O') {
-                c = '0';
-            } else if (c == 'I' || c == 'L') {
-                c = '1';
-            }
-            normalized += c;
-        }
-        if (!normalized.startsWith(SecretKeyPrefix) || normalized.size() != SecretKeyPrefix.size() + 26) {
+        auto utf8 = text.toUtf8();
+        try {
+            *secretKey = takeSecure(ov::parse_secret_key(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size()))));
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
+            return true;
+        } catch (const rust::Error&) {
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
             return false;
         }
-
-        SecureBytes result;
-        quint32 buffer = 0;
-        int bits = 0;
-        for (const auto c : normalized.mid(SecretKeyPrefix.size())) {
-            const char* found = c.unicode() < 128 ? std::strchr(CrockfordAlphabet, c.toLatin1()) : nullptr;
-            if (!found || c.toLatin1() == '\0') {
-                return false;
-            }
-            buffer = (buffer << 5) | static_cast<quint32>(found - CrockfordAlphabet);
-            bits += 5;
-            if (bits >= 8) {
-                bits -= 8;
-                result.push_back(static_cast<uint8_t>((buffer >> bits) & 0xff));
-            }
-        }
-        // Two bits are left over, the padding, which must be zero
-        if (bits != 2 || (buffer & 0x3) != 0 || result.size() != SecretKeySize) {
-            return false;
-        }
-        *secretKey = result;
-        return true;
     }
 
     KdfParams KdfParams::generate()
     {
         KdfParams kdf;
-        kdf.salt = randomBytes(16);
+        kdf.salt = fromSecure(randomSecure(16));
         return kdf;
     }
 
@@ -341,24 +256,25 @@ namespace AccountCrypto
 
     SecureBytes normalizePassword(const QString& password)
     {
-        auto utf8 = password.normalized(QString::NormalizationForm_KC).toUtf8();
-        auto secure = toSecure(utf8);
-        Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
-        return secure;
+        auto utf8 = password.toUtf8();
+        try {
+            auto normalized = takeSecure(ov::nfkc_utf8(slice(utf8)));
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
+            return normalized;
+        } catch (const rust::Error&) {
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
+            return {};
+        }
     }
 
     SecureBytes stretchPassword(const SecureBytes& normalizedPassword, const KdfParams& kdf)
     {
-        auto family = Botan::PasswordHashFamily::create_or_throw("Argon2id");
-        auto argon2 = family->from_params(kdf.memoryKiB, kdf.iterations, kdf.parallelism);
-        SecureBytes out(KeySize);
-        argon2->derive_key(out.data(),
-                           out.size(),
-                           reinterpret_cast<const char*>(normalizedPassword.data()),
-                           normalizedPassword.size(),
-                           bytes(kdf.salt),
-                           static_cast<size_t>(kdf.salt.size()));
-        return out;
+        try {
+            return takeSecure(ov::argon2id(
+                slice(normalizedPassword), slice(kdf.salt), kdf.memoryKiB, kdf.iterations, kdf.parallelism));
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     SecureBytes deriveAuk(const SecureBytes& stretchedPassword, const SecureBytes& secretKey)
@@ -374,15 +290,11 @@ namespace AccountCrypto
     QByteArray
     wrap(const SecureBytes& key, const SecureBytes& plaintext, const QByteArray& aad, const QByteArray& nonce)
     {
-        const auto actualNonce = nonce.isEmpty() ? randomBytes(NonceSize) : nonce;
-        if (key.size() != KeySize || actualNonce.size() != NonceSize) {
+        try {
+            return toByteArray(ov::wrap(slice(key), slice(plaintext), slice(aad), slice(nonce)));
+        } catch (const rust::Error&) {
             return {};
         }
-        SecureBytes buffer(plaintext);
-        if (!aead(true, key, actualNonce, aad, buffer)) {
-            return {};
-        }
-        return QByteArray(1, EnvelopeVersion) + actualNonce + fromSecure(buffer);
     }
 
     bool unwrap(const SecureBytes& key,
@@ -391,26 +303,11 @@ namespace AccountCrypto
                 SecureBytes* plaintext,
                 Error* error)
     {
-        const auto fail = [error](Error reason) {
-            if (error) {
-                *error = reason;
-            }
-            return false;
-        };
-        if (wrapped.isEmpty()) {
-            return fail(Error::InvalidInput);
+        try {
+            *plaintext = takeSecure(ov::unwrap(slice(key), slice(wrapped), slice(aad)));
+        } catch (const rust::Error& e) {
+            return fail(error, wrapped.isEmpty() ? Error::InvalidInput : errorOf(e));
         }
-        if (wrapped.at(0) != EnvelopeVersion) {
-            return fail(Error::UnsupportedVersion);
-        }
-        if (key.size() != KeySize || wrapped.size() < 1 + NonceSize + 16) {
-            return fail(Error::InvalidInput);
-        }
-        auto buffer = toSecure(wrapped.mid(1 + NonceSize));
-        if (!aead(false, key, wrapped.mid(1, NonceSize), aad, buffer)) {
-            return fail(Error::DecryptionFailed);
-        }
-        *plaintext = buffer;
         if (error) {
             *error = Error::None;
         }
@@ -447,30 +344,17 @@ namespace AccountCrypto
     QByteArray x25519PublicKey(const SecureBytes& secretKey)
     {
         try {
-            Botan::X25519_PrivateKey key(secretKey);
-            return toByteArray(key.public_value());
-        } catch (std::exception&) {
+            return toByteArray(ov::x25519_public_key(slice(secretKey)));
+        } catch (const rust::Error&) {
             return {};
         }
     }
 
-    namespace
-    {
-        std::unique_ptr<Botan::Ed25519_PrivateKey> ed25519Key(const SecureBytes& seed)
-        {
-#ifdef WITH_BOTAN3
-            return std::make_unique<Botan::Ed25519_PrivateKey>(Botan::Ed25519_PrivateKey::from_seed(seed));
-#else
-            return std::make_unique<Botan::Ed25519_PrivateKey>(seed);
-#endif
-        }
-    } // namespace
-
     QByteArray ed25519PublicKey(const SecureBytes& seed)
     {
         try {
-            return toByteArray(ed25519Key(seed)->get_public_key());
-        } catch (std::exception&) {
+            return toByteArray(ov::ed25519_public_key(slice(seed)));
+        } catch (const rust::Error&) {
             return {};
         }
     }
@@ -478,30 +362,15 @@ namespace AccountCrypto
     QByteArray sign(const SecureBytes& signSeed, const QByteArray& message)
     {
         try {
-            auto key = ed25519Key(signSeed);
-            Botan::PK_Signer signer(*key, *randomGen()->getRng(), "Pure");
-            return toByteArray(
-                signer.sign_message(bytes(message), static_cast<size_t>(message.size()), *randomGen()->getRng()));
-        } catch (std::exception&) {
+            return toByteArray(ov::ed25519_sign(slice(signSeed), slice(message)));
+        } catch (const rust::Error&) {
             return {};
         }
     }
 
     bool verify(const QByteArray& signPk, const QByteArray& message, const QByteArray& signature)
     {
-        if (signPk.size() != KeySize || signature.size() != 64) {
-            return false;
-        }
-        try {
-            Botan::Ed25519_PublicKey key(std::vector<uint8_t>(signPk.begin(), signPk.end()));
-            Botan::PK_Verifier verifier(key, "Pure");
-            return verifier.verify_message(bytes(message),
-                                           static_cast<size_t>(message.size()),
-                                           bytes(signature),
-                                           static_cast<size_t>(signature.size()));
-        } catch (std::exception&) {
-            return false;
-        }
+        return ov::ed25519_verify(slice(signPk), slice(message), slice(signature));
     }
 
     QByteArray signPublicKeys(const SecureBytes& signSeed, const QByteArray& encPk, const QByteArray& signPk)
@@ -511,31 +380,27 @@ namespace AccountCrypto
 
     bool verifyPublicKeys(const PublicKeys& publicKeys)
     {
-        return publicKeys.encPk.size() == KeySize
-               && verify(publicKeys.signPk, PublicKeysContext + publicKeys.encPk + publicKeys.signPk, publicKeys.sig);
+        return ov::verify_public_keys(slice(publicKeys.encPk), slice(publicKeys.signPk), slice(publicKeys.sig));
     }
 
     QString fingerprint(const PublicKeys& publicKeys)
     {
-        const auto hex = toHex(sha256(FingerprintContext + publicKeys.encPk + publicKeys.signPk).left(20));
-        QStringList groups;
-        for (int i = 0; i < hex.size(); i += 4) {
-            groups << hex.mid(i, 4);
-        }
-        return groups.join(' ');
+        const auto text = ov::fingerprint(slice(publicKeys.encPk), slice(publicKeys.signPk));
+        return QString::fromUtf8(text.data(), static_cast<int>(text.size()));
     }
 
     Keyset keysetFromSecrets(const SecureBytes& encSk, const SecureBytes& signSeed)
     {
         Keyset keyset;
-        if (encSk.size() != KeySize || signSeed.size() != KeySize) {
-            return keyset;
+        try {
+            const auto publicKeys = ov::keyset_from_secrets(slice(encSk), slice(signSeed));
+            keyset.encSk = encSk;
+            keyset.signSeed = signSeed;
+            keyset.publicKeys.encPk = toByteArray(publicKeys.enc_pk);
+            keyset.publicKeys.signPk = toByteArray(publicKeys.sign_pk);
+            keyset.publicKeys.sig = toByteArray(publicKeys.sig);
+        } catch (const rust::Error&) {
         }
-        keyset.encSk = encSk;
-        keyset.signSeed = signSeed;
-        keyset.publicKeys.encPk = x25519PublicKey(encSk);
-        keyset.publicKeys.signPk = ed25519PublicKey(signSeed);
-        keyset.publicKeys.sig = signPublicKeys(signSeed, keyset.publicKeys.encPk, keyset.publicKeys.signPk);
         return keyset;
     }
 
@@ -606,7 +471,11 @@ namespace AccountCrypto
 
     SecureBytes sharedSecret(const SecureBytes& secretKey, const QByteArray& publicKey)
     {
-        return x25519(secretKey, publicKey);
+        try {
+            return takeSecure(ov::x25519_shared(slice(secretKey), slice(publicKey)));
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     SecureBytes sealKey(const SecureBytes& sharedSecret, const QByteArray& ephemeralPk, const QByteArray& recipientPk)
@@ -620,19 +489,12 @@ namespace AccountCrypto
                     const SecureBytes& ephemeralSk,
                     const QByteArray& nonce)
     {
-        const auto esk = ephemeralSk.empty() ? randomSecure(KeySize) : ephemeralSk;
-        const auto epk = x25519PublicKey(esk);
-        const auto shared = x25519(esk, recipientEncPk);
-        if (shared.empty() || epk.size() != KeySize) {
+        try {
+            return toByteArray(
+                ov::seal(slice(recipientEncPk), slice(plaintext), slice(aad), slice(ephemeralSk), slice(nonce)));
+        } catch (const rust::Error&) {
             return {};
         }
-        const auto key = sealKey(shared, epk, recipientEncPk);
-        const auto wrapped = wrap(key, plaintext, aad, nonce);
-        if (wrapped.isEmpty()) {
-            return {};
-        }
-        // 0x01 || epk || nonce || ciphertext
-        return QByteArray(1, EnvelopeVersion) + epk + wrapped.mid(1);
     }
 
     bool unseal(const SecureBytes& recipientEncSk,
@@ -641,29 +503,15 @@ namespace AccountCrypto
                 SecureBytes* plaintext,
                 Error* error)
     {
-        const auto fail = [error](Error reason) {
-            if (error) {
-                *error = reason;
-            }
-            return false;
-        };
-        if (sealed.isEmpty()) {
-            return fail(Error::InvalidInput);
+        try {
+            *plaintext = takeSecure(ov::unseal(slice(recipientEncSk), slice(sealed), slice(aad)));
+        } catch (const rust::Error& e) {
+            return fail(error, sealed.isEmpty() ? Error::InvalidInput : errorOf(e));
         }
-        if (sealed.at(0) != EnvelopeVersion) {
-            return fail(Error::UnsupportedVersion);
+        if (error) {
+            *error = Error::None;
         }
-        if (sealed.size() < 1 + KeySize + NonceSize + 16) {
-            return fail(Error::InvalidInput);
-        }
-        const auto epk = sealed.mid(1, KeySize);
-        const auto recipientPk = x25519PublicKey(recipientEncSk);
-        const auto shared = x25519(recipientEncSk, epk);
-        if (shared.empty() || recipientPk.isEmpty()) {
-            return fail(Error::DecryptionFailed);
-        }
-        const auto key = sealKey(shared, epk, recipientPk);
-        return unwrap(key, QByteArray(1, EnvelopeVersion) + sealed.mid(1 + KeySize), aad, plaintext, error);
+        return true;
     }
 
     SecureBytes generateVaultKey()
@@ -673,7 +521,11 @@ namespace AccountCrypto
 
     SecureBytes vaultNameKey(const SecureBytes& vaultKey)
     {
-        return hkdf(vaultKey, {}, VaultNameInfo);
+        try {
+            return takeSecure(ov::vault_name_key(slice(vaultKey)));
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     QByteArray
@@ -798,55 +650,66 @@ namespace AccountCrypto
 
     QString refreshTokenHash(const QString& refreshToken)
     {
-        return toHex(sha256(refreshToken.toUtf8()));
+        const auto utf8 = refreshToken.toUtf8();
+        const auto hash = ov::refresh_token_hash(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
+        return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
     }
 
     QString ServiceAccountToken::secretHash() const
     {
-        return toHex(sha256(fromSecure(secret)));
+        try {
+            const auto hash = ov::service_account_secret_hash(slice(secret));
+            return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     QString ServiceAccountToken::secretPrefix() const
     {
-        return toBase64Url(secret).left(8);
+        try {
+            const auto prefix = ov::service_account_secret_prefix(slice(secret));
+            return QString::fromUtf8(prefix.data(), static_cast<int>(prefix.size()));
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     QString buildServiceAccountToken(const ServiceAccountToken& token)
     {
-        // Written by hand to keep the key order of the spec; QJsonDocument would sort the keys
-        const auto json = QStringLiteral(R"({"v":%1,"url":%2,"sa_id":%3,"secret":%4,"kek":%5})")
-                              .arg(token.version)
-                              .arg(jsonString(token.url),
-                                   jsonString(token.saId),
-                                   jsonString(toBase64Url(token.secret)),
-                                   jsonString(toBase64Url(token.kek)));
-        return ServiceAccountPrefix + toBase64Url(json.toUtf8());
+        const auto url = token.url.toUtf8();
+        const auto saId = token.saId.toUtf8();
+        try {
+            auto text = ov::build_service_account_token(rust::Str(url.constData(), static_cast<size_t>(url.size())),
+                                                         rust::Str(saId.constData(), static_cast<size_t>(saId.size())),
+                                                         slice(token.secret),
+                                                         slice(token.kek));
+            auto result = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
+            Botan::secure_scrub_memory(const_cast<char*>(text.data()), text.size());
+            return result;
+        } catch (const rust::Error&) {
+            return {};
+        }
     }
 
     bool parseServiceAccountToken(const QString& text, ServiceAccountToken* token)
     {
-        const auto trimmed = text.trimmed();
-        if (!trimmed.startsWith(ServiceAccountPrefix)) {
+        auto utf8 = text.toUtf8();
+        try {
+            auto parsed = ov::parse_service_account_token(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
+            ServiceAccountToken result;
+            result.version = 1;
+            result.url = QString::fromUtf8(parsed.url.data(), static_cast<int>(parsed.url.size()));
+            result.saId = QString::fromUtf8(parsed.sa_id.data(), static_cast<int>(parsed.sa_id.size()));
+            result.secret = takeSecure(std::move(parsed.secret));
+            result.kek = takeSecure(std::move(parsed.kek));
+            *token = result;
+            return true;
+        } catch (const rust::Error&) {
+            Botan::secure_scrub_memory(utf8.data(), static_cast<size_t>(utf8.size()));
             return false;
         }
-        bool ok = false;
-        const auto json = decodeJsonPart(trimmed.mid(ServiceAccountPrefix.size()), &ok);
-        if (!ok || json.value("v").toInt() != 1) {
-            return false;
-        }
-        ServiceAccountToken result;
-        result.version = 1;
-        result.url = json.value("url").toString();
-        result.saId = json.value("sa_id").toString();
-        bool secretOk = false, kekOk = false;
-        result.secret = secureFromBase64Url(json.value("secret").toString(), &secretOk);
-        result.kek = secureFromBase64Url(json.value("kek").toString(), &kekOk);
-        if (result.url.isEmpty() || result.saId.isEmpty() || !secretOk || !kekOk || result.secret.size() != KeySize
-            || result.kek.size() != KeySize) {
-            return false;
-        }
-        *token = result;
-        return true;
     }
 
     bool parseJwtClaims(const QString& token, JwtClaims* claims)

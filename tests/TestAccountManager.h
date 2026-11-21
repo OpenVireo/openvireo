@@ -36,6 +36,8 @@ private slots:
     void testReusedRefreshTokenSignsOut();
     void testServiceAccountExchange();
     void testKeyringOpensNewestKeyWithFallback();
+    void testDownloadKeepsTheWholeVault();
+    void testListsAndOpensVaultVersions();
     void testAccessEventRefreshesAndReloads();
     void testLockClearsKeys();
     void testDeleteAccountAndRestore();

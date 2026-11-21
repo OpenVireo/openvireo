@@ -33,6 +33,7 @@ private slots:
     void testWaitsForThisDevicesToken();
     void testSyncsWhenTheServerAnnouncesAChange();
     void testOpensAnOlderVersion();
+    void testOpensAnOlderVersionOfAnAccountVault();
     void testOpensAnOlderVersionFromTheVaultCard();
     void testCombinesChangesToDifferentFields();
     void testSyncsAnAccountVaultWithTheAccountsToken();

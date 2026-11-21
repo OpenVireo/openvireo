@@ -19,6 +19,7 @@
 #define KEEPASSXC_VAULTSHARING_H
 
 #include "AccountCrypto.h"
+#include "AccountManager.h"
 
 #include <QDateTime>
 #include <QObject>
@@ -27,7 +28,6 @@
 
 #include <functional>
 
-class AccountManager;
 class Database;
 
 /**
@@ -65,7 +65,6 @@ public:
 
         QString fingerprint() const;
         QString displayName() const;
-        static Recipient fromJson(const QJsonObject& json);
     };
 
     struct Member
@@ -91,8 +90,9 @@ public:
     using VaultCallback =
         std::function<void(const QString& vaultId, const QSharedPointer<Database>& vault, const QString& error)>;
 
-    // Re-keying retries this often when another device uploads in between (412)
-    static constexpr int MaxUploadAttempts = 3;
+    // Re-keying retries this often when another device uploads in between (412): openvireo-core's sync attempts
+    // (ov-sync SyncOptions::max_attempts)
+    static constexpr int MaxUploadAttempts = 5;
     // Roles, from least to most (SPEC §9)
     static QStringList roles();
 
@@ -129,25 +129,12 @@ signals:
     void progress(const QString& message);
 
 private:
-    struct Rotation;
-
-    void startRotation(const QSharedPointer<Rotation>& rotation);
-    void rekey(const QSharedPointer<Rotation>& rotation, int attempt);
-    void activate(const QSharedPointer<Rotation>& rotation);
+    // Create a vault from `db` in openvireo-core (import_kdbx as a new vault)
     void createFromDatabase(const QSharedPointer<Database>& db,
                             const QString& name,
                             const QString& orgId,
                             VaultCallback done);
-    void createWithGrants(const QSharedPointer<Database>& db,
-                          const QString& vaultId,
-                          const QString& orgId,
-                          const QString& vaultName,
-                          const SecureBytes& vaultKey,
-                          const QJsonArray& grants,
-                          VaultCallback done);
-    void uploadNewVault(const QString& vaultId, const QSharedPointer<Database>& db, VaultCallback done);
-    void collectRecipients(const QStringList& principals,
-                           std::function<void(const QList<Recipient>&, const QString& error)> done);
+    QString messageFor(const AccountManager::CoreError& error) const;
 
     QPointer<AccountManager> m_account;
 };
