@@ -1539,7 +1539,7 @@ SyncEngine::mergeAccountVault(Database* local, Database* remote, const Database*
         for (const auto& change : result.changes) {
             const auto type = changeType(change.change);
             const auto details = QString::fromUtf8(change.details.data(), static_cast<int>(change.details.size()));
-            const auto uuid = change.uuid.size() == 16 ? QUuid::fromRfc4122(QByteArrayView(toByteArray(change.uuid)))
+            const auto uuid = change.uuid.size() == 16 ? QUuid::fromRfc4122(toByteArray(change.uuid))
                                                         : QUuid();
             if (change.subject == ov::ChangeSubject::Entry) {
                 if (const auto* entry = local->rootGroup()->findEntryByUuid(uuid)) {
