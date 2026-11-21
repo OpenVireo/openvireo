@@ -26,6 +26,7 @@
 
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncEventStream.h"
+#include "gui/remote/SyncServerClient.h"
 
 #include <QObject>
 #include <QPointer>
@@ -36,6 +37,7 @@
 
 #include <memory>
 
+class CompositeKey;
 class Database;
 class QuickUnlockInterface;
 
@@ -57,8 +59,10 @@ class QuickUnlockInterface;
  * borrows the core's token through accessToken(). Presenting a rotated refresh token makes the server revoke
  * the session, which signs this device out.
  *
- * Account vaults get their tokens from this manager: it registers itself as the token provider of
- * its account with SyncServerClient while signed in.
+ * Account vaults are kept as KDBX files (KeePassXC Databases) under the vault key as a raw key file. The core
+ * lists the vaults, hands out each one's key (Account::vault_kdbx_credentials), downloads and creates them, and
+ * syncs the files (Account::sync_vault_kdbx): this manager registers itself with SyncServerClient as its account's
+ * token provider and vault syncer while signed in, and SyncEngine syncs through it.
  *
  * Quick Unlock (Touch ID, Windows Hello, Polkit) works as it does for databases: after the master password
  * unlocks the account once, the AUK is handed to the platform's Quick Unlock provider, which keeps it
@@ -226,9 +230,21 @@ public:
 
     using CreateVaultCallback =
         std::function<void(const QString& vaultId, QSharedPointer<Database> db, const QString& error)>;
-    // Create a personal vault: its key is sealed to this account. `done` gets the empty vault database
-    // to save and upload with If-None-Match: *, or an error.
+    // Create a vault: its key is sealed to this account (and in an org to its owners and admins), and the core
+    // uploads it empty with If-None-Match: *. `done` gets the vault database to save as the local copy, or an error.
     void createVault(const QString& name, CreateVaultCallback done);
+    void createVault(const QString& name, const QString& orgId, CreateVaultCallback done);
+    using DownloadVaultCallback =
+        std::function<void(QSharedPointer<Database> db, const QString& errorCode, const QString& error)>;
+    // Download a vault this device has no copy of yet; `db` is under the vault's newest key. `errorCode` is the
+    // core's wire code: not_found when nothing was uploaded yet.
+    void downloadVault(const QString& vaultId, DownloadVaultCallback done);
+    // Sync a vault file in the core (SyncEngine calls this through SyncServerClient::accountVaultSyncerFor())
+    AccountVaultSync::Cancel syncVault(const AccountVaultSync::Request& request, AccountVaultSync::Done done);
+    // The composite key of a vault's newest key version: the vault key as a raw key file; null without it
+    QSharedPointer<CompositeKey> vaultKey(const QString& vaultId) const;
+    // A vault key (a raw 32-byte key file) as a KeePassXC composite key
+    static QSharedPointer<CompositeKey> vaultCompositeKey(const QByteArray& keyFile);
 
     // Account deletion (SPEC §23). The erase date while the signed-in account is pending: it opens no
     // vaults until restoreAccount().
@@ -313,6 +329,8 @@ public:
         QString code;
         QString message;
         QString details;
+        // The server's own code when it isn't a wire code (account_pending_deletion, ...)
+        QString serverCode;
         int status = 0;
         bool ok() const
         {
@@ -320,9 +338,13 @@ public:
         }
     };
 
+    // The vault list as a worker read it from the core
+    struct VaultList;
+
 private:
     struct Pending;
     struct CoreSession;
+    struct EventLoop;
     enum class CoreEnd
     {
         // The core ended the session already (refused refresh)
@@ -357,6 +379,10 @@ private:
     void endSession(const QString& reason, CoreEnd end = CoreEnd::None);
     void startEvents();
     void stopEvents();
+    void takeCoreEvent(const ov::AccountEvent& event);
+    void takeVaultList(const VaultList& list);
+    void registerAccountHooks();
+    void unregisterAccountHooks();
     QString defaultServerId() const;
 
     // The core client and account for `config`, without network; null when the config isn't usable
@@ -402,7 +428,8 @@ private:
     QList<Org> m_orgs;
     AccountPlan::Plan m_plan;
     QuickUnlockInterface* m_quickUnlock = nullptr;
-    QPointer<SyncEventStream> m_events;
+    // The core's event stream (Account::subscribe), read on a thread of its own
+    std::shared_ptr<EventLoop> m_events;
 
     bool m_offline = false;
     QString m_deletionScheduledFor;

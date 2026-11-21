@@ -107,6 +107,19 @@ void VaultKeyring::setVaults(const QJsonArray& vaults, const SecureBytes& encSk)
     setVaults(parsed, encSk);
 }
 
+void VaultKeyring::setVaults(const QList<Vault>& vaults, const QHash<QString, QPair<int, SecureBytes>>& keys)
+{
+    clear();
+    for (const auto& vault : vaults) {
+        QMap<int, SecureBytes> versions;
+        if (keys.contains(vault.id) && keys.value(vault.id).second.size() == AccountCrypto::KeySize) {
+            versions.insert(keys.value(vault.id).first, keys.value(vault.id).second);
+        }
+        m_keys.insert(vault.id, versions);
+        m_vaults.insert(vault.id, vault);
+    }
+}
+
 void VaultKeyring::clear()
 {
     // SecureBytes wipe themselves when freed

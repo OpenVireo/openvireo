@@ -181,6 +181,8 @@ namespace FakeAccount
         QStringList requests;
         // The principal behind each sync server request ("" for device tokens and none)
         QStringList syncPrincipals;
+        // The bearer token of each sync server request
+        QStringList syncTokens;
         // The sync server answers PUT vaults/<id> with 412 this many times, as if another device saved first
         int conflictsToInject = 0;
 
@@ -242,6 +244,11 @@ namespace FakeAccount
     {
     public:
         FakeSyncClient(const RemoteParams& params, QSharedPointer<Server> server, QObject* parent = nullptr);
+        // send() for FakeAccount::Transport
+        void dispatch(const QByteArray& verb, const QUrl& url, const Headers& headers, const QByteArray& body, Callback callback)
+        {
+            send(verb, url, headers, body, 0, std::move(callback));
+        }
 
     protected:
         void send(const QByteArray& verb,
@@ -255,7 +262,8 @@ namespace FakeAccount
         QSharedPointer<Server> m_server;
     };
 
-    // The core Host transport in front of `server`: each request is answered by a FakeAuthClient on the GUI thread
+    // The core Host transport in front of `server`: each request is answered on the GUI thread by a FakeAuthClient
+    // (the account server) or a FakeSyncClient (the sync server)
     class Transport : public ov::HttpTransport
     {
     public:

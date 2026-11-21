@@ -121,7 +121,7 @@ add_unit_test(NAME testkdbximport SOURCES TestKdbxImport.cpp
 add_unit_test(NAME testremotesyncserver SOURCES TestRemoteSyncServer.cpp
         LIBS ${TEST_LIBRARIES})
 
-add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp
+add_unit_test(NAME testsyncengine SOURCES TestSyncEngine.cpp util/CoreTestServers.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 
 add_unit_test(NAME testaccountcrypto SOURCES TestAccountCrypto.cpp

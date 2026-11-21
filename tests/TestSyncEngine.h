@@ -61,6 +61,11 @@ private slots:
     void testKeepsAMoveFromOneDeviceAndAnEditFromAnother();
     void testBringsTogetherCopiesInDifferentGroups();
     void testMeasuresTheClockAgainstTheServer();
+    // Account vaults, synced in openvireo-core on its test servers
+    void testAccountVaultSyncsInTheCore();
+    void testAccountVaultKeepsEditsMadeDuringTheSync();
+    void testAccountVaultReportsARollback();
+    void testAccountVaultReportsALostVault();
 };
 
 #endif // KEEPASSXC_TESTSYNCENGINE_H

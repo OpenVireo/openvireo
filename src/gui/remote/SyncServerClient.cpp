@@ -41,6 +41,8 @@ namespace
     QHash<QString, AccessTokenProvider> g_accountProviders;
     // Vault id -> the account on this device that holds it (same mutex)
     QHash<QString, QString> g_vaultAccounts;
+    // Account id -> how the account syncs its vaults (same mutex)
+    QHash<QString, AccountVaultSync::Syncer> g_accountSyncers;
 
     // The provider for an account vault; call with the mutex held
     AccessTokenProvider accountProviderLocked(const QString& accountId, const QString& vaultId)
@@ -145,6 +147,29 @@ void SyncServerClient::setVaultAccount(const QString& vaultId, const QString& ac
     } else {
         g_vaultAccounts.insert(vaultId, accountId);
     }
+}
+
+void SyncServerClient::setAccountVaultSyncer(const QString& accountId, AccountVaultSync::Syncer syncer)
+{
+    QMutexLocker locker(&g_accountProvidersMutex);
+    if (syncer) {
+        g_accountSyncers.insert(accountId, std::move(syncer));
+    } else {
+        g_accountSyncers.remove(accountId);
+    }
+}
+
+AccountVaultSync::Syncer SyncServerClient::accountVaultSyncerFor(const RemoteParams& params)
+{
+    if (params.type != RemoteParams::Type::AccountVault || params.tokenProvider) {
+        return {};
+    }
+    QMutexLocker locker(&g_accountProvidersMutex);
+    const auto holder = g_vaultAccounts.value(params.vaultId);
+    if (!holder.isEmpty() && g_accountProviders.contains(holder)) {
+        return g_accountSyncers.value(holder);
+    }
+    return g_accountSyncers.value(params.accountId);
 }
 
 SyncServerClient::~SyncServerClient()
