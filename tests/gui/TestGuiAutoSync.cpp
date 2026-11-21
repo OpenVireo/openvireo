@@ -398,6 +398,69 @@ void TestGuiAutoSync::testOpensAnOlderVersion()
     QFile::remove(filePath);
 }
 
+void TestGuiAutoSync::testOpensAnOlderVersionOfAnAccountVault()
+{
+    // An account vault's versions come from its account (Account::vault_history, open_vault_version), never from a
+    // sync server client of its own
+    RemoteParams params;
+    params.name = "OpenVireo account (Team)";
+    params.type = RemoteParams::Type::AccountVault;
+    params.serverUrl = FakeAccount::SyncUrl;
+    params.accountId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    params.vaultId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto now = QDateTime::currentDateTimeUtc();
+    QString askedVault;
+    qint64 askedRevision = 0;
+    AccountVaultSync::History history;
+    history.list = [now](const QString&,
+                         std::function<void(const QList<AccountVaultSync::Version>&, const QString&)> done) {
+        AccountVaultSync::Version current{2, now, 2048, true};
+        AccountVaultSync::Version older{1, now.addDays(-1), 1024, false};
+        done({current, older}, {});
+    };
+    history.open = [&](const QString& vaultId,
+                       qint64 revision,
+                       const QString& password,
+                       std::function<void(const QByteArray&, const QString&)> done) {
+        askedVault = vaultId;
+        askedRevision = revision;
+        auto version = QSharedPointer<Database>::create();
+        auto key = QSharedPointer<CompositeKey>::create();
+        key->addKey(QSharedPointer<PasswordKey>::create(password));
+        version->setKey(key);
+        addEntry(version.data(), "In the first version");
+        QByteArray data;
+        QVERIFY(VaultKeyring::writeVault(version.data(), &data));
+        done(data, {});
+    };
+    SyncServerClient::setAccountVaultHistory(params.accountId, history);
+    const auto restore = qScopeGuard([&] { SyncServerClient::setAccountVaultHistory(params.accountId, {}); });
+
+    SyncHistoryDialog dialog(params);
+    QSignalSpy opened(&dialog, &SyncHistoryDialog::openRequested);
+    auto* versions = dialog.versionList();
+    QTRY_COMPARE_WITH_TIMEOUT(versions->topLevelItemCount(), 2, 5000);
+    QVERIFY(versions->topLevelItem(0)->text(0).contains("current"));
+    QCOMPARE(versions->topLevelItem(1)->text(0), QString("1"));
+
+    versions->setCurrentItem(versions->topLevelItem(1));
+    dialog.openSelected();
+    QTRY_COMPARE_WITH_TIMEOUT(opened.count(), 1, 5000);
+    QCOMPARE(askedVault, params.vaultId);
+    QCOMPARE(askedRevision, qint64(1));
+    // Under a one-off password that comes with the request: the vault key is never shown
+    const auto filePath = opened.first().at(0).toString();
+    const auto password = opened.first().at(1).toString();
+    QVERIFY(filePath.contains("OpenVireo account (Team) (version 1)"));
+    QVERIFY(password.size() >= 24);
+    auto key = QSharedPointer<CompositeKey>::create();
+    key->addKey(QSharedPointer<PasswordKey>::create(password));
+    Database version;
+    QVERIFY(version.open(filePath, key));
+    QCOMPARE(titles(&version), QStringList({"In the first version"}));
+    QFile::remove(filePath);
+}
+
 void TestGuiAutoSync::testOpensAnOlderVersionFromTheVaultCard()
 {
     SKIP_WITHOUT_SERVER();
@@ -673,11 +736,12 @@ void TestGuiAutoSync::testSharedVaultSyncsWithThisDevicesAccount()
     QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
     auto* widget = controller.vaultWidget(vaultId);
     QVERIFY(widget);
-    // Its settings name Alice's account, as in a copy her device synced before openvireo-core (the core's merge
-    // leaves database-level custom data as the server has it, so a fresh download names Bob's)
+    // Its settings name Alice's account, as in a copy that came from her device. (A download here names Bob's: the
+    // copy this device keeps drops the account remotes in the server's file and gets its own.)
     RemoteSettings settings(widget->database());
     settings.loadSettings();
     QCOMPARE(settings.getAllRemoteParams().size(), 1);
+    QCOMPARE(settings.getAllRemoteParams().first()->accountId, bob->accountId());
     {
         auto params = *settings.getAllRemoteParams().first();
         settings.removeRemoteParams(params.name);

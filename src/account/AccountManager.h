@@ -20,7 +20,6 @@
 
 #include "AccountCrypto.h"
 #include "AccountPlan.h"
-#include "AuthClient.h"
 #include "CoreHost.h"
 #include "VaultKeyring.h"
 
@@ -240,10 +239,21 @@ public:
     void downloadVault(const QString& vaultId, DownloadVaultCallback done);
     // Sync a vault file in the core (SyncEngine calls this through SyncServerClient::accountVaultSyncerFor())
     AccountVaultSync::Cancel syncVault(const AccountVaultSync::Request& request, AccountVaultSync::Done done);
+    // The versions of an account vault the sync server keeps (Account::vault_history), newest first
+    void vaultHistory(const QString& vaultId,
+                      std::function<void(const QList<AccountVaultSync::Version>& versions, const QString& error)> done);
+    // One of them (Account::open_vault_version) as a KDBX file under `password` alone
+    void openVaultVersion(const QString& vaultId,
+                          qint64 revision,
+                          const QString& password,
+                          std::function<void(const QByteArray& kdbx, const QString& error)> done);
     // The composite key of a vault's newest key version: the vault key as a raw key file; null without it
     QSharedPointer<CompositeKey> vaultKey(const QString& vaultId) const;
     // A vault key (a raw 32-byte key file) as a KeePassXC composite key
     static QSharedPointer<CompositeKey> vaultCompositeKey(const QByteArray& keyFile);
+    // A core vault (account or service account) as the KDBX file this device keeps, everything in it, under
+    // `credentials` (Account::vault_kdbx_credentials). Blocking: call it on the core's worker.
+    static QByteArray vaultFile(const ov::Vault& vault, ov::KdbxCredentials credentials, const ov::CancelToken& cancel);
 
     // Account deletion (SPEC §23). The erase date while the signed-in account is pending: it opens no
     // vaults until restoreAccount().
@@ -370,7 +380,7 @@ private:
     void setOffline(bool offline);
     void scheduleReconnect();
     // GET /me's kdf, keyset and orgs into the offline cache, and the orgs into orgs()
-    void takeProfile(const QJsonObject& me);
+    void takeProfile(const ov::Profile& profile);
     QString unreachableMessage() const;
     QString messageFor(const CoreError& error) const;
     // A refused refresh ended the session in the core: end it here too. True when it did.
@@ -382,7 +392,8 @@ private:
     void forgetAuk();
     void takeToken(const QString& token);
     void finishTokenRequest(const CoreError& error);
-    void exchangeServiceAccount();
+    void openServiceAccount(const ServerConfig& config, const QString& token);
+    void takeServiceAccountVaults(const VaultList& list);
     void finishRefresh(bool ok);
     void endSession(const QString& reason, CoreEnd end = CoreEnd::None);
     void startEvents();
@@ -395,6 +406,8 @@ private:
 
     // The core client and account for `config`, without network; null when the config isn't usable
     std::shared_ptr<CoreSession> makeCore(const ServerConfig& config) const;
+    // The core session that syncs: the service account's while one is signed in, else the account's
+    std::shared_ptr<CoreSession> vaultCore() const;
     // Runs `work` on this manager's worker (one at a time, in order), then `done` on this thread
     void runCore(std::shared_ptr<CoreSession> core,
                  std::function<void(CoreSession&)> work,
@@ -410,7 +423,6 @@ private:
     QThreadPool m_pool;
     int m_inFlight = 0;
     bool m_destroying = false;
-    AuthClient* m_client;
     ServerConfig m_config;
     AccountCrypto::KdfParams m_newAccountKdf;
     bool m_eventsEnabled = true;
@@ -420,7 +432,8 @@ private:
     QString m_email;
     QString m_deviceId;
     bool m_serviceAccount = false;
-    AccountCrypto::ServiceAccountToken m_saToken;
+    // A service account signed in with its token (ov::ServiceAccount): its own client, separate from m_core
+    std::shared_ptr<CoreSession> m_saCore;
 
     // The last token the core handed out, and when it expires on this device's clock
     QString m_accessToken;

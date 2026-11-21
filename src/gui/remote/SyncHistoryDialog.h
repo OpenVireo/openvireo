@@ -19,6 +19,7 @@
 #define KEEPASSXC_SYNCHISTORYDIALOG_H
 
 #include "RemoteSettings.h"
+#include "SyncServerClient.h"
 
 #include <QDialog>
 
@@ -26,12 +27,15 @@ class QDialogButtonBox;
 class QLabel;
 class QPushButton;
 class QTreeWidget;
-class SyncServerClient;
 
 /**
  * The versions of a database kept on the sync server. Opening one downloads it to a temporary
  * file and opens it in its own tab, where entries can be copied from it or it can be merged
  * into the current database. Nothing is changed on the server.
+ *
+ * An account vault's versions come from its account's openvireo-core session (Account::vault_history and
+ * open_vault_version, see SyncServerClient::accountVaultHistoryFor()). The vault key is random and never shown, so
+ * the version is saved under a one-off password instead, which comes with openRequested().
  */
 class SyncHistoryDialog : public QDialog
 {
@@ -49,17 +53,22 @@ public slots:
     void openSelected();
 
 signals:
-    // A version was downloaded to `filePath`
-    void openRequested(const QString& filePath);
+    // A version was downloaded to `filePath`; `password` opens it (empty: the database's own credentials)
+    void openRequested(const QString& filePath, const QString& password);
     // Whether a version is selected and not being downloaded
     void canOpenChanged(bool canOpen);
 
 private:
     void loadVersions();
+    void showVersions(const QList<AccountVaultSync::Version>& versions);
+    // Saves a downloaded version to a temporary file and asks to open it
+    void saveVersion(qint64 revision, const QByteArray& data, const QString& password);
     void showStatus(const QString& text);
     void setCanOpen(bool canOpen);
 
     RemoteParams m_params;
+    // Set for an account vault whose account is signed in on this device
+    AccountVaultSync::History m_history;
     SyncServerClient* m_client;
     QTreeWidget* m_versions;
     QLabel* m_status;

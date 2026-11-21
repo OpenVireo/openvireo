@@ -31,80 +31,9 @@
 
 #include <algorithm>
 
-VaultKeyring::Vault VaultKeyring::Vault::fromJson(const QJsonObject& json, bool* ok)
-{
-    Vault vault;
-    vault.id = json.value("id").toString();
-    vault.orgId = json.value("org_id").toString();
-    vault.ownerId = json.value("owner_id").toString();
-    bool nameOk = false;
-    vault.encryptedName = AccountCrypto::fromBase64Url(json.value("encrypted_name").toString(), &nameOk);
-    vault.role = json.value("role").toString();
-    vault.currentKeyVersion = json.value("current_key_version").toInt();
-    vault.pendingKeyVersion =
-        json.value("pending_key_version").isDouble() ? json.value("pending_key_version").toInt() : -1;
-    vault.rotationRequired = json.value("rotation_required").toBool();
-    for (const auto& value : json.value("keys").toArray()) {
-        const auto key = value.toObject();
-        bool keyOk = false;
-        SealedKey sealed;
-        sealed.version = key.value("key_version").toInt();
-        sealed.sealedKey = AccountCrypto::fromBase64Url(key.value("sealed_key").toString(), &keyOk);
-        if (keyOk && !sealed.sealedKey.isEmpty()) {
-            vault.keys << sealed;
-        }
-    }
-    // Newest first, whatever order the server used
-    std::sort(vault.keys.begin(), vault.keys.end(), [](const SealedKey& a, const SealedKey& b) {
-        return a.version > b.version;
-    });
-    if (ok) {
-        *ok = !vault.id.isEmpty() && nameOk;
-    }
-    return vault;
-}
-
 VaultKeyring::~VaultKeyring()
 {
     clear();
-}
-
-void VaultKeyring::setVaults(const QList<Vault>& vaults, const SecureBytes& encSk)
-{
-    clear();
-    for (auto vault : vaults) {
-        QMap<int, SecureBytes> keys;
-        for (const auto& sealed : vault.keys) {
-            SecureBytes vaultKey;
-            // The AAD binds each sealed key to its vault, so the server can't hand one vault's key out as another's
-            if (AccountCrypto::unseal(encSk, sealed.sealedKey, AccountCrypto::vaultKeyAad(vault.id), &vaultKey)
-                && vaultKey.size() == AccountCrypto::KeySize) {
-                keys.insert(sealed.version, vaultKey);
-            }
-        }
-        // The name was encrypted with one of the keys, normally the newest
-        for (auto it = keys.constEnd(); it != keys.constBegin();) {
-            --it;
-            if (AccountCrypto::decryptVaultName(it.value(), vault.id, vault.encryptedName, &vault.name)) {
-                break;
-            }
-        }
-        m_keys.insert(vault.id, keys);
-        m_vaults.insert(vault.id, vault);
-    }
-}
-
-void VaultKeyring::setVaults(const QJsonArray& vaults, const SecureBytes& encSk)
-{
-    QList<Vault> parsed;
-    for (const auto& value : vaults) {
-        bool ok = false;
-        auto vault = Vault::fromJson(value.toObject(), &ok);
-        if (ok) {
-            parsed << vault;
-        }
-    }
-    setVaults(parsed, encSk);
 }
 
 void VaultKeyring::setVaults(const QList<Vault>& vaults, const QHash<QString, QPair<int, SecureBytes>>& keys)

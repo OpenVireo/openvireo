@@ -29,7 +29,7 @@
  * The Host of openvireo-core on the desktop (rust-core-tasks.md §2.2): the core does no I/O of its own and
  * calls these back for it.
  *
- *   HttpTransport  QNetworkAccessManager, so Qt's proxy settings apply as they do to AuthClient
+ *   HttpTransport  QNetworkAccessManager, so Qt's proxy settings apply as they do to the sync server client
  *   SecureStore    the keychain the account code already uses (SyncTokenStore)
  *   BlobCache      files beside AccountOfflineCache, in <accounts root>/<user>/core/
  *   Clock          core/Clock (so MockClock works in tests)
