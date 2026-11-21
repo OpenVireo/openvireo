@@ -33,9 +33,25 @@ namespace
     // KeePass attributes that hold TOTP settings; shared together as one "otp" field
     const QStringList TotpAttributes{"otp", "TOTP Seed", "TOTP Settings"};
 
-    QDateTime parseTime(const QJsonValue& value)
+    QDateTime parseTime(const QString& value)
     {
-        return QDateTime::fromString(value.toString(), Qt::ISODate);
+        return QDateTime::fromString(value, Qt::ISODate);
+    }
+
+    rust::String rs(const QString& text)
+    {
+        const auto utf8 = text.toUtf8();
+        return rust::String(utf8.constData(), static_cast<size_t>(utf8.size()));
+    }
+
+    rust::Vec<uint8_t> bytesOf(const QByteArray& data)
+    {
+        rust::Vec<uint8_t> out;
+        out.reserve(static_cast<size_t>(data.size()));
+        for (auto c : data) {
+            out.push_back(static_cast<uint8_t>(c));
+        }
+        return out;
     }
 } // namespace
 
@@ -127,79 +143,78 @@ void ItemShare::create(const QJsonObject& payload, const Options& options, Creat
         done({}, tr("Unlock your account first."));
         return;
     }
-    const auto base = m_account->server().shareBase();
-    if (base.isEmpty()) {
+    if (m_account->server().shareBase().isEmpty()) {
         done({}, tr("This account server has no share page."));
         return;
     }
 
-    QJsonObject body{{"expires_in", options.expiresIn}};
-    body.insert("vault_id", options.vaultId.isEmpty() ? QJsonValue() : QJsonValue(options.vaultId));
-    body.insert("max_opens", options.maxOpens > 0 ? QJsonValue(options.maxOpens) : QJsonValue());
-    SecureBytes passcodeKey;
-    if (!options.passcode.isEmpty()) {
-        const auto kdf = KdfParams::generate();
-        passcodeKey = sharePasscodeKey(options.passcode, kdf);
-        body.insert("kdf", kdf.toJson());
-        body.insert("auth", toBase64Url(shareAuth(passcodeKey)));
+    // openvireo-core registers the link, encrypts the payload under a fresh link key (and the passcode), keeps the
+    // owner reference sealed to this account and uploads it (SPEC §22)
+    ov::SharePayload content;
+    content.v = static_cast<uint32_t>(payload.value("v").toInt(1));
+    content.kind = rs(payload.value("kind").toString());
+    content.title = rs(payload.value("title").toString());
+    content.shared_by = rs(payload.value("shared_by").toString());
+    for (const auto& value : payload.value("fields").toArray()) {
+        const auto json = value.toObject();
+        ov::ShareField field;
+        field.k = rs(json.value("k").toString());
+        field.label = rs(json.value("label").toString());
+        field.value = bytesOf(json.value("value").toString().toUtf8());
+        field.is_protected = json.value("protected").toBool();
+        content.fields.push_back(std::move(field));
     }
-    const auto payloadJson = QJsonDocument(payload).toJson(QJsonDocument::Compact);
-    const auto refJson = QJsonDocument(QJsonObject{{"vault", options.vaultId.isEmpty() ? QJsonValue() : QJsonValue(options.vaultId)},
-                                                   {"entry", options.entryId.isEmpty() ? QJsonValue() : QJsonValue(options.entryId)},
-                                                   {"title", payload.value("title").toString()}})
-                             .toJson(QJsonDocument::Compact);
+    ov::ShareOptions opts;
+    opts.expires_in = static_cast<uint32_t>(qMax(0, options.expiresIn));
+    opts.has_max_opens = options.maxOpens > 0;
+    opts.max_opens = static_cast<uint32_t>(qMax(0, options.maxOpens));
+    opts.has_passcode = !options.passcode.isEmpty();
+    opts.passcode = bytesOf(options.passcode.toUtf8());
+    opts.vault_id = rs(options.vaultId);
+    opts.entry_id = rs(options.entryId);
 
+    auto created = std::make_shared<Created>();
+    auto input = std::make_shared<std::pair<ov::SharePayload, ov::ShareOptions>>(std::move(content), std::move(opts));
     QPointer<ItemShare> guard(this);
-    m_account->client()->createShare(body, [guard, base, payloadJson, refJson, passcodeKey, done](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        const auto json = response.json();
-        const auto id = json.value("id").toString();
-        const auto linkKey = randomSecure(KeySize);
-        const auto ct = encryptSharePayload(linkKey, id, payloadJson, passcodeKey);
-        if (ct.isEmpty()) {
-            done({}, tr("This is too much to share in one link. Choose fewer fields."));
-            return;
-        }
-        const auto ref = toBase64Url(encryptShareRef(guard->m_account->keyset().encSk, id, refJson));
-        const Created created{id, shareLink(base, id, linkKey), parseTime(json.value("expires_at"))};
-        guard->m_account->client()->uploadShare(id, ct, ref, [created, done](const AuthClient::Response& upload) {
-            if (!upload.isSuccess()) {
-                done({}, AuthClient::errorMessage(upload));
+    m_account->callAccount(
+        this,
+        [input, created](const ov::Account& account, const ov::CancelToken& cancel) {
+            auto share = account.create_share(std::move(input->first), std::move(input->second), cancel);
+            created->id = CoreHost::toQString(share.id);
+            created->url = QString::fromUtf8(reinterpret_cast<const char*>(share.url.data()),
+                                             static_cast<int>(share.url.size()));
+            ov::wipe(share.url);
+            created->expiresAt = parseTime(CoreHost::toQString(share.expires_at));
+        },
+        [guard, input, created, done](const AccountManager::CoreError& error) {
+            // The payload is wiped with the request
+            ov::wipe(input->second.passcode);
+            if (!error.ok()) {
+                done({}, guard && guard->m_account ? guard->m_account->errorMessage(error) : error.message);
                 return;
             }
-            done(created, {});
+            done(*created, {});
         });
-    });
 }
 
-ItemShare::Listing ItemShare::Listing::fromJson(const QJsonObject& json, const SecureBytes& encSk)
+ItemShare::Listing ItemShare::Listing::fromCore(const ov::ShareListing& share)
 {
     Listing listing;
-    listing.id = json.value("id").toString();
-    listing.vaultId = json.value("vault_id").toString();
-    listing.passcode = json.value("passcode").toBool();
-    listing.maxOpens = json.value("max_opens").toInt();
-    listing.opens = json.value("opens").toInt();
-    for (const auto& value : json.value("opened_at").toArray()) {
-        listing.openedAt << parseTime(value);
+    listing.id = CoreHost::toQString(share.id);
+    listing.vaultId = CoreHost::toQString(share.vault_id);
+    listing.passcode = share.passcode;
+    listing.maxOpens = share.has_max_opens ? static_cast<int>(share.max_opens) : 0;
+    listing.opens = static_cast<int>(share.opens);
+    for (const auto& when : share.opened_at) {
+        listing.openedAt << parseTime(CoreHost::toQString(when));
     }
-    listing.createdAt = parseTime(json.value("created_at"));
-    listing.expiresAt = parseTime(json.value("expires_at"));
-    listing.status = json.value("status").toString();
-    listing.endReason = json.value("end_reason").toString();
-    bool ok = false;
-    const auto ref = fromBase64Url(json.value("ref").toString(), &ok);
-    QByteArray refJson;
-    if (ok && !encSk.empty() && decryptShareRef(encSk, listing.id, ref, &refJson)) {
-        const auto refObject = QJsonDocument::fromJson(refJson).object();
-        listing.title = refObject.value("title").toString();
-        listing.entryId = refObject.value("entry").toString();
+    listing.createdAt = parseTime(CoreHost::toQString(share.created_at));
+    listing.expiresAt = parseTime(CoreHost::toQString(share.expires_at));
+    listing.status = CoreHost::toQString(share.status);
+    listing.endReason = CoreHost::toQString(share.end_reason);
+    if (share.has_reference) {
+        listing.title = CoreHost::toQString(share.reference.title);
+        listing.entryId = CoreHost::toQString(share.reference.entry);
     }
     return listing;
 }
@@ -210,21 +225,22 @@ void ItemShare::list(ListCallback done)
         done({}, tr("Unlock your account first."));
         return;
     }
+    auto shares = std::make_shared<QList<Listing>>();
     QPointer<ItemShare> guard(this);
-    m_account->client()->listShares([guard, done](const AuthClient::Response& response) {
-        if (!guard || !guard->m_account) {
-            return;
-        }
-        if (!response.isSuccess()) {
-            done({}, AuthClient::errorMessage(response));
-            return;
-        }
-        QList<Listing> shares;
-        for (const auto& value : response.json().value("shares").toArray()) {
-            shares << Listing::fromJson(value.toObject(), guard->m_account->keyset().encSk);
-        }
-        done(shares, {});
-    });
+    m_account->callAccount(
+        this,
+        [shares](const ov::Account& account, const ov::CancelToken& cancel) {
+            for (const auto& share : account.list_shares(cancel)) {
+                *shares << Listing::fromCore(share);
+            }
+        },
+        [guard, shares, done](const AccountManager::CoreError& error) {
+            if (!error.ok()) {
+                done({}, guard && guard->m_account ? guard->m_account->errorMessage(error) : error.message);
+                return;
+            }
+            done(*shares, {});
+        });
 }
 
 void ItemShare::revoke(const QString& shareId, Done done)
@@ -233,7 +249,15 @@ void ItemShare::revoke(const QString& shareId, Done done)
         done(false, tr("Unlock your account first."));
         return;
     }
-    m_account->client()->revokeShare(shareId, [done](const AuthClient::Response& response) {
-        done(response.isSuccess(), response.isSuccess() ? QString() : AuthClient::errorMessage(response));
-    });
+    QPointer<ItemShare> guard(this);
+    m_account->callAccount(
+        this,
+        [shareId](const ov::Account& account, const ov::CancelToken& cancel) {
+            account.revoke_share(rs(shareId), cancel);
+        },
+        [guard, done](const AccountManager::CoreError& error) {
+            done(error.ok(),
+                 error.ok() ? QString()
+                            : (guard && guard->m_account ? guard->m_account->errorMessage(error) : error.message));
+        });
 }

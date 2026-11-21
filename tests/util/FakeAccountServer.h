@@ -110,6 +110,8 @@ namespace FakeAccount
             QJsonObject request;
             QByteArray ct;
             QString ref;
+            QString createdAt;
+            QString expiresAt;
             bool revoked = false;
         };
         struct Invitation

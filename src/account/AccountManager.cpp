@@ -549,6 +549,42 @@ void AccountManager::runCore(std::shared_ptr<CoreSession> core,
     watcher->setFuture(future);
 }
 
+void AccountManager::callAccount(QObject* context, AccountWork work, AccountDone done)
+{
+    QPointer<QObject> guard(context);
+    if (m_state != State::Unlocked || !m_core) {
+        CoreError error;
+        error.code = QStringLiteral("signed_out");
+        error.message = tr("Unlock your account first.");
+        QTimer::singleShot(0, this, [guard, done, error] {
+            if (guard && done) {
+                done(error);
+            }
+        });
+        return;
+    }
+    auto core = m_core;
+    runCore(
+        core,
+        [work](CoreSession& c) {
+            auto cancel = ov::new_cancel_token();
+            work(c.acct(), *cancel);
+        },
+        [this, guard, core, done](const CoreError& e) {
+            if (!e.ok() && core == m_core) {
+                sessionEndedBy(e);
+            }
+            if (guard && done) {
+                done(e);
+            }
+        });
+}
+
+QString AccountManager::errorMessage(const CoreError& error) const
+{
+    return messageFor(error);
+}
+
 void AccountManager::setServer(const ServerConfig& config)
 {
     const bool same = m_core && config.toJson() == m_config.toJson();

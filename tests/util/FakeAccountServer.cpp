@@ -270,6 +270,21 @@ namespace FakeAccount
         const auto error = [&](int status, const QString& code, const QString& message = {}) {
             reply(status, {{"error", message.isEmpty() ? code : message}, {"code", code}});
         };
+        // A share link as its owner sees it (the API's Share)
+        const auto shareJson = [](const Server::Share& share) {
+            const auto status = share.revoked ? "ended" : share.ct.isEmpty() ? "pending" : "active";
+            return QJsonObject{{"id", share.id},
+                               {"vault_id", share.vaultId.isEmpty() ? QJsonValue() : QJsonValue(share.vaultId)},
+                               {"ref", share.ref.isEmpty() ? QJsonValue() : QJsonValue(share.ref)},
+                               {"passcode", share.request.value("kdf").isObject()},
+                               {"max_opens", share.request.value("max_opens")},
+                               {"opens", 0},
+                               {"opened_at", QJsonArray()},
+                               {"created_at", share.createdAt},
+                               {"expires_at", share.expiresAt},
+                               {"status", status},
+                               {"end_reason", share.revoked ? QJsonValue("revoked") : QJsonValue()}};
+        };
 
         if (url.path() == "/.well-known/openvireo-configuration") {
             server.requests << "GET .well-known/openvireo-configuration";
@@ -521,13 +536,12 @@ namespace FakeAccount
                 share.owner = caller;
                 share.vaultId = vaultId;
                 share.request = json;
+                share.createdAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+                share.expiresAt =
+                    QDateTime::currentDateTimeUtc().addSecs(json.value("expires_in").toInt()).toString(Qt::ISODate);
                 server.shares.insert(share.id, share);
                 server.shareOrder.prepend(share.id);
-                reply(201,
-                      {{"id", share.id},
-                       {"status", "pending"},
-                       {"expires_at",
-                        QDateTime::currentDateTimeUtc().addSecs(json.value("expires_in").toInt()).toString(Qt::ISODate)}});
+                reply(201, shareJson(share));
             }
         } else if (parts.value(0) == "shares" && parts.size() == 2 && verb == "PUT") {
             auto& share = server.shares[parts.value(1)];
@@ -536,22 +550,14 @@ namespace FakeAccount
             } else {
                 share.ct = b64("ct");
                 share.ref = json.value("ref").toString();
-                reply(200, {{"id", share.id}, {"status", "active"}});
+                reply(200, shareJson(share));
             }
         } else if (path == "shares" && verb == "GET") {
             QJsonArray list;
             for (const auto& id : server.shareOrder) {
                 const auto& share = server.shares[id];
                 if (share.owner == caller && !share.ct.isEmpty()) {
-                    list << QJsonObject{{"id", share.id},
-                                        {"vault_id", share.vaultId.isEmpty() ? QJsonValue() : QJsonValue(share.vaultId)},
-                                        {"ref", share.ref},
-                                        {"passcode", share.request.contains("kdf")},
-                                        {"max_opens", share.request.value("max_opens")},
-                                        {"opens", 0},
-                                        {"opened_at", QJsonArray()},
-                                        {"status", share.revoked ? "ended" : "active"},
-                                        {"end_reason", share.revoked ? QJsonValue("revoked") : QJsonValue()}};
+                    list << shareJson(share);
                 }
             }
             reply(200, {{"shares", list}});
@@ -726,6 +732,14 @@ namespace FakeAccount
                 server.log(caller, "vault.key.rotate", vault.id);
                 reply(202);
             }
+        } else if (parts.value(0) == "vaults" && parts.size() == 2 && verb == "PATCH") {
+            // Rename: the name encrypted under the current key (openvireo-core re-encrypts it after a rotation)
+            auto& vault = server.vaults[parts.value(1)];
+            if (json.contains("encrypted_name")) {
+                vault.encryptedName = json.value("encrypted_name").toString();
+            }
+            server.log(caller, "vault.rename", vault.id, vault.orgId);
+            reply(200, vaultJson(vault));
         } else if (parts.value(0) == "vaults" && parts.value(2) == "keys" && parts.value(4) == "activate") {
             auto& vault = server.vaults[parts.value(1)];
             const auto version = parts.value(3).toInt();
