@@ -385,17 +385,22 @@ void TestAccountManager::testWrongPasswordOrSecretKey()
     manager->signIn(Email, "wrong password");
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 1, 20000);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
-    QVERIFY(errors.first().first().toString().contains("password is wrong"));
+    // OPAQUE refused: the password (or the email), never the Secret Key
+    QCOMPARE(errors.first().first().toString(), QString("The email address or the master password is wrong."));
     // OPAQUE fails on this device; login/finish is never even sent
     QCOMPARE(fixture.count("POST /auth/login/finish"), 0);
 
     // Another Secret Key: the server accepts the password, but the keyset doesn't unwrap
     SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
     SecureBytes other = generateSecretKey();
+    fixture.servers->clear_requests();
     manager->signIn(Email, Password, formatSecretKey(other));
     QTRY_COMPARE_WITH_TIMEOUT(errors.count(), 2, 20000);
     QCOMPARE(manager->state(), AccountManager::State::SignedOut);
-    QVERIFY2(errors.last().first().toString().contains("Secret Key"), qPrintable(errors.last().first().toString()));
+    // The core says which one it was (details keyset_unwrap_failed), and logs the session it got out again
+    QCOMPARE(errors.last().first().toString(), QString("The Secret Key is wrong."));
+    QCOMPARE(fixture.count("POST /auth/login/finish"), 1);
+    QCOMPARE(fixture.count("POST /auth/logout"), 1);
     QVERIFY(manager->keyset().isNull());
     // The core unlocks before it keeps the session: none is kept, and the wrong key isn't remembered
     QVERIFY(coreSession({}).isEmpty());
