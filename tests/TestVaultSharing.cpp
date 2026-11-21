@@ -381,16 +381,15 @@ void TestVaultSharing::testFinishesAPendingRotation()
     // The old key still opens the blob, so nobody is locked out
     QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId, 1)));
 
-    // Rotating again finishes it with the pending key instead of starting another
+    // Rotating again would finish it with the pending key; openvireo-core doesn't yet (CONTRACT-REQUEST), so the
+    // server refuses a second rotation and the user is told, with nothing changed
     QString error;
-    QVERIFY2(
-        run(
-            f.sharing.data(), [&](VaultSharing* s, VaultSharing::Done done) { s->rotate(vaultId, {}, done); }, &error),
-        qPrintable(error));
-    QCOMPARE(f.server->vaults.value(vaultId).current, 2);
-    QCOMPARE(f.server->vaults.value(vaultId).pending, -1);
-    QTRY_VERIFY(f.alice->keyring().vault(vaultId).currentKeyVersion == 2);
-    QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId)));
+    QVERIFY(!run(
+        f.sharing.data(), [&](VaultSharing* s, VaultSharing::Done done) { s->rotate(vaultId, {}, done); }, &error));
+    QVERIFY2(error.contains("hasn't finished"), qPrintable(error));
+    QCOMPARE(f.server->vaults.value(vaultId).current, 1);
+    QCOMPARE(f.server->vaults.value(vaultId).pending, 2);
+    QVERIFY(VaultKeyring::readVault(f.server->blobs.value(vaultId).data, f.alice->keyring().compositeKey(vaultId, 1)));
 }
 
 void TestVaultSharing::testMovesADatabaseToTheAccount()
@@ -470,8 +469,16 @@ void TestVaultSharing::testMovesADatabaseToTheAccount()
     QCOMPARE(argon->rounds(), VaultKeyring::VaultKdfIterations);
     QVERIFY(!VaultKeyring::readVault(f.server->blobs.value(vaultId).data, password));
 
-    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays
-    RemoteSettings settings(uploaded);
+    // It syncs as an account vault from now on; the sync server remote is gone, the command remote stays. The local
+    // copy carries the remotes: openvireo-core's import uploads the vault without database-level custom data.
+    {
+        RemoteSettings uploadedSettings(uploaded);
+        uploadedSettings.loadSettings();
+        for (const auto* params : uploadedSettings.getAllRemoteParams()) {
+            QVERIFY2(params->name != "home", qPrintable(params->name));
+        }
+    }
+    RemoteSettings settings(vault);
     settings.loadSettings();
     QStringList remotes;
     for (const auto* params : settings.getAllRemoteParams()) {
@@ -1298,7 +1305,8 @@ void TestVaultSharing::testMakesShareLinks()
     const auto& stored = f.server->shares.value(share.id);
     QCOMPARE(stored.vaultId, vaultId);
     QCOMPARE(stored.request.value("max_opens").toInt(), 1);
-    QVERIFY(!stored.request.contains("kdf"));
+    // No passcode: no KDF (openvireo-core sends "kdf": null where the C++ client left it out)
+    QVERIFY(!stored.request.value("kdf").isObject());
     QVERIFY(!stored.ct.contains("hunter2-wifi"));
     QCOMPARE((stored.ct.size() - 41) % SharePad, 0);
     const auto linkKey = secureFromBase64Url(share.url.section('#', 1));

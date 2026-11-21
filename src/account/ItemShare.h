@@ -19,6 +19,7 @@
 #define KEEPASSXC_ITEMSHARE_H
 
 #include "AccountCrypto.h"
+#include "CoreHost.h"
 
 #include <QDateTime>
 #include <QJsonObject>
@@ -96,7 +97,7 @@ public:
         {
             return status == "ended";
         }
-        static Listing fromJson(const QJsonObject& json, const SecureBytes& encSk);
+        static Listing fromCore(const ov::ShareListing& share);
     };
 
     using CreatedCallback = std::function<void(const Created& share, const QString& error)>;

@@ -341,6 +341,15 @@ public:
     // The vault list as a worker read it from the core
     struct VaultList;
 
+    // A call on the signed-in account's openvireo-core session; it runs on the core's worker thread
+    using AccountWork = std::function<void(const ov::Account& account, const ov::CancelToken& cancel)>;
+    using AccountDone = std::function<void(const CoreError& error)>;
+    // Runs `work` with the unlocked account, then `done` on this thread unless `context` is gone; a session the
+    // core ended (refused refresh) signs this device out. signed_out without an unlocked account.
+    void callAccount(QObject* context, AccountWork work, AccountDone done);
+    // The message to show for a failed core call
+    QString errorMessage(const CoreError& error) const;
+
 private:
     struct Pending;
     struct CoreSession;
