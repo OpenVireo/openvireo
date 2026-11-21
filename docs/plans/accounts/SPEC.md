@@ -50,6 +50,10 @@ AUK        = HKDF(ikm=stretched, salt=SecretKey(16 bytes), info="ov-auk-v1", L=3
 - `kdf` = `{"alg":"argon2id","salt":<16 bytes>,"m":65536,"t":3,"p":1}`. These are the production
   defaults. The client picks a random salt at registration, and the server stores the object as
   given and returns it after a successful OPAQUE login. Clients refuse `m < 19456` or `t < 2`.
+- **Maximum:** clients also refuse `m > 1048576` (1 GiB), `t > 64`, `p > 64`, or `m × t > 16777216`
+  (16 GiB of work), before running Argon2, whatever the minimum: a `kdf` that large would exhaust a
+  phone's or a browser tab's memory, or take minutes. The server refuses to store a `kdf` outside
+  the same bounds.
 - The OPAQUE password input (§8) is the same NFKC UTF-8 password. OPAQUE and the AUK are
   independent: a stolen OPAQUE record still needs the Secret Key to decrypt anything.
 
@@ -793,7 +797,8 @@ auth     = HKDF(ikm=P, salt=empty, info="ov-share-auth-v1", L=32)               
 ```
 
 - `kdf` is `{"alg":"argon2id","salt":<16 random bytes>,"m","t","p"}` with §3's defaults; clients
-  refuse `m < 19456` or `t < 2` here too.
+  refuse `m < 19456` or `t < 2`, and anything over §3's maximum, here too (the link's creator picks
+  it).
 - `pad` appends `0x80`, then zero bytes up to the next multiple of 512. `unpad` drops trailing zero
   bytes and then one `0x80`; anything else is an error.
 - The server stores `SHA-256(auth)` and needs `auth` before it returns `ct`. It can try passcodes
