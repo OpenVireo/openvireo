@@ -41,12 +41,13 @@ class QNetworkAccessManager;
 class QNetworkReply;
 
 /**
- * Asynchronous JSON client for the KeePassXC auth server (docs/plans/accounts/openapi.yaml), in the
- * style of SyncServerClient: every request ends by calling its callback on the client's thread,
- * unless abort() runs first, and tests override send() to answer without a network.
+ * Asynchronous JSON client for the few auth server routes (docs/plans/accounts/openapi.yaml) that openvireo-core
+ * doesn't cover for the desktop yet: a service account's session and GET /me. Everything else (sign-in, sessions,
+ * vaults, sharing, orgs, share links) runs on the core's ov::Account. Every request ends by calling its callback on
+ * the client's thread, unless abort() runs first; tests override send() to answer without a network.
  *
  * Routes that need a signed-in caller get their bearer token from the token provider; the others
- * (registration, login, refresh, service account exchange, discovery) never send one.
+ * (service account exchange, discovery) never send one.
  */
 class AuthClient : public QObject
 {
@@ -104,113 +105,15 @@ public:
     // GET <issuer>/.well-known/openvireo-configuration: {issuer, api, sync, jwks_uri, opaque, kdf_min}
     void discover(const QString& issuerUrl, Callback callback);
 
-    void registerStart(const QString& email, const QByteArray& request, Callback callback);
-    void registerFinish(const QString& sessionId,
-                        const QByteArray& record,
-                        const QJsonObject& kdf,
-                        const QJsonObject& keyset,
-                        const DeviceInfo& device,
-                        Callback callback);
-    void loginStart(const QString& email, const QByteArray& ke1, Callback callback);
-    // A Session, or {mfa_required: true, mfa_token, methods}
-    void loginFinish(const QString& sessionId, const QByteArray& authU, const DeviceInfo& device, Callback callback);
-    void loginMfa(const QString& mfaToken, const QString& totp, Callback callback);
-    void refresh(const QString& refreshToken, Callback callback);
-    void logout(Callback callback);
+    // Service accounts (SPEC §9): the token's secret for an access token. CONTRACT-REQUEST: the core's
+    // ServiceAccount can't sync KDBX files yet (vault_kdbx_credentials, sync_vault_kdbx), so a service account
+    // signed in on the desktop still runs here; see AccountManager::signInServiceAccount().
     void exchangeServiceAccount(const QString& saId, const QString& secret, Callback callback);
-
-    void me(Callback callback);
-    void lookupUser(const QString& email, Callback callback);
-    // `principal` is user:<id> or sa:<id>
-    void publicKey(const QString& principal, Callback callback);
-    // Account deletion (SPEC §23)
-    void deletionPreview(Callback callback);
-    // Needs an access token issued in the last 5 minutes; 202 {scheduled_for}
-    void scheduleDeletion(const QString& confirm, Callback callback);
-    void cancelDeletion(Callback callback);
-    void transferVault(const QString& vaultId, const QString& principal, Callback callback);
-    void listDevices(Callback callback);
-    void revokeDevice(const QString& deviceId, Callback callback);
-
+    // The service account's vaults with their sealed keys
     void listVaults(Callback callback);
-    void getVault(const QString& vaultId, Callback callback);
-    void createVault(const QString& vaultId,
-                     const QString& orgId,
-                     const QByteArray& encryptedName,
-                     const QJsonArray& grants,
-                     Callback callback);
-    void renameVault(const QString& vaultId, const QByteArray& encryptedName, Callback callback);
-    void deleteVault(const QString& vaultId, Callback callback);
-    void vaultAccess(const QString& vaultId, Callback callback);
-    void grantAccess(const QString& vaultId, const QJsonArray& grants, Callback callback);
-    // Start a key rotation (SPEC §7): `grants` for every remaining member, `remove` the principals to drop
-    void startRotation(const QString& vaultId,
-                       int keyVersion,
-                       const QJsonArray& grants,
-                       const QStringList& remove,
-                       Callback callback);
-    void activateKey(const QString& vaultId, int keyVersion, Callback callback);
-
-    // Orgs (the caller's orgs and roles come with me())
-    // A new org; the caller becomes its owner
-    void createOrg(const QString& name, Callback callback);
-    // Rename the org or change who can make share links ({name}, {item_share_links}); owners and admins
-    void updateOrg(const QString& orgId, const QJsonObject& changes, Callback callback);
-    // Owners only: the org goes with its vaults and service accounts
-    void deleteOrg(const QString& orgId, Callback callback);
-    void orgMembers(const QString& orgId, Callback callback);
-    // A new role for a member. `saMasterKeys` (SaMasterGrant) go along when promoting to owner or admin.
-    void setMemberRole(const QString& orgId,
-                       const QString& userId,
-                       const QString& role,
-                       const QJsonArray& saMasterKeys,
-                       Callback callback);
-    // The server deletes their vault access and flags the org vaults they could open (rotation_required)
-    void removeMember(const QString& orgId, const QString& userId, Callback callback);
-    // Confirm an accepted member with their vault grants (VaultGrant) and, for admins, the SA master keys
-    void confirmMember(const QString& orgId,
-                       const QString& userId,
-                       const QJsonArray& grants,
-                       const QJsonArray& saMasterKeys,
-                       Callback callback);
-    // Invitations (owner/admin); the invitee gets the token by email only (SPEC §12)
-    void listInvitations(const QString& orgId, Callback callback);
-    void invite(const QString& orgId, const QString& email, const QString& role, Callback callback);
-    void cancelInvitation(const QString& orgId, const QString& invitationId, Callback callback);
-    // Accept as the signed-in user; an owner or admin confirms the member afterwards
-    void acceptInvitation(const QString& token, Callback callback);
-
-    // Service accounts of an org (owner/admin)
-    void listServiceAccounts(const QString& orgId, Callback callback);
-    // `body` is {id, name, expires_at, keyset, master_keys, secret}, see openapi.yaml
-    void createServiceAccount(const QString& orgId, const QJsonObject& body, Callback callback);
-    // Owners and admins also get their sealed copy of the master key (`master_key`)
-    void getServiceAccount(const QString& saId, Callback callback);
-    // Any of {name, expires_at, disabled}
-    void updateServiceAccount(const QString& saId, const QJsonObject& changes, Callback callback);
-    void deleteServiceAccount(const QString& saId, Callback callback);
-    void listServiceAccountSecrets(const QString& saId, Callback callback);
-    // `secret` is a NewSaSecret: {id, name, secret_hash, prefix, wrapped_master, expires_at}
-    void issueServiceAccountSecret(const QString& saId, const QJsonObject& secret, Callback callback);
-    // {expires_at}: an ISO time, or null for never; the secret's token stays the same
-    void updateServiceAccountSecret(const QString& saId,
-                                    const QString& secretId,
-                                    const QJsonObject& changes,
-                                    Callback callback);
-    void revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback);
-
-    // The org's audit log, newest first; `before` is the `next` cursor of the previous page
-    void auditLog(const QString& orgId, const QString& before, int limit, Callback callback);
-
-    // Share links (SPEC §22)
-    void createShare(const QJsonObject& body, Callback callback);
-    void uploadShare(const QString& shareId, const QByteArray& ciphertext, const QString& ref, Callback callback);
-    void listShares(Callback callback);
-    void revokeShare(const QString& shareId, Callback callback);
-
-    // A Grant for POST /vaults, /vaults/{id}/access and /vaults/{id}/keys
-    static QJsonObject
-    grant(const QString& principal, const QString& role, int keyVersion, const QByteArray& sealedKey);
+    // GET /me: the profile with the keyset and KDF the offline cache keeps. CONTRACT-REQUEST: Account::me's Profile
+    // carries neither (nor the public keys that show a recovery replaced the keyset).
+    void me(Callback callback);
 
     // Drop all requests in flight; their callbacks are never called
     void abort();
@@ -232,7 +135,6 @@ protected:
 private:
     void post(const QString& path, const QJsonObject& body, Callback callback, bool authenticated = false);
     void get(const QString& path, Callback callback);
-    void sendJson(const QByteArray& verb, const QString& path, const QJsonObject& body, Callback callback);
     void
     request(const QByteArray& verb, const QUrl& url, const QByteArray& body, bool authenticated, Callback callback);
 

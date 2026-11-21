@@ -33,14 +33,6 @@
 #include <QNetworkReply>
 #endif
 
-namespace
-{
-    QString encoded(const QString& pathPart)
-    {
-        return QString::fromLatin1(QUrl::toPercentEncoding(pathPart));
-    }
-} // namespace
-
 QJsonObject AuthClient::Response::json() const
 {
     return QJsonDocument::fromJson(body).object();
@@ -126,15 +118,6 @@ QUrl AuthClient::endpoint(const QString& path) const
     return QUrl(m_apiUrl + "/" + path);
 }
 
-QJsonObject
-AuthClient::grant(const QString& principal, const QString& role, int keyVersion, const QByteArray& sealedKey)
-{
-    return QJsonObject{{"principal", principal},
-                       {"role", role},
-                       {"key_version", keyVersion},
-                       {"sealed_key", AccountCrypto::toBase64Url(sealedKey)}};
-}
-
 void AuthClient::discover(const QString& issuerUrl, Callback callback)
 {
     auto base = issuerUrl.trimmed();
@@ -142,61 +125,6 @@ void AuthClient::discover(const QString& issuerUrl, Callback callback)
         base.chop(1);
     }
     request("GET", QUrl(base + "/.well-known/openvireo-configuration"), {}, false, std::move(callback));
-}
-
-void AuthClient::registerStart(const QString& email, const QByteArray& request, Callback callback)
-{
-    post("auth/register/start",
-         {{"email", email.trimmed()}, {"request", AccountCrypto::toBase64Url(request)}},
-         std::move(callback));
-}
-
-void AuthClient::registerFinish(const QString& sessionId,
-                                const QByteArray& record,
-                                const QJsonObject& kdf,
-                                const QJsonObject& keyset,
-                                const DeviceInfo& device,
-                                Callback callback)
-{
-    post("auth/register/finish",
-         {{"session_id", sessionId},
-          {"record", AccountCrypto::toBase64Url(record)},
-          {"kdf", kdf},
-          {"keyset", keyset},
-          {"device", device.toJson()}},
-         std::move(callback));
-}
-
-void AuthClient::loginStart(const QString& email, const QByteArray& ke1, Callback callback)
-{
-    post("auth/login/start",
-         {{"email", email.trimmed()}, {"ke1", AccountCrypto::toBase64Url(ke1)}},
-         std::move(callback));
-}
-
-void AuthClient::loginFinish(const QString& sessionId,
-                             const QByteArray& authU,
-                             const DeviceInfo& device,
-                             Callback callback)
-{
-    post("auth/login/finish",
-         {{"session_id", sessionId}, {"auth_u", AccountCrypto::toBase64Url(authU)}, {"device", device.toJson()}},
-         std::move(callback));
-}
-
-void AuthClient::loginMfa(const QString& mfaToken, const QString& totp, Callback callback)
-{
-    post("auth/login/mfa", {{"mfa_token", mfaToken}, {"totp", totp.trimmed()}}, std::move(callback));
-}
-
-void AuthClient::refresh(const QString& refreshToken, Callback callback)
-{
-    post("auth/refresh", {{"refresh_token", refreshToken}}, std::move(callback));
-}
-
-void AuthClient::logout(Callback callback)
-{
-    post("auth/logout", {}, std::move(callback), true);
 }
 
 void AuthClient::exchangeServiceAccount(const QString& saId, const QString& secret, Callback callback)
@@ -209,252 +137,9 @@ void AuthClient::me(Callback callback)
     get("me", std::move(callback));
 }
 
-void AuthClient::lookupUser(const QString& email, Callback callback)
-{
-    get("users/lookup?email=" + encoded(email.trimmed()), std::move(callback));
-}
-
-void AuthClient::publicKey(const QString& principal, Callback callback)
-{
-    get("principals/" + encoded(principal) + "/public-key", std::move(callback));
-}
-
-void AuthClient::listDevices(Callback callback)
-{
-    get("devices", std::move(callback));
-}
-
-void AuthClient::deleteOrg(const QString& orgId, Callback callback)
-{
-    request("DELETE", endpoint("orgs/" + encoded(orgId)), {}, true, std::move(callback));
-}
-
-void AuthClient::deletionPreview(Callback callback)
-{
-    get("me/deletion", std::move(callback));
-}
-
-void AuthClient::scheduleDeletion(const QString& confirm, Callback callback)
-{
-    sendJson("DELETE", "me", QJsonObject{{"confirm", confirm}}, std::move(callback));
-}
-
-void AuthClient::cancelDeletion(Callback callback)
-{
-    post("me/deletion/cancel", {}, std::move(callback), true);
-}
-
-void AuthClient::transferVault(const QString& vaultId, const QString& principal, Callback callback)
-{
-    post("vaults/" + encoded(vaultId) + "/owner", QJsonObject{{"principal", principal}}, std::move(callback), true);
-}
-
-void AuthClient::revokeDevice(const QString& deviceId, Callback callback)
-{
-    request("DELETE", endpoint("devices/" + encoded(deviceId)), {}, true, std::move(callback));
-}
-
 void AuthClient::listVaults(Callback callback)
 {
     get("vaults", std::move(callback));
-}
-
-void AuthClient::getVault(const QString& vaultId, Callback callback)
-{
-    get("vaults/" + encoded(vaultId), std::move(callback));
-}
-
-void AuthClient::createVault(const QString& vaultId,
-                             const QString& orgId,
-                             const QByteArray& encryptedName,
-                             const QJsonArray& grants,
-                             Callback callback)
-{
-    QJsonObject body{
-        {"id", vaultId}, {"encrypted_name", AccountCrypto::toBase64Url(encryptedName)}, {"grants", grants}};
-    body["org_id"] = orgId.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(orgId);
-    post("vaults", body, std::move(callback), true);
-}
-
-void AuthClient::renameVault(const QString& vaultId, const QByteArray& encryptedName, Callback callback)
-{
-    QJsonObject body{{"encrypted_name", AccountCrypto::toBase64Url(encryptedName)}};
-    request("PATCH",
-            endpoint("vaults/" + encoded(vaultId)),
-            QJsonDocument(body).toJson(QJsonDocument::Compact),
-            true,
-            std::move(callback));
-}
-
-void AuthClient::deleteVault(const QString& vaultId, Callback callback)
-{
-    request("DELETE", endpoint("vaults/" + encoded(vaultId)), {}, true, std::move(callback));
-}
-
-void AuthClient::vaultAccess(const QString& vaultId, Callback callback)
-{
-    get("vaults/" + encoded(vaultId) + "/access", std::move(callback));
-}
-
-void AuthClient::grantAccess(const QString& vaultId, const QJsonArray& grants, Callback callback)
-{
-    post("vaults/" + encoded(vaultId) + "/access", {{"grants", grants}}, std::move(callback), true);
-}
-
-void AuthClient::startRotation(const QString& vaultId,
-                               int keyVersion,
-                               const QJsonArray& grants,
-                               const QStringList& remove,
-                               Callback callback)
-{
-    QJsonObject body{{"key_version", keyVersion}, {"grants", grants}};
-    if (!remove.isEmpty()) {
-        body["remove"] = QJsonArray::fromStringList(remove);
-    }
-    post("vaults/" + encoded(vaultId) + "/keys", body, std::move(callback), true);
-}
-
-void AuthClient::activateKey(const QString& vaultId, int keyVersion, Callback callback)
-{
-    post("vaults/" + encoded(vaultId) + "/keys/" + QString::number(keyVersion) + "/activate",
-         {},
-         std::move(callback),
-         true);
-}
-
-void AuthClient::createOrg(const QString& name, Callback callback)
-{
-    post("orgs", {{"name", name}}, std::move(callback), true);
-}
-
-void AuthClient::updateOrg(const QString& orgId, const QJsonObject& changes, Callback callback)
-{
-    sendJson("PATCH", "orgs/" + encoded(orgId), changes, std::move(callback));
-}
-
-void AuthClient::orgMembers(const QString& orgId, Callback callback)
-{
-    get("orgs/" + encoded(orgId) + "/members", std::move(callback));
-}
-
-void AuthClient::setMemberRole(const QString& orgId,
-                               const QString& userId,
-                               const QString& role,
-                               const QJsonArray& saMasterKeys,
-                               Callback callback)
-{
-    QJsonObject body{{"role", role}};
-    if (!saMasterKeys.isEmpty()) {
-        body["sa_master_keys"] = saMasterKeys;
-    }
-    sendJson("PATCH", "orgs/" + encoded(orgId) + "/members/" + encoded(userId), body, std::move(callback));
-}
-
-void AuthClient::removeMember(const QString& orgId, const QString& userId, Callback callback)
-{
-    request("DELETE",
-            endpoint("orgs/" + encoded(orgId) + "/members/" + encoded(userId)),
-            {},
-            true,
-            std::move(callback));
-}
-
-void AuthClient::listInvitations(const QString& orgId, Callback callback)
-{
-    get("orgs/" + encoded(orgId) + "/invitations", std::move(callback));
-}
-
-void AuthClient::invite(const QString& orgId, const QString& email, const QString& role, Callback callback)
-{
-    post("orgs/" + encoded(orgId) + "/invitations", {{"email", email}, {"role", role}}, std::move(callback), true);
-}
-
-void AuthClient::cancelInvitation(const QString& orgId, const QString& invitationId, Callback callback)
-{
-    request("DELETE",
-            endpoint("orgs/" + encoded(orgId) + "/invitations/" + encoded(invitationId)),
-            {},
-            true,
-            std::move(callback));
-}
-
-void AuthClient::acceptInvitation(const QString& token, Callback callback)
-{
-    post("invitations/accept", {{"token", token}}, std::move(callback), true);
-}
-
-void AuthClient::confirmMember(const QString& orgId,
-                               const QString& userId,
-                               const QJsonArray& grants,
-                               const QJsonArray& saMasterKeys,
-                               Callback callback)
-{
-    QJsonObject body{{"grants", grants}};
-    if (!saMasterKeys.isEmpty()) {
-        body["sa_master_keys"] = saMasterKeys;
-    }
-    post("orgs/" + encoded(orgId) + "/members/" + encoded(userId) + "/confirm", body, std::move(callback), true);
-}
-
-void AuthClient::listServiceAccounts(const QString& orgId, Callback callback)
-{
-    get("orgs/" + encoded(orgId) + "/service-accounts", std::move(callback));
-}
-
-void AuthClient::createServiceAccount(const QString& orgId, const QJsonObject& body, Callback callback)
-{
-    post("orgs/" + encoded(orgId) + "/service-accounts", body, std::move(callback), true);
-}
-
-void AuthClient::getServiceAccount(const QString& saId, Callback callback)
-{
-    get("service-accounts/" + encoded(saId), std::move(callback));
-}
-
-void AuthClient::updateServiceAccount(const QString& saId, const QJsonObject& changes, Callback callback)
-{
-    sendJson("PATCH", "service-accounts/" + encoded(saId), changes, std::move(callback));
-}
-
-void AuthClient::deleteServiceAccount(const QString& saId, Callback callback)
-{
-    request("DELETE", endpoint("service-accounts/" + encoded(saId)), {}, true, std::move(callback));
-}
-
-void AuthClient::listServiceAccountSecrets(const QString& saId, Callback callback)
-{
-    get("service-accounts/" + encoded(saId) + "/secrets", std::move(callback));
-}
-
-void AuthClient::issueServiceAccountSecret(const QString& saId, const QJsonObject& secret, Callback callback)
-{
-    post("service-accounts/" + encoded(saId) + "/secrets", secret, std::move(callback), true);
-}
-
-void AuthClient::updateServiceAccountSecret(const QString& saId,
-                                            const QString& secretId,
-                                            const QJsonObject& changes,
-                                            Callback callback)
-{
-    sendJson("PATCH", "service-accounts/" + encoded(saId) + "/secrets/" + encoded(secretId), changes, std::move(callback));
-}
-
-void AuthClient::revokeServiceAccountSecret(const QString& saId, const QString& secretId, Callback callback)
-{
-    request("DELETE",
-            endpoint("service-accounts/" + encoded(saId) + "/secrets/" + encoded(secretId)),
-            {},
-            true,
-            std::move(callback));
-}
-
-void AuthClient::auditLog(const QString& orgId, const QString& before, int limit, Callback callback)
-{
-    auto path = "orgs/" + encoded(orgId) + "/audit?limit=" + QString::number(limit);
-    if (!before.isEmpty()) {
-        path += "&before=" + encoded(before);
-    }
-    get(path, std::move(callback));
 }
 
 void AuthClient::post(const QString& path, const QJsonObject& body, Callback callback, bool authenticated)
@@ -463,35 +148,9 @@ void AuthClient::post(const QString& path, const QJsonObject& body, Callback cal
         "POST", endpoint(path), QJsonDocument(body).toJson(QJsonDocument::Compact), authenticated, std::move(callback));
 }
 
-void AuthClient::createShare(const QJsonObject& body, Callback callback)
-{
-    post("shares", body, std::move(callback), true);
-}
-
-void AuthClient::uploadShare(const QString& shareId, const QByteArray& ciphertext, const QString& ref, Callback callback)
-{
-    sendJson(
-        "PUT", "shares/" + encoded(shareId), {{"ct", AccountCrypto::toBase64Url(ciphertext)}, {"ref", ref}}, std::move(callback));
-}
-
-void AuthClient::listShares(Callback callback)
-{
-    get("shares", std::move(callback));
-}
-
-void AuthClient::revokeShare(const QString& shareId, Callback callback)
-{
-    request("DELETE", endpoint("shares/" + encoded(shareId)), {}, true, std::move(callback));
-}
-
 void AuthClient::get(const QString& path, Callback callback)
 {
     request("GET", endpoint(path), {}, true, std::move(callback));
-}
-
-void AuthClient::sendJson(const QByteArray& verb, const QString& path, const QJsonObject& body, Callback callback)
-{
-    request(verb, endpoint(path), QJsonDocument(body).toJson(QJsonDocument::Compact), true, std::move(callback));
 }
 
 void AuthClient::request(const QByteArray& verb,

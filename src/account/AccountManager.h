@@ -181,7 +181,6 @@ public:
     QString accessTokenNow() const;
     const AccountCrypto::Keyset& keyset() const;
     const VaultKeyring& keyring() const;
-    AuthClient* client() const;
     // The orgs this account belongs to, as of the last reloadVaults(); empty while locked
     QList<Org> orgs() const;
     // Unlocked from this device's offline cache because the servers couldn't be reached (SPEC §20).

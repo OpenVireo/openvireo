@@ -706,11 +706,6 @@ const VaultKeyring& AccountManager::keyring() const
     return m_keyring;
 }
 
-AuthClient* AccountManager::client() const
-{
-    return m_client;
-}
-
 AccountPlan::Plan AccountManager::plan() const
 {
     return m_plan;
