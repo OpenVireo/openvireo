@@ -51,6 +51,7 @@ JSON_CHROME=$(cat << EOF
     "path": "${PROXY_PATH}",
     "type": "stdio",
     "allowed_origins": [
+        "chrome-extension://ogecgkbokcjipobddojjhapbfcppghcf/",
         "chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/"
     ]
 }

@@ -17,7 +17,7 @@ NOTE: On Linux, Flatpak and Snap based browsers are generally not supported. Ubu
 === Install the Browser Extension
 You can download the OpenVireo Browser extension from your web browser. To download the OpenVireo Browser extension, perform the following steps:
 
-1. Get OpenVireo Browser from https://addons.mozilla.org/firefox/addon/openvireo/[Firefox Add-ons] (Mozilla Firefox, Tor Browser) or the https://chromewebstore.google.com/detail/ogecgkbokcjipobddojjhapbfcppghcf[Chrome Web Store] (Chrome, Chromium, Vivaldi, Brave, Microsoft Edge). Every release is also on the https://github.com/openvireo/openvireo-browser/releases[OpenVireo Browser releases page]. The KeePassXC-Browser extension from the browser stores does not connect to OpenVireo.
+1. Get OpenVireo Browser from https://addons.mozilla.org/firefox/addon/openvireo/[Firefox Add-ons] (Mozilla Firefox, Tor Browser) or the https://chromewebstore.google.com/detail/ogecgkbokcjipobddojjhapbfcppghcf[Chrome Web Store] (Chrome, Chromium, Vivaldi, Brave, Microsoft Edge). The KeePassXC-Browser extension from the browser stores does not connect to OpenVireo.
 
 2. Click the button to install/add the extension to the browser. Accept any confirmation dialogs.
 
@@ -185,7 +185,7 @@ If you wish to support multiple custom browsers, you can copy the native messagi
 ----
 {
     "allowed_origins": [
-        "chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/"
+        "chrome-extension://ogecgkbokcjipobddojjhapbfcppghcf/"
     ],
     "description": "OpenVireo integration with native messaging support",
     "name": "com.openvireo.browser",
@@ -205,7 +205,7 @@ Windows Registry Editor Version 5.00
 "NativeMessagingUserLevelHosts"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallAllowlist]
-"1"="bafnojkbdaiajjkkaeljcngflakgdmmk"
+"1"="ogecgkbokcjipobddojjhapbfcppghcf"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\NativeMessagingAllowlist]
 "1"="com.openvireo.browser"

@@ -24,13 +24,15 @@
 # https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
 
 # Chromium, Google Chrome, Vivaldi & Brave
-readonly arg1='chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk'
+# (the Chrome Web Store item, and the ID unpacked development builds use)
+readonly arg1='chrome-extension://ogecgkbokcjipobddojjhapbfcppghcf'
+readonly arg1_dev='chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk'
 # Firefox & Tor Browser
 readonly arg2='browser@openvireo.com'
 
 # Check arguments to see if this was a proxy launch from the browser
 # Use =~ to account for minor variations in the chrome extension
-if [[ "$1" =~ "$arg1" || "$2" == "$arg2" ]]; then
+if [[ "$1" =~ "$arg1" || "$1" =~ "$arg1_dev" || "$2" == "$arg2" ]]; then
     exec openvireo-proxy "$@"
 elif [[ "$1" == "kdbx" || "$1" == "cli" ]]; then
     exec openvireo-kdbx "${@:2}"

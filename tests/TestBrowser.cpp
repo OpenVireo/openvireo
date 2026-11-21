@@ -21,6 +21,7 @@
 #include "browser/BrowserHost.h"
 #include "browser/BrowserMessageBuilder.h"
 #include "browser/BrowserSettings.h"
+#include "browser/NativeMessageInstaller.h"
 #include "core/Group.h"
 #include "keys/PasswordKey.h"
 #include "core/Tools.h"
@@ -1256,4 +1257,30 @@ void TestBrowser::testBrowserHostCoalescedMessaging()
     result = browserHost.parseSocketData(fragmented7, 0);
     QVERIFY(result.length() == 1);
     QCOMPARE(result.first(), secondOriginalMessage);
+}
+
+void TestBrowser::testNativeMessagingManifest()
+{
+    NativeMessageInstaller installer;
+
+    // Chromium-based browsers: the Chrome Web Store item (also installed by Edge, Brave and Vivaldi) and the ID
+    // unpacked development builds get from the extension manifest's "key"
+    for (auto browser : {BrowserShared::CHROME,
+                         BrowserShared::CHROMIUM,
+                         BrowserShared::VIVALDI,
+                         BrowserShared::BRAVE,
+                         BrowserShared::EDGE}) {
+        const auto manifest = installer.constructFile(browser);
+        QCOMPARE(manifest["name"].toString(), QStringLiteral("com.openvireo.browser"));
+        QVERIFY(!manifest.contains("allowed_extensions"));
+        const auto origins = manifest["allowed_origins"].toArray();
+        QVERIFY(origins.contains(QStringLiteral("chrome-extension://ogecgkbokcjipobddojjhapbfcppghcf/")));
+        QVERIFY(origins.contains(QStringLiteral("chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/")));
+    }
+
+    for (auto browser : {BrowserShared::FIREFOX, BrowserShared::TOR_BROWSER}) {
+        const auto manifest = installer.constructFile(browser);
+        QVERIFY(!manifest.contains("allowed_origins"));
+        QCOMPARE(manifest["allowed_extensions"].toArray(), QJsonArray({QStringLiteral("browser@openvireo.com")}));
+    }
 }

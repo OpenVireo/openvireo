@@ -43,6 +43,8 @@ private:
     QJsonObject constructFile(BrowserShared::SupportedBrowsers browser);
     bool createNativeMessageFile(BrowserShared::SupportedBrowsers browser);
 
+    friend class TestBrowser;
+
     Q_DISABLE_COPY(NativeMessageInstaller);
 };
 

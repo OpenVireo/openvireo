@@ -39,7 +39,11 @@ namespace
 {
     const QString HOST_NAME = QStringLiteral("com.openvireo.browser");
     const QStringList ALLOWED_EXTENSIONS = QStringList() << QStringLiteral("browser@openvireo.com");
-    const QStringList ALLOWED_ORIGINS = QStringList() << QStringLiteral("chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/");
+    // The Chrome Web Store item (also what Edge, Brave and Vivaldi install), then the ID the manifest's "key"
+    // pins for unpacked development builds
+    const QStringList ALLOWED_ORIGINS = QStringList()
+                                        << QStringLiteral("chrome-extension://ogecgkbokcjipobddojjhapbfcppghcf/")
+                                        << QStringLiteral("chrome-extension://bafnojkbdaiajjkkaeljcngflakgdmmk/");
 #if defined(Q_OS_MACOS)
     const QString TARGET_DIR_CHROME = QStringLiteral("/Library/Application Support/Google/Chrome/NativeMessagingHosts");
     const QString TARGET_DIR_CHROMIUM = QStringLiteral("/Library/Application Support/Chromium/NativeMessagingHosts");
