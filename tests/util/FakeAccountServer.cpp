@@ -812,6 +812,7 @@ namespace FakeAccount
                   {{"id", org.id},
                    {"name", org.name},
                    {"role", server.orgMember(org.id, caller.mid(5))->role},
+                   {"item_share_links", org.shareLinks},
                    {"created_at", now()}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 3 && verb == "GET") {
             QJsonArray members;
@@ -891,7 +892,8 @@ namespace FakeAccount
                   {{"id", org.id},
                    {"name", org.name},
                    {"role", server.orgMember(org.id, caller.mid(5))->role},
-                   {"item_share_links", org.shareLinks}});
+                   {"item_share_links", org.shareLinks},
+                   {"created_at", now()}});
         } else if (parts.value(0) == "orgs" && parts.value(2) == "members" && parts.size() == 4 && verb == "PATCH") {
             const auto orgId = parts.value(1);
             const auto role = json.value("role").toString();
