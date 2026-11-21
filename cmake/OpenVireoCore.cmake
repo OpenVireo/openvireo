@@ -74,7 +74,10 @@ corrosion_import_crate(
 )
 
 set(OVCORE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/ovcore-include")
-set(_ovcore_env "OV_CXX_INCLUDE_DIR=${OVCORE_INCLUDE_DIR}")
+# ov-ffi-cpp's build script writes the headers to a staging folder; ovcore_headers below copies the ones
+# that changed into OVCORE_INCLUDE_DIR
+set(_ovcore_staging_dir "${CMAKE_BINARY_DIR}/ovcore-include-cargo")
+set(_ovcore_env "OV_CXX_INCLUDE_DIR=${_ovcore_staging_dir}")
 # aes 0.8 uses the ARMv8 AES instructions only with this cfg. openvireo-core sets it in its
 # .cargo/config.toml, which cargo doesn't read here; without it AES-KDF runs ~30x slower. The
 # per-target RUSTFLAGS reach every crate of the target, not only the top one.
@@ -88,6 +91,30 @@ if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 corrosion_set_env_vars(ov_desktop ${_ovcore_env})
 
+# Cargo rewrites the headers when the pin changes, behind Ninja's back: Ninja stats them before cargo runs
+# and wouldn't rebuild what includes them until the next build. Declaring them as the byproducts of a
+# step that runs after cargo makes Ninja look at them again once it has, so one build is enough. Copying
+# only what changed (copy_if_different) keeps a rerun of cargo with the same headers from rebuilding
+# every file that includes <ovcore.h>, and a `clean` that removes them gets them back from the staging
+# folder without cargo.
+set(_ovcore_headers ovcore.h rust/cxx.h ov-ffi-cpp/src/lib.rs.h ov-ffi-cpp/include/host.h ov-ffi-cpp/include/ovcore.h)
+set(_ovcore_header_outputs)
+set(_ovcore_header_commands)
+foreach(_ovcore_header IN LISTS _ovcore_headers)
+    get_filename_component(_ovcore_header_dir "${OVCORE_INCLUDE_DIR}/${_ovcore_header}" DIRECTORY)
+    list(APPEND _ovcore_header_outputs "${OVCORE_INCLUDE_DIR}/${_ovcore_header}")
+    list(APPEND _ovcore_header_commands
+         COMMAND "${CMAKE_COMMAND}" -E make_directory "${_ovcore_header_dir}"
+         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_ovcore_staging_dir}/${_ovcore_header}"
+                 "${OVCORE_INCLUDE_DIR}/${_ovcore_header}")
+endforeach()
+add_custom_target(ovcore_headers
+        ${_ovcore_header_commands}
+        BYPRODUCTS ${_ovcore_header_outputs}
+        COMMENT "Updating the openvireo-core headers"
+        VERBATIM)
+add_dependencies(ovcore_headers cargo-build_ov_desktop)
+
 file(MAKE_DIRECTORY "${OVCORE_INCLUDE_DIR}")
 add_library(ovcore INTERFACE)
 target_include_directories(ovcore SYSTEM INTERFACE "${OVCORE_INCLUDE_DIR}")
@@ -95,5 +122,5 @@ target_link_libraries(ovcore INTERFACE ov_desktop)
 if(APPLE)
     target_link_libraries(ovcore INTERFACE "-framework Security" "-framework CoreFoundation")
 endif()
-# The headers exist once cargo has run
-add_dependencies(ovcore cargo-build_ov_desktop)
+# The headers exist once cargo has run and ovcore_headers has copied them
+add_dependencies(ovcore cargo-build_ov_desktop ovcore_headers)
