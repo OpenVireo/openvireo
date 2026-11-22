@@ -504,6 +504,7 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->appThemeComboBox->addItem(tr("Automatic (follow system)"), QStringLiteral("auto"));
     m_generalUi->appThemeComboBox->addItem(tr("Light"), QStringLiteral("light"));
     m_generalUi->appThemeComboBox->addItem(tr("Dark"), QStringLiteral("dark"));
+    m_generalUi->appThemeComboBox->addItem(tr("High contrast"), QStringLiteral("highcontrast"));
     auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
     int appThemeIndex = m_generalUi->appThemeComboBox->findData(appTheme);
     if (appThemeIndex < 0) {

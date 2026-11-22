@@ -2853,12 +2853,14 @@ void MainWindow::initViewMenu()
     m_ui->actionThemeAuto->setData("auto");
     m_ui->actionThemeLight->setData("light");
     m_ui->actionThemeDark->setData("dark");
+    m_ui->actionThemeHighContrast->setData("highcontrast");
     m_ui->actionThemeClassic->setData("classic");
 
     auto themeActions = new QActionGroup(this);
     themeActions->addAction(m_ui->actionThemeAuto);
     themeActions->addAction(m_ui->actionThemeLight);
     themeActions->addAction(m_ui->actionThemeDark);
+    themeActions->addAction(m_ui->actionThemeHighContrast);
     themeActions->addAction(m_ui->actionThemeClassic);
 
     auto theme = config()->get(Config::GUI_ApplicationTheme).toString();
@@ -3019,6 +3021,7 @@ void MainWindow::initActionCollection()
                     m_ui->actionThemeAuto,
                     m_ui->actionThemeLight,
                     m_ui->actionThemeDark,
+                    m_ui->actionThemeHighContrast,
                     m_ui->actionThemeClassic,
 #ifndef Q_OS_MACOS
                     m_ui->actionShowMenubar,

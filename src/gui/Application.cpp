@@ -26,6 +26,7 @@
 #include "gui/osutils/OSUtils.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/styles/dark/DarkStyle.h"
+#include "gui/styles/highcontrast/HighContrastStyle.h"
 #include "gui/styles/light/LightStyle.h"
 #include "gui/vault/VaultControls.h"
 
@@ -166,28 +167,51 @@ void Application::bootstrap(const QString& uiLanguage)
 #endif
 }
 
+FluentTheme::HighContrastColors Application::highContrastColors()
+{
+#ifdef Q_OS_WIN
+    // Respect the user's chosen Windows contrast theme
+    if (winUtils()->isHighContrastMode()) {
+        return winUtils()->highContrastColors();
+    }
+#endif
+    return FluentTheme::highContrastColors(osUtils->isDarkMode());
+}
+
 void Application::applyTheme()
 {
     auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
     if (appTheme == "auto") {
-        appTheme = osUtils->isDarkMode() ? "dark" : "light";
-#ifdef Q_OS_WIN
-        if (winUtils()->isHighContrastMode()) {
-            appTheme = "classic";
+        if (osUtils->isHighContrastMode()) {
+            appTheme = "highcontrast";
+        } else {
+            appTheme = osUtils->isDarkMode() ? "dark" : "light";
         }
-#endif
     }
     QPixmapCache::clear();
-    if (appTheme == "light") {
+    m_highContrast = false;
+    // Fluent-Qt's colours go last: widgets restyle their labels when it notifies them, and re-polishing for
+    // the new style would otherwise restore the palettes they had before
+    if (appTheme == "highcontrast") {
+        const auto colors = highContrastColors();
+        m_darkTheme = colors.isDark();
+        m_highContrast = true;
+        auto* s = new HighContrastStyle(colors);
+        setPalette(s->standardPalette());
+        setStyle(s);
+        FluentTheme::applyHighContrast(colors);
+    } else if (appTheme == "light") {
+        m_darkTheme = false;
         auto* s = new LightStyle;
         setPalette(s->standardPalette());
         setStyle(s);
-        m_darkTheme = false;
+        FluentTheme::apply(m_darkTheme);
     } else if (appTheme == "dark") {
+        m_darkTheme = true;
         auto* s = new DarkStyle;
         setPalette(s->standardPalette());
         setStyle(s);
-        m_darkTheme = true;
+        FluentTheme::apply(m_darkTheme);
     } else {
         // Classic mode, don't check for dark theme on Windows
         // because Qt 5.x does not support it
@@ -201,8 +225,8 @@ void Application::applyTheme()
             setStyleSheet(stylesheetFile.readAll());
             stylesheetFile.close();
         }
+        FluentTheme::apply(m_darkTheme);
     }
-    FluentTheme::apply(m_darkTheme);
     applyFontSize();
 }
 
@@ -428,6 +452,11 @@ bool Application::sendLockToInstance()
 bool Application::isDarkTheme() const
 {
     return m_darkTheme;
+}
+
+bool Application::isHighContrastTheme() const
+{
+    return m_highContrast;
 }
 
 void Application::restart()

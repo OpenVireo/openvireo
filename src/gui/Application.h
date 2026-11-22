@@ -20,6 +20,8 @@
 #ifndef KEEPASSX_APPLICATION_H
 #define KEEPASSX_APPLICATION_H
 
+#include "gui/styles/FluentTheme.h"
+
 #include <QApplication>
 #include <QString>
 #include <QtNetwork/qlocalserver.h>
@@ -49,6 +51,10 @@ public:
     bool event(QEvent* event) override;
     bool isAlreadyRunning() const;
     bool isDarkTheme() const;
+    bool isHighContrastTheme() const;
+    // The high-contrast scheme to use: the Windows system colours while Windows High Contrast is on,
+    // else the fixed scheme matching the system's light or dark appearance
+    static FluentTheme::HighContrastColors highContrastColors();
 
     bool sendFileNamesToRunningInstance(const QStringList& fileNames);
     bool sendLockToInstance();
@@ -80,6 +86,7 @@ private:
 #endif
     bool m_alreadyRunning;
     bool m_darkTheme = false;
+    bool m_highContrast = false;
     QLockFile* m_lockFile;
     QLocalServer m_lockServer;
     QString m_socketName;

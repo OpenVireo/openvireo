@@ -376,6 +376,7 @@
      <addaction name="actionThemeAuto"/>
      <addaction name="actionThemeLight"/>
      <addaction name="actionThemeDark"/>
+     <addaction name="actionThemeHighContrast"/>
      <addaction name="actionThemeClassic"/>
     </widget>
     <addaction name="actionNotifications"/>
@@ -1155,6 +1156,17 @@
    </property>
    <property name="toolTip">
     <string>Set Theme: Dark</string>
+   </property>
+  </action>
+  <action name="actionThemeHighContrast">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>High Contrast</string>
+   </property>
+   <property name="toolTip">
+    <string>Set Theme: High Contrast</string>
    </property>
   </action>
   <action name="actionThemeClassic">
