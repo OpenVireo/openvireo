@@ -109,6 +109,19 @@ namespace
 VaultModal::Colors VaultModal::colors()
 {
     Colors c;
+    if (FluentTheme::isHighContrast()) {
+        // Solid colours only: the backdrop hides the window instead of dimming it, borders are the text colour
+        const auto p = FluentTheme::palette();
+        c.backdrop = p.canvas;
+        c.card = p.layer;
+        c.border = p.strokeStrong;
+        c.text = p.text;
+        c.textSecondary = p.textSecondary;
+        c.hover = p.subtleHover;
+        c.selected = p.accent;
+        c.onSelected = p.onAccent;
+        return c;
+    }
     if (FluentTheme::isDark()) {
         c.backdrop = QColor(0, 0, 0, 166);
         c.card = QColor(0x1a, 0x1d, 0x21);
@@ -314,7 +327,7 @@ void VaultModal::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
     const QRectF card = QRectF(m_card->geometry()).translated(0, 4);
-    constexpr int ShadowSteps = 8;
+    const int ShadowSteps = FluentTheme::isHighContrast() ? 0 : 8;
     for (int i = ShadowSteps; i > 0; --i) {
         painter.setBrush(QColor(0, 0, 0, 3));
         painter.drawRoundedRect(card.adjusted(-i, -i, i, i), CardRadius + i, CardRadius + i);

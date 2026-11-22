@@ -221,6 +221,13 @@ namespace
             if (underMouse()) {
                 painter.fillPath(path, p.subtleHover);
             }
+            if (m_pinned && p.highContrast) {
+                // The caution fill matches the window in high contrast, so outline pinned messages instead
+                painter.setPen(QPen(p.caution, 1));
+                painter.drawPath(path);
+            } else {
+                FluentTheme::paintRowStateOutline(&painter, path, false, underMouse());
+            }
             if (hasFocus() && m_keyboardFocus) {
                 painter.setPen(QPen(p.text, 2));
                 painter.drawPath(path);

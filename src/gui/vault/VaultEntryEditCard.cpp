@@ -808,6 +808,7 @@ void VaultDimmer::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event)
     auto color = m_color();
-    color.setAlphaF(0.55);
+    // High contrast has no translucent fills: hide the panes instead of fading them
+    color.setAlphaF(FluentTheme::isHighContrast() ? 1.0 : 0.55);
     QPainter(this).fillRect(rect(), color);
 }

@@ -211,6 +211,7 @@ void GroupView::drawRow(QPainter* painter, const QStyleOptionViewItem& option, c
         QPainterPath path;
         path.addRoundedRect(row, 4, 4);
         painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
+        FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
     }
     // The root's chevron sits where the pill would, so the root shows only the highlight
     if (selected && index.parent().isValid()) {

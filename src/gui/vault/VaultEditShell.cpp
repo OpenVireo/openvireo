@@ -69,6 +69,7 @@ namespace
                 QPainterPath path;
                 path.addRoundedRect(row, 4, 4);
                 painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
+                FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
             }
             if (selected) {
                 QPainterPath pill;

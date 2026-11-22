@@ -245,7 +245,9 @@ void DatabaseOpenWidget::applyCardStyle()
     const auto color = m_db ? m_db->publicColor() : QString();
     // Without one, the outline sits between the card stroke and the strong stroke, so the card reads on the canvas
     auto stroke = p.strokeStrong;
-    stroke.setAlphaF(stroke.alphaF() * 0.3);
+    if (!p.highContrast) {
+        stroke.setAlphaF(stroke.alphaF() * 0.3);
+    }
     const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(stroke.name(QColor::HexArgb))
                                         : QStringLiteral("3px solid %1").arg(color);
     m_card->setStyleSheet(QStringLiteral("QFrame#unlockCard { background-color: %1; border: %2; border-radius: 8px; }"

@@ -75,6 +75,7 @@ void EntryListItemDelegate::paint(QPainter* painter,
         QPainterPath path;
         path.addRoundedRect(row, 4, 4);
         painter->fillPath(path, selected ? p.accentSubtle : p.subtleHover);
+        FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
     }
     if (selected) {
         QRectF pill(row.left(), row.center().y() - 8, 3, 16);
@@ -129,6 +130,10 @@ void EntryListItemDelegate::paint(QPainter* painter,
         QPainterPath badgePath;
         badgePath.addRoundedRect(badge, BadgeHeight / 2.0, BadgeHeight / 2.0);
         painter->fillPath(badgePath, badgeBg);
+        if (p.highContrast) {
+            painter->setPen(QPen(badgeFg, 1));
+            painter->drawPath(badgePath);
+        }
         painter->setFont(strong);
         painter->setPen(badgeFg);
         painter->drawText(badge, Qt::AlignCenter, badgeText);

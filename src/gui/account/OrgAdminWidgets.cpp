@@ -30,6 +30,7 @@
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QVBoxLayout>
@@ -79,7 +80,8 @@ namespace
         const int height = metrics.height() + 6;
         const QRectF pill(right - width, centerY - height / 2.0, width, height);
         const auto colors = badgeColors(kind);
-        painter->setPen(Qt::NoPen);
+        // High contrast gives every badge an outline, since its fill matches the window
+        painter->setPen(FluentTheme::isHighContrast() ? QPen(colors.text, 1) : QPen(Qt::NoPen));
         painter->setBrush(colors.background);
         painter->drawRoundedRect(pill, height / 2.0, height / 2.0);
         painter->setFont(font);
@@ -109,6 +111,9 @@ namespace
             painter->setPen(Qt::NoPen);
             painter->setBrush(selected ? p.subtlePressed : p.subtleHover);
             painter->drawRoundedRect(box, 6, 6);
+            QPainterPath path;
+            path.addRoundedRect(box, 6, 6);
+            FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
         }
         if (selected) {
             // WinUI's selection indicator: a short accent pill at the start of the row
@@ -118,7 +123,7 @@ namespace
         }
         const bool focused = (option.state & QStyle::State_HasFocus) && option.widget && option.widget->hasFocus();
         if (focused) {
-            painter->setPen(QPen(p.accent, 2));
+            painter->setPen(QPen(p.highContrast ? p.focus : p.accent, 2));
             painter->setBrush(Qt::NoBrush);
             painter->drawRoundedRect(box.adjusted(1, 1, -1, -1), 5, 5);
         }

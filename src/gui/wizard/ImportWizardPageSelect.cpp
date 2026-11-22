@@ -76,7 +76,8 @@ namespace
             painter->setRenderHint(QPainter::Antialiasing);
 
             QColor fill = hovered ? colors.hover : Qt::transparent;
-            if (selected) {
+            if (selected && !FluentTheme::isHighContrast()) {
+                // High contrast shows the selection with the 2px border and the radio mark only
                 fill = colors.selected;
                 fill.setAlpha(FluentTheme::isDark() ? 40 : 18);
             }

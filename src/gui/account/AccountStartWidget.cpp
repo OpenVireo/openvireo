@@ -51,7 +51,9 @@ namespace
     QColor outlineColor(const FluentTheme::Palette& p)
     {
         auto stroke = p.strokeStrong;
-        stroke.setAlphaF(stroke.alphaF() * 0.3);
+        if (!p.highContrast) {
+            stroke.setAlphaF(stroke.alphaF() * 0.3);
+        }
         return stroke;
     }
 
