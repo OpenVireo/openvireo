@@ -52,10 +52,11 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
+#include "gui/vault/VaultPanes.h"
 #include "gui/wizard/ImportWizard.h"
 #include "keys/PasswordKey.h"
 
@@ -129,6 +130,127 @@ namespace
         entry->setTitle(title);
         entry->setGroup(db->rootGroup());
     }
+
+    QLineEdit* lockPassword(MainWindow* window)
+    {
+        return child<QLineEdit>(window->accountLockScreen(), "accountLockPassword");
+    }
+
+    void clickUnlock(MainWindow* window)
+    {
+        QTest::mouseClick(child<QPushButton>(window->accountLockScreen(), "accountLockUnlock"), Qt::LeftButton);
+    }
+
+    bool hasNotification(MainWindow* window, const QString& text)
+    {
+        for (const auto& notification : window->notificationCenter()->notifications()) {
+            if (notification.text.contains(text) || notification.title.contains(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    QAction* accountAction(MainWindow* window, const QString& text)
+    {
+        auto* menu = window->findChild<QMenu*>("menuAccount");
+        for (auto* action : menu ? menu->actions() : QList<QAction*>()) {
+            if (action->text() == text) {
+                return action;
+            }
+        }
+        qWarning("No account action %s", qPrintable(text));
+        return nullptr;
+    }
+
+    // The one-time token shows in a Fluent content dialog, which closes only once it has finished opening
+    void closeTokenDialog(ServiceAccountsDialog* dialog)
+    {
+        QTest::qWait(500);
+        if (dialog->tokenDialog()) {
+            dialog->tokenDialog()->reject();
+        }
+        QTRY_VERIFY(!dialog->tokenDialog());
+    }
+
+    VaultHeaderBar* header(MainWindow* window)
+    {
+        return window->findChild<VaultHeaderBar*>();
+    }
+
+    // The account button at the end of the header: shown while signed in to an account
+    VaultAccountButton* accountButton(MainWindow* window)
+    {
+        return header(window)->accountButton();
+    }
+
+    struct MenuRow
+    {
+        QString text;
+        bool enabled;
+        bool checkable;
+        bool heading;
+    };
+
+    // Clicks a header button, reads the menu it opens and closes it, triggering the row with `choose` if given
+    QList<MenuRow> headerMenu(QAbstractButton* button, const QString& choose = {})
+    {
+        QList<MenuRow> rows;
+        bool opened = false;
+        QTimer::singleShot(0, button, [&] {
+            auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!menu) {
+                return;
+            }
+            opened = true;
+            QPointer<QAction> chosen;
+            for (auto* action : menu->actions()) {
+                if (action->isSeparator()) {
+                    continue;
+                }
+                rows << MenuRow{action->text(),
+                                action->isEnabled(),
+                                action->isCheckable(),
+                                !action->isEnabled() && action->font().bold()};
+                if (!choose.isEmpty() && action->text() == choose) {
+                    chosen = action;
+                }
+            }
+            menu->close();
+            if (chosen) {
+                chosen->trigger();
+            } else if (!choose.isEmpty()) {
+                qWarning("No menu row %s", qPrintable(choose));
+            }
+        });
+        QTest::mouseClick(button, Qt::LeftButton);
+        if (!opened) {
+            qWarning("No menu opened");
+        }
+        return rows;
+    }
+
+    // The account's vaults as the header's database picker lists them: each section's heading, then its vaults
+    QStringList pickerVaultRows(MainWindow* window, QStringList* headings = nullptr)
+    {
+        QStringList rows;
+        bool inVaults = false;
+        for (const auto& row : headerMenu(header(window)->databasePicker())) {
+            if (row.heading) {
+                inVaults = true;
+                if (headings) {
+                    *headings << row.text;
+                }
+            } else if (!inVaults) {
+                continue;
+            } else if (!row.checkable) {
+                // The vault commands that follow the vaults
+                break;
+            }
+            rows << row.text;
+        }
+        return rows;
+    }
 } // namespace
 
 void TestGuiAccounts::initTestCase()
@@ -136,7 +258,6 @@ void TestGuiAccounts::initTestCase()
     QVERIFY(Crypto::init());
     Config::createConfigFromFile(TemporaryFile::createTempConfigFile(), TemporaryFile::createTempConfigFile());
     Application::bootstrap();
-    FluentTheme::setVaultLayoutEnabledForTests(false);
 }
 
 void TestGuiAccounts::init()
@@ -164,13 +285,18 @@ void TestGuiAccounts::init()
 void TestGuiAccounts::cleanup()
 {
     if (m_mainWindow) {
+        // Nothing is saved, so locking and closing don't stop to ask (in the vault layout a Fluent content
+        // dialog would wait for an answer)
+        auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
+        for (int i = 0; i < tabs->count(); ++i) {
+            tabs->databaseWidgetFromIndex(i)->database()->markAsClean();
+        }
         auto* controller = m_mainWindow->accountController();
         controller->lockAccount();
         controller->account()->signOut();
         for (auto* dialog : m_mainWindow->findChildren<QDialog*>()) {
             dialog->close();
         }
-        auto* tabs = m_mainWindow->findChild<DatabaseTabWidget*>("tabWidget");
         for (int i = 0; i < tabs->count(); ++i) {
             tabs->databaseWidgetFromIndex(i)->database()->markAsClean();
         }
@@ -242,7 +368,7 @@ void TestGuiAccounts::testStartScreenShowsUntilAModeIsChosen()
     auto* welcome = m_mainWindow->findChild<QWidget*>("welcomeWidget");
     QVERIFY(welcome->isHidden());
     QCOMPARE(m_mainWindow->startScreen()->currentPage(), AccountStartWidget::Page::SignIn);
-    QVERIFY(m_mainWindow->accountVaultsPane()->isHidden());
+    QVERIFY(accountButton(m_mainWindow.data())->isHidden());
     // The hosted server comes from the build (KPXC_DEFAULT_ACCOUNT_SERVER) unless changed
     QCOMPARE(child<QLineEdit>(m_mainWindow->startScreen(), "serverEdit")->text(), Issuer);
 
@@ -333,7 +459,7 @@ void TestGuiAccounts::testSignsInOnANewDeviceWithMfa()
     QCOMPARE(controller->account()->state(), AccountManager::State::Unlocked);
     QCOMPARE(controller->mode(), AccountController::Mode::Account);
     QCOMPARE(config()->get(Config::Account_StartMode).toString(), QString("account"));
-    QVERIFY(!m_mainWindow->accountVaultsPane()->isHidden());
+    QVERIFY(!accountButton(m_mainWindow.data())->isHidden());
     // The device is trusted now: the next sign-in doesn't ask for the Secret Key
     QVERIFY(!AccountManager::storedSecretKey(serverConfig().serverId(), Email).isEmpty());
     m_mainWindow->showStartScreen();
@@ -392,7 +518,8 @@ void TestGuiAccounts::testPairsWithASelfHostedServer()
     QCOMPARE(m_mainWindow->accountController()->mode(), AccountController::Mode::SelfHosted);
     QVERIFY(m_server->requests.contains("sync GET health"));
     QVERIFY(m_server->requests.contains("sync POST devices/pairing/claim"));
-    QVERIFY(m_mainWindow->accountVaultsPane()->isHidden());
+    // A self-hosted server has no account, so no account button
+    QVERIFY(accountButton(m_mainWindow.data())->isHidden());
     QString url, deviceToken;
     QVERIFY(AccountController::selfHostedServer(&url, &deviceToken));
     QCOMPARE(url, httpUrl);
@@ -513,25 +640,25 @@ void TestGuiAccounts::testUnlockOpensEveryVaultAndLockClearsKeys()
         QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), before + 1, 10000);
     }
     QTRY_COMPARE(account->keyring().vaults().size(), 2);
-    auto* pane = m_mainWindow->accountVaultsPane();
-    QTRY_COMPARE(pane->vaultList()->count(), 2);
-    QCOMPARE(pane->vaultList()->item(0)->text(), QString("Personal"));
+    // The header's database picker lists the account's vaults
+    QTRY_COMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Account vaults", "Personal", "Work"}));
     // Vault copies are kept out of the recent databases
     QVERIFY(config()->get(Config::LastDatabases).toStringList().isEmpty());
 
-    // Locking closes the vaults and wipes the keys
-    QTest::mouseClick(child<QPushButton>(pane, "accountVaultsLock"), Qt::LeftButton);
-    QCOMPARE(account->state(), AccountManager::State::Locked);
+    // Locking from the account button closes the vaults and wipes the keys
+    headerMenu(accountButton(m_mainWindow.data()), QStringLiteral("&Lock Account"));
+    QTRY_COMPARE(account->state(), AccountManager::State::Locked);
     QTRY_COMPARE(tabs->count(), 0);
     QVERIFY(account->keyring().isEmpty());
     QVERIFY(account->keyset().isNull());
-    QCOMPARE(pane->vaultList()->count(), 0);
-    QVERIFY(!child<QWidget>(pane, "accountVaultsPassword")->isHidden());
+    QCOMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Account vaults", "Unlock your account…"}));
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
+    QVERIFY(lockPassword(m_mainWindow.data())->isVisible());
 
     // One password unlocks the account and opens every vault, with no per-vault password
     const auto vaultRequests = m_server->requests.filter("sync GET vaults/").size();
-    child<QLineEdit>(pane, "accountVaultsPassword")->setText(Password);
-    QTest::mouseClick(child<QPushButton>(pane, "accountVaultsUnlock"), Qt::LeftButton);
+    lockPassword(m_mainWindow.data())->setText(Password);
+    clickUnlock(m_mainWindow.data());
     QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
     for (int i = 0; i < tabs->count(); ++i) {
@@ -697,9 +824,9 @@ void TestGuiAccounts::testServiceAccountsDialog()
     QVERIFY(token.startsWith("ov_sa_"));
     QTRY_COMPARE(dialog->currentServiceAccount().isEmpty(), false);
     const auto saId = dialog->currentServiceAccount();
-    // Shown once: closing the window forgets it
-    dialog->tokenDialog()->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Close)->click();
-    QTRY_VERIFY(!dialog->tokenDialog());
+    // Shown once, in a Fluent content dialog: closing it forgets it
+    QVERIFY(qobject_cast<fluent::dialogs_flyouts::ContentDialog*>(dialog->tokenDialog()));
+    closeTokenDialog(dialog);
 
     // Grant the vault read-only, once the card has loaded what the new service account can open (the vault list
     // fills in after the dialog stops being busy: granting before that finds no vault to grant)
@@ -734,7 +861,7 @@ void TestGuiAccounts::testServiceAccountsDialog()
     QTRY_VERIFY(dialog->tokenDialog());
     QVERIFY(child<QLineEdit>(dialog->tokenDialog(), "serviceAccountToken")->text() != token);
     QTRY_COMPARE(child<QTreeWidget>(dialog, "secretsTree")->topLevelItemCount(), 2);
-    dialog->tokenDialog()->close();
+    closeTokenDialog(dialog);
 
     // Revoke the first one
     auto* secrets = child<QTreeWidget>(dialog, "secretsTree");
@@ -833,12 +960,12 @@ void TestGuiAccounts::testSignOutReturnsToTheStartScreen()
     controller->unlockAccount(Password);
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
 
-    QTest::mouseClick(child<QPushButton>(m_mainWindow->accountVaultsPane(), "accountVaultsSignOut"), Qt::LeftButton);
+    headerMenu(accountButton(m_mainWindow.data()), QStringLiteral("Sign &Out"));
     QCOMPARE(controller->account()->state(), AccountManager::State::SignedOut);
     QTRY_COMPARE(tabs->count(), 0);
     QVERIFY(m_mainWindow->isStartScreenShown());
     QCOMPARE(controller->mode(), AccountController::Mode::Unset);
-    QVERIFY(m_mainWindow->accountVaultsPane()->isHidden());
+    QVERIFY(accountButton(m_mainWindow.data())->isHidden());
 }
 
 void TestGuiAccounts::testSwitchesAccountsWithoutSigningOut()
@@ -891,16 +1018,6 @@ void TestGuiAccounts::testSwitchesAccountsWithoutSigningOut()
 
 namespace
 {
-    // The vaults and headings the sidebar shows, in order
-    QStringList sidebarRows(AccountVaultsPane* pane)
-    {
-        QStringList rows;
-        for (int i = 0; i < pane->vaultList()->count(); ++i) {
-            rows << pane->vaultList()->item(i)->text();
-        }
-        return rows;
-    }
-
     ServiceAccountsDialog* openOrgDialog(MainWindow* window)
     {
         window->showServiceAccounts();
@@ -972,11 +1089,15 @@ void TestGuiAccounts::testCreatesAnOrgAndOrgVaults()
     QCOMPARE(m_server->roleOf(vaultId, carol), QString("manage"));
     QVERIFY(m_server->vaultKeyFor(vaultId, carol, carolKeys.encSk) == account->keyring().vaultKey(vaultId));
 
-    // The sidebar groups the vaults: personal ones first, then each org's under its name
-    auto* pane = m_mainWindow->accountVaultsPane();
-    QTRY_COMPARE(sidebarRows(pane), QStringList({"Personal", "Mine", "Acme", "Deploy"}));
-    QVERIFY(!(pane->vaultList()->item(2)->flags() & Qt::ItemIsSelectable));
-    QCOMPARE(pane->vaultList()->item(3)->data(AccountVaultsPane::OrgIdRole).toString(), orgId);
+    // The database picker groups the vaults: personal ones first, then each org's under its name
+    QTRY_COMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Personal", "Mine", "Acme", "Deploy"}));
+    // The headings can't be picked
+    QStringList headings;
+    pickerVaultRows(m_mainWindow.data(), &headings);
+    QCOMPARE(headings, QStringList({"Personal", "Acme"}));
+    const auto sections = AccountVaultsPane::sections(account);
+    QCOMPARE(sections.size(), 2);
+    QCOMPARE(sections.at(1).orgId, orgId);
 
     // A confirmed admin the client can't seal to: the server answers 400, nothing is created
     QString erin;
@@ -1019,7 +1140,6 @@ void TestGuiAccounts::testAcceptsAnInvitation()
     QTRY_VERIFY_WITH_TIMEOUT(!m_mainWindow->isStartScreenShown(), 10000);
     auto* controller = m_mainWindow->accountController();
     auto* account = controller->account();
-    auto* pane = m_mainWindow->accountVaultsPane();
 
     // A pasted code that isn't one is refused before anything is sent
     QSignalSpy messages(controller, &AccountController::message);
@@ -1040,7 +1160,7 @@ void TestGuiAccounts::testAcceptsAnInvitation()
     QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Positive);
     QCOMPARE(m_server->orgMember(orgId, account->accountId())->status, QString("accepted"));
     // Alice waits for an admin: the org shows, without vaults
-    QTRY_COMPARE(sidebarRows(pane), QStringList({"Acme (waiting for confirmation)"}));
+    QTRY_COMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Acme (waiting for confirmation)"}));
     QVERIFY(!account->keyring().contains(vaultId));
 
     // Olivia confirms her with the vault; the access event makes this device reload
@@ -1060,7 +1180,7 @@ void TestGuiAccounts::testAcceptsAnInvitation()
     QTRY_VERIFY(confirmed);
     account->handleAccessEvent({});
     QTRY_VERIFY_WITH_TIMEOUT(account->keyring().contains(vaultId), 10000);
-    QTRY_COMPARE(sidebarRows(pane), QStringList({"Acme", "Deploy"}));
+    QTRY_COMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Acme", "Deploy"}));
 }
 
 void TestGuiAccounts::testInvitesPromotesAndRemovesMembers()
@@ -1245,16 +1365,14 @@ void TestGuiAccounts::testOrgDialogAsAVaultCard()
     m_mainWindow->accountController()->account()->reloadVaults();
     QTRY_VERIFY(m_mainWindow->accountController()->account()->org(orgId).canAdminister());
 
-    // The main window here keeps the classic layout, so the card goes over a window of its own
-    FluentTheme::setVaultLayoutEnabledForTests(true);
-    QWidget host;
-    host.resize(1200, 800);
-    host.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&host));
-    auto* dialog = new ServiceAccountsDialog(m_mainWindow->accountController()->account(), &host);
-    QPointer<OrgAdminModal> modal = new OrgAdminModal(&host, dialog);
-    modal->open();
+    // The organization window opens as a card over the main window, like Settings
+    auto* dialog = openOrgDialog(m_mainWindow.data());
+    QVERIFY(dialog);
+    QPointer<OrgAdminModal> modal = m_mainWindow->findChild<OrgAdminModal*>();
+    QVERIFY(modal);
     QVERIFY(modal->isOpen());
+    QCOMPARE(modal->dialog(), dialog);
+    QVERIFY(!dialog->isWindow());
     QTRY_COMPARE(dialog->currentOrg(), orgId);
     // The card brings the title and Done, so the window's own Close button stays hidden
     QVERIFY(!child<QDialogButtonBox>(dialog, "buttonBox")->isVisibleTo(dialog));
@@ -1266,16 +1384,13 @@ void TestGuiAccounts::testOrgDialogAsAVaultCard()
     QVERIFY(qobject_cast<fluent::dialogs_flyouts::ContentDialog*>(dialog->tokenDialog()));
     auto* token = child<QLineEdit>(dialog->tokenDialog(), "serviceAccountToken");
     QVERIFY(token->text().startsWith("ov_sa_"));
-    // A Fluent dialog closes only once it has finished opening
-    QTest::qWait(500);
-    dialog->tokenDialog()->reject();
-    QTRY_VERIFY(!dialog->tokenDialog());
+    closeTokenDialog(dialog);
 
     // Done closes the card and the window inside it
     QTRY_VERIFY(!dialog->isBusy());
     QTest::mouseClick(child<QPushButton>(modal.data(), "orgAdminDone"), Qt::LeftButton);
     QTRY_VERIFY(!modal);
-    FluentTheme::setVaultLayoutEnabledForTests(false);
+    QTRY_VERIFY(!m_mainWindow->findChild<ServiceAccountsDialog*>());
 }
 
 namespace
@@ -1417,35 +1532,33 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
                 && !value.contains(AccountCrypto::toBase64Url(auk)) && !bytes.contains(auk.toBase64()));
     }
 
-    // Locked, the sidebar offers Quick Unlock beside the password
-    auto* pane = m_mainWindow->accountVaultsPane();
-    auto* quickButton = child<QPushButton>(pane, "accountVaultsQuickUnlock");
-    QVERIFY(quickButton->isHidden());
+    // Locked, the lock screen offers Quick Unlock first, beside the password
+    auto* lockScreen = m_mainWindow->accountLockScreen();
+    auto* quickButton = child<QPushButton>(lockScreen, "accountLockQuickUnlock");
+    auto* message = child<MessageWidget>(lockScreen, "accountLockMessage");
     controller->lockAccount();
     QCOMPARE(account->state(), AccountManager::State::Locked);
     QTRY_COMPARE(tabs->count(), 0);
     QVERIFY(account->canQuickUnlock());
-    QVERIFY(!quickButton->isHidden());
-    // The lock screen offers it first, and doesn't prompt until asked
     QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
-    auto* lockScreen = m_mainWindow->accountLockScreen();
-    QVERIFY(!child<QPushButton>(lockScreen, "accountLockQuickUnlock")->isHidden());
+    QVERIFY(!quickButton->isHidden());
+    // It doesn't prompt until asked
     QCOMPARE(quickUnlock.prompts, 0);
-    QVERIFY(!child<QWidget>(pane, "accountVaultsPassword")->isHidden());
+    QVERIFY(!lockPassword(m_mainWindow.data())->isHidden());
 
     // Cancelling the prompt leaves the account locked and says nothing
     quickUnlock.answer = MockQuickUnlock::Answer::Cancel;
     QTest::mouseClick(quickButton, Qt::LeftButton);
     QCOMPARE(quickUnlock.prompts, 1);
     QCOMPARE(account->state(), AccountManager::State::Locked);
-    QVERIFY(child<QLabel>(pane, "accountVaultsError")->isHidden());
+    QVERIFY(message->isHidden());
 
     // A failed prompt shows why
     quickUnlock.answer = MockQuickUnlock::Answer::Fail;
     QTest::mouseClick(quickButton, Qt::LeftButton);
     QCOMPARE(account->state(), AccountManager::State::Locked);
-    QTRY_VERIFY(!child<QLabel>(pane, "accountVaultsError")->isHidden());
-    QVERIFY(child<QLabel>(pane, "accountVaultsError")->text().contains("Quick Unlock"));
+    QTRY_VERIFY(!message->isHidden());
+    QVERIFY(message->text().contains("Quick Unlock"));
 
     // Authenticating opens every vault without the master password
     quickUnlock.answer = MockQuickUnlock::Answer::Authenticate;
@@ -1453,21 +1566,22 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Unlocked, 10000);
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 1, 10000);
     QVERIFY(!tabs->databaseWidgetFromIndex(0)->isLocked());
-    QVERIFY(quickButton->isHidden());
+    QTRY_VERIFY(!m_mainWindow->isAccountLockScreenShown());
 
     // Off in the settings, or without a provider, the button is gone
     controller->lockAccount();
     QTRY_COMPARE(tabs->count(), 0);
+    QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
     config()->set(Config::Security_QuickUnlock, false);
-    QMetaObject::invokeMethod(pane, "refresh");
+    QMetaObject::invokeMethod(lockScreen, "updateState");
     QVERIFY(!account->canQuickUnlock());
     QVERIFY(quickButton->isHidden());
     config()->set(Config::Security_QuickUnlock, true);
     quickUnlock.available = false;
-    QMetaObject::invokeMethod(pane, "refresh");
+    QMetaObject::invokeMethod(lockScreen, "updateState");
     QVERIFY(quickButton->isHidden());
     quickUnlock.available = true;
-    QMetaObject::invokeMethod(pane, "refresh");
+    QMetaObject::invokeMethod(lockScreen, "updateState");
     QVERIFY(!quickButton->isHidden());
 
     // A restart starts without it: the provider only keeps it in memory, as for databases
@@ -1492,7 +1606,7 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     m_server->users[Email].keyset = changed;
     QTest::mouseClick(quickButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(account->state(), AccountManager::State::Locked, 10000);
-    QTRY_VERIFY(child<QLabel>(pane, "accountVaultsError")->text().contains("master password"));
+    QTRY_VERIFY(message->text().contains("master password"));
     QVERIFY(quickUnlock.keys.isEmpty());
     QTRY_VERIFY(quickButton->isHidden());
     m_server->users[Email].keyset = wrapped;
@@ -1569,20 +1683,17 @@ void TestGuiAccounts::testImportsAKdbxFile()
     const auto originalBytes = file.readAll();
     file.close();
 
-    // Opens the wizard on the KeePass 2 source with the file and its password filled in
+    // Opens the import modal on the KeePass 2 source, at its details step with the file and its password filled in
     auto openWizard = [&]() -> ImportWizard* {
         m_mainWindow->findChild<QAction*>("actionImport")->trigger();
-        // Each import makes a new wizard; earlier ones stay hidden
-        auto visibleWizard = [this]() -> ImportWizard* {
-            for (auto* w : m_mainWindow->findChildren<ImportWizard*>()) {
-                if (w->isVisible()) {
-                    return w;
-                }
-            }
+        // Each import makes a new modal, which goes away once the wizard inside it finishes
+        VaultImportModal* modal = nullptr;
+        [&] { QTRY_VERIFY((modal = m_mainWindow->findChild<VaultImportModal*>("vaultImportModal"))); }();
+        if (!modal) {
             return nullptr;
-        };
-        ImportWizard* wizard = nullptr;
-        [&] { QTRY_VERIFY((wizard = visibleWizard())); }();
+        }
+        [&] { QTRY_VERIFY(modal->isOpen()); }();
+        auto* wizard = modal->findChild<ImportWizard*>();
         if (!wizard) {
             return nullptr;
         }
@@ -1592,14 +1703,26 @@ void TestGuiAccounts::testImportsAKdbxFile()
                 sources->setCurrentRow(i);
             }
         }
+        modal->next();
+        if (modal->currentStep() != VaultImportModal::DetailsStep) {
+            qWarning("The import modal didn't move on to the details");
+            return nullptr;
+        }
         wizard->setField("ImportFile", path);
         wizard->setField("ImportPassword", "file");
         return wizard;
     };
-    auto finish = [](ImportWizard* wizard) {
-        wizard->next();
+    // Continue to the review, then import
+    auto finish = [this](ImportWizard* wizard) {
+        QPointer<VaultImportModal> modal = m_mainWindow->findChild<VaultImportModal*>("vaultImportModal");
+        QVERIFY(modal);
+        QVERIFY(modal->isAncestorOf(wizard));
+        modal->next();
         QTRY_COMPARE(wizard->currentId(), 1);
-        wizard->button(QWizard::FinishButton)->click();
+        QCOMPARE(modal->currentStep(), int(VaultImportModal::ReviewStep));
+        modal->next();
+        // The modal goes away with the wizard
+        QTRY_VERIFY(!modal);
     };
 
     // Merge into the vault; signed in, the wizard also offers a new vault
@@ -1622,7 +1745,6 @@ void TestGuiAccounts::testImportsAKdbxFile()
     QVERIFY(wizard);
     wizard->findChild<QRadioButton*>("existingDatabaseRadio")->setChecked(true);
     finish(wizard);
-    QTRY_VERIFY(!wizard->isVisible());
     QCOMPARE(titles(vaultWidget->database().data()), (QStringList{"Bank", "Mail"}));
 
     // As a new vault of the account, named after the file's root group
@@ -1646,40 +1768,6 @@ void TestGuiAccounts::testImportsAKdbxFile()
     QCOMPARE(file.readAll(), originalBytes);
 }
 
-namespace
-{
-    QLineEdit* lockPassword(MainWindow* window)
-    {
-        return child<QLineEdit>(window->accountLockScreen(), "accountLockPassword");
-    }
-
-    void clickUnlock(MainWindow* window)
-    {
-        QTest::mouseClick(child<QPushButton>(window->accountLockScreen(), "accountLockUnlock"), Qt::LeftButton);
-    }
-
-    bool hasNotification(MainWindow* window, const QString& text)
-    {
-        for (const auto& notification : window->notificationCenter()->notifications()) {
-            if (notification.text.contains(text) || notification.title.contains(text)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    QAction* accountAction(MainWindow* window, const QString& text)
-    {
-        auto* menu = window->findChild<QMenu*>("menuAccount");
-        for (auto* action : menu ? menu->actions() : QList<QAction*>()) {
-            if (action->text() == text) {
-                return action;
-            }
-        }
-        qWarning("No account action %s", qPrintable(text));
-        return nullptr;
-    }
-} // namespace
 
 void TestGuiAccounts::testLockScreenUnlocksTheAccount()
 {
@@ -1890,7 +1978,6 @@ void TestGuiAccounts::testUnlocksOfflineFromTheLockScreen()
 
 void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
 {
-    FluentTheme::setVaultLayoutEnabledForTests(true);
     Database db;
     auto* entry = new Entry();
     entry->setUuid(QUuid::createUuid());
@@ -1939,5 +2026,4 @@ void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
     QVERIFY(child<QWidget>(text, "shareLinkCommands")->isVisibleTo(text));
     text->reject();
     QTRY_VERIFY(!text);
-    FluentTheme::setVaultLayoutEnabledForTests(false);
 }

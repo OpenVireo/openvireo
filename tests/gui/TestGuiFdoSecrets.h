@@ -109,7 +109,7 @@ private slots:
 
 private:
     bool driveUnlockDialog(DatabaseWidget* target = nullptr);
-    bool driveNewDatabaseWizard();
+    bool driveNewDatabaseModal();
     bool driveAccessControlDialog(bool remember = true, bool includeFutureEntries = false);
     bool waitForSignal(QSignalSpy& spy, int expectedCount);
 

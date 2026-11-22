@@ -36,8 +36,7 @@
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
-#include "gui/styles/FluentTheme.h"
-#include "gui/wizard/NewDatabaseWizard.h"
+#include "gui/vault/VaultNewDatabaseModal.h"
 #include "util/FdoSecretsProxy.h"
 #include "util/TemporaryFile.h"
 
@@ -45,6 +44,7 @@
 #include <QLineEdit>
 #include <QSignalSpy>
 #include <QTest>
+#include <QTimer>
 #include <utility>
 
 int main(int argc, char* argv[])
@@ -153,8 +153,6 @@ void TestGuiFdoSecrets::initTestCase()
 
     Application::bootstrap();
 
-    // These tests drive the classic toolbar and entry table
-    FluentTheme::setVaultLayoutEnabledForTests(false);
     // Today's local experience, without the account start screen
     config()->set(Config::Account_StartMode, "local");
     m_mainWindow.reset(new MainWindow());
@@ -1063,7 +1061,7 @@ void TestGuiFdoSecrets::testCollectionCreate()
         VERIFY(spyPromptCompleted.isValid());
 
         DBUS_VERIFY(prompt->Prompt(""));
-        VERIFY(driveNewDatabaseWizard());
+        VERIFY(driveNewDatabaseModal());
 
         VERIFY(waitForSignal(spyPromptCompleted, 1));
         auto args = spyPromptCompleted.takeFirst();
@@ -1997,44 +1995,36 @@ bool TestGuiFdoSecrets::driveAccessControlDialog(bool remember, bool includeFutu
     return false;
 }
 
-bool TestGuiFdoSecrets::driveNewDatabaseWizard()
+bool TestGuiFdoSecrets::driveNewDatabaseModal()
 {
-    // processEvents will block because the NewDatabaseWizard is shown using exec
-    // which creates a local QEventLoop.
-    // so we do a little trick here to get the return value back
+    // processEvents will block because the new database modal waits in a local QEventLoop, like the
+    // wizard's exec() did, so we do a little trick here to get the return value back
     bool ret = false;
     QTimer::singleShot(0, this, [this, &ret]() {
         ret = [this]() -> bool {
-            auto wizard = m_tabWidget->findChild<NewDatabaseWizard*>();
-            VERIFY(wizard);
+            auto modal = m_mainWindow->findChild<VaultNewDatabaseModal*>("vaultNewDatabaseModal");
+            VERIFY(modal);
+            VERIFY(modal->isOpen());
 
-            COMPARE(wizard->currentId(), 0);
-            wizard->next();
-            wizard->next();
-            COMPARE(wizard->currentId(), 2);
+            COMPARE(modal->currentStep(), 0);
+            modal->next();
+            modal->next();
+            COMPARE(modal->currentStep(), 2);
 
             // enter password
             auto* passwordEdit =
-                wizard->findChild<PasswordWidget*>("enterPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
+                modal->findChild<PasswordWidget*>("enterPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
             auto* passwordRepeatEdit =
-                wizard->findChild<PasswordWidget*>("repeatPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
+                modal->findChild<PasswordWidget*>("repeatPasswordEdit")->findChild<QLineEdit*>("passwordEdit");
             VERIFY(passwordEdit);
             VERIFY(passwordRepeatEdit);
             QTest::keyClicks(passwordEdit, "test");
-            QTest::keyClick(passwordEdit, Qt::Key::Key_Tab);
             QTest::keyClicks(passwordRepeatEdit, "test");
-
-            // save database to temporary file
-            TemporaryFile tmpFile;
-            VERIFY(tmpFile.open());
-            tmpFile.close();
-            fileDialog()->setNextFileName(tmpFile.fileName());
 
             // click Continue on the warning due to weak password
             MessageBox::setNextAnswer(MessageBox::ContinueWithWeakPass);
-            wizard->accept();
-
-            tmpFile.remove();
+            // Continue on the last step creates the database
+            modal->next();
             return true;
         }();
     });

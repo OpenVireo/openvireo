@@ -27,7 +27,6 @@
 #include <QPushButton>
 #include <QTableView>
 #include <QTest>
-#include <QToolBar>
 
 #include "browser/BrowserService.h"
 #include "config-keepassx-tests.h"
@@ -38,7 +37,7 @@
 #include "gui/PasswordWidget.h"
 #include "gui/entry/EditEntryWidget.h"
 #include "gui/entry/EntryView.h"
-#include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultEntryEditCard.h"
 
 int main(int argc, char* argv[])
 {
@@ -70,8 +69,6 @@ void TestGuiBrowser::initTestCase()
     // Disable quick unlock
     config()->set(Config::Security_QuickUnlock, false);
 
-    // These tests drive the classic toolbar and entry table
-    FluentTheme::setVaultLayoutEnabledForTests(false);
     // Today's local experience, without the account start screen
     config()->set(Config::Account_StartMode, "local");
     m_mainWindow.reset(new MainWindow());
@@ -135,22 +132,23 @@ void TestGuiBrowser::testEntrySettings()
     // Enable the Browser Integration
     config()->set(Config::Browser_Enabled, true);
 
-    auto* toolBar = m_mainWindow->findChild<QToolBar*>("toolBar");
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
 
-    entryView->setFocus();
-    QVERIFY(entryView->hasFocus());
-
     // Select the first entry in the database
-    QModelIndex entryItem = entryView->model()->index(0, 1);
-    Entry* entry = entryView->entryFromIndex(entryItem);
-    clickIndex(entryItem, entryView, Qt::LeftButton);
+    Entry* entry = entryView->entryFromIndex(entryView->model()->index(0, 0));
+    QVERIFY(entry);
+    entryView->setCurrentEntry(entry);
+    QTRY_COMPARE(m_dbWidget->currentSelectedEntry(), entry);
 
-    auto* entryEditAction = m_mainWindow->findChild<QAction*>("actionEntryEdit");
-    QWidget* entryEditWidget = toolBar->widgetForAction(entryEditAction);
-    QTest::mouseClick(entryEditWidget, Qt::LeftButton);
-    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    auto* editEntryWidget = m_dbWidget->findChild<EditEntryWidget*>("editEntryWidget");
+    // The entry opens for editing in place of its detail card
+    triggerAction("actionEntryEdit");
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* card = m_dbWidget->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
+    QVERIFY(card);
+    QVERIFY(card->isVisible());
+    auto* editEntryWidget = qobject_cast<EditEntryWidget*>(card->editor());
+    QVERIFY(editEntryWidget);
+    QCOMPARE(editEntryWidget->objectName(), QString("editEntryWidget"));
 
     // Switch to Properties page and select all rows from the custom data table
     editEntryWidget->setCurrentPage(5);
@@ -166,35 +164,36 @@ void TestGuiBrowser::testEntrySettings()
     MessageBox::setNextAnswer(MessageBox::Delete);
     QTest::mouseClick(removeButton, Qt::LeftButton);
 
-    // Apply the removal
-    auto* editEntryWidgetButtonBox = editEntryWidget->findChild<QDialogButtonBox*>("buttonBox");
-    QVERIFY(editEntryWidgetButtonBox);
-    auto* okButton = editEntryWidgetButtonBox->button(QDialogButtonBox::Ok);
-    QVERIFY(okButton);
-    QTRY_VERIFY(okButton->isEnabled());
-    QTest::mouseClick(okButton, Qt::LeftButton);
-    QApplication::processEvents();
+    // Save the removal from the command bar, which holds Save while an entry is edited in place
+    auto* saveButton = m_dbWidget->findChild<QAbstractButton*>("vaultEditSaveButton");
+    QVERIFY(saveButton);
+    QTRY_VERIFY(saveButton->isVisible());
+    QTRY_VERIFY(saveButton->isEnabled());
+    QTest::mouseClick(saveButton, Qt::LeftButton);
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 
     QCOMPARE(entry->customData()->size(), 0);
 }
 
 void TestGuiBrowser::testAdditionalURLs()
 {
-    auto* toolBar = m_mainWindow->findChild<QToolBar*>("toolBar");
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
 
-    entryView->setFocus();
-    QVERIFY(entryView->hasFocus());
-
     // Select the first entry in the database
-    QModelIndex entryItem = entryView->model()->index(0, 1);
-    clickIndex(entryItem, entryView, Qt::LeftButton);
+    Entry* entry = entryView->entryFromIndex(entryView->model()->index(0, 0));
+    QVERIFY(entry);
+    entryView->setCurrentEntry(entry);
+    QTRY_COMPARE(m_dbWidget->currentSelectedEntry(), entry);
 
-    auto* entryEditAction = m_mainWindow->findChild<QAction*>("actionEntryEdit");
-    QWidget* entryEditWidget = toolBar->widgetForAction(entryEditAction);
-    QTest::mouseClick(entryEditWidget, Qt::LeftButton);
-    QCOMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    auto* editEntryWidget = m_dbWidget->findChild<EditEntryWidget*>("editEntryWidget");
+    // The entry opens for editing in place of its detail card
+    triggerAction("actionEntryEdit");
+    QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
+    auto* card = m_dbWidget->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
+    QVERIFY(card);
+    QVERIFY(card->isVisible());
+    auto* editEntryWidget = qobject_cast<EditEntryWidget*>(card->editor());
+    QVERIFY(editEntryWidget);
+    QCOMPARE(editEntryWidget->objectName(), QString("editEntryWidget"));
 
     // Switch to Browser Integration page and add three URL's
     editEntryWidget->setCurrentPage(4);
@@ -206,24 +205,36 @@ void TestGuiBrowser::testAdditionalURLs()
 
     QStringList testURLs = {"https://example1.com", "https://example2.com", "https://example3.com"};
 
+    // Each new row opens an editor for the URL; type into it directly so the test doesn't depend on which
+    // window has the keyboard focus (other GUI tests may be running at the same time)
     for (const auto& url : testURLs) {
         QTest::mouseClick(addURLButton, Qt::LeftButton);
         QApplication::processEvents();
-        QTest::keyClicks(urlList->focusWidget(), url);
+        QLineEdit* editor = nullptr;
+        for (auto* edit : urlList->viewport()->findChildren<QLineEdit*>()) {
+            if (!edit->isHidden()) {
+                editor = edit;
+            }
+        }
+        QVERIFY(editor);
+        editor->selectAll();
+        QTest::keyClicks(editor, url);
+        QTest::keyClick(editor, Qt::Key_Enter);
+        QApplication::processEvents();
     }
 
     // Check the values from attributesEdit
     editEntryWidget->setCurrentPage(1);
     auto* attributesView = editEntryWidget->findChild<QListView*>("attributesView");
     auto* attrTextEdit = editEntryWidget->findChild<QPlainTextEdit*>("attributesEdit");
+    QVERIFY(attributesView);
+    QVERIFY(attrTextEdit);
+    // The URL attributes sort before the ones this entry already had
+    QVERIFY(attributesView->model()->rowCount() >= testURLs.size());
 
-    // Go top of the list
-    attributesView->setFocus();
-    QTest::keyClick(attributesView->focusWidget(), Qt::Key_PageUp);
-
-    for (const auto& url : testURLs) {
-        QCOMPARE(attrTextEdit->toPlainText(), url);
-        QTest::keyClick(attributesView->focusWidget(), Qt::Key_Down);
+    for (int i = 0; i < testURLs.size(); ++i) {
+        attributesView->setCurrentIndex(attributesView->model()->index(i, 0));
+        QCOMPARE(attrTextEdit->toPlainText(), testURLs.at(i));
     }
 }
 
@@ -256,12 +267,4 @@ void TestGuiBrowser::triggerAction(const QString& name)
     QVERIFY(action->isEnabled());
     action->trigger();
     QApplication::processEvents();
-}
-
-void TestGuiBrowser::clickIndex(const QModelIndex& index,
-                                QAbstractItemView* view,
-                                Qt::MouseButton button,
-                                Qt::KeyboardModifiers stateKey)
-{
-    QTest::mouseClick(view->viewport(), button, stateKey, view->visualRect(index).center());
 }
