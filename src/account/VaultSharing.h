@@ -102,7 +102,6 @@ public:
 
     void loadMembers(const QString& vaultId, MembersCallback done);
     void lookupRecipient(const QString& email, RecipientCallback done);
-    void recipientFor(const QString& principal, RecipientCallback done);
 
     // Seal the vault's current key to a checked recipient and grant `role`
     void grant(const QString& vaultId, const Recipient& recipient, const QString& role, Done done);
