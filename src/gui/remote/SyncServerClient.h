@@ -166,8 +166,6 @@ public:
     // Replaces how create() makes clients, for tests; nullptr restores the default
     static void setFactory(std::function<SyncServerClient*(const RemoteParams&)> factory);
 
-    // Replace the token provider this client got from its parameters
-    void setTokenProvider(AccessTokenProvider provider);
     // The provider for `params`: its own, its account's, or one handing out its static token
     static AccessTokenProvider tokenProviderFor(const RemoteParams& params);
     // Whether `params` can sync: a static token, or a signed-in account (or service account) that holds the vault

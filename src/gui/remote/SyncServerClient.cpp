@@ -88,11 +88,6 @@ void SyncServerClient::setFactory(std::function<SyncServerClient*(const RemotePa
     g_factory = std::move(factory);
 }
 
-void SyncServerClient::setTokenProvider(AccessTokenProvider provider)
-{
-    m_tokenProvider = std::move(provider);
-}
-
 AccessTokenProvider SyncServerClient::tokenProviderFor(const RemoteParams& params)
 {
     if (params.tokenProvider) {
