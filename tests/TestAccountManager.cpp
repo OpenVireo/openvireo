@@ -1542,7 +1542,7 @@ void TestAccountManager::testOfflineUnlockCanBeTurnedOff()
 
     // Turning it off removes what an earlier session kept
     config()->set(Config::Account_AllowOfflineUnlock, true);
-    AccountOfflineCache::saveVaults(manager->accountId(), {});
+    AccountOfflineCache::saveProfile(manager->accountId(), {{"alg", "argon2id"}}, {{"enc_pk", "x"}}, {});
     QVERIFY(QFile::exists(AccountOfflineCache::path(manager->accountId())));
     AccountOfflineCache::clearAll();
     QVERIFY(!QFile::exists(AccountOfflineCache::path(manager->accountId())));

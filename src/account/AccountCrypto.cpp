@@ -37,10 +37,6 @@ namespace AccountCrypto
 
     namespace
     {
-        const QByteArray PublicKeysContext = QByteArrayLiteral("ov-pubkeys-v1");
-        const QByteArray SealInfo = QByteArrayLiteral("ov-seal-v1");
-        const QByteArray AukInfo = QByteArrayLiteral("ov-auk-v1");
-
         rust::Slice<const uint8_t> slice(const QByteArray& data)
         {
             return {reinterpret_cast<const uint8_t*>(data.constData()), static_cast<size_t>(data.size())};
@@ -225,15 +221,6 @@ namespace AccountCrypto
         return kdf;
     }
 
-    QJsonObject KdfParams::toJson() const
-    {
-        return QJsonObject{{"alg", "argon2id"},
-                           {"salt", toBase64Url(salt)},
-                           {"m", static_cast<qint64>(memoryKiB)},
-                           {"t", static_cast<qint64>(iterations)},
-                           {"p", static_cast<qint64>(parallelism)}};
-    }
-
     KdfParams KdfParams::fromJson(const QJsonObject& json, bool* ok)
     {
         KdfParams kdf;
@@ -275,16 +262,6 @@ namespace AccountCrypto
         } catch (const rust::Error&) {
             return {};
         }
-    }
-
-    SecureBytes deriveAuk(const SecureBytes& stretchedPassword, const SecureBytes& secretKey)
-    {
-        return hkdf(stretchedPassword, fromSecure(secretKey), AukInfo);
-    }
-
-    SecureBytes deriveAuk(const QString& password, const KdfParams& kdf, const SecureBytes& secretKey)
-    {
-        return deriveAuk(stretchPassword(normalizePassword(password), kdf), secretKey);
     }
 
     QByteArray
@@ -339,43 +316,6 @@ namespace AccountCrypto
         SecureBytes().swap(encSk);
         SecureBytes().swap(signSeed);
         publicKeys = {};
-    }
-
-    QByteArray x25519PublicKey(const SecureBytes& secretKey)
-    {
-        try {
-            return toByteArray(ov::x25519_public_key(slice(secretKey)));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    QByteArray ed25519PublicKey(const SecureBytes& seed)
-    {
-        try {
-            return toByteArray(ov::ed25519_public_key(slice(seed)));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    QByteArray sign(const SecureBytes& signSeed, const QByteArray& message)
-    {
-        try {
-            return toByteArray(ov::ed25519_sign(slice(signSeed), slice(message)));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    bool verify(const QByteArray& signPk, const QByteArray& message, const QByteArray& signature)
-    {
-        return ov::ed25519_verify(slice(signPk), slice(message), slice(signature));
-    }
-
-    QByteArray signPublicKeys(const SecureBytes& signSeed, const QByteArray& encPk, const QByteArray& signPk)
-    {
-        return sign(signSeed, PublicKeysContext + encPk + signPk);
     }
 
     bool verifyPublicKeys(const PublicKeys& publicKeys)
@@ -469,20 +409,6 @@ namespace AccountCrypto
         return unwrapKeyset(key, wrapped, publicKeys, keyset, error);
     }
 
-    SecureBytes sharedSecret(const SecureBytes& secretKey, const QByteArray& publicKey)
-    {
-        try {
-            return takeSecure(ov::x25519_shared(slice(secretKey), slice(publicKey)));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    SecureBytes sealKey(const SecureBytes& sharedSecret, const QByteArray& ephemeralPk, const QByteArray& recipientPk)
-    {
-        return hkdf(sharedSecret, ephemeralPk + recipientPk, SealInfo);
-    }
-
     QByteArray seal(const QByteArray& recipientEncPk,
                     const SecureBytes& plaintext,
                     const QByteArray& aad,
@@ -528,12 +454,6 @@ namespace AccountCrypto
         }
     }
 
-    QByteArray
-    encryptVaultName(const SecureBytes& vaultKey, const QString& vaultId, const QString& name, const QByteArray& nonce)
-    {
-        return wrap(vaultNameKey(vaultKey), toSecure(name.toUtf8()), vaultNameAad(vaultId), nonce);
-    }
-
     bool
     decryptVaultName(const SecureBytes& vaultKey, const QString& vaultId, const QByteArray& encrypted, QString* name)
     {
@@ -548,20 +468,6 @@ namespace AccountCrypto
     QByteArray shareAad(const QString& shareId)
     {
         return "ov-share-v1|" + shareId.toUtf8();
-    }
-
-    QByteArray shareRefAad(const QString& shareId)
-    {
-        return "ov-share-ref|" + shareId.toUtf8();
-    }
-
-    SecureBytes padShare(const SecureBytes& data)
-    {
-        const auto size = (data.size() / SharePad + 1) * SharePad;
-        SecureBytes padded(size, 0);
-        std::copy(data.begin(), data.end(), padded.begin());
-        padded[data.size()] = 0x80;
-        return padded;
     }
 
     bool unpadShare(const SecureBytes& padded, SecureBytes* data)
@@ -592,16 +498,6 @@ namespace AccountCrypto
         return hkdf(passcodeKey, {}, "ov-share-auth-v1");
     }
 
-    QByteArray encryptSharePayload(const SecureBytes& linkKey,
-                                   const QString& shareId,
-                                   const QByteArray& payloadJson,
-                                   const SecureBytes& passcodeKey,
-                                   const QByteArray& nonce)
-    {
-        auto ct = wrap(shareContentKey(linkKey, passcodeKey), padShare(toSecure(payloadJson)), shareAad(shareId), nonce);
-        return ct.size() > ShareMaxCiphertext ? QByteArray() : ct;
-    }
-
     bool decryptSharePayload(const SecureBytes& linkKey,
                              const QString& shareId,
                              const QByteArray& ciphertext,
@@ -618,75 +514,11 @@ namespace AccountCrypto
         return true;
     }
 
-    SecureBytes shareRefKey(const SecureBytes& encSk)
-    {
-        return hkdf(encSk, {}, "ov-share-ref-v1");
-    }
-
-    QByteArray
-    encryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& refJson, const QByteArray& nonce)
-    {
-        return wrap(shareRefKey(encSk), toSecure(refJson), shareRefAad(shareId), nonce);
-    }
-
-    bool decryptShareRef(const SecureBytes& encSk, const QString& shareId, const QByteArray& ref, QByteArray* refJson)
-    {
-        SecureBytes plain;
-        if (!unwrap(shareRefKey(encSk), ref, shareRefAad(shareId), &plain)) {
-            return false;
-        }
-        *refJson = fromSecure(plain);
-        return true;
-    }
-
-    QString shareLink(const QString& base, const QString& shareId, const SecureBytes& linkKey)
-    {
-        auto trimmed = base;
-        while (trimmed.endsWith('/')) {
-            trimmed.chop(1);
-        }
-        return trimmed + "/" + shareId + "#" + toBase64Url(linkKey);
-    }
-
-    QString refreshTokenHash(const QString& refreshToken)
-    {
-        const auto utf8 = refreshToken.toUtf8();
-        const auto hash = ov::refresh_token_hash(rust::Str(utf8.constData(), static_cast<size_t>(utf8.size())));
-        return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
-    }
-
     QString ServiceAccountToken::secretHash() const
     {
         try {
             const auto hash = ov::service_account_secret_hash(slice(secret));
             return QString::fromUtf8(hash.data(), static_cast<int>(hash.size()));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    QString ServiceAccountToken::secretPrefix() const
-    {
-        try {
-            const auto prefix = ov::service_account_secret_prefix(slice(secret));
-            return QString::fromUtf8(prefix.data(), static_cast<int>(prefix.size()));
-        } catch (const rust::Error&) {
-            return {};
-        }
-    }
-
-    QString buildServiceAccountToken(const ServiceAccountToken& token)
-    {
-        const auto url = token.url.toUtf8();
-        const auto saId = token.saId.toUtf8();
-        try {
-            auto text = ov::build_service_account_token(rust::Str(url.constData(), static_cast<size_t>(url.size())),
-                                                         rust::Str(saId.constData(), static_cast<size_t>(saId.size())),
-                                                         slice(token.secret),
-                                                         slice(token.kek));
-            auto result = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
-            Botan::secure_scrub_memory(const_cast<char*>(text.data()), text.size());
-            return result;
         } catch (const rust::Error&) {
             return {};
         }

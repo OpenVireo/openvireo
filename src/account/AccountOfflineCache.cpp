@@ -58,11 +58,6 @@ void AccountOfflineCache::saveProfile(const QString& accountId,
     update(accountId, {{"kdf", kdf}, {"keyset", keyset}, {"orgs", orgs}});
 }
 
-void AccountOfflineCache::saveVaults(const QString& accountId, const QJsonArray& vaults)
-{
-    update(accountId, {{"vaults", vaults}});
-}
-
 QJsonObject AccountOfflineCache::load(const QString& accountId)
 {
     if (accountId.isEmpty() || !isEnabled()) {

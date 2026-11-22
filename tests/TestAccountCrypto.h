@@ -39,7 +39,6 @@ private slots:
     void testVaultName();
     void testShareLinks();
     void testServiceAccount();
-    void testRefreshTokenHash();
     void testJwtClaims();
     void testVaultFixture();
     void testVaultKeyRoundTrip();

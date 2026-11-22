@@ -162,44 +162,6 @@ void VaultSharing::lookupRecipient(const QString& email, RecipientCallback done)
         });
 }
 
-void VaultSharing::recipientFor(const QString& principal, RecipientCallback done)
-{
-    if (!m_account) {
-        done({}, tr("Not signed in."));
-        return;
-    }
-    if (principal == m_account->principal()) {
-        Recipient self;
-        self.principal = principal;
-        self.email = m_account->email();
-        self.publicKeys = m_account->keyset().publicKeys;
-        self.verified = verifyPublicKeys(self.publicKeys);
-        done(self, {});
-        return;
-    }
-    auto found = std::make_shared<Recipient>();
-    QPointer<VaultSharing> guard(this);
-    m_account->callAccount(
-        this,
-        [principal, found](const ov::Account& account, const ov::CancelToken& cancel) {
-            *found = recipientOf(account.recipient(rs(principal), "", cancel));
-        },
-        [guard, principal, found, done](const AccountManager::CoreError& error) {
-            if (!error.ok()) {
-                done({}, guard->messageFor(error));
-                return;
-            }
-            auto recipient = *found;
-            // Only trust the keys for the principal they were asked for
-            if (recipient.principal.isEmpty()) {
-                recipient.principal = principal;
-            } else if (recipient.principal != principal) {
-                recipient.verified = false;
-            }
-            done(recipient, {});
-        });
-}
-
 void VaultSharing::loadMembers(const QString& vaultId, MembersCallback done)
 {
     if (!m_account) {

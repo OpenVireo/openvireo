@@ -24,8 +24,8 @@
 
 /**
  * What an account keeps on this device to unlock without the network (SPEC §20): the wrapped keyset
- * and its KDF settings and the org list as GET /me returned them, and the vault list as GET /vaults
- * returned it (encrypted names, sealed keys). Nothing in it opens without the master password and the
+ * and its KDF settings and the org list as GET /me returned them. The vault list and keys are cached by
+ * openvireo-core (CoreHost::FileCache). Nothing in it opens without the master password and the
  * Secret Key, which stays in the keychain.
  *
  * It lives in <accounts root>/<account id>/offline.json beside the vault copies, readable by the user
@@ -44,7 +44,6 @@ public:
                             const QJsonObject& kdf,
                             const QJsonObject& keyset,
                             const QJsonArray& orgs);
-    static void saveVaults(const QString& accountId, const QJsonArray& vaults);
 
     // Empty objects/arrays when nothing is cached (or caching is off)
     static QJsonObject load(const QString& accountId);
