@@ -25,6 +25,8 @@
 class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
+class EditEntryWidget;
+class QAbstractButton;
 class QAbstractItemView;
 
 class TestGui : public QObject
@@ -91,6 +93,11 @@ private:
     void checkSaveDatabase();
     void checkEntryCount(int count);
     void prepareAndTriggerRemoteSync();
+    // Vault Index layout helpers
+    EditEntryWidget* editEntryWidget() const;
+    QAbstractButton* commandButton(const QString& actionName) const;
+    void clickNewEntry();
+    void clickEditEntry();
 
     QScopedPointer<MainWindow> m_mainWindow;
     QPointer<DatabaseTabWidget> m_tabWidget;
