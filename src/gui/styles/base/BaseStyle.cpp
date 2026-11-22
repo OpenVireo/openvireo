@@ -388,6 +388,10 @@ namespace Phantom
             Num_ColorCacheEntries = 10,
         };
         using PhSwatchCache = QVarLengthArray<PhCacheEntry, Num_ColorCacheEntries>;
+        // Set while the high-contrast style is the application style: outlines and dividers
+        // become the text colour instead of a subtle shade of the window
+        bool g_highContrastOutlines = false;
+
         Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal)
         {
             using namespace SwatchColors;
@@ -448,6 +452,22 @@ namespace Phantom
             colors[S_itemView_multiSelection_currentBorder] = Dc::itemViewMultiSelectionCurrentBorderOf(pal);
             colors[S_itemView_headerOnLine] = Dc::itemViewHeaderOnLineColorOf(pal);
             colors[S_scrollbarGutter_disabled] = colors[S_window];
+
+            if (g_highContrastOutlines) {
+                // Solid, full-contrast borders on every control; the scrollbar thumb is drawn in
+                // the text colour so it doesn't depend on a faint shade
+                const QColor outline = colors[S_windowText];
+                colors[S_window_outline] = outline;
+                colors[S_window_divider] = outline;
+                colors[S_frame_outline] = outline;
+                colors[S_base_divider] = outline;
+                colors[S_splitterHandle] = outline;
+                colors[S_highlight_outline] = outline;
+                colors[S_progressBar_outline] = outline;
+                colors[S_itemView_headerOnLine] = outline;
+                colors[S_scrollbarSlider] = outline;
+                colors[S_sliderHandle] = colors[S_button];
+            }
 
 #ifdef Q_OS_MACOS
             colors[S_tabBarBase] = Dc::tabBarBase(pal);
@@ -1371,6 +1391,12 @@ BaseStyle::BaseStyle()
     : d(new BaseStylePrivate)
 {
     setObjectName(QLatin1String("Phantom"));
+    Phantom::g_highContrastOutlines = false;
+}
+
+void BaseStyle::setHighContrastOutlines(bool enabled)
+{
+    Phantom::g_highContrastOutlines = enabled;
 }
 
 BaseStyle::~BaseStyle()

@@ -106,6 +106,7 @@ set(gui_SOURCES
         gui/styles/base/BaseStyle.cpp
         gui/styles/dark/DarkStyle.cpp
         gui/styles/light/LightStyle.cpp
+        gui/styles/highcontrast/HighContrastStyle.cpp
         gui/styles/FluentTheme.cpp
         gui/AboutDialog.cpp
         gui/ActionCollection.cpp

@@ -89,6 +89,12 @@ public:
 
 protected:
     /**
+     * Draw control outlines, dividers and scrollbar thumbs in the text colour.
+     * Applies to every BaseStyle until the next one is constructed.
+     */
+    static void setHighContrastOutlines(bool enabled);
+
+    /**
      * @return Paths to application stylesheets
      */
     virtual QString getAppStyleSheet() const
