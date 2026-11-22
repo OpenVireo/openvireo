@@ -42,6 +42,15 @@ public:
     virtual bool isStatusBarDark() const = 0;
 
     /**
+     * @return OS asks apps for more contrast: Windows High Contrast, macOS Increase contrast,
+     * or the desktop portal's high-contrast preference on Linux. Changes emit interfaceThemeChanged().
+     */
+    virtual bool isHighContrastMode() const
+    {
+        return false;
+    }
+
+    /**
      * @return KeePassXC set to launch at system startup (autostart).
      */
     virtual bool isLaunchAtStartupEnabled() const = 0;
@@ -92,7 +101,7 @@ signals:
     void globalShortcutChanged(const QString& name, const QString& description);
 
     /**
-     * Indicates platform UI theme change (light mode to dark mode).
+     * Indicates platform UI theme change (light mode to dark mode, or high contrast on or off).
      */
     void interfaceThemeChanged();
 

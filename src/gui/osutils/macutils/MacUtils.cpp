@@ -108,6 +108,11 @@ bool MacUtils::isDarkMode() const
     return m_appkit->isDarkMode();
 }
 
+bool MacUtils::isHighContrastMode() const
+{
+    return m_appkit->isHighContrast();
+}
+
 bool MacUtils::isStatusBarDark() const
 {
     return m_appkit->isStatusBarDark();

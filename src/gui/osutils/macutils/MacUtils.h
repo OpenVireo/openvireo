@@ -38,6 +38,7 @@ public:
 
     bool isDarkMode() const override;
     bool isStatusBarDark() const override;
+    bool isHighContrastMode() const override;
     bool isLaunchAtStartupEnabled() const override;
     void setLaunchAtStartup(bool enable) override;
     bool isCapslockEnabled() override;

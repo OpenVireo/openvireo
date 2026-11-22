@@ -43,6 +43,11 @@
                                                                 name:NSWorkspaceSessionDidResignActiveNotification
                                                                 object:nil];
 
+        [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
+                                                            selector:@selector(accessibilityDisplayOptionsChanged:)
+                                                                name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+                                                              object:nil];
+
         [NSApp addObserver:self forKeyPath:@"effectiveAppearance" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
@@ -87,6 +92,17 @@
     }
 }
 
+
+//
+// "Increase contrast" (or another display accessibility option) was toggled
+//
+- (void) accessibilityDisplayOptionsChanged:(NSNotification*) notification
+{
+    Q_UNUSED(notification)
+    if (m_appkit) {
+        emit m_appkit->interfaceThemeChanged();
+    }
+}
 
 //
 // Get process id of frontmost application (-> keyboard input)
@@ -136,7 +152,21 @@
 //
 - (bool) isDarkMode
 {
-    return [NSApp.effectiveAppearance.name isEqualToString:NSAppearanceNameDarkAqua];
+    // Increase contrast turns DarkAqua into AccessibilityHighContrastDarkAqua, so match rather than compare names
+    if (@available(macOS 10.14, *)) {
+        NSAppearanceName best = [NSApp.effectiveAppearance
+            bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]];
+        return [best isEqualToString:NSAppearanceNameDarkAqua];
+    }
+    return false;
+}
+
+//
+// Get state of macOS "Increase contrast" accessibility setting
+//
+- (bool) isHighContrast
+{
+    return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldIncreaseContrast];
 }
 
 
@@ -307,6 +337,11 @@ bool AppKit::isHidden(pid_t pid)
 bool AppKit::isDarkMode()
 {
     return [static_cast<id>(self) isDarkMode];
+}
+
+bool AppKit::isHighContrast()
+{
+    return [static_cast<id>(self) isHighContrast];
 }
 
 bool AppKit::isStatusBarDark()

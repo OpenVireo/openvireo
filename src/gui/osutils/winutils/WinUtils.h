@@ -19,6 +19,7 @@
 #define KEEPASSXC_WINUTILS_H
 
 #include "gui/osutils/OSUtilsBase.h"
+#include "gui/styles/FluentTheme.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QHash>
@@ -46,7 +47,9 @@ public:
     void setLaunchAtStartup(bool enable) override;
     bool isCapslockEnabled() override;
     void setUserInputProtection(bool enable) override;
-    bool isHighContrastMode() const;
+    bool isHighContrastMode() const override;
+    // The user's high-contrast scheme, from the Windows system colours
+    FluentTheme::HighContrastColors highContrastColors() const;
 
     void registerNativeEventFilter() override;
 
@@ -84,6 +87,7 @@ private:
 
     bool m_darkAppThemeActive;
     bool m_darkSystemThemeActive;
+    bool m_highContrastActive;
 
     Q_DISABLE_COPY(WinUtils)
 };

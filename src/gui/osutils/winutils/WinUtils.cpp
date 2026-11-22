@@ -33,6 +33,7 @@ WinUtils* WinUtils::instance()
         m_instance = new WinUtils(qApp);
         m_instance->m_darkAppThemeActive = m_instance->isDarkMode();
         m_instance->m_darkSystemThemeActive = m_instance->isStatusBarDark();
+        m_instance->m_highContrastActive = m_instance->isHighContrastMode();
 
 #ifdef QT_DEBUG
         // Attach console to enable debug output
@@ -84,7 +85,11 @@ bool WinUtils::nativeEventFilter(const QByteArray& eventType, void* message, qin
     auto* msg = static_cast<MSG*>(message);
     switch (msg->message) {
     case WM_SETTINGCHANGE:
-        if (m_darkAppThemeActive != isDarkMode()) {
+        if (m_highContrastActive != isHighContrastMode()) {
+            m_highContrastActive = !m_highContrastActive;
+            m_darkAppThemeActive = isDarkMode();
+            emit interfaceThemeChanged();
+        } else if (m_darkAppThemeActive != isDarkMode()) {
             m_darkAppThemeActive = !m_darkAppThemeActive;
             emit interfaceThemeChanged();
         }
@@ -92,6 +97,12 @@ bool WinUtils::nativeEventFilter(const QByteArray& eventType, void* message, qin
         if (m_darkSystemThemeActive != isStatusBarDark()) {
             m_darkSystemThemeActive = !m_darkSystemThemeActive;
             emit statusbarThemeChanged();
+        }
+        break;
+    case WM_SYSCOLORCHANGE:
+        // Switching between high-contrast schemes changes the system colours we build the theme from
+        if (m_highContrastActive) {
+            emit interfaceThemeChanged();
         }
         break;
     case WM_HOTKEY:
@@ -147,6 +158,26 @@ bool WinUtils::isHighContrastMode() const
 {
     QSettings settings(R"(HKEY_CURRENT_USER\Control Panel\Accessibility\HighContrast)", QSettings::NativeFormat);
     return (settings.value("Flags").toInt() & 1u) != 0;
+}
+
+FluentTheme::HighContrastColors WinUtils::highContrastColors() const
+{
+    auto sysColor = [](int index) {
+        // COLORREF is 0x00BBGGRR; the GetRValue() family lives in wingdi.h, which NOGDI leaves out
+        const DWORD color = GetSysColor(index);
+        return QColor(int(color & 0xff), int((color >> 8) & 0xff), int((color >> 16) & 0xff));
+    };
+    FluentTheme::HighContrastColors colors;
+    colors.window = sysColor(COLOR_WINDOW);
+    colors.windowText = sysColor(COLOR_WINDOWTEXT);
+    colors.highlight = sysColor(COLOR_HIGHLIGHT);
+    colors.highlightText = sysColor(COLOR_HIGHLIGHTTEXT);
+    colors.buttonFace = sysColor(COLOR_BTNFACE);
+    colors.buttonText = sysColor(COLOR_BTNTEXT);
+    colors.grayText = sysColor(COLOR_GRAYTEXT);
+    colors.hotlight = sysColor(COLOR_HOTLIGHT);
+    FluentTheme::fillStatusColors(colors);
+    return colors;
 }
 
 bool WinUtils::registerGlobalShortcut(const QString& name, Qt::Key key, Qt::KeyboardModifiers modifiers, QString* error)

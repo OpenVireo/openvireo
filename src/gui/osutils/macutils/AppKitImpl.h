@@ -36,6 +36,7 @@
 - (bool) hideProcess:(pid_t) pid;
 - (bool) isHidden:(pid_t) pid;
 - (bool) isDarkMode;
+- (bool) isHighContrast;
 - (bool) isStatusBarDark;
 - (void) userSwitchHandler:(NSNotification*) notification;
 - (bool) enableAccessibility;

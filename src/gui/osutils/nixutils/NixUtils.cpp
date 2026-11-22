@@ -98,6 +98,11 @@ NixUtils::NixUtils(QObject* parent)
     if (reply.isValid()) {
         setColorScheme(reply.value());
     }
+    // Only newer portals (1.20+) report the contrast preference; older ones return an error
+    QDBusReply<QDBusVariant> contrastReply = desktopPortal.call("ReadOne", "org.freedesktop.appearance", "contrast");
+    if (contrastReply.isValid()) {
+        setContrast(contrastReply.value());
+    }
 }
 
 NixUtils::~NixUtils() = default;
@@ -113,6 +118,11 @@ bool NixUtils::isDarkMode() const
         return false;
     }
     return qApp->style()->standardPalette().color(QPalette::Window).toHsl().lightness() < 110;
+}
+
+bool NixUtils::isHighContrastMode() const
+{
+    return m_systemHighContrast;
 }
 
 bool NixUtils::isStatusBarDark() const
@@ -445,6 +455,8 @@ void NixUtils::handleColorSchemeChanged(QString ns, QString key, QDBusVariant va
 {
     if (ns == "org.freedesktop.appearance" && key == "color-scheme") {
         setColorScheme(value);
+    } else if (ns == "org.freedesktop.appearance" && key == "contrast") {
+        setContrast(value);
     }
 }
 
@@ -453,6 +465,15 @@ void NixUtils::setColorScheme(QDBusVariant value)
     m_systemColorschemePref = static_cast<ColorschemePref>(value.variant().toInt());
     m_systemColorschemePrefExists = true;
     emit interfaceThemeChanged();
+}
+
+void NixUtils::setContrast(QDBusVariant value)
+{
+    const bool highContrast = value.variant().toUInt() == 1;
+    if (highContrast != m_systemHighContrast) {
+        m_systemHighContrast = highContrast;
+        emit interfaceThemeChanged();
+    }
 }
 
 quint64 NixUtils::getProcessStartTime() const

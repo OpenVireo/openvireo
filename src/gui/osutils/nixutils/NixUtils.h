@@ -35,6 +35,7 @@ public:
 
     bool isDarkMode() const override;
     bool isStatusBarDark() const override;
+    bool isHighContrastMode() const override;
     bool isLaunchAtStartupEnabled() const override;
     void setLaunchAtStartup(bool enable) override;
     bool isCapslockEnabled() override;
@@ -101,6 +102,10 @@ private:
     bool m_systemColorschemePrefExists = false;
 
     void setColorScheme(QDBusVariant value);
+
+    // "org.freedesktop.appearance contrast": 0 = no preference, 1 = higher contrast
+    bool m_systemHighContrast = false;
+    void setContrast(QDBusVariant value);
 
     GlobalShortcutsPortal* m_globalShortcutsPortal = nullptr;
     RemoteDesktopPortal* m_remoteDesktopPortal = nullptr;
