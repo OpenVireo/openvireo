@@ -46,8 +46,6 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/wizard/ImportWizard.h"
-#include "keeshare/KeeShare.h"
-#include "keeshare/KeeShareSettings.h"
 #include "mock/MockClock.h"
 
 #include <QAbstractButton>
@@ -98,12 +96,11 @@ namespace
     const QColor kCalloutColor(0x3c, 0x7d, 0x20); // KeePassXC brand green
 
     // Everything shown is fixed, so re-running only changes images whose UI changed: the clock
-    // (timestamps, expiry, TOTP codes), entry and group ids, generated passwords, and the
-    // KeeShare certificate all come from here.
+    // (timestamps, expiry, TOTP codes), entry and group ids and generated passwords all come
+    // from here.
     const QUuid kUuidNamespace("{6b3a2e1c-5d4f-4c8e-9a7b-1f2e3d4c5b6a}");
     const auto kPassword = QStringLiteral("q7#Vt2!mWz9$kLp4Rx8@");
     const auto kPassphrase = QStringLiteral("orbit-candle-maple-river-signal-velvet");
-    const auto kKeeShareFixture = QStringLiteral("DocsScreenshotsKeeShare.txt");
 
     QUuid uuidFor(const QString& name)
     {
@@ -161,22 +158,6 @@ void TestDocsScreenshots::initTestCase()
     Application::bootstrap();
     MockClock::setup(new MockClock(2026, 1, 15, 9, 30, 0));
     QApplication::setCursorFlashTime(0); // a steady caret, not one caught mid-blink
-
-    // KeeShare signs with a generated certificate, so keep one as a fixture. The first run
-    // creates it; commit it so later runs (and other machines) show the same one.
-    const auto fixture = QDir(KEEPASSX_TEST_DATA_DIR).absoluteFilePath(kKeeShareFixture);
-    QFile keeShareFile(fixture);
-    if (keeShareFile.open(QIODevice::ReadOnly)) {
-        config()->set(Config::KeeShare_Own, QString::fromUtf8(keeShareFile.readAll()));
-    } else {
-        auto own = KeeShareSettings::Own::generate();
-        own.certificate.signer = QStringLiteral("John Doe"); // not the account running the tool
-        const auto serialized = KeeShareSettings::Own::serialize(own);
-        config()->set(Config::KeeShare_Own, serialized);
-        QVERIFY(keeShareFile.open(QIODevice::WriteOnly));
-        keeShareFile.write(serialized.toUtf8());
-        qInfo().noquote() << "Created" << fixture << "- commit it so screenshots stay the same";
-    }
 
     config()->set(Config::GUI_ApplicationTheme, "light");
     config()->set(Config::AutoSaveAfterEveryChange, false);
@@ -722,9 +703,6 @@ void TestDocsScreenshots::groupEditor()
     if (selectPage(editor, "Browser Integration")) {
         saveCard("browser_group_settings", modal);
     }
-    if (selectPage(editor, "KeeShare")) {
-        saveCard("keeshare_group_settings", modal);
-    }
     closeModal(modal);
 }
 
@@ -771,9 +749,6 @@ void TestDocsScreenshots::applicationSettings()
     }
     if (selectPage(settings, "SSH Agent")) {
         saveCard("sshagent_application_settings", modal);
-    }
-    if (selectPage(settings, "KeeShare")) {
-        saveCard("keeshare_application_settings", modal);
     }
     selectPage(settings, "General");
     closeModal(modal);

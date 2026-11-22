@@ -66,7 +66,7 @@ QToolTip {
     padding: 3px;
 }
 
-DatabaseWidget #SearchBanner, DatabaseWidget #KeeShareBanner {
+DatabaseWidget #SearchBanner {
     font-weight: bold;
     background-color: palette(highlight);
     color: palette(highlighted-text);

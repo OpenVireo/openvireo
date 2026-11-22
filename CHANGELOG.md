@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+- KeeShare. Share vaults with an OpenVireo account instead. Files shared with KeeShare in KeePassXC open normally and keep their share settings, but OpenVireo no longer imports or exports the shared containers.
+
 ## 1.0.0 (2026-11-11)
 
 The first stable release of OpenVireo. Report problems at https://github.com/openvireo/openvireo/issues.

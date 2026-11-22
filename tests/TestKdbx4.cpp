@@ -518,6 +518,42 @@ void TestKdbx4Format::testAttachmentIndexStability()
     QCOMPARE(a3->value("y"), attachment3);
 }
 
+// OpenVireo no longer has KeeShare, but a file shared with it in KeePassXC must keep its share settings when saved here
+void TestKdbx4Format::testKeeShareReferenceKept()
+{
+    QScopedPointer<Database> db(new Database());
+    db->changeKdf(fastKdf(KeePass2::uuidToKdf(KeePass2::KDF_ARGON2ID)));
+    db->setKey(QSharedPointer<CompositeKey>::create());
+
+    const auto reference = QStringLiteral("PEtlZVNoYXJlPjwvS2VlU2hhcmU+");
+    auto group = new Group();
+    group->setUuid(QUuid::createUuid());
+    group->setName("Shared");
+    group->setParent(db->rootGroup());
+    group->customData()->set("KeeShare/Reference", reference);
+    auto entry = new Entry();
+    entry->setUuid(QUuid::createUuid());
+    entry->setTitle("In a shared group");
+    entry->setGroup(group);
+
+    QBuffer buffer;
+    buffer.open(QBuffer::ReadWrite);
+    KeePass2Writer writer;
+    QVERIFY(writer.writeDatabase(&buffer, db.data()));
+
+    buffer.seek(0);
+    KeePass2Reader reader;
+    auto db2 = QSharedPointer<Database>::create();
+    reader.readDatabase(&buffer, QSharedPointer<CompositeKey>::create(), db2.data());
+    QVERIFY(!reader.hasError());
+
+    auto* group2 = db2->rootGroup()->findGroupByUuid(group->uuid());
+    QVERIFY(group2);
+    QCOMPARE(group2->customData()->value("KeeShare/Reference"), reference);
+    QVERIFY(group2->isShared());
+    QVERIFY(group2->findEntryByUuid(entry->uuid()));
+}
+
 void TestKdbx4Format::testCustomData()
 {
     Database db;

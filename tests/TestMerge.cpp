@@ -105,7 +105,7 @@ void TestMerge::testMergeNoChanges()
 }
 
 /**
- * Merging without database custom data (used by imports and KeeShare)
+ * Merging without database custom data (used by imports)
  */
 void TestMerge::testMergeCustomData()
 {

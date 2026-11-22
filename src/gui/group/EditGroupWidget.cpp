@@ -30,7 +30,6 @@
 #include "gui/Font.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
-#include "keeshare/group/EditGroupPageKeeShare.h"
 
 class EditGroupWidget::ExtraPage
 {
@@ -83,7 +82,6 @@ EditGroupWidget::EditGroupWidget(QWidget* parent)
         initializeBrowserPage();
     }
 #endif
-    addEditPage(new EditGroupPageKeeShare(this));
     addPage(tr("Properties"), icons()->icon("document-properties"), m_editWidgetProperties);
 
     connect(m_mainUi->expireCheck, SIGNAL(toggled(bool)), m_mainUi->expireDatePicker, SLOT(setEnabled(bool)));

@@ -127,7 +127,6 @@ map() {
         password-show-on)                   echo eye-outline                    ;;
         preferences-desktop-icons)          echo emoticon-happy-outline         ;;
         preferences-other)                  echo file-document-edit-outline     ;;
-        preferences-system-network-sharing) echo lan                            ;;
         refresh)                            echo refresh                        ;;
         reports)                            echo lightbulb-on-outline           ;;
         reports-exclude)                    echo lightbulb-off-outline          ;;

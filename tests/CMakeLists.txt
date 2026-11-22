@@ -184,9 +184,6 @@ add_unit_test(NAME testcsvexporter SOURCES TestCsvExporter.cpp
 add_unit_test(NAME testykchallengeresponsekey SOURCES TestYkChallengeResponseKey.cpp
         LIBS ${TEST_LIBRARIES})
 
-add_unit_test(NAME testsharing SOURCES TestSharing.cpp
-        LIBS testsupport ${TEST_LIBRARIES})
-
 add_unit_test(NAME testdatabase SOURCES TestDatabase.cpp
         LIBS testsupport ${TEST_LIBRARIES})
 

@@ -41,7 +41,6 @@ OpenVireo has numerous features for novice and power users alike. This guide wil
  ** YubiKey/OnlyKey challenge-response support
  ** Command line interface for database files (openvireo-kdbx)
  ** Auto-Open databases
- ** KeeShare shared databases (import, export, and synchronize)
  ** Automatic sync with your own OpenVireo Sync Server, with field-by-field merging, version history, and device pairing
  ** Remote sync with your own download and upload commands (scp, sftp, rsync, …)
  ** Shared vaults, organizations, and service accounts for CI, servers, and Kubernetes (with an OpenVireo account)

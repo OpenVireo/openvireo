@@ -67,8 +67,6 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
-#include "gui/widgets/ElidedLabel.h"
-#include "keeshare/KeeShare.h"
 #include "remote/RemoteHandler.h"
 #include "remote/RemoteSettings.h"
 #include "remote/SyncEngine.h"
@@ -99,7 +97,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     , m_previewView(new EntryPreviewWidget(this))
     , m_previewSplitter(new QSplitter(m_mainWidget))
     , m_searchingLabel(new QLabel(this))
-    , m_shareLabel(new ElidedLabel(this))
     , m_editEntryWidget(new EditEntryWidget(this))
     , m_editGroupWidget(new EditGroupWidget(this))
     , m_historyEditEntryWidget(new EditEntryWidget(this))
@@ -195,11 +192,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_searchingLabel->setAlignment(Qt::AlignCenter);
     m_searchingLabel->setVisible(false);
 
-    m_shareLabel->setObjectName("KeeShareBanner");
-    m_shareLabel->setRawText(tr("Shared group…"));
-    m_shareLabel->setAlignment(Qt::AlignCenter);
-    m_shareLabel->setVisible(false);
-
     m_editEntryWidget->setObjectName("editEntryWidget");
     m_historyEditEntryWidget->setObjectName("editEntryHistoryWidget");
     m_editGroupWidget->setObjectName("editGroupWidget");
@@ -290,10 +282,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     });
 
     m_searchLimitGroup = config()->get(Config::SearchLimitGroup).toBool();
-
-    // We need to reregister the database to allow exports
-    // from a newly created database
-    KeeShare::instance()->connectDatabase(m_db, {});
 
     if (m_db->isInitialized()) {
         switchToMainView();
@@ -622,8 +610,6 @@ void DatabaseWidget::replaceDatabase(QSharedPointer<Database> db)
     }
 
     emit databaseReplaced(oldDb, m_db);
-
-    KeeShare::instance()->connectDatabase(m_db, oldDb);
 
     oldDb->releaseData();
 }
@@ -1300,7 +1286,6 @@ void DatabaseWidget::setupClassicLayout(QHBoxLayout* hbox)
     auto rightHandSideVBox = new QVBoxLayout();
     rightHandSideVBox->setContentsMargins(0, 0, 0, 0);
     rightHandSideVBox->addWidget(m_searchingLabel);
-    rightHandSideVBox->addWidget(m_shareLabel);
     rightHandSideVBox->addWidget(m_previewSplitter);
     rightHandSideWidget->setLayout(rightHandSideVBox);
     m_entryView = new EntryView(rightHandSideWidget);
@@ -1342,7 +1327,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     surfaceLayout->setSpacing(0);
     m_vaultCommandBar = new VaultCommandBar(surface);
     surfaceLayout->addWidget(m_vaultCommandBar);
-    surfaceLayout->addWidget(m_shareLabel);
     surfaceLayout->addWidget(m_previewSplitter, 1);
 
     // Entry list and detail card, each with its own breathing room
@@ -2307,11 +2291,6 @@ void DatabaseWidget::mergeDatabase(bool accepted)
             return;
         }
 
-#ifdef WITH_XC_KEESHARE
-        // Disable KeeShare while merging to avoid conflicts with incoming changes
-        KeeShare::instance()->setSharingEnabled(m_db, false);
-#endif
-
         auto* mergeDialog = new MergeDialog(srcDb, m_db, this);
         connect(mergeDialog, &MergeDialog::databaseMerged, [this](bool changed) {
             if (changed) {
@@ -2325,9 +2304,6 @@ void DatabaseWidget::mergeDatabase(bool accepted)
             if (result == QDialog::Rejected) {
                 showMessage(tr("Merge canceled, no changes were made."), MessageWidget::Information);
             }
-#ifdef WITH_XC_KEESHARE
-            KeeShare::instance()->setSharingEnabled(m_db, true);
-#endif
         });
         mergeDialog->open();
     }
@@ -2695,7 +2671,6 @@ void DatabaseWidget::search(const QString& searchtext)
     m_lastSearchText = searchtext;
 
     m_searchingLabel->setVisible(true);
-    m_shareLabel->setVisible(false);
     updateVaultCommandBar();
 
     emit searchModeActivated();
@@ -2760,14 +2735,6 @@ void DatabaseWidget::onGroupChanged()
     }
 
     m_previewView->setGroup(group);
-
-    auto shareLabel = KeeShare::sharingLabel(group);
-    if (!shareLabel.isEmpty()) {
-        m_shareLabel->setRawText(shareLabel);
-        m_shareLabel->setVisible(true);
-    } else {
-        m_shareLabel->setVisible(false);
-    }
 
     updateVaultCommandBar();
     emit groupChanged();

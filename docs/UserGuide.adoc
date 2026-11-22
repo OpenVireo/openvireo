@@ -33,7 +33,6 @@ include::topics/PasswordGenerator.adoc[tags=*]
 
 include::topics/ImportExport.adoc[tags=*]
 
-include::topics/KeeShare.adoc[tags=*]
 
 include::topics/BrowserIntegration.adoc[tags=*]
 

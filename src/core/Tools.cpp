@@ -88,7 +88,6 @@ namespace Tools
 
         QString extensions;
         extensions += "\n- " + QObject::tr("Auto-Type");
-        extensions += "\n- " + QObject::tr("KeeShare");
         extensions += "\n- " + QObject::tr("Hardware Keys");
 #if defined(Q_OS_MACOS) || defined(Q_CC_MSVC)
         extensions += "\n- " + QObject::tr("Quick Unlock");

@@ -25,8 +25,6 @@
 #include "core/Totp.h"
 #include "gui/Font.h"
 #include "gui/Icons.h"
-#include "keeshare/KeeShare.h"
-#include "keeshare/KeeShareSettings.h"
 
 #include <QScrollBar>
 #include <QTabWidget>
@@ -201,7 +199,6 @@ void EntryPreviewWidget::refresh()
     } else if (m_currentGroup) {
         updateGroupHeaderLine();
         updateGroupGeneralTab();
-        updateGroupSharingTab();
 
         setVisible(!config()->get(Config::GUI_HidePreviewPanel).toBool());
 
@@ -525,15 +522,6 @@ void EntryPreviewWidget::updateGroupGeneralTab()
     } else {
         m_ui->groupNotesTextEdit->setFont(Font::defaultFont());
     }
-}
-
-void EntryPreviewWidget::updateGroupSharingTab()
-{
-    Q_ASSERT(m_currentGroup);
-    setTabEnabled(m_ui->groupTabWidget, m_ui->groupShareTab, KeeShare::isShared(m_currentGroup));
-    auto reference = KeeShare::referenceOf(m_currentGroup);
-    m_ui->groupShareTypeLabel->setText(KeeShare::referenceTypeLabel(reference));
-    m_ui->groupSharePathLabel->setText(reference.path);
 }
 
 void EntryPreviewWidget::updateTotpLabel()

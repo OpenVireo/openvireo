@@ -25,7 +25,8 @@
 #include "core/Tools.h"
 #include "gui/DatabaseIcons.h"
 #include "gui/Icons.h"
-#include "keeshare/KeeShare.h"
+
+#include <QFont>
 
 GroupModel::GroupModel(Database* db, QObject* parent)
     : QAbstractItemModel(parent)
@@ -124,9 +125,7 @@ QVariant GroupModel::data(const QModelIndex& index, int role) const
     Group* group = groupFromIndex(index);
 
     if (role == Qt::DisplayRole) {
-        QString nameTemplate = "%1";
-        nameTemplate = KeeShare::indicatorSuffix(group, nameTemplate);
-        return nameTemplate.arg(group->name());
+        return group->name();
     } else if (role == Qt::DecorationRole) {
         return Icons::groupIconPixmap(group);
     } else if (role == Qt::FontRole) {

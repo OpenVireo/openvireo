@@ -65,7 +65,6 @@ private slots:
 
     void updateGroupHeaderLine();
     void updateGroupGeneralTab();
-    void updateGroupSharingTab();
 
     void updateTotpLabel();
     void updateTabIndexes();

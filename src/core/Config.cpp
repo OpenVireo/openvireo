@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-#define CONFIG_VERSION 2
+#define CONFIG_VERSION 3
 #define QS QStringLiteral
 
 enum ConfigType
@@ -215,7 +215,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::FdoSecrets_ConfirmAccessItem, {QS("FdoSecrets/ConfirmAccessItem"), Roaming, true}},
     {Config::FdoSecrets_UnlockBeforeSearch, {QS("FdoSecrets/UnlockBeforeSearch"), Roaming, true}},
 
-    // KeeShare
+    // Account
     // How the start screen was left: "account", "selfhosted" or "local"; empty shows the start screen
     {Config::Account_StartMode, {QS("Account/StartMode"), Local, {}}},
     // The hosted account server (its issuer URL), when it isn't the built-in default
@@ -224,10 +224,6 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     // Keep the wrapped keyset and vault list so the account unlocks without a connection (SPEC §20)
     {Config::Account_AllowOfflineUnlock, {QS("Account/AllowOfflineUnlock"), Local, true}},
 
-    {Config::KeeShare_QuietSuccess, {QS("KeeShare/QuietSuccess"), Roaming, false}},
-    {Config::KeeShare_Own, {QS("KeeShare/Own"), Roaming, {}}},
-    {Config::KeeShare_Foreign, {QS("KeeShare/Foreign"), Roaming, {}}},
-    {Config::KeeShare_Active, {QS("KeeShare/Active"), Roaming, {}}},
 
     // PasswordGenerator
     {Config::PasswordGenerator_LowerCase, {QS("PasswordGenerator/LowerCase"), Roaming, true}},
@@ -399,9 +395,9 @@ static const QHash<QString, Config::ConfigKey> deprecationMap = {
     {QS("security/HidePasswordPreviewPanel"), Config::Security_HidePasswordPreviewPanel},
     {QS("security/passwordsrepeat"), Config::Deleted},
     {QS("security/hidenotes"), Config::Security_HideNotes},
-    {QS("KeeShare/Settings.own"), Config::KeeShare_Own},
-    {QS("KeeShare/Settings.foreign"), Config::KeeShare_Foreign},
-    {QS("KeeShare/Settings.active"), Config::KeeShare_Active},
+    {QS("KeeShare/Settings.own"), Config::Deleted},
+    {QS("KeeShare/Settings.foreign"), Config::Deleted},
+    {QS("KeeShare/Settings.active"), Config::Deleted},
     {QS("SSHAgent"), Config::SSHAgent_Enabled},
     {QS("SSHAgentOpenSSH"), Config::SSHAgent_UseOpenSSH},
     {QS("SSHAuthSockOverride"), Config::SSHAgent_AuthSockOverride},
@@ -444,7 +440,13 @@ static const QHash<QString, Config::ConfigKey> deprecationMap = {
 
     // 2.8.0
     {QS("GUI/AdvancedSettings"), Config::Deleted},
-    {QS("Security/PasswordsRepeatVisible"), Config::Deleted}};
+    {QS("Security/PasswordsRepeatVisible"), Config::Deleted},
+
+    // OpenVireo 1.1: KeeShare was removed
+    {QS("KeeShare/QuietSuccess"), Config::Deleted},
+    {QS("KeeShare/Own"), Config::Deleted},
+    {QS("KeeShare/Foreign"), Config::Deleted},
+    {QS("KeeShare/Active"), Config::Deleted}};
 
 /**
  * Migrate settings from previous versions.

@@ -25,7 +25,6 @@
 #endif
 #include "../remote/DatabaseSettingsWidgetRemote.h"
 #include "DatabaseSettingsWidgetMaintenance.h"
-#include "keeshare/DatabaseSettingsWidgetKeeShare.h"
 #ifdef KPXC_FEATURE_FDOSECRETS
 #include "fdosecrets/widgets/DatabaseSettingsWidgetFdoSecrets.h"
 #endif
@@ -49,7 +48,6 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
 #ifdef KPXC_FEATURE_BROWSER
     , m_browserWidget(new DatabaseSettingsWidgetBrowser(this))
 #endif
-    , m_keeShareWidget(new DatabaseSettingsWidgetKeeShare(this))
 #ifdef KPXC_FEATURE_FDOSECRETS
     , m_fdoSecretsWidget(new DatabaseSettingsWidgetFdoSecrets(this))
 #endif
@@ -120,8 +118,6 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
     addPage(tr("Browser Integration"), icons()->icon("internet-web-browser"), m_browserWidget);
 #endif
 
-    addPage(tr("KeeShare"), icons()->icon("preferences-system-network-sharing"), m_keeShareWidget);
-
 #ifdef KPXC_FEATURE_FDOSECRETS
     addPage(tr("Secret Service Integration"), icons()->icon(QStringLiteral("freedesktop")), m_fdoSecretsWidget);
 #endif
@@ -146,7 +142,6 @@ void DatabaseSettingsDialog::load(const QSharedPointer<Database>& db)
 #ifdef KPXC_FEATURE_BROWSER
     m_browserWidget->loadSettings(db);
 #endif
-    m_keeShareWidget->loadSettings(db);
 #ifdef KPXC_FEATURE_FDOSECRETS
     m_fdoSecretsWidget->loadSettings(db);
 #endif
@@ -195,7 +190,6 @@ void DatabaseSettingsDialog::save()
 
     // Browser settings don't have anything to save
 
-    m_keeShareWidget->saveSettings();
 #ifdef KPXC_FEATURE_FDOSECRETS
     m_fdoSecretsWidget->saveSettings();
 #endif

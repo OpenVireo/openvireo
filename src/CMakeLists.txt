@@ -387,10 +387,6 @@ set(autotype_LIB autotype)
 add_subdirectory(qrcode)
 set(qrcode_LIB qrcode)
 
-# TODO: Move to gui sources on refactor
-add_subdirectory(keeshare)
-set(keeshare_LIB keeshare)
-
 add_subdirectory(sshagent)
 if(KPXC_FEATURE_SSHAGENT)
     set(sshagent_LIB sshagent)
@@ -439,7 +435,6 @@ target_link_libraries(keepassxc_gui
         ${autofill_LIB}
         ${browser_LIB}
         ${fdosecrets_LIB}
-        ${keeshare_LIB}
         ${sshagent_LIB})
 # openvireo-core (cmake/OpenVireoCore.cmake): <ovcore.h> and the static library
 target_link_libraries(keepassxc_gui ovcore)

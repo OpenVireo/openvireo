@@ -241,7 +241,8 @@ bool Group::isEmpty() const
     return !hasChildren() && m_entries.isEmpty();
 }
 
-// TODO: Refactor this when KeeShare is refactored
+// KeeShare was removed, but groups it shared in KeePassXC still carry its reference in their custom data. The KDBX
+// writers keep their attachments namespaced in the attachment pool, as before.
 bool Group::isShared() const
 {
     auto group = this;

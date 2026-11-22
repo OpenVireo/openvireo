@@ -38,9 +38,7 @@ public:
 
     enum Badges
     {
-        ShareActive = 0,
-        ShareInactive,
-        Expired
+        Expired = 0
     };
 
     QPixmap icon(int index, IconSize size = IconSize::Default);

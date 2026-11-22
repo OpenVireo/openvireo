@@ -194,10 +194,6 @@ public:
         Account_SelfHostedServerUrl,
         Account_AllowOfflineUnlock,
 
-        KeeShare_QuietSuccess,
-        KeeShare_Own,
-        KeeShare_Foreign,
-        KeeShare_Active,
 
         PasswordGenerator_LowerCase,
         PasswordGenerator_UpperCase,

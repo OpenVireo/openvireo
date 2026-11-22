@@ -78,8 +78,6 @@
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
 #include "gui/vault/VaultWindowFrame.h"
-#include "keeshare/KeeShare.h"
-#include "keeshare/SettingsPageKeeShare.h"
 #include "keys/drivers/YubiKey.h"
 #include <components/layout/Card.h>
 
@@ -302,12 +300,6 @@ MainWindow::MainWindow()
 #else
     agentEnabled(false);
 #endif
-
-    KeeShare::init(this);
-    m_ui->settingsWidget->addSettingsPage(new SettingsPageKeeShare(m_ui->tabWidget));
-    connect(KeeShare::instance(),
-            SIGNAL(sharingMessage(QString, MessageWidget::MessageType)),
-            SLOT(displayGlobalMessage(QString, MessageWidget::MessageType)));
 
 #ifdef KPXC_FEATURE_FDOSECRETS
     auto fdoSS = new FdoSecretsPlugin(m_ui->tabWidget);

@@ -46,7 +46,6 @@ class QSplitter;
 class QLabel;
 class EntryPreviewWidget;
 class TagView;
-class ElidedLabel;
 class RemoteSettings;
 class SyncScheduler;
 class SyncEventStream;
@@ -385,7 +384,6 @@ private:
     QPointer<EntryPreviewWidget> m_previewView;
     QPointer<QSplitter> m_previewSplitter;
     QPointer<QLabel> m_searchingLabel;
-    QPointer<ElidedLabel> m_shareLabel;
     QPointer<EditEntryWidget> m_editEntryWidget;
     QPointer<EditGroupWidget> m_editGroupWidget;
     QPointer<EditEntryWidget> m_historyEditEntryWidget;

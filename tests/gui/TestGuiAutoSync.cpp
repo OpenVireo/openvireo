@@ -40,7 +40,6 @@
 #include "gui/remote/SyncHistoryDialog.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "keeshare/KeeShare.h"
 #include "keys/PasswordKey.h"
 
 #include <QEventLoop>
@@ -194,8 +193,6 @@ void TestGuiAutoSync::initTestCase()
     Application::bootstrap();
     // Never touch the real Keychain or token file
     SyncTokenStore::setBackend(SyncTokenStore::createMemoryBackend());
-    // Normally done by MainWindow, which these tests don't need
-    KeeShare::init(this);
     config()->set(Config::AutoSaveAfterEveryChange, false);
     config()->set(Config::AutoSaveOnExit, false);
 }

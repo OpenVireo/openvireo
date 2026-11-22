@@ -32,7 +32,6 @@
 #include "gui/DatabaseIcons.h"
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
-#include "keeshare/KeeShare.h"
 
 class AdaptiveIconEngine : public QIconEngine
 {
@@ -264,8 +263,6 @@ QPixmap Icons::groupIconPixmap(const Group* group, IconSize size)
 
     if (group->isExpired()) {
         icon = databaseIcons()->applyBadge(icon, DatabaseIcons::Badges::Expired);
-    } else if (KeeShare::isShared(group)) {
-        icon = KeeShare::indicatorBadge(group, icon);
     }
 
     return icon;

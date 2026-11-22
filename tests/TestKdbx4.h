@@ -66,6 +66,7 @@ private slots:
     void testUpgradeMasterKeyIntegrity();
     void testUpgradeMasterKeyIntegrity_data();
     void testAttachmentIndexStability();
+    void testKeeShareReferenceKept();
     void testCustomData();
 };
 
