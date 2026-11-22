@@ -32,7 +32,6 @@
 #include <QDesktopServices>
 #include <QFontDatabase>
 #include <QHBoxLayout>
-#include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
 #include <QUrl>
@@ -453,18 +452,17 @@ void AccountStartWidget::updateAccountsPage()
         connect(open, &QPushButton::clicked, this, [this, account] { openKnownAccount(account); });
         layout->addWidget(open, 1);
 
-        auto* more = new QPushButton(QStringLiteral("…"), row);
+        // A subtle Fluent icon button, square with the row, opening a Fluent menu right-aligned beneath it
+        auto* more = Vault::iconButton(Typography::Icons::More, tr("More for %1").arg(account.email), row);
         more->setObjectName("knownAccountMore");
-        more->setFixedWidth(32);
-        more->setToolTip(tr("More for %1").arg(account.email));
-        more->setAccessibleName(tr("More for %1").arg(account.email));
-        connect(more, &QPushButton::clicked, this, [this, more, account] {
-            QMenu menu(this);
+        more->setFixedSize(OptionHeight, OptionHeight);
+        connect(more, &QAbstractButton::clicked, this, [this, more, account] {
+            VaultMenu menu(this);
             if (account.signedIn) {
                 menu.addAction(tr("Sign out"), this, [this, account] { signOutKnownAccount(account); });
             }
             menu.addAction(tr("Remove from this device"), this, [this, account] { removeKnownAccount(account); });
-            menu.exec(more->mapToGlobal(more->rect().bottomLeft()));
+            menu.exec(more->mapToGlobal(QPoint(more->width() - menu.sizeHint().width(), more->height() + 4)));
         });
         layout->addWidget(more);
         m_accountRows->addWidget(row);
