@@ -1,5 +1,5 @@
 = OpenVireo: User Guide
-KeePassXC Team <team@keepassxc.org>
+OpenVireo <admin@openvireo.com>
 :data-uri:
 :homepage: https://openvireo.com
 :icons: font

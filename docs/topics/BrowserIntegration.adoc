@@ -21,7 +21,7 @@ You can download the OpenVireo Browser extension from your web browser. To downl
 
 2. Click the button to install/add the extension to the browser. Accept any confirmation dialogs.
 
-TIP: For the most up-to-date troubleshooting advice on all platforms, read the KeePassXC-Browser https://github.com/keepassxreboot/keepassxc-browser/wiki/Troubleshooting-guide[Troubleshooting Guide], which also applies to OpenVireo Browser.
+TIP: For the most up-to-date troubleshooting advice on all platforms, see the upstream KeePassXC-Browser https://github.com/keepassxreboot/keepassxc-browser/wiki/Troubleshooting-guide[Troubleshooting Guide], which also applies to OpenVireo Browser.
 
 // tag::advanced[]
 NOTE: When Microsoft Edge is installed as a managed application, system administrators are required to deploy a custom native messaging configuration. Instructions for this are found in the advanced section below.
@@ -173,7 +173,7 @@ image::browser_custom_browser_configuration.png[]
 
 The native messaging script file needed for the custom browser depends on the browser type. For Firefox based browsers like Librefox the _Browser type_ must be _Firefox_. For Arc, Opera, etc. the type must be set to _Chromium_.
 
-_Config location_ must have the exact path for the browser's _native-messaging-hosts_ folder. If you are unsure, refer to our https://github.com/keepassxreboot/keepassxc-browser/wiki/Troubleshooting-guide#1-after-enabling-browser-integration-and-support-for-your-browser[Troubleshooting Guide] for listing of the most common paths, and a few ways for finding a path when it's not known.
+_Config location_ must have the exact path for the browser's _native-messaging-hosts_ folder. If you are unsure, refer to the upstream KeePassXC-Browser https://github.com/keepassxreboot/keepassxc-browser/wiki/Troubleshooting-guide#1-after-enabling-browser-integration-and-support-for-your-browser[Troubleshooting Guide] for listing of the most common paths, and a few ways for finding a path when it's not known.
 
 When a Custom Browser has been successfully set, OpenVireo will automatically write the needed native messaging script file to the folder.
 

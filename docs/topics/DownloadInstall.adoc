@@ -7,33 +7,28 @@ include::.sharedheader[]
 OpenVireo is available for download for the following operating systems and platforms:
 
 * Microsoft Windows
-** Portable and MSI Installer (64-bit and 32-bit)
-* Linux – Official Cross-Distribution Packages
-** AppImage and Snap Package
-* Linux – Distribution-Specific Packages
-** Ubuntu, Debian, Arch Linux, Gentoo, Fedora, CentOS, and OpenSUSE
+** Portable and MSI Installer (64-bit)
+* Linux
+** AppImage (x86_64 and ARM64)
 * macOS
-** DMG Installer, Homebrew Cask
+** DMG Installer (Apple silicon and Intel)
 
-To download the OpenVireo installer for your desired platform, visit our https://github.com/openvireo/openvireo/releases[GitHub Releases].
+To download the OpenVireo installer for your desired platform, visit https://openvireo.com/download or directly from our https://github.com/openvireo/openvireo/releases[GitHub Releases].
 
 NOTE: OpenVireo is open-source software and may be available on other websites that are unaffiliated with OpenVireo. *We strongly discourage downloading OpenVireo from third-party websites.*
 
 Before installing OpenVireo, it is recommended that you verify that your downloaded installer matches the signature, which is published alongside the release package. By verifying the signatures of OpenVireo releases, you can verify the authenticity and integrity of the downloaded installation file. This guarantees that the file you downloaded was originally created by the OpenVireo maintainers and its contents have not been tampered with.
 
-To know more about the steps to verify the authenticity and integrity of your downloaded package, visit https://keepassxc.org/verifying-signatures.
+To know more about the steps to verify the authenticity and integrity of your downloaded package, visit https://openvireo.com/verifying-signatures.
 
 === Microsoft Windows
-The Windows MSI installer is code signed. If you do not see a verified publisher in this dialog when installing the application, click *NO* and download the installer from https://github.com/openvireo/openvireo/releases.
-
-.Windows UAC Dialog
-image::uac_dialog.png[50%]
+Only download the Windows MSI installer from https://openvireo.com/download or the https://github.com/openvireo/openvireo/releases[GitHub Releases] page.
 
 Installing OpenVireo is a simple process. In the following example, installation steps for OpenVireo on Microsoft Windows are described. Installing OpenVireo on other operating systems is also a simple process, which you can accomplish by using the native installers. To know more about the installation instructions on the other operating systems, refer to the OpenVireo User Manual.
 
 To install OpenVireo on Microsoft Windows, perform the following steps:
 
-1. Double click on the OpenVireo-Y.Y.Y-WinZZ.msi file. Here, Y.Y.Y represents the version of the software and ZZ represents the 32-bit/64-bit version of the Microsoft Windows operating system.
+1. Double click on the OpenVireo-Y.Y.Y-x64.msi file. Here, Y.Y.Y represents the version of the software.
 +
 .Install wizard
 image::install_wizard_1.png[,80%]
@@ -49,15 +44,10 @@ The following options can be set when running the MSI in an unattended installat
 * *AUTOSTARTPROGRAM* – OpenVireo will auto-start on login (default ON)
 * *INSTALLDESKTOPSHORTCUT* – A desktop icon will be installed (default OFF)
 
-Example: `msiexec.exe /q /i OpenVireo-Y.Y.Y-WinZZ.msi AUTOSTARTPROGRAM=0`
+Example: `msiexec.exe /q /i OpenVireo-Y.Y.Y-x64.msi AUTOSTARTPROGRAM=0`
 
 === Linux
-You can easily download the OpenVireo installer for Linux. When you search for OpenVireo, multiple options are displayed as shown in the following screen:
-
-.Ubuntu Store
-image::linux_store.png[]
-
-The Snap and Flatpak options are sandboxed applications (more secure). The Native option is installed with the operating system files. Read more about the limitations of these options here: https://keepassxc.org/docs/#faq-appsnap-yubikey[OpenVireo Snap FAQ]
+On Linux, download the OpenVireo AppImage from the https://openvireo.com/download#linux[download page], make it executable, and run it. See the https://openvireo.com/docs/#faq-appsnap-run-appimage[AppImage FAQ] for details.
 
 NOTE: OpenVireo stores a configuration file in `~/.local/state` to remember window position, recent files, and other local settings. If you mount this folder to a tmpdisk you will lose settings after reboot.
 
