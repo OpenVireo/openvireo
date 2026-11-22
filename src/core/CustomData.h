@@ -61,6 +61,9 @@ public:
     int size() const;
     int dataSize() const;
     void copyDataFrom(const CustomData* other);
+    // Removes the items KeePassXC writes by itself on every change and save (the last-modified stamp and the
+    // random slug) without stamping the change, so copies made for a sync merge compare by their real data
+    void removeStampItems();
     bool operator==(const CustomData& other) const;
     bool operator!=(const CustomData& other) const;
 

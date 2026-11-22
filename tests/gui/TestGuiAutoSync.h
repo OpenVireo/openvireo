@@ -38,6 +38,7 @@ private slots:
     void testCombinesChangesToDifferentFields();
     void testSyncsAnAccountVaultWithTheAccountsToken();
     void testAccountVaultFollowsAKeyRotation();
+    void testAccountVaultEditSettles();
     void testSharedVaultSyncsWithThisDevicesAccount();
 };
 

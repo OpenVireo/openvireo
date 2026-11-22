@@ -651,6 +651,48 @@ void TestGuiAutoSync::testSyncsAnAccountVaultWithTheAccountsToken()
     controller.lockAccount();
 }
 
+void TestGuiAutoSync::testAccountVaultEditSettles()
+{
+    // Saving restamps the database's custom data (_LAST_MODIFIED, KPXC_RANDOM_SLUG). Merged as data, the stamp made
+    // the window look newer than every sync result, and the vault synced again and again after an edit.
+    using State = DatabaseWidget::SyncStatus::State;
+    auto server = QSharedPointer<FakeAccount::Server>::create();
+    FakeAccount::installSyncFactory(server);
+    const auto restoreFactory = qScopeGuard([] { FakeAccount::restoreSyncFactory(); });
+
+    DatabaseTabWidget tabs;
+    auto* account = signUp(server, "alice@example.com");
+    QVERIFY(account);
+    AccountController controller(&tabs, account);
+    controller.createVault("Personal");
+    QTRY_COMPARE_WITH_TIMEOUT(tabs.count(), 1, 10000);
+    QTRY_VERIFY(!account->keyring().isEmpty());
+    const auto vaultId = account->keyring().vaults().first().id;
+    auto* widget = controller.vaultWidget(vaultId);
+    QVERIFY(widget);
+    addEntry(widget->database().data(), "Mail");
+    QVERIFY(widget->save());
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+
+    // An edit as the entry editor makes it (with a history item), saved
+    auto* entry = widget->database()->rootGroup()->entriesRecursive().value(0);
+    QVERIFY(entry);
+    entry->beginUpdate();
+    entry->setPassword("new password");
+    QVERIFY(entry->endUpdate());
+    server->requests.clear();
+    QVERIFY(widget->save());
+    QTRY_VERIFY_WITH_TIMEOUT(!server->requests.filter("sync PUT").isEmpty(), 10000);
+    QTRY_COMPARE_WITH_TIMEOUT(widget->syncStatus().state, State::Synced, 10000);
+
+    // One sync uploads it, then the vault stays quiet
+    QTest::qWait(3000);
+    QCOMPARE(server->requests.filter("sync PUT").size(), 1);
+    QVERIFY2(server->requests.filter("sync ").size() <= 3, qPrintable(server->requests.join(", ")));
+    QCOMPARE(widget->syncStatus().state, State::Synced);
+    controller.lockAccount();
+}
+
 void TestGuiAutoSync::testAccountVaultFollowsAKeyRotation()
 {
     using State = DatabaseWidget::SyncStatus::State;

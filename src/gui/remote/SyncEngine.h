@@ -277,6 +277,8 @@ private:
     AccountVaultSync::Cancel m_coreCancel;
     QByteArray m_coreSent;
     QSharedPointer<const CompositeKey> m_coreSentKey;
+    // The core was told about local changes, so it merged everything it was sent
+    bool m_coreSentLocalChanged = false;
     // The window holds edits the last sync didn't upload (made while the core synced): sync again
     bool m_coreLocalAhead = false;
     // The database was saved after its copy went to the core

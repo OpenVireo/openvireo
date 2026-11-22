@@ -18,6 +18,7 @@
 #include "SyncEngine.h"
 
 #include "core/Clock.h"
+#include "core/CustomData.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/EntryAttachments.h"
@@ -648,6 +649,9 @@ namespace
         copy->setEmitModified(false);
         copy->metadata()->copyAttributesFrom(db->metadata());
         copy->metadata()->customData()->copyDataFrom(db->metadata()->customData());
+        // KeePassXC restamps these on every save; merged as data they would make each copy look newer than the
+        // other forever
+        copy->metadata()->customData()->removeStampItems();
         for (const auto& uuid : db->metadata()->customIconsOrder()) {
             copy->metadata()->addCustomIcon(uuid, db->metadata()->customIcon(uuid));
         }
@@ -800,7 +804,14 @@ namespace
                 target->metadata()->addCustomIcon(uuid, source->metadata()->customIcon(uuid));
             }
         }
-        target->metadata()->customData()->copyDataFrom(source->metadata()->customData());
+        // The merge copies carry no stamp items (see mergeCopyOf): the target keeps its own unless its data changed
+        auto* customData = target->metadata()->customData();
+        CustomData current;
+        current.copyDataFrom(customData);
+        current.removeStampItems();
+        if (current != *source->metadata()->customData()) {
+            customData->copyDataFrom(source->metadata()->customData());
+        }
         if (const auto* bin = source->metadata()->recycleBin()) {
             target->metadata()->setRecycleBin(target->rootGroup()->findGroupByUuid(bin->uuid()));
         }
@@ -1191,6 +1202,7 @@ void SyncEngine::startCoreSync()
     }
     m_coreSent = request.kdbx;
     m_coreSentKey = m_db->key();
+    m_coreSentLocalChanged = request.localChanged;
     m_coreSavedSince = false;
     m_coreResult.reset();
 
@@ -1244,7 +1256,8 @@ void SyncEngine::applyCoreResult()
     emit progress(75, tr("Syncing..."));
     QScopedPointer<AccountVaultSync::Result> result(m_coreResult.take());
     // Edits made while the core synced aren't on the server yet
-    bool localAhead = m_db->isModified() || m_coreSavedSince;
+    const bool editedDuringSync = m_db->isModified() || m_coreSavedSince;
+    bool localAhead = editedDuringSync;
     auto keyFile = result->keyFile;
     Botan::secure_scrub_memory(result->keyFile.data(), static_cast<size_t>(result->keyFile.size()));
     const auto key = AccountManager::vaultCompositeKey(keyFile);
@@ -1271,7 +1284,13 @@ void SyncEngine::applyCoreResult()
             fail(tr("The databases could not be merged."));
             return;
         }
-        localAhead = ahead;
+        // The core merged everything that was sent when it was told about local changes, so without edits made
+        // during the sync the window can't hold anything the result lacks. Syncing again for such a difference
+        // would repeat forever.
+        localAhead = ahead && (editedDuringSync || !m_coreSentLocalChanged);
+        if (ahead && !localAhead) {
+            qWarning("SyncEngine: the synced vault differs from what was sent without edits; not syncing again");
+        }
     }
     m_coreSent.clear();
     m_coreSentKey.reset();

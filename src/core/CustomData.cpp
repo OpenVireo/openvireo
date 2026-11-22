@@ -163,6 +163,18 @@ void CustomData::copyDataFrom(const CustomData* other)
     emitModified();
 }
 
+void CustomData::removeStampItems()
+{
+    if (!m_data.contains(LastModified) && !m_data.contains(RandomSlug)) {
+        return;
+    }
+    emit aboutToBeReset();
+    m_data.remove(LastModified);
+    m_data.remove(RandomSlug);
+    emit reset();
+    emitModified();
+}
+
 QDateTime CustomData::lastModified() const
 {
     if (m_data.contains(LastModified)) {
