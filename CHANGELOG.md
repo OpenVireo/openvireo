@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### New Features
+- High contrast theme, chosen automatically when Windows High Contrast, macOS Increase contrast or the Linux desktop's high-contrast setting is on. It replaces the switch to the Classic theme on Windows High Contrast.
+
 ### Removed
 - KeeShare. Share vaults with an OpenVireo account instead. Files shared with KeeShare in KeePassXC open normally and keep their share settings, but OpenVireo no longer imports or exports the shared containers.
 
