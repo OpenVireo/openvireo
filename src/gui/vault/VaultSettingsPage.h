@@ -22,7 +22,6 @@
 #include <QWidget>
 
 class QAbstractButton;
-class QGroupBox;
 class QHBoxLayout;
 class QLabel;
 class QVBoxLayout;
@@ -91,8 +90,6 @@ public:
 
     // A heading followed by cards; no heading for an empty title
     VaultSettingsSection* addSection(const QString& title = {});
-    // Section in place of a group box of the form, titled like it and hidden and disabled with it
-    VaultSettingsSection* addSection(QGroupBox* group);
     // Section in place of a card of the form, titled like it and hidden and disabled with it
     VaultSettingsSection* addSection(VaultCard* card);
     // Show the cards in place of the form. Warns about controls of the form left out of the cards.

@@ -29,7 +29,6 @@
 #include <QDebug>
 #include <QFocusEvent>
 #include <QGridLayout>
-#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -249,13 +248,6 @@ VaultSettingsSection* VaultSettingsPage::addSection(const QString& title)
 {
     auto section = new VaultSettingsSection(title, m_body);
     m_layout->addWidget(section);
-    return section;
-}
-
-VaultSettingsSection* VaultSettingsPage::addSection(QGroupBox* group)
-{
-    auto section = addSection(group->title());
-    section->follow(group);
     return section;
 }
 

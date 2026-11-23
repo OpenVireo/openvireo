@@ -1,0 +1,33 @@
+# Forms that may still use stock controls, checked by check-fluent-ui.sh.
+#
+# Every form here is a dialog that Phase 4 of the Fluent-only UI plan redesigns
+# (openvireo-dev-guide plans/fluent-only-ui.md): it becomes a VaultModal card, a
+# stand-alone Fluent window or a Stepper wizard, and leaves this list then.
+# Don't add forms to it: use the Vault* drop-ins from gui/vault/VaultControls.h.
+
+# Stand-alone Fluent windows
+src/autotype/AutoTypeSelectDialog.ui
+src/autotype/PickcharsDialog.ui
+src/browser/BrowserEntrySaveDialog.ui
+src/fdosecrets/widgets/AccessControlDialog.ui
+# Already Fluent; the stock buttons are hidden and only hold the labels and logic
+src/browser/BrowserAccessControlDialog.ui
+src/browser/BrowserPasskeysConfirmationDialog.ui
+
+# VaultModal cards
+src/gui/AboutDialog.ui
+src/gui/CloneDialog.ui
+src/gui/IconDownloaderDialog.ui
+src/gui/MergeDialog.ui
+src/gui/TotpDialog.ui
+src/gui/UpdateCheckDialog.ui
+src/gui/account/ShareVaultDialog.ui
+src/gui/entry/EditEntryAttachmentsDialog.ui
+src/gui/entry/PreviewEntryAttachmentsDialog.ui
+src/gui/passkeys/PasskeyExportDialog.ui
+src/gui/passkeys/PasskeyImportDialog.ui
+src/gui/reports/ReportsDialog.ui
+src/sshagent/OpenSSHKeyGenDialog.ui
+
+# Stepper wizards
+src/gui/account/SignUpWizard.ui

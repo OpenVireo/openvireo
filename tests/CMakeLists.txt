@@ -48,6 +48,13 @@ add_test(NAME test_windows_deployqt_host_triplet_unset
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_windows_deployqt_host_triplet.cmake")
 set_tests_properties(test_windows_deployqt_host_triplet_unset PROPERTIES WILL_FAIL TRUE)
 
+# Forms use the Fluent drop-ins instead of stock controls (share/scripts/fluent-ui-allowlist.txt lists the exceptions)
+find_program(BASH_PROGRAM bash)
+if(BASH_PROGRAM)
+    add_test(NAME testfluentui
+            COMMAND ${BASH_PROGRAM} "${PROJECT_SOURCE_DIR}/share/scripts/check-fluent-ui.sh" "${PROJECT_SOURCE_DIR}")
+endif()
+
 set(TEST_LIBRARIES keepassxc_gui Qt6::Test)
 
 set(testsupport_SOURCES
