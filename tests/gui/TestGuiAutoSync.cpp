@@ -42,6 +42,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "keys/PasswordKey.h"
 
+#include <QDialogButtonBox>
 #include <QEventLoop>
 #include <QFile>
 #include <QNetworkAccessManager>

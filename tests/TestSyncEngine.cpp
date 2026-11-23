@@ -148,7 +148,7 @@ namespace
             if (clockAheadMsec) {
                 // Whole seconds, as in a Date header
                 auto time = QDateTime::currentDateTimeUtc().addMSecs(*clockAheadMsec);
-                response.serverTime = QDateTime::fromSecsSinceEpoch(time.toSecsSinceEpoch(), QTimeZone::UTC);
+                response.serverTime = QDateTime::fromSecsSinceEpoch(time.toSecsSinceEpoch(), QTimeZone::utc());
             }
             deliverLater(response, std::move(callback));
         }
@@ -1430,7 +1430,7 @@ void TestSyncEngine::testMeasuresTheClockAgainstTheServer()
 {
     // What SyncServerClient reads from a Date header
     QCOMPARE(SyncServerClient::parseHttpDate("Mon, 02 Nov 2026 23:42:46 GMT"),
-             QDateTime(QDate(2026, 11, 2), QTime(23, 42, 46), QTimeZone::UTC));
+             QDateTime(QDate(2026, 11, 2), QTime(23, 42, 46), QTimeZone::utc()));
     QVERIFY(!SyncServerClient::parseHttpDate("").isValid());
     QVERIFY(!SyncServerClient::parseHttpDate("yesterday").isValid());
 
