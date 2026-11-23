@@ -334,7 +334,7 @@
             </spacer>
            </item>
            <item row="4" column="1">
-            <widget class="QSpinBox" name="parallelismSpinBox">
+            <widget class="VaultSpinBox" name="parallelismSpinBox">
              <property name="minimumSize">
               <size>
                <width>150</width>
@@ -366,7 +366,7 @@
             </widget>
            </item>
            <item row="3" column="1">
-            <widget class="QSpinBox" name="memorySpinBox">
+            <widget class="VaultSpinBox" name="memorySpinBox">
              <property name="minimumSize">
               <size>
                <width>150</width>
@@ -400,7 +400,7 @@
            <item row="2" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="40,40,0">
              <item>
-              <widget class="QSpinBox" name="transformRoundsSpinBox">
+              <widget class="VaultSpinBox" name="transformRoundsSpinBox">
                <property name="minimumSize">
                 <size>
                  <width>150</width>
@@ -554,6 +554,11 @@
   <extends>QSlider</extends>
   <header>components/basicinput/Slider.h</header>
  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
  </customwidgets>
  <resources/>
  <connections/>

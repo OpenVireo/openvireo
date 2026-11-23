@@ -49,7 +49,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="VaultCard" name="groupBox">
      <property name="title">
       <string>OpenVireo Browser settings</string>
      </property>
@@ -100,13 +100,13 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_2">
+    <widget class="VaultCard" name="groupBox_2">
      <property name="title">
       <string>Stored keys</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_4">
       <item>
-       <widget class="QGroupBox" name="groupBox_3">
+       <widget class="VaultCard" name="groupBox_3">
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <item>
           <widget class="QTableView" name="customDataTable">
@@ -175,6 +175,12 @@
    <class>MessageWidget</class>
    <extends>QWidget</extends>
    <header>gui/MessageWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

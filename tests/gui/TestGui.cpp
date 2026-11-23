@@ -30,7 +30,6 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSignalSpy>
-#include <QSpinBox>
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTest>
@@ -250,7 +249,7 @@ void TestGui::testCreateDatabase()
         QTRY_VERIFY(!decryptionTimeSlider->isVisible());
         QVERIFY(algorithmComboBox->isVisible());
 
-        auto rounds = modal->findChild<QSpinBox*>("transformRoundsSpinBox");
+        auto rounds = modal->findChild<VaultSpinBox*>("transformRoundsSpinBox");
         QVERIFY(rounds);
         QVERIFY(rounds->isVisible());
         QTest::mouseClick(rounds, Qt::MouseButton::LeftButton);
@@ -259,7 +258,7 @@ void TestGui::testCreateDatabase()
         QTest::keyClick(rounds, Qt::Key_Tab);
         QTest::keyClick(rounds, Qt::Key_Tab);
 
-        auto memory = modal->findChild<QSpinBox*>("memorySpinBox");
+        auto memory = modal->findChild<VaultSpinBox*>("memorySpinBox");
         QVERIFY(memory);
         QVERIFY(memory->isVisible());
         QTest::mouseClick(memory, Qt::MouseButton::LeftButton);
@@ -267,7 +266,7 @@ void TestGui::testCreateDatabase()
         QTest::keyClicks(memory, "50");
         QTest::keyClick(memory, Qt::Key_Tab);
 
-        auto parallelism = modal->findChild<QSpinBox*>("parallelismSpinBox");
+        auto parallelism = modal->findChild<VaultSpinBox*>("parallelismSpinBox");
         QVERIFY(parallelism);
         QVERIFY(parallelism->isVisible());
         QTest::mouseClick(parallelism, Qt::MouseButton::LeftButton);
@@ -1774,7 +1773,7 @@ void TestGui::testDatabaseSettings()
     QVERIFY(dbSettingsStackedWidget);
     auto* autosaveDelayCheckBox = dbSettingsDialog->findChild<QCheckBox*>("autosaveDelayCheckBox");
     QVERIFY(autosaveDelayCheckBox);
-    auto* autosaveDelaySpinBox = dbSettingsDialog->findChild<QSpinBox*>("autosaveDelaySpinBox");
+    auto* autosaveDelaySpinBox = dbSettingsDialog->findChild<VaultSpinBox*>("autosaveDelaySpinBox");
     QVERIFY(autosaveDelaySpinBox);
     // The settings open in a modal over the window, with Save and Cancel in its footer
     auto* dbSettingsModal = m_mainWindow->findChild<VaultModal*>("vaultDatabaseSettingsModal");
@@ -1846,7 +1845,7 @@ void TestGui::testDatabaseSettings()
     QVERIFY(kdfSelection->isVisible());
     QCOMPARE(kdfSelection->currentText(), QString("AES-KDF (KDBX 3)"));
 
-    auto transformRoundsSpinBox = securityTabWidget->findChild<QSpinBox*>("transformRoundsSpinBox");
+    auto transformRoundsSpinBox = securityTabWidget->findChild<VaultSpinBox*>("transformRoundsSpinBox");
     QVERIFY(transformRoundsSpinBox);
 
     // Adjust compatibility to KDBX4 and wait for KDF to update
@@ -1871,9 +1870,9 @@ void TestGui::testDatabaseSettings()
 
     // test disable and default values for maximum history items and size
     auto* historyMaxItemsCheckBox = dbSettingsDialog->findChild<QCheckBox*>("historyMaxItemsCheckBox");
-    auto* historyMaxItemsSpinBox = dbSettingsDialog->findChild<QSpinBox*>("historyMaxItemsSpinBox");
+    auto* historyMaxItemsSpinBox = dbSettingsDialog->findChild<VaultSpinBox*>("historyMaxItemsSpinBox");
     auto* historyMaxSizeCheckBox = dbSettingsDialog->findChild<QCheckBox*>("historyMaxSizeCheckBox");
-    auto* historyMaxSizeSpinBox = dbSettingsDialog->findChild<QSpinBox*>("historyMaxSizeSpinBox");
+    auto* historyMaxSizeSpinBox = dbSettingsDialog->findChild<VaultSpinBox*>("historyMaxSizeSpinBox");
     // test defaults
     QCOMPARE(historyMaxItemsSpinBox->value(), Metadata::DefaultHistoryMaxItems);
     QCOMPARE(historyMaxSizeSpinBox->value(), qRound(Metadata::DefaultHistoryMaxSize / qreal(1024 * 1024)));

@@ -73,15 +73,15 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
     connect(m_ui->nameLineEdit, &QLineEdit::textChanged, setModified);
     connect(m_ui->downloadCommand, &QLineEdit::textChanged, setModified);
     connect(m_ui->inputForDownload, &QPlainTextEdit::textChanged, setModified);
-    connect(m_ui->downloadTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+    connect(m_ui->downloadTimeoutSec, &VaultSpinBox::valueChanged, setModified);
     connect(m_ui->uploadCommand, &QLineEdit::textChanged, setModified);
     connect(m_ui->inputForUpload, &QPlainTextEdit::textChanged, setModified);
-    connect(m_ui->uploadTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+    connect(m_ui->uploadTimeoutSec, &VaultSpinBox::valueChanged, setModified);
     connect(m_ui->typeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), setModified);
     connect(m_ui->serverUrlEdit, &QLineEdit::textChanged, setModified);
     connect(m_ui->serverDatabaseIdEdit, &QLineEdit::textChanged, setModified);
     connect(m_ui->serverTokenEdit, &QLineEdit::textChanged, setModified);
-    connect(m_ui->serverTimeoutSec, QOverload<int>::of(&QSpinBox::valueChanged), setModified);
+    connect(m_ui->serverTimeoutSec, &VaultSpinBox::valueChanged, setModified);
     connect(m_ui->autoSyncCheckBox, &QCheckBox::toggled, setModified);
 
     updateTypeVisibility();
