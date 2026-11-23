@@ -197,6 +197,20 @@ void VaultStyle::drawComplexControl(ComplexControl control,
     }
 }
 
+QRect VaultStyle::subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget) const
+{
+    switch (element) {
+    // Fluent check boxes and radio buttons draw their own indicator and text, so Fusion's idea of where those are
+    // doesn't match: the whole control takes the click, as in WinUI
+    case SE_CheckBoxClickRect:
+    case SE_RadioButtonClickRect:
+        return option->rect;
+    default:
+        break;
+    }
+    return QProxyStyle::subElementRect(element, option, widget);
+}
+
 int VaultStyle::styleHint(StyleHint hint,
                           const QStyleOption* option,
                           const QWidget* widget,
