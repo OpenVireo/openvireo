@@ -104,6 +104,8 @@ jobs:
       run: |
         rustup toolchain install stable --profile minimal
         rustup default stable
+        # Git Bash's coreutils link would shadow MSVC's link.exe for cargo
+        rm -f /usr/bin/link.exe
 
     - name: Set up vcpkg
       run: |
