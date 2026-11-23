@@ -500,7 +500,13 @@ void ImportWizardPageSelect::setSourceStep(bool sourceStep)
     if (!m_details) {
         return;
     }
-    m_ui->importTypeList->setVisible(sourceStep);
+    // Hiding the focused list moves focus on, which Qt 6.4 handles as a Tab key press in a list with tab key
+    // navigation: the current source moved to another tile just as it was chosen
+    auto* list = m_ui->importTypeList;
+    const bool tabKeyNavigation = list->tabKeyNavigation();
+    list->setTabKeyNavigation(false);
+    list->setVisible(sourceStep);
+    list->setTabKeyNavigation(tabKeyNavigation);
     m_details->setVisible(!sourceStep);
 }
 
