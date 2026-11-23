@@ -104,7 +104,7 @@ The option to type just the username, password, or current TOTP value is availab
 TIP: On Windows, you will see an option to use a virtual keyboard in this sub-menu. This is an experimental feature that allows you to type into virtual machines by simulating actual keyboard presses. Some international keyboards may be unsupported due to limitations in the Windows API.
 
 === Performing Entry-Level Auto-Type
-You can quickly activate the default Auto-Type sequence for a particular entry using Entry-Level Auto-Type. For this operation, the OpenVireo window will be minimized and the Auto-Type sequence occurs in the previously selected window. You can perform Entry-Level Auto-Type from the toolbar icon *(A)*, entry context menu *(B)*, or by pressing kbd:[Ctrl+Shift+V].
+You can quickly activate the default Auto-Type sequence for a particular entry using Entry-Level Auto-Type. For this operation, the OpenVireo window will be minimized and the Auto-Type sequence occurs in the previously selected window. You can perform Entry-Level Auto-Type from the _Perform Auto-Type_ button in the command bar *(A)*, the entry context menu *(B)*, or by pressing kbd:[Ctrl+Shift+V].
 
 WARNING: Be careful when using Entry-Level Auto-Type as you can inadvertently type into the wrong window. For example, a chat window or email.
 

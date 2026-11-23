@@ -47,7 +47,7 @@ By default, OpenVireo prevents recordings and screenshots of the application win
 You can customize the appearance of OpenVireo to your liking. The following options are available in the _View_ menu:
 
 ==== Themes
-OpenVireo ships with light, dark and high-contrast themes specifically designed to meet accessibility standards. By default (_Automatic_) the theme follows your system's light or dark appearance, but you can always choose _Light_, _Dark_, _High contrast_, or _Classic_ (the platform's native look) with the _Theme_ setting *(A)* under _Tools_ -> _Settings_ -> _General_ -> _User Interface_, or from the _View_ -> _Theme_ menu.
+OpenVireo ships with light, dark and high-contrast themes specifically designed to meet accessibility standards. By default (_Automatic_) the theme follows your system's light or dark appearance, but you can always choose _Light_, _Dark_ or _High contrast_ with the _Theme_ setting *(A)* under _Tools_ -> _Settings_ -> _General_ -> _User Interface_, or from the _View_ -> _Theme_ menu.
 
 The _High contrast_ theme uses solid colours only: text reaches a 7:1 contrast ratio (WCAG AAA), every control and card has a solid border, keyboard focus and selected items are outlined as well as filled, and animations are turned off. _Automatic_ switches to it whenever your system asks for more contrast, and back again when it no longer does:
 

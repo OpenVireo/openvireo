@@ -6,6 +6,7 @@
 - High contrast theme, chosen automatically when Windows High Contrast, macOS Increase contrast or the Linux desktop's high-contrast setting is on. It replaces the switch to the Classic theme on Windows High Contrast.
 
 ### Removed
+- The classic theme and the classic window layout (toolbar, preview panel and database tabs). If you used the Classic theme, OpenVireo now follows your system theme (Automatic).
 - KeeShare. Share vaults with an OpenVireo account instead. Files shared with KeeShare in KeePassXC open normally and keep their share settings, but OpenVireo no longer imports or exports the shared containers.
 
 ## 1.0.0 (2026-11-11)
