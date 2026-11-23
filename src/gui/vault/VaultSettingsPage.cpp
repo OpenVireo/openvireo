@@ -259,6 +259,13 @@ VaultSettingsSection* VaultSettingsPage::addSection(QGroupBox* group)
     return section;
 }
 
+VaultSettingsSection* VaultSettingsPage::addSection(VaultCard* card)
+{
+    auto section = addSection(card->title());
+    section->follow(card);
+    return section;
+}
+
 void VaultSettingsPage::finish()
 {
     if (!m_page) {

@@ -18,12 +18,18 @@
 #include "VaultControls.h"
 
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultEditShell.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAbstractSpinBox>
 #include <QApplication>
+#include <QBoxLayout>
 #include <QContextMenuEvent>
 #include <QEvent>
+#include <QFontMetrics>
+#include <QGridLayout>
+#include <QLayout>
+#include <QLocale>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLineEdit>
@@ -32,7 +38,10 @@
 #include <QTextEdit>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QShowEvent>
 #include <QStyle>
+
+#include <cmath>
 
 #include <components/menus_toolbars/private/TextEditingMenu_p.h>
 
@@ -565,6 +574,344 @@ void VaultDateTimeEdit::paintEvent(QPaintEvent* event)
     painter.drawText(QStyle::visualRect(layoutDirection(), rect(), logical),
                      Qt::AlignCenter,
                      Typography::Icons::ChevronDownMed);
+}
+
+namespace
+{
+    // Room between the number and its suffix
+    constexpr int SuffixGap = 4;
+} // namespace
+
+VaultSpinBox::VaultSpinBox(QWidget* parent)
+    : fluent::textfields::NumberBox(parent)
+{
+    setSpinButtonPlacementMode(SpinButtonPlacementMode::Compact);
+    // QSpinBox's defaults: as wide as its numbers need, not as wide as a text field
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    NumberBox::setRange(0, 99);
+    NumberBox::setValue(0);
+    setSmallChange(1);
+    setLargeChange(10);
+
+    connect(this, &NumberBox::valueChanged, this, [this] { syncValue(); });
+    connect(this, &QLineEdit::textEdited, this, &VaultSpinBox::trackText);
+    // Runs after the number box commits the text: like QSpinBox, text that isn't a number gives way to the last value
+    connect(this, &QLineEdit::editingFinished, this, &VaultSpinBox::restoreValidValue);
+    updateSuffixMargin();
+}
+
+int VaultSpinBox::value() const
+{
+    return m_value;
+}
+
+void VaultSpinBox::setValue(int value)
+{
+    NumberBox::setValue(value);
+    syncValue();
+}
+
+int VaultSpinBox::minimum() const
+{
+    return qRound(NumberBox::minimum());
+}
+
+void VaultSpinBox::setMinimum(int minimum)
+{
+    NumberBox::setMinimum(minimum);
+    syncValue();
+}
+
+int VaultSpinBox::maximum() const
+{
+    return qRound(NumberBox::maximum());
+}
+
+void VaultSpinBox::setMaximum(int maximum)
+{
+    NumberBox::setMaximum(maximum);
+    syncValue();
+}
+
+void VaultSpinBox::setRange(int minimum, int maximum)
+{
+    NumberBox::setRange(minimum, maximum);
+    syncValue();
+}
+
+int VaultSpinBox::singleStep() const
+{
+    return qRound(smallChange());
+}
+
+void VaultSpinBox::setSingleStep(int step)
+{
+    setSmallChange(step);
+    setLargeChange(step * 10);
+}
+
+QString VaultSpinBox::suffix() const
+{
+    return m_suffix;
+}
+
+void VaultSpinBox::setSuffix(const QString& suffix)
+{
+    m_suffix = suffix;
+    updateSuffixMargin();
+    updateGeometry();
+    update();
+}
+
+bool VaultSpinBox::keyboardTracking() const
+{
+    return m_keyboardTracking;
+}
+
+void VaultSpinBox::setKeyboardTracking(bool tracking)
+{
+    m_keyboardTracking = tracking;
+}
+
+QString VaultSpinBox::cleanText() const
+{
+    return text().trimmed();
+}
+
+void VaultSpinBox::syncValue()
+{
+    const double value = NumberBox::value();
+    if (std::isnan(value)) {
+        return;
+    }
+    const int rounded = qRound(value);
+    if (rounded != m_value) {
+        m_value = rounded;
+        emit valueChanged(m_value);
+    }
+}
+
+void VaultSpinBox::trackText(const QString& text)
+{
+    if (!m_keyboardTracking) {
+        return;
+    }
+    bool ok = false;
+    const int typed = QLocale::c().toInt(text.trimmed(), &ok);
+    // Out of range text waits for the number box to clamp it once committed
+    if (ok && typed >= minimum() && typed <= maximum() && typed != m_value) {
+        m_value = typed;
+        emit valueChanged(m_value);
+    }
+}
+
+void VaultSpinBox::restoreValidValue()
+{
+    if (std::isnan(NumberBox::value())) {
+        NumberBox::setValue(m_value);
+    }
+    syncValue();
+}
+
+int VaultSpinBox::suffixWidth() const
+{
+    return m_suffix.isEmpty() ? 0 : fontMetrics().horizontalAdvance(m_suffix) + SuffixGap;
+}
+
+void VaultSpinBox::updateSuffixMargin()
+{
+    // The suffix is painted in the room kept free to the right of the text, so the text never runs under it
+    const QMargins margins = textMargins();
+    setTextMargins(margins.left(), margins.top(), suffixWidth(), margins.bottom());
+}
+
+void VaultSpinBox::changeEvent(QEvent* event)
+{
+    NumberBox::changeEvent(event);
+    if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange) {
+        updateSuffixMargin();
+    }
+}
+
+QSize VaultSpinBox::sizeHint() const
+{
+    QSize hint = NumberBox::sizeHint();
+    // Room for the widest number and the suffix, as QSpinBox gives
+    const QFontMetrics metrics = fontMetrics();
+    const int digits = qMax(QString::number(minimum()).size(), QString::number(maximum()).size());
+    const int wanted = metrics.horizontalAdvance(QString(digits, QLatin1Char('0'))) + suffixWidth()
+                       + contentMargins().left() + contentMargins().right() + 8;
+    hint.setWidth(qMax(qMin(hint.width(), wanted + 40), wanted));
+    return hint;
+}
+
+QSize VaultSpinBox::minimumSizeHint() const
+{
+    QSize hint = NumberBox::minimumSizeHint();
+    hint.setWidth(qMax(hint.width(), sizeHint().width()));
+    return hint;
+}
+
+void VaultSpinBox::paintEvent(QPaintEvent* event)
+{
+    NumberBox::paintEvent(event);
+    if (m_suffix.isEmpty() || text().isEmpty()) {
+        return;
+    }
+
+    // Right after the number: where the text starts follows from the cursor, wherever the box aligns it
+    const QFontMetrics metrics = fontMetrics();
+    const int cursorX = cursorRect().center().x();
+    const int textStart = cursorX - metrics.horizontalAdvance(text().left(cursorPosition()));
+    const int textEnd = textStart + metrics.horizontalAdvance(text());
+    const int areaRight = width() - contentMargins().right();
+    const int x = qMin(textEnd + SuffixGap, areaRight - suffixWidth() + SuffixGap);
+
+    const auto& colors = themeColors();
+    QPainter painter(this);
+    painter.setFont(font());
+    painter.setPen(isEnabled() ? colors.textSecondary : colors.textDisabled);
+    const QRect area(x, 0, areaRight - x, height());
+    painter.drawText(area, Qt::AlignLeft | Qt::AlignVCenter, m_suffix);
+}
+
+namespace
+{
+    // Space above and below a card's title, inside the card
+    constexpr int CardTitlePadding = 12;
+    constexpr int CardTitleIndent = 12;
+} // namespace
+
+VaultCard::VaultCard(QWidget* parent)
+    : VaultCard({}, parent)
+{
+}
+
+VaultCard::VaultCard(const QString& title, QWidget* parent)
+    : fluent::layout::Card(parent)
+    , m_title(title)
+{
+    updateTitleMargin();
+}
+
+QString VaultCard::title() const
+{
+    return m_title;
+}
+
+void VaultCard::setTitle(const QString& title)
+{
+    if (m_title == title) {
+        return;
+    }
+    m_title = title;
+    updateTitleMargin();
+    update();
+}
+
+bool VaultCard::event(QEvent* event)
+{
+    if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange) {
+        updateTitleMargin();
+    }
+    return fluent::layout::Card::event(event);
+}
+
+QRect VaultCard::titleRect() const
+{
+    const QFontMetrics metrics(Vault::font(Typography::FontRole::BodyStrong));
+    int indent = CardTitleIndent;
+    if (auto* cardLayout = layout()) {
+        indent = qMax(indent, cardLayout->contentsMargins().left());
+    }
+    return {indent, CardTitlePadding, qMax(0, width() - 2 * indent), metrics.height()};
+}
+
+void VaultCard::updateTitleMargin()
+{
+    // The card's layout starts below the title
+    const int top = m_title.isEmpty() ? 0 : CardTitlePadding + QFontMetrics(Vault::font(Typography::FontRole::BodyStrong)).height();
+    const QMargins margins = contentsMargins();
+    if (margins.top() != top) {
+        setContentsMargins(margins.left(), top, margins.right(), margins.bottom());
+    }
+}
+
+void VaultCard::paintEvent(QPaintEvent* event)
+{
+    fluent::layout::Card::paintEvent(event);
+    if (m_title.isEmpty()) {
+        return;
+    }
+    QPainter painter(this);
+    painter.setFont(Vault::font(Typography::FontRole::BodyStrong));
+    painter.setPen(isEnabled() ? themeColors().textPrimary : themeColors().textDisabled);
+    const QRect rect = QStyle::visualRect(layoutDirection(), this->rect(), titleRect());
+    painter.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextHideMnemonic, m_title);
+}
+
+VaultDialogButtonBox::VaultDialogButtonBox(QWidget* parent)
+    : QDialogButtonBox(parent)
+{
+}
+
+void VaultDialogButtonBox::showEvent(QShowEvent* event)
+{
+    QDialogButtonBox::showEvent(event);
+    // Not while showing: the box moves into the bar, and out of the layout that is showing it
+    if (!m_presentPending && !qobject_cast<VaultButtonBar*>(parentWidget())) {
+        m_presentPending = true;
+        QMetaObject::invokeMethod(this, &VaultDialogButtonBox::present, Qt::QueuedConnection);
+    }
+}
+
+namespace
+{
+    QLayout* layoutHolding(QLayout* layout, QWidget* widget)
+    {
+        if (!layout) {
+            return nullptr;
+        }
+        for (int i = 0; i < layout->count(); ++i) {
+            auto* item = layout->itemAt(i);
+            if (item->widget() == widget) {
+                return layout;
+            }
+            if (auto* found = layoutHolding(item->layout(), widget)) {
+                return found;
+            }
+        }
+        return nullptr;
+    }
+} // namespace
+
+void VaultDialogButtonBox::present()
+{
+    m_presentPending = false;
+    auto* parent = parentWidget();
+    if (!parent || isHidden() || qobject_cast<VaultButtonBar*>(parent)) {
+        return;
+    }
+
+    auto* holder = layoutHolding(parent->layout(), this);
+    auto* boxLayout = qobject_cast<QBoxLayout*>(holder);
+    auto* gridLayout = qobject_cast<QGridLayout*>(holder);
+    const int index = holder ? holder->indexOf(this) : -1;
+    int row = 0, column = 0, rowSpan = 1, columnSpan = 1;
+    if (gridLayout && index >= 0) {
+        gridLayout->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
+    }
+
+    // The bar takes the box in, which takes it out of the form's layout
+    auto* bar = new VaultButtonBar(this, parent);
+    if (boxLayout && index >= 0) {
+        boxLayout->insertWidget(index, bar);
+    } else if (gridLayout) {
+        gridLayout->addWidget(bar, row, column, rowSpan, columnSpan);
+    } else if (holder) {
+        holder->addWidget(bar);
+    }
+    bar->show();
 }
 
 VaultMenu::VaultMenu(QWidget* parent)

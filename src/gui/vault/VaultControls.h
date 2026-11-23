@@ -19,6 +19,7 @@
 #define KEEPASSXC_VAULTCONTROLS_H
 
 #include <QDateTimeEdit>
+#include <QDialogButtonBox>
 #include <QPlainTextEdit>
 #include <QPointer>
 
@@ -27,8 +28,10 @@
 #include <components/basicinput/ComboBox.h>
 #include <components/basicinput/RadioButton.h>
 #include <components/foundation/FluentElement.h>
+#include <components/layout/Card.h>
 #include <components/menus_toolbars/Menu.h>
 #include <components/textfields/LineEdit.h>
+#include <components/textfields/NumberBox.h>
 
 /**
  * Fluent-Qt controls as drop-in replacements for the stock ones in .ui forms.
@@ -190,6 +193,106 @@ private:
     void applyStyleSheet();
 
     QMargins m_contentMargins;
+};
+
+// Number field for forms, in place of QSpinBox: a Fluent number box with the integer API of QSpinBox
+// (value, range, single step, suffix, valueChanged(int)), so forms, their code and tests keep using it as before.
+// The suffix shows after the number in the secondary text color.
+class VaultSpinBox : public fluent::textfields::NumberBox
+{
+    Q_OBJECT
+    Q_PROPERTY(int value READ value WRITE setValue USER true)
+    Q_PROPERTY(int minimum READ minimum WRITE setMinimum)
+    Q_PROPERTY(int maximum READ maximum WRITE setMaximum)
+    Q_PROPERTY(int singleStep READ singleStep WRITE setSingleStep)
+    Q_PROPERTY(QString suffix READ suffix WRITE setSuffix)
+    Q_PROPERTY(bool keyboardTracking READ keyboardTracking WRITE setKeyboardTracking)
+
+public:
+    explicit VaultSpinBox(QWidget* parent = nullptr);
+
+    int value() const;
+    int minimum() const;
+    void setMinimum(int minimum);
+    int maximum() const;
+    void setMaximum(int maximum);
+    void setRange(int minimum, int maximum);
+    int singleStep() const;
+    void setSingleStep(int step);
+    QString suffix() const;
+    void setSuffix(const QString& suffix);
+    // As with QSpinBox, the value follows the text while typing unless this is turned off
+    bool keyboardTracking() const;
+    void setKeyboardTracking(bool tracking);
+    // The number as typed, without the suffix
+    QString cleanText() const;
+
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
+public slots:
+    void setValue(int value);
+
+signals:
+    void valueChanged(int value);
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
+
+private:
+    void syncValue();
+    void trackText(const QString& text);
+    void restoreValidValue();
+    void updateSuffixMargin();
+    int suffixWidth() const;
+
+    int m_value = 0;
+    QString m_suffix;
+    bool m_keyboardTracking = true;
+};
+
+// Card for forms, in place of QGroupBox: a Fluent card holding the group's controls, headed by its title
+class VaultCard : public fluent::layout::Card
+{
+    Q_OBJECT
+    Q_PROPERTY(QString title READ title WRITE setTitle)
+
+public:
+    explicit VaultCard(QWidget* parent = nullptr);
+    explicit VaultCard(const QString& title, QWidget* parent = nullptr);
+
+    QString title() const;
+    void setTitle(const QString& title);
+
+protected:
+    bool event(QEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    void updateTitleMargin();
+    QRect titleRect() const;
+
+    QString m_title;
+};
+
+// Dialog button box for forms that shows Fluent buttons. The box keeps the whole QDialogButtonBox API for the
+// form's code and tests, but is presented through a VaultButtonBar: a form that doesn't put it in a bar itself,
+// or in a modal's footer, gets one in its place the first time the box shows.
+class VaultDialogButtonBox : public QDialogButtonBox
+{
+    Q_OBJECT
+
+public:
+    explicit VaultDialogButtonBox(QWidget* parent = nullptr);
+
+protected:
+    void showEvent(QShowEvent* event) override;
+
+private:
+    void present();
+
+    bool m_presentPending = false;
 };
 
 // Fluent menu for context menus, button menus and menu bar menus
