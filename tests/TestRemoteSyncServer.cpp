@@ -265,7 +265,10 @@ void TestRemoteSyncServer::testTokenFileWithoutSystemStore()
     QVERIFY(SyncTokenStore::save("key", "file-token"));
     QVERIFY(fake->tokens.isEmpty());
     QVERIFY(QFile::exists(path));
+#ifndef Q_OS_WIN
+    // On Windows the user's profile folder ACL protects the file; Qt only maps the read-only flag to these bits
     QCOMPARE(QFile::permissions(path) & (QFile::ReadGroup | QFile::ReadOther), QFile::Permissions());
+#endif
     QCOMPARE(SyncTokenStore::description(), SyncTokenStore::createFileBackend(path)->description());
 
     // Removing the last token leaves no file behind
