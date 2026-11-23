@@ -1,8 +1,8 @@
 name: "Tests"
 
-# Builds the app with all features plus the unit and GUI tests on Linux and runs the full suite
-# under Xvfb (a real X server; the offscreen platform crashes the GUI tests). TestGuiFdoSecrets
-# only builds here, since it needs D-Bus.
+# Builds the app with all features plus the unit and GUI tests on Linux and Windows and runs the full
+# suite. Linux runs under Xvfb (a real X server; the offscreen platform crashes the GUI tests) and is the
+# only place TestGuiFdoSecrets builds, since it needs D-Bus.
 
 on:
   push:
@@ -71,4 +71,88 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-test-log
+        path: build/Testing/Temporary/LastTest.log
+
+  windows:
+    name: Windows
+    # Prebuilt Qt from install-qt-action instead of building it with vcpkg (which takes hours); vcpkg
+    # builds only the small libraries in vcpkg.json, and its binary cache is saved even when a run fails.
+    runs-on: windows-2022
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.3'
+        arch: win64_msvc2022_64
+        modules: qtimageformats
+        cache: true
+
+    - name: Set up Rust
+      run: |
+        rustup toolchain install stable --profile minimal
+        rustup default stable
+
+    - name: Set up vcpkg
+      run: |
+        echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+        echo "VCPKG_CACHE=$RUNNER_TEMP/vcpkg-cache" >> "$GITHUB_ENV"
+        baseline=$(python -c "import json; print(json.load(open('vcpkg.json'))['builtin-baseline'])")
+        git clone --quiet https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+        git -C "$RUNNER_TEMP/vcpkg" checkout --quiet "$baseline"
+        "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+        mkdir -p "$RUNNER_TEMP/vcpkg-cache"
+        echo "VCPKG_BINARY_SOURCES=clear;files,$(cygpath -w "$RUNNER_TEMP/vcpkg-cache"),readwrite" >> "$GITHUB_ENV"
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-tests-windows-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
+    - name: Configure
+      run: |
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_HOST_TRIPLET=x64-windows-release \
+          -DWITH_BUILD_QT=OFF -DWITH_XC_ALL=ON -DKPXC_FEATURE_ACCOUNTS=ON -DKPXC_FEATURE_DOCS=OFF \
+          -DWITH_TESTS=ON -DWITH_GUI_TESTS=ON
+
+    - name: Save vcpkg binary cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-tests-windows-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
+    - name: Build
+      # -k 0: report every compile error in one run
+      run: cmake --build build --parallel -- -k 0
+
+    - name: Test
+      working-directory: build
+      env:
+        LANG: en_US.UTF-8
+      run: |
+        export PATH="$PWD/vcpkg_installed/x64-windows-release/bin:$PATH"
+        ctest --output-on-failure --timeout 900
+
+    - name: Upload test log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-test-log
         path: build/Testing/Temporary/LastTest.log
