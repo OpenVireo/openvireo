@@ -27,7 +27,9 @@
 #include <QFontDatabase>
 #include <QHeaderView>
 #include <QLabel>
+#include <QLayout>
 #include <QPushButton>
+#include <QScrollArea>
 
 namespace
 {
@@ -158,6 +160,21 @@ void ShareVaultDialog::setupVaultLayout()
     page.addWidget(m_ui->statusLabel);
     m_ui->buttonBox->hide();
     page.finish();
+
+    // The members list keeps its height: on a short window the page scrolls instead of squeezing the list away
+    if (auto* body = findChild<QWidget*>(objectName() + QStringLiteral("Cards"), Qt::FindDirectChildrenOnly)) {
+        auto* scroll = new QScrollArea(this);
+        scroll->setObjectName(QStringLiteral("shareVaultScroll"));
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidgetResizable(true);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        delete layout()->replaceWidget(body, scroll);
+        scroll->setWidget(body);
+        scroll->viewport()->setAutoFillBackground(false);
+        body->setAutoFillBackground(false);
+        Vault::useFluentScrollBars(scroll);
+        setFillHeight(true);
+    }
 }
 
 ShareVaultDialog::~ShareVaultDialog() = default;
