@@ -45,7 +45,7 @@ private slots:
     void checkFileChanged();
 
 private:
-    QByteArray calculateChecksum();
+    QByteArray calculateChecksum(bool* opened = nullptr);
     bool shouldIgnoreChanges();
 
     QString m_filePath;
@@ -54,8 +54,12 @@ private:
     QTimer m_fileChangeDelayTimer;
     QTimer m_fileIgnoreDelayTimer;
     QTimer m_fileChecksumTimer;
+    // Checks the file again after a change that came in during a check, or after the file couldn't be opened
+    QTimer m_fileRecheckTimer;
     int m_fileChecksumSizeBytes = -1;
     bool m_ignoreFileChange = false;
+    bool m_recheckFileChange = false;
+    int m_fileOpenRetries = 0;
     bool m_paused = false;
 };
 

@@ -19,6 +19,8 @@
 
 #include "core/AsyncTask.h"
 
+#include <QPair>
+
 #ifdef Q_OS_LINUX
 #include <sys/statfs.h>
 #endif
@@ -30,11 +32,14 @@ FileWatcher::FileWatcher(QObject* parent)
     for (QObject* member : {static_cast<QObject*>(&m_fileWatcher),
                             static_cast<QObject*>(&m_fileChangeDelayTimer),
                             static_cast<QObject*>(&m_fileIgnoreDelayTimer),
-                            static_cast<QObject*>(&m_fileChecksumTimer)}) {
+                            static_cast<QObject*>(&m_fileChecksumTimer),
+                            static_cast<QObject*>(&m_fileRecheckTimer)}) {
         member->setParent(this);
     }
     connect(&m_fileWatcher, SIGNAL(fileChanged(QString)), SLOT(checkFileChanged()));
     connect(&m_fileChecksumTimer, SIGNAL(timeout()), SLOT(checkFileChanged()));
+    connect(&m_fileRecheckTimer, SIGNAL(timeout()), SLOT(checkFileChanged()));
+    m_fileRecheckTimer.setSingleShot(true);
     connect(&m_fileChangeDelayTimer, &QTimer::timeout, this, [this] { emit fileChanged(m_filePath); });
     m_fileChangeDelayTimer.setSingleShot(true);
     m_fileIgnoreDelayTimer.setSingleShot(true);
@@ -86,6 +91,9 @@ void FileWatcher::stop()
     m_fileChecksum.clear();
     m_fileChecksumTimer.stop();
     m_fileChangeDelayTimer.stop();
+    m_fileRecheckTimer.stop();
+    m_recheckFileChange = false;
+    m_fileOpenRetries = 0;
     m_paused = false;
 }
 
@@ -117,6 +125,11 @@ bool FileWatcher::hasSameFileChecksum()
 
 void FileWatcher::checkFileChanged()
 {
+    if (m_ignoreFileChange) {
+        // A check is running and may have read the file before this change: check again when it's done
+        m_recheckFileChange = true;
+        return;
+    }
     if (shouldIgnoreChanges()) {
         return;
     }
@@ -124,22 +137,44 @@ void FileWatcher::checkFileChanged()
     // Prevent reentrance
     m_ignoreFileChange = true;
 
-    AsyncTask::runThenCallback([this] { return calculateChecksum(); },
-                               this,
-                               [this](const QByteArray& checksum) {
-                                   if (checksum != m_fileChecksum) {
-                                       m_fileChecksum = checksum;
-                                       m_fileChangeDelayTimer.start(0);
-                                   }
-
-                                   m_ignoreFileChange = false;
-                               });
+    AsyncTask::runThenCallback(
+        [this] {
+            bool opened = false;
+            auto checksum = calculateChecksum(&opened);
+            return qMakePair(opened, checksum);
+        },
+        this,
+        [this](const QPair<bool, QByteArray>& result) {
+            m_ignoreFileChange = false;
+            if (m_filePath.isEmpty()) {
+                return;
+            }
+            // The file can't be opened while another app writes it on Windows: try again shortly
+            // instead of waiting for the next periodic checksum
+            constexpr int MaxFileOpenRetries = 10;
+            if (!result.first && m_fileOpenRetries < MaxFileOpenRetries) {
+                ++m_fileOpenRetries;
+                m_fileRecheckTimer.start(200);
+                return;
+            }
+            m_fileOpenRetries = 0;
+            if (result.second != m_fileChecksum) {
+                m_fileChecksum = result.second;
+                m_fileChangeDelayTimer.start(0);
+            } else if (m_recheckFileChange) {
+                m_fileRecheckTimer.start(0);
+            }
+            m_recheckFileChange = false;
+        });
 }
 
-QByteArray FileWatcher::calculateChecksum()
+QByteArray FileWatcher::calculateChecksum(bool* opened)
 {
     QFile file(m_filePath);
     if (!m_filePath.isEmpty() && file.open(QFile::ReadOnly)) {
+        if (opened) {
+            *opened = true;
+        }
         QCryptographicHash hash(QCryptographicHash::Sha256);
         if (m_fileChecksumSizeBytes > 0) {
             hash.addData(file.read(m_fileChecksumSizeBytes));
