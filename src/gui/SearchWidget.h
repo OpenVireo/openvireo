@@ -31,7 +31,6 @@ namespace Ui
     class SearchWidget;
 }
 
-class PopupHelpWidget;
 class VaultSearchHelp;
 
 class SearchWidget : public QWidget
@@ -86,8 +85,7 @@ private:
     void addFluentSearchButtons();
 
     const QScopedPointer<Ui::SearchWidget> m_ui;
-    PopupHelpWidget* m_helpWidget = nullptr;
-    // Vault Index layout: a Fluent flyout below the help button in place of m_helpWidget
+    // Search tips: a Fluent flyout below the help button
     VaultSearchHelp* m_vaultHelp = nullptr;
     QWidget* m_helpButton = nullptr;
     QTimer* m_searchTimer;
@@ -96,8 +94,6 @@ private:
     QAction* m_actionLimitGroup;
     QAction* m_actionWaitForEnter;
     QMenu* m_searchMenu;
-    // Vault Index layout: Fluent-Qt AutoSuggestBox in place of the plain line edit
-    bool m_fluentSearch = false;
 };
 
 #endif // SEARCHWIDGET_H

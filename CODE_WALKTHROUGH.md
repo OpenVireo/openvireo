@@ -178,11 +178,11 @@ It can also write a backup first. Every save calls `setKey(..., updateTransformS
 The main widget hierarchy:
 
 ```
-MainWindow                               src/gui/MainWindow.cpp   (menus, toolbar, tray, global actions)
-└── DatabaseTabWidget                    src/gui/DatabaseTabWidget.cpp  (one tab per database, lock-all)
+MainWindow                               src/gui/MainWindow.cpp   (menus, header, tray, global actions)
+└── DatabaseTabWidget                    src/gui/DatabaseTabWidget.cpp  (one page per database, lock-all)
     └── DatabaseWidget (QStackedWidget)  src/gui/DatabaseWidget.cpp
         ├── DatabaseOpenWidget           unlock screen
-        ├── main view: GroupView | EntryView | EntryPreviewWidget
+        ├── main view: navigation pane (GroupView, TagView) | EntryView | EntryDetailCard
         ├── EditEntryWidget              src/gui/entry/
         ├── EditGroupWidget              src/gui/group/
         ├── DatabaseSettingsDialog       src/gui/dbsettings/
@@ -194,7 +194,7 @@ MainWindow                               src/gui/MainWindow.cpp   (menus, toolba
 - `DatabaseWidgetStateSync` keeps splitter sizes and column layouts consistent across tabs.
 - Platform-specific code lives in [src/gui/osutils/](src/gui/osutils/) (`macutils`, `winutils`, `nixutils`). It covers screen-lock detection, launch-at-startup and device listeners, all behind `osUtils->...`.
 - `Clipboard` copies secrets to the clipboard, clears them after a timeout, and uses platform hints to keep them out of clipboard history.
-- New-database setup is under [src/gui/wizard/](src/gui/wizard/). The key editors for passwords, key files and YubiKeys are under [src/gui/databasekey/](src/gui/databasekey/).
+- New-database setup is `VaultNewDatabaseModal` in [src/gui/vault/](src/gui/vault/); import is under [src/gui/wizard/](src/gui/wizard/). The key editors for passwords, key files and YubiKeys are under [src/gui/databasekey/](src/gui/databasekey/).
 
 ---
 

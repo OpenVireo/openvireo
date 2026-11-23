@@ -40,7 +40,6 @@
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
-#include "gui/wizard/NewDatabaseWizard.h"
 
 DatabaseTabWidget::DatabaseTabWidget(QWidget* parent)
     : QTabWidget(parent)
@@ -83,19 +82,19 @@ void DatabaseTabWidget::hideTabBar()
 }
 
 /**
- * Helper method for invoking the new database wizard.
+ * Shows the New Database modal over the window and waits for it to finish.
  * The user of this method MUST take ownership of the returned pointer.
  *
  * @return pointer to the configured new database, nullptr on failure
  */
-QSharedPointer<Database> DatabaseTabWidget::execNewDatabaseWizard()
+QSharedPointer<Database> DatabaseTabWidget::execNewDatabaseModal()
 {
     QSharedPointer<Database> db;
     // The menus stay usable behind the modal, so don't stack a second one
     if (window()->findChild<VaultNewDatabaseModal*>()) {
         return {};
     }
-    // A modal over the window instead of the wizard. Wait for it like the wizard's exec(),
+    // Wait for the modal like a dialog's exec(),
     // since callers need the database right away.
     QPointer<VaultNewDatabaseModal> modal = new VaultNewDatabaseModal(window());
     QEventLoop loop;
@@ -129,7 +128,7 @@ QSharedPointer<Database> DatabaseTabWidget::execNewDatabaseWizard()
 
 DatabaseWidget* DatabaseTabWidget::newDatabase()
 {
-    auto db = execNewDatabaseWizard();
+    auto db = execNewDatabaseModal();
     if (!db) {
         return nullptr;
     }
@@ -350,8 +349,8 @@ void DatabaseTabWidget::importFile()
                 dbWidget->save();
                 return;
             }
-            // Start the new database wizard with the imported database
-            auto newDb = execNewDatabaseWizard();
+            // Create a new database for the imported entries
+            auto newDb = execNewDatabaseModal();
             if (newDb) {
                 // Merge the imported db into the new one
                 Merger merger(db.data(), newDb.data());

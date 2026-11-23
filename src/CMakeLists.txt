@@ -119,7 +119,6 @@ set(gui_SOURCES
         gui/DatabaseTabWidget.cpp
         gui/DatabaseWidget.cpp
         gui/DatabaseWidgetStateSync.cpp
-        gui/EntryPreviewWidget.cpp
         gui/DialogyWidget.cpp
         gui/EditWidget.cpp
         gui/EditWidgetIcons.cpp
@@ -183,7 +182,7 @@ set(gui_SOURCES
         gui/account/SharedLinksDialog.cpp
         gui/account/DeleteAccountDialog.cpp
         gui/account/SignUpWizard.cpp
-        gui/vault/AccountVaultsPane.cpp
+        gui/vault/AccountVaults.cpp
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultControls.cpp
         gui/vault/VaultEditShell.cpp
@@ -248,20 +247,12 @@ set(gui_SOURCES
         gui/osutils/ScreenLockListener.cpp
         gui/osutils/ScreenLockListenerPrivate.cpp
         gui/widgets/ElidedLabel.cpp
-        gui/widgets/KPToolBar.cpp
-        gui/widgets/PopupHelpWidget.cpp
         gui/widgets/ShortcutWidget.cpp
         gui/wizard/ImportWizard.cpp
         gui/wizard/ImportWizardPageReview.cpp
         gui/wizard/ImportWizardPageSelect.cpp
-        gui/wizard/NewDatabaseWizard.cpp
-        gui/wizard/NewDatabaseWizardPage.cpp
-        gui/wizard/NewDatabaseWizardPageMetaData.cpp
-        gui/wizard/NewDatabaseWizardPageEncryption.cpp
-        gui/wizard/NewDatabaseWizardPageDatabaseKey.cpp
         quickunlock/QuickUnlockInterface.cpp
-        ../share/icons/icons.qrc
-        ../share/wizard/wizard.qrc)
+        ../share/icons/icons.qrc)
 
 if(APPLE)
     list(APPEND gui_SOURCES

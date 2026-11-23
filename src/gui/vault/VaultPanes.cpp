@@ -28,7 +28,7 @@
 #include "gui/account/AccountController.h"
 #include "gui/remote/RemoteSettings.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/vault/AccountVaultsPane.h"
+#include "gui/vault/AccountVaults.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
@@ -805,13 +805,13 @@ void VaultDatabasePicker::addAccountVaults(QMenu* menu)
     }
 
     const auto current = m_accountController->vaultIdOf(m_dbWidget);
-    for (const auto& section : AccountVaultsPane::sections(account)) {
+    for (const auto& section : AccountVaults::sections(account)) {
         addHeading(section.title.isEmpty() ? tr("Account vaults") : section.title, section.toolTip);
         for (const auto& vault : section.vaults) {
-            auto* action = menu->addAction(Tools::escapeAccelerators(AccountVaultsPane::vaultName(vault)));
+            auto* action = menu->addAction(Tools::escapeAccelerators(AccountVaults::vaultName(vault)));
             action->setCheckable(true);
             action->setChecked(vault.id == current);
-            action->setToolTip(AccountVaultsPane::vaultToolTip(vault));
+            action->setToolTip(AccountVaults::vaultToolTip(vault));
             const auto vaultId = vault.id;
             connect(action, &QAction::triggered, this, [this, vaultId] {
                 if (m_accountController) {

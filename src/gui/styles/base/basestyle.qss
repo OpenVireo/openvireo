@@ -39,13 +39,6 @@ DatabaseWidget #groupView[vaultLayout="true"]:disabled, DatabaseWidget #tagView[
     background-color: transparent;
 }
 
-EntryPreviewWidget *[blendIn="true"]
-{
-    background-color: palette(window);
-    border: none;
-    padding-left: 0px;
-}
-
 DatabaseOpenWidget #centralStack, DatabaseOpenWidget #publicSummaryLabel {
     border: 1px solid palette(mid);
     background: palette(light);

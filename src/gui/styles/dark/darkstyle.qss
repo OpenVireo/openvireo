@@ -1,12 +1,10 @@
 DatabaseWidget:!active,
-DatabaseWidget #groupView:!active, DatabaseWidget #tagView:!active,
-EntryPreviewWidget *:!active[blendIn="true"] {
+DatabaseWidget #groupView:!active, DatabaseWidget #tagView:!active {
     background-color: #404042;
 }
 
 DatabaseWidget:disabled,
-DatabaseWidget #groupView:disabled, DatabaseWidget #tagView:disabled,
-EntryPreviewWidget *:disabled[blendIn="true"] {
+DatabaseWidget #groupView:disabled, DatabaseWidget #tagView:disabled {
     background-color: #424242;
 }
 

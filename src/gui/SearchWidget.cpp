@@ -17,20 +17,17 @@
 
 #include "SearchWidget.h"
 #include "gui/MainWindow.h"
-#include "ui_SearchHelpWidget.h"
 #include "ui_SearchWidget.h"
 
 #include <QKeyEvent>
 #include <QMenu>
 #include <QShortcut>
-#include <QToolButton>
 
 #include "core/SignalMultiplexer.h"
 #include "gui/Icons.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSearchHelp.h"
 #include "gui/vault/VaultWidgets.h"
-#include "gui/widgets/PopupHelpWidget.h"
 
 #include <components/textfields/AutoSuggestBox.h>
 
@@ -44,20 +41,14 @@ SearchWidget::SearchWidget(QWidget* parent)
     useFluentSearchBox();
     setFocusProxy(m_ui->searchEdit);
 
-    if (m_fluentSearch) {
-        m_vaultHelp = new VaultSearchHelp(this);
-        connect(m_vaultHelp, &VaultSearchHelp::insertRequested, this, &SearchWidget::insertSearchTerm);
-        connect(m_vaultHelp, &VaultSearchHelp::searchRequested, this, [this](const QString& text) {
-            m_ui->searchEdit->setText(text);
-            m_searchTimer->stop();
-            startSearch();
-            m_ui->searchEdit->setFocus();
-        });
-    } else {
-        m_helpWidget = new PopupHelpWidget(m_ui->searchEdit);
-        Ui::SearchHelpWidget helpUi;
-        helpUi.setupUi(m_helpWidget);
-    }
+    m_vaultHelp = new VaultSearchHelp(this);
+    connect(m_vaultHelp, &VaultSearchHelp::insertRequested, this, &SearchWidget::insertSearchTerm);
+    connect(m_vaultHelp, &VaultSearchHelp::searchRequested, this, [this](const QString& text) {
+        m_ui->searchEdit->setText(text);
+        m_searchTimer->stop();
+        startSearch();
+        m_ui->searchEdit->setFocus();
+    });
 
     m_searchTimer->setSingleShot(true);
     m_clearSearchTimer->setSingleShot(true);
@@ -98,18 +89,7 @@ SearchWidget::SearchWidget(QWidget* parent)
     m_ui->helpIcon->setIcon(icons()->icon("system-help"));
     m_ui->saveIcon->setIcon(icons()->icon("document-save"));
     m_ui->saveIcon->setVisible(false);
-    if (m_fluentSearch) {
-        addFluentSearchButtons();
-        return;
-    }
-    m_ui->searchEdit->addAction(m_ui->searchIcon, QLineEdit::LeadingPosition);
-    m_ui->searchEdit->addAction(m_ui->helpIcon, QLineEdit::TrailingPosition);
-    m_ui->searchEdit->addAction(m_ui->saveIcon, QLineEdit::TrailingPosition);
-
-    // Fix initial visibility of actions (bug in Qt)
-    for (QToolButton* toolButton : m_ui->searchEdit->findChildren<QToolButton*>()) {
-        toolButton->setVisible(toolButton->defaultAction()->isVisible());
-    }
+    addFluentSearchButtons();
 }
 
 SearchWidget::~SearchWidget() = default;
@@ -123,7 +103,6 @@ void SearchWidget::useFluentSearchBox()
     delete layout()->replaceWidget(m_ui->searchEdit, box);
     delete m_ui->searchEdit;
     m_ui->searchEdit = box;
-    m_fluentSearch = true;
 
     // Enter is handled in eventFilter(); this comes from the box's search button
     connect(box, &fluent::textfields::AutoSuggestBox::querySubmitted, this, [this] {
@@ -156,7 +135,7 @@ bool SearchWidget::eventFilter(QObject* obj, QEvent* event)
         if (keyEvent->key() == Qt::Key_Escape) {
             emit escapePressed();
             return true;
-        } else if (m_fluentSearch && (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
+        } else if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
             // AutoSuggestBox consumes Enter without emitting returnPressed()
             onReturnPressed();
             return true;
@@ -296,18 +275,10 @@ void SearchWidget::clearSearch()
 
 void SearchWidget::toggleHelp()
 {
-    if (m_vaultHelp) {
-        if (m_vaultHelp->isOpen()) {
-            m_vaultHelp->close();
-        } else {
-            m_vaultHelp->showAt(m_helpButton);
-        }
-        return;
-    }
-    if (m_helpWidget->isVisible()) {
-        m_helpWidget->hide();
+    if (m_vaultHelp->isOpen()) {
+        m_vaultHelp->close();
     } else {
-        m_helpWidget->show();
+        m_vaultHelp->showAt(m_helpButton);
     }
 }
 

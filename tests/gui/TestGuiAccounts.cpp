@@ -52,7 +52,7 @@
 #include "gui/remote/RemoteSettings.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
-#include "gui/vault/AccountVaultsPane.h"
+#include "gui/vault/AccountVaults.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
@@ -1095,7 +1095,7 @@ void TestGuiAccounts::testCreatesAnOrgAndOrgVaults()
     QStringList headings;
     pickerVaultRows(m_mainWindow.data(), &headings);
     QCOMPARE(headings, QStringList({"Personal", "Acme"}));
-    const auto sections = AccountVaultsPane::sections(account);
+    const auto sections = AccountVaults::sections(account);
     QCOMPARE(sections.size(), 2);
     QCOMPARE(sections.at(1).orgId, orgId);
 
