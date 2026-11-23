@@ -22,6 +22,9 @@
 #include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/textfields/Label.h>
 
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultDialog.h"
+
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QHash>
@@ -112,67 +115,115 @@ MessageBox::Button MessageBox::messageBox(QWidget* parent,
                                           MessageBox::Action action,
                                           QCheckBox* checkbox)
 {
+    // Like WinUI's content dialog, the Fluent alerts say what they are about in their title, without an icon
+    Q_UNUSED(icon)
     if (m_nextAnswer == MessageBox::NoButton) {
         Button fluentAnswer = NoButton;
         if (fluentMessageBox(parent, title, text, buttons, defaultButton, action, checkbox, fluentAnswer)) {
             return fluentAnswer;
         }
 
-        QMessageBox msgBox(parent);
-        msgBox.setTextFormat(Qt::RichText);
-        msgBox.setIcon(icon);
-        msgBox.setWindowTitle(title);
-        // Replace newlines with HTML line breaks
-        auto fixedText = text;
-        msgBox.setText(fixedText.replace("\n", "<br>"));
-
-        if (m_overrideParent) {
-            // Force the creation of the QWindow, without this windowHandle() will return nullptr
-            msgBox.winId();
-            auto msgBoxWindow = msgBox.windowHandle();
-            Q_ASSERT(msgBoxWindow);
-            msgBoxWindow->setTransientParent(m_overrideParent);
-        }
-
-        for (uint64_t b = First; b <= Last; b <<= 1) {
-            if (b & buttons) {
-                QString buttonText = m_buttonDefs[static_cast<Button>(b)].first;
-                QMessageBox::ButtonRole role = m_buttonDefs[static_cast<Button>(b)].second;
-
-                auto buttonPtr = msgBox.addButton(buttonText, role);
-                m_addedButtonLookup.insert(buttonPtr, static_cast<Button>(b));
-            }
-        }
-
-        if (defaultButton != MessageBox::NoButton) {
-            QList<QAbstractButton*> defPtrList = m_addedButtonLookup.keys(defaultButton);
-            if (defPtrList.count() > 0) {
-                msgBox.setDefaultButton(static_cast<QPushButton*>(defPtrList[0]));
-            }
-        }
-
-        if (checkbox) {
-            checkbox->setParent(&msgBox);
-            msgBox.setCheckBox(checkbox);
-        }
-
-        if (action == MessageBox::Raise) {
-            msgBox.setWindowFlags(Qt::WindowStaysOnTopHint);
-            msgBox.activateWindow();
-            msgBox.raise();
-        }
-        msgBox.layout()->setSizeConstraint(QLayout::SetMinimumSize);
-        msgBox.exec();
-
-        Button returnButton = m_addedButtonLookup[msgBox.clickedButton()];
-        m_addedButtonLookup.clear();
-        return returnButton;
+        return fluentAlertWindow(parent, title, text, buttons, defaultButton, action, checkbox);
 
     } else {
         MessageBox::Button returnButton = m_nextAnswer;
         m_nextAnswer = MessageBox::NoButton;
         return returnButton;
     }
+}
+
+// Without a window to show over, or for another application's window, or raised above other applications: a Fluent
+// window of its own laid out like the content dialog, with the message, the check box and the buttons sharing the
+// width of the window's command bar
+MessageBox::Button MessageBox::fluentAlertWindow(QWidget* parent,
+                                                 const QString& title,
+                                                 const QString& text,
+                                                 MessageBox::Buttons buttons,
+                                                 MessageBox::Button defaultButton,
+                                                 MessageBox::Action action,
+                                                 QCheckBox* checkbox)
+{
+    VaultDialog dialog(parent);
+    dialog.setObjectName(QStringLiteral("vaultAlertWindow"));
+    dialog.setPresentation(VaultDialog::OwnWindow);
+    dialog.setWindowTitle(title);
+    dialog.setMaximumDialogWidth(FluentAlertWidth + 48);
+    if (action == MessageBox::Raise) {
+        dialog.setWindowFlags(dialog.windowFlags() | Qt::WindowStaysOnTopHint);
+    }
+    if (m_overrideParent) {
+        // Force the creation of the QWindow, without this windowHandle() will return nullptr
+        dialog.winId();
+        auto* dialogWindow = dialog.windowHandle();
+        Q_ASSERT(dialogWindow);
+        dialogWindow->setTransientParent(m_overrideParent);
+    }
+
+    auto* layout = new QVBoxLayout(&dialog);
+    layout->setSpacing(12);
+    auto* message = new fluent::textfields::Label(&dialog);
+    message->setObjectName(QStringLiteral("vaultAlertMessage"));
+    message->setFluentTypography(Typography::FontRole::Body);
+    message->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
+    message->setTextFormat(Qt::RichText);
+    message->setWordWrap(true);
+    message->setOpenExternalLinks(true);
+    message->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    auto fixedText = text;
+    message->setText(fixedText.replace("\n", "<br>"));
+    layout->addWidget(message);
+    if (checkbox) {
+        checkbox->setParent(&dialog);
+        layout->addWidget(checkbox);
+    }
+
+    auto* box = new VaultDialogButtonBox(&dialog);
+    QHash<QAbstractButton*, Button> lookup;
+    Button escapeButton = NoButton;
+    QList<Button> added;
+    for (uint64_t b = First; b <= Last; b <<= 1) {
+        if (!(b & buttons)) {
+            continue;
+        }
+        const auto button = static_cast<Button>(b);
+        const auto& def = m_buttonDefs[button];
+        // The roles of a message box and a button box are the same
+        auto* added_button = box->addButton(def.first, static_cast<QDialogButtonBox::ButtonRole>(def.second));
+        lookup.insert(added_button, button);
+        added << button;
+        if (def.second == QMessageBox::RejectRole && escapeButton == NoButton) {
+            escapeButton = button;
+        }
+        if (button == defaultButton) {
+            if (auto* push = qobject_cast<QPushButton*>(added_button)) {
+                push->setDefault(true);
+            }
+        }
+    }
+    // Without a button that rejects, Escape answers like a message box would: with the only button, or with No
+    if (escapeButton == NoButton) {
+        if (added.size() == 1) {
+            escapeButton = added.first();
+        } else {
+            for (auto button : added) {
+                if (m_buttonDefs.value(button).second == QMessageBox::NoRole) {
+                    escapeButton = button;
+                    break;
+                }
+            }
+        }
+    }
+    layout->addWidget(box);
+    dialog.setCommands(box);
+
+    Button answer = escapeButton;
+    QObject::connect(box, &QDialogButtonBox::clicked, &dialog, [&dialog, &lookup, &answer](QAbstractButton* clicked) {
+        answer = lookup.value(clicked, NoButton);
+        dialog.accept();
+    });
+    // Like a message box, the dialog owns the check box and deletes it on closing
+    dialog.exec();
+    return answer;
 }
 
 bool MessageBox::fluentMessageBox(QWidget* parent,

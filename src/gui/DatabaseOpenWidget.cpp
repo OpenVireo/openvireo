@@ -603,7 +603,7 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
         if (key->type() != FileKey::KeePass2XMLv2 && key->type() != FileKey::Hashed
             && !config()->get(Config::Messages_NoLegacyKeyFileWarning).toBool()) {
             // The message box owns the checkbox and deletes it on closing
-            auto dontShowAgain = new QCheckBox(tr("Don't show this warning again"));
+            auto dontShowAgain = new VaultCheckBox(tr("Don't show this warning again"));
             connect(dontShowAgain, &QCheckBox::toggled, this, [](bool checked) {
                 config()->set(Config::Messages_NoLegacyKeyFileWarning, checked);
             });

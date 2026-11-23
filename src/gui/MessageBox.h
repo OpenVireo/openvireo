@@ -153,6 +153,15 @@ private:
                                  QCheckBox* checkbox,
                                  Button& answer);
 
+    // Shows the message as a Fluent window of its own, for when there is no window to show a content dialog over
+    static Button fluentAlertWindow(QWidget* parent,
+                                    const QString& title,
+                                    const QString& text,
+                                    Buttons buttons,
+                                    Button defaultButton,
+                                    Action action,
+                                    QCheckBox* checkbox);
+
     static QString stdButtonText(QMessageBox::StandardButton button);
 };
 
