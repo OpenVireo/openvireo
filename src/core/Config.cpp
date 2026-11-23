@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-#define CONFIG_VERSION 4
+#define CONFIG_VERSION 5
 #define QS QStringLiteral
 
 enum ConfigType
@@ -132,8 +132,6 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
 
     {Config::GUI_MainWindowGeometry, {QS("GUI/MainWindowGeometry"), Local, {}}},
     {Config::GUI_MainWindowState, {QS("GUI/MainWindowState"), Local, {}}},
-    {Config::GUI_ListViewState, {QS("GUI/ListViewState"), Local, {}}},
-    {Config::GUI_SearchViewState, {QS("GUI/SearchViewState"), Local, {}}},
     {Config::GUI_SplitterState, {QS("GUI/SplitterState"), Local, {}}},
     {Config::GUI_GroupSplitterState, {QS("GUI/GroupSplitterState"), Local, {}}},
     {Config::GUI_VaultSplitterState, {QS("GUI/VaultSplitterState"), Local, {}}},
@@ -448,7 +446,11 @@ static const QHash<QString, Config::ConfigKey> deprecationMap = {
     {QS("GUI/MovableToolbar"), Config::Deleted},
     {QS("GUI/ToolButtonStyle"), Config::Deleted},
     {QS("GUI/HidePreviewPanel"), Config::Deleted},
-    {QS("GUI/PreviewSplitterState"), Config::Deleted}};
+    {QS("GUI/PreviewSplitterState"), Config::Deleted},
+
+    // OpenVireo 1.1: the entry table's columns and header were removed with the classic views
+    {QS("GUI/ListViewState"), Config::Deleted},
+    {QS("GUI/SearchViewState"), Config::Deleted}};
 
 /**
  * Migrate settings from previous versions.
@@ -512,8 +514,6 @@ void Config::migrate()
             set(MinimizeOnCopy, true);
         }
 
-        // Reset database columns if upgrading from pre 2.6.0
-        remove(GUI_ListViewState);
     }
 
     // Migrate from boolean OpenURLOnDoubleClick to enum URLDoubleClickAction

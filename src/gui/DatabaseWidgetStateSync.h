@@ -33,12 +33,10 @@ public:
 public slots:
     void setActive(DatabaseWidget* dbWidget);
     void applySplitterSizes();
-    void applyViewState();
 
 private slots:
     void blockUpdates();
     void updateSplitterSizes();
-    void updateViewState();
     void updateAll(bool forceSync = false);
     void sync();
 
@@ -52,9 +50,6 @@ private:
     QTimer m_syncTimer;
 
     QHash<Config::ConfigKey, QList<int>> m_splitterSizes;
-
-    QByteArray m_listViewState;
-    QByteArray m_searchViewState;
 };
 
 #endif // KEEPASSX_DATABASEWIDGETSTATESYNC_H

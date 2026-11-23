@@ -110,8 +110,6 @@ public:
 
         GUI_MainWindowGeometry,
         GUI_MainWindowState,
-        GUI_ListViewState,
-        GUI_SearchViewState,
         GUI_SplitterState,
         GUI_GroupSplitterState,
         GUI_VaultSplitterState,

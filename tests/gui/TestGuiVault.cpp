@@ -44,6 +44,7 @@
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
 #include "gui/TotpSetupDialog.h"
+#include "gui/entry/EntryListItemDelegate.h"
 #include "gui/entry/EntryView.h"
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
@@ -242,11 +243,12 @@ void TestGuiVault::testLayout()
 void TestGuiVault::testEntryListMode()
 {
     auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
-    QVERIFY(entryView->isListMode());
+    // One two-line row per entry: no header, and only the title column, which the delegate draws
     QVERIFY(entryView->header()->isHidden());
-    // List mode has no column layout, so it must never overwrite the saved table layout
-    QVERIFY(entryView->viewState().isEmpty());
-    QVERIFY(m_dbWidget->entryViewState().isEmpty());
+    for (int column = 0; column < entryView->model()->columnCount(); ++column) {
+        QCOMPARE(entryView->isColumnHidden(column), column != EntryModel::Title);
+    }
+    QVERIFY(qobject_cast<EntryListItemDelegate*>(entryView->itemDelegateForColumn(EntryModel::Title)));
     QCOMPARE(entryView->model()->rowCount(), 6);
 }
 

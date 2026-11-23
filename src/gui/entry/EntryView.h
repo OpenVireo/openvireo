@@ -27,7 +27,6 @@ class Entry;
 class EntryModel;
 class Group;
 class SortFilterHideProxyModel;
-class QActionGroup;
 
 class EntryView : public QTreeView
 {
@@ -46,10 +45,6 @@ public:
     bool isSorted();
     int numberOfSelectedEntries();
     void setFirstEntryActive();
-    QByteArray viewState() const;
-    bool setViewState(const QByteArray& state);
-    void setListMode(bool enabled);
-    bool isListMode() const;
 
     void displayGroup(Group* group);
     void displaySearch(const QList<Entry*>& entries);
@@ -57,41 +52,21 @@ public:
 signals:
     void entryActivated(Entry* entry, EntryModel::ModelColumn column);
     void entrySelectionChanged(Entry* entry);
-    void viewStateChanged();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
-    void showEvent(QShowEvent* event) override;
     void startDrag(Qt::DropActions supportedActions) override;
 
 private slots:
     void emitEntryActivated(const QModelIndex& index);
-    void showHeaderMenu(const QPoint& position);
-    void toggleColumnVisibility(QAction* action);
-    void fitColumnsToWindow();
-    void fitColumnsToContents();
-    void resetViewToDefaults();
     void contextMenuShortcutPressed();
-    void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
     void jumpToGroupShortcut();
 
 private:
-    void resetFixedColumns();
-    bool isColumnHidden(int logicalIndex);
-    void onHeaderChanged();
-
     EntryModel* const m_model;
     SortFilterHideProxyModel* const m_sortModel;
-    int m_lastIndex;
-    Qt::SortOrder m_lastOrder;
     bool m_inSearchMode = false;
-    bool m_columnsNeedRelayout = true;
-    // Vault Index layout: one two-line column, no header, no saved column state
-    bool m_listMode = false;
-
-    QMenu* m_headerMenu;
-    QActionGroup* m_columnActions;
 };
 
 #endif // KEEPASSX_ENTRYVIEW_H

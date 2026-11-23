@@ -194,7 +194,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     connect(m_mainSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
     connect(m_groupSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
     connect(m_previewSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
-    connect(m_entryView, SIGNAL(viewStateChanged()), SIGNAL(entryViewStateChanged()));
     connect(m_groupView, SIGNAL(groupSelectionChanged()), SLOT(onGroupChanged()));
     connect(m_entryView, SIGNAL(entryActivated(Entry*,EntryModel::ModelColumn)),
         SLOT(entryActivationSignalReceived(Entry*,EntryModel::ModelColumn)));
@@ -476,22 +475,6 @@ void DatabaseWidget::onConfigChanged(Config::ConfigKey key)
 void DatabaseWidget::setSearchStringForAutoType(const QString& search)
 {
     m_searchStringForAutoType = search;
-}
-
-/**
- * Get current view state of entry view
- */
-QByteArray DatabaseWidget::entryViewState() const
-{
-    return m_entryView->viewState();
-}
-
-/**
- * Set view state of entry view
- */
-bool DatabaseWidget::setEntryViewState(const QByteArray& state) const
-{
-    return m_entryView->setViewState(state);
 }
 
 void DatabaseWidget::clearAllWidgets()
@@ -1230,7 +1213,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     hbox->addWidget(m_mainSplitter);
 
     m_entryView = new EntryView(m_mainWidget);
-    m_entryView->setListMode(true);
 
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
     m_vaultNavPane = navPane;

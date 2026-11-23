@@ -106,11 +106,37 @@ void TestConfig::testClassicLayoutMigration()
 
     // Settings only the classic layout read are gone
     QSettings migrated(tempFile.fileName(), QSettings::IniFormat);
-    QCOMPARE(migrated.value("ConfigVersion").toInt(), 4);
+    QVERIFY(migrated.value("ConfigVersion").toInt() >= 4);
     QCOMPARE(migrated.value("GUI/ApplicationTheme").toString(), QString("auto"));
     for (const auto& key : {"GUI/HideToolbar", "GUI/MovableToolbar", "GUI/ToolButtonStyle", "GUI/HidePreviewPanel"}) {
         QVERIFY2(!migrated.contains(key), key);
     }
+
+    tempFile.remove();
+}
+
+void TestConfig::testEntryViewStateMigration()
+{
+    // A config from before the entry list lost its table columns and header
+    TemporaryFile tempFile;
+    tempFile.open();
+
+    QSettings oldConfig(tempFile.fileName(), QSettings::IniFormat);
+    oldConfig.setValue("ConfigVersion", 4);
+    oldConfig.setValue("GUI/ListViewState", QByteArray("columns"));
+    oldConfig.setValue("GUI/SearchViewState", QByteArray("columns"));
+    oldConfig.setValue("GUI/ApplicationTheme", "dark");
+    oldConfig.sync();
+    tempFile.close();
+
+    Config::createConfigFromFile(tempFile.fileName());
+
+    QSettings migrated(tempFile.fileName(), QSettings::IniFormat);
+    QCOMPARE(migrated.value("ConfigVersion").toInt(), 5);
+    QVERIFY(!migrated.contains("GUI/ListViewState"));
+    QVERIFY(!migrated.contains("GUI/SearchViewState"));
+    // Other settings stay
+    QCOMPARE(migrated.value("GUI/ApplicationTheme").toString(), QString("dark"));
 
     tempFile.remove();
 }
