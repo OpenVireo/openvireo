@@ -312,10 +312,6 @@
 <context>
     <name>AccountLockWidget</name>
     <message>
-        <source>Your account is locked</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>or use your master password</source>
         <translation type="unfinished"></translation>
     </message>
@@ -332,6 +328,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Enter your master password to open your vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Unlock with Touch ID, Windows Hello or your system password</source>
         <translation type="unfinished"></translation>
     </message>
@@ -341,6 +341,43 @@
     </message>
     <message>
         <source>Hide password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vault is
+locked.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vaults are encrypted with a key only your password can make. It&apos;s made here, on this device, and never sent anywhere.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Make your key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your password is stretched into the key that opens your vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open your vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Decrypted here; the server only ever holds ciphertext.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -357,6 +394,10 @@
     </message>
     <message>
         <source>Switch account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not %1?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -673,10 +714,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Your vaults sync between OpenVireo on your computers and OpenVireo Web.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Email</source>
         <translation type="unfinished"></translation>
     </message>
@@ -813,6 +850,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Only encrypted data and sealed keys leave this device. Without an account, nothing leaves it at all.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>or</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pair with a server you run yourself</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open a .kdbx file on this device</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Change</source>
         <translation type="unfinished"></translation>
     </message>
@@ -853,6 +906,115 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Pick up where
+you left off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accounts stay signed in here, so going back to one takes only its master password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Self-hosted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your server,
+your data.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync your databases through an OpenVireo sync server you run. No OpenVireo account needed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>One more
+check.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The code from your authenticator app proves it&apos;s you, even if someone else has your password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Good to see
+you again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in with your master password. Your Secret Key is already saved on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OpenVireo account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vaults,
+on every device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in and your vaults follow you between OpenVireo on your computers, your phone and the web. Everything is encrypted here before it leaves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Any OpenVireo sync server you run.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pair this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>With a code from another device or the admin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose what syncs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Each database keeps its own master password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sign in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your password stays here; the server only checks a proof of it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Make your key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your password and Secret Key become your vault key, on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sync your vaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Encrypted vaults download and open here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New to OpenVireo?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Have an account?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Enter your email address and master password.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -870,6 +1032,10 @@
     </message>
     <message>
         <source>Connecting to the sync server…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your vaults sync between OpenVireo on your computers, your phone and OpenVireo Web.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2902,6 +3068,47 @@ To prevent this error from appearing, you must go to &quot;Database Settings / S
     </message>
     <message>
         <source>Don&apos;t show this warning again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter the password for this database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This database
+is locked.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>It opens with its own password, here on this device. Nothing is uploaded.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>It stays on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Make your key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your password is stretched into the database key, here on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open the database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Decrypted in memory; nothing is uploaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -14464,6 +14671,10 @@ Example: JBSWY3DPEHPK3PXP</source>
 <context>
     <name>VaultCommandBar</name>
     <message>
+        <source>Show groups</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>New Entry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14501,6 +14712,14 @@ Example: JBSWY3DPEHPK3PXP</source>
             <numerusform></numerusform>
             <numerusform></numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Hide groups</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back to the entries</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Close</source>
@@ -15050,6 +15269,80 @@ Click to open the Remote Sync settings.</source>
     <message>
         <source>%1
 Syncing is paused. Click to review.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultUnlockShell</name>
+    <message>
+        <source>OpenVireo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open source under GPLv3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Help</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Contact</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Terms</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Privacy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enter your password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only on this device.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Make your key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your password is stretched into the key that opens your vault.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open your vault.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Decrypted here, never on a server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultUnlockSteps</name>
+    <message>
+        <source>Unlock progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>in progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>current</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>to do</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
