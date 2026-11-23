@@ -1,0 +1,73 @@
+name: "Tests"
+
+# Builds the app with all features plus the unit and GUI tests on Linux and runs the full suite
+# under Xvfb (a real X server; the offscreen platform crashes the GUI tests). TestGuiFdoSecrets
+# only builds here, since it needs D-Bus.
+
+on:
+  push:
+    branches:
+      - 'develop'
+      - 'release/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux
+    # Pinned: ubuntu-latest moved to 26.04, which has no libbotan-2-dev
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake g++ pkgconf ccache ninja-build
+        sudo apt install -y qt6-base-dev qt6-base-private-dev qt6-tools-dev qt6-base-dev-tools qt6-svg-dev qt6-5compat-dev qt6-wayland libkeyutils-dev libminizip-dev libbotan-2-dev libqrencode-dev zlib1g-dev asciidoctor libreadline-dev libpcsclite-dev libusb-1.0-0-dev libxi-dev libxtst-dev
+        sudo apt install -y xvfb xauth dbus dbus-x11 xclip fonts-dejavu-core
+
+    - name: ccache
+      uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-tests-linux-${{ github.sha }}
+        restore-keys: ccache-tests-linux-
+
+    - name: Configure
+      run: |
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DWITH_XC_ALL=ON -DKPXC_FEATURE_ACCOUNTS=ON \
+          -DWITH_TESTS=ON -DWITH_GUI_TESTS=ON
+
+    - name: Build
+      env:
+        CCACHE_DIR: ${{ github.workspace }}/.ccache
+        CCACHE_MAXSIZE: 1G
+      run: cmake --build build --parallel $(nproc)
+
+    - name: Test
+      working-directory: build
+      env:
+        QT_QPA_PLATFORM: xcb
+        LANG: en_US.UTF-8
+      run: xvfb-run -a -s "-screen 0 1920x1080x24" ctest --output-on-failure --timeout 900
+
+    - name: Upload test log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-test-log
+        path: build/Testing/Temporary/LastTest.log
