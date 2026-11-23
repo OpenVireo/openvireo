@@ -72,6 +72,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultTable.h"
 #include "gui/vault/VaultWidgets.h"
 #include "gui/entry/AutoTypeAssociationsModel.h"
 #include "gui/entry/EntryAttributesModel.h"
@@ -80,13 +81,13 @@
 namespace
 {
     // Item delegate to enable completer showing suggestions for the attribute key
-    class AttributeKeyDelegate : public QStyledItemDelegate
+    class AttributeKeyDelegate : public VaultTableDelegate
     {
         std::function<QStringList()> m_getSuggestion;
 
     public:
         explicit AttributeKeyDelegate(QObject* parent, std::function<QStringList()> suggFunc)
-            : QStyledItemDelegate(parent)
+            : VaultTableDelegate(parent)
             , m_getSuggestion(std::move(suggFunc))
         {
         }
@@ -333,6 +334,8 @@ void EditEntryWidget::setupAdvanced()
     };
     auto* attributeKeyDelegate = new AttributeKeyDelegate(m_advancedWidget, getAttributeKeySuggestions);
     m_advancedUi->attributesView->setItemDelegate(attributeKeyDelegate);
+    // The page shows a note of its own in place of an empty list
+    Vault::styleTable(m_advancedUi->attributesView);
 
     // clang-format off
     connect(m_advancedUi->addAttributeButton, SIGNAL(clicked()), SLOT(insertAttribute()));
@@ -473,6 +476,8 @@ void EditEntryWidget::setupAutoType()
     m_autoTypeAssocModel->setAutoTypeAssociations(m_autoTypeAssoc);
     m_autoTypeUi->assocView->setModel(m_autoTypeAssocModel);
     m_autoTypeUi->assocView->setColumnHidden(1, true);
+    m_autoTypeUi->assocView->setRootIsDecorated(false);
+    Vault::styleTable(m_autoTypeUi->assocView, tr("No window associations yet"));
 
     // clang-format off
     connect(m_autoTypeUi->enableButton, SIGNAL(toggled(bool)), SLOT(updateAutoTypeEnabled()));
@@ -621,6 +626,7 @@ void EditEntryWidget::setupBrowser()
         // Use a custom item delegate to align the icon to the right side
         auto iconDelegate = new URLModelIconDelegate(m_browserUi->additionalURLsView);
         m_browserUi->additionalURLsView->setItemDelegate(iconDelegate);
+        Vault::styleTable(m_browserUi->additionalURLsView, tr("No additional URLs yet"));
 
         // clang-format off
         connect(m_browserUi->skipAutoSubmitCheckbox, SIGNAL(toggled(bool)), SLOT(updateBrowserModified()));
@@ -827,6 +833,7 @@ void EditEntryWidget::setupHistory()
 
     m_historyUi->historyView->setModel(m_sortModel);
     m_historyUi->historyView->setRootIsDecorated(false);
+    Vault::styleTable(m_historyUi->historyView, tr("No earlier versions yet"));
 
     // clang-format off
     connect(m_historyUi->historyView, SIGNAL(activated(QModelIndex)), SLOT(histEntryActivated(QModelIndex)));

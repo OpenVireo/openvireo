@@ -21,19 +21,19 @@
 
 #include "core/Entry.h"
 #include <QStandardItemModel>
-#include <QStyledItemDelegate>
+#include "gui/vault/VaultTable.h"
 
 class EntryAttributes;
 
-class URLModelIconDelegate : public QStyledItemDelegate
+class URLModelIconDelegate : public VaultTableDelegate
 {
 public:
-    using QStyledItemDelegate::QStyledItemDelegate;
+    using VaultTableDelegate::VaultTableDelegate;
 
 protected:
     void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const override
     {
-        QStyledItemDelegate::initStyleOption(option, index);
+        VaultTableDelegate::initStyleOption(option, index);
         option->decorationPosition = QStyleOptionViewItem::Right;
     }
 };

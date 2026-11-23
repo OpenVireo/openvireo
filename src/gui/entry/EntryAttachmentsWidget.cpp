@@ -36,6 +36,7 @@
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 namespace
 {
@@ -74,6 +75,8 @@ EntryAttachmentsWidget::EntryAttachmentsWidget(QWidget* parent)
     m_ui->attachmentsView->horizontalHeader()->setSectionResizeMode(EntryAttachmentsModel::SizeColumn,
                                                                     QHeaderView::ResizeToContents);
     m_ui->attachmentsView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    // Before the delegate's signals are connected below: styling gives the view its Fluent delegate
+    Vault::styleTable(m_ui->attachmentsView, tr("No attachments yet"));
 
     connect(this, SIGNAL(buttonsVisibleChanged(bool)), this, SLOT(updateButtonsVisible()));
     connect(this, SIGNAL(readOnlyChanged(bool)), SLOT(updateButtonsEnabled()));
