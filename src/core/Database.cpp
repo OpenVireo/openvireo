@@ -576,7 +576,7 @@ void Database::releaseData()
     m_modified = false;
 
     {
-        QMutexLocker locker(&s_uuidMapMutex);
+        QMutexLocker uuidMapLocker(&s_uuidMapMutex);
         s_uuidMap.remove(m_uuid);
     }
     m_uuid = QUuid();

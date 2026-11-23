@@ -56,7 +56,8 @@ jobs:
       env:
         CCACHE_DIR: ${{ github.workspace }}/.ccache
         CCACHE_MAXSIZE: 1G
-      run: cmake --build build --parallel $(nproc)
+      # -k 0: report every compile error in one run
+      run: cmake --build build --parallel $(nproc) -- -k 0
 
     - name: Test
       working-directory: build
