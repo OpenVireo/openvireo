@@ -71,6 +71,10 @@ if [ -n "${allowed}" ]; then
 fi
 
 if [ ${status} -eq 0 ]; then
-    echo "All forms use Fluent controls (${count} allowlisted until their redesign)."
+    if [ ${count} -eq 0 ]; then
+        echo "All forms use Fluent controls."
+    else
+        echo "All forms use Fluent controls (${count} allowlisted until their redesign)."
+    fi
 fi
 exit ${status}
