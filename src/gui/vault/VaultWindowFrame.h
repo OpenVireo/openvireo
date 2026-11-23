@@ -54,6 +54,9 @@ public:
     // The widget to place at the top of the window: the title bar, or the header itself
     QWidget* widget() const;
     bool isUnified() const;
+    // Without the title bar, the window controls float over the top of the window's content, as on the sign-in
+    // screen, whose panel reaches the top edge
+    void setTitleBarShown(bool shown);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

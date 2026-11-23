@@ -205,10 +205,13 @@ private slots:
 private:
     void setupAccounts();
     bool wantsAccountLockScreen() const;
+    // The start and lock screens fill the page edge to edge; the welcome screen keeps its margins
+    bool isFullBleedHomeShown() const;
+    void updateHomeChrome();
     void setupNotifications();
     // Where the notification list and the error peek open: the visible bell, else the toolbar's
     QWidget* notificationAnchor() const;
-    void updateNotificationChrome();
+    void updateTopChrome();
     void setupVaultPasswordGenerator();
     void closeVaultModals();
     static const QString BaseWindowTitle;
@@ -250,6 +253,7 @@ private:
     QPointer<NotificationButton> m_notificationButton;
     // The bell and build pill on screens without the header, such as the welcome screen
     QPointer<QWidget> m_cornerBar;
+    QMargins m_welcomeMargins;
     QPointer<NotificationButton> m_cornerNotificationButton;
     QPointer<NotificationFlyout> m_notificationFlyout;
     QPointer<NotificationPeek> m_notificationPeek;

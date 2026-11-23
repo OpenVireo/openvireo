@@ -189,12 +189,11 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
     m_ui->messageWidget->setCloseButtonVisible(true);
     m_ui->busyLabel->setVisible(false);
 
-    // The split layout of the web app's sign-in page (VaultUnlockShell): a dark panel with a heading for the page,
+    // The split layout of the web app's sign-in page (VaultUnlockShell): a panel with a heading for the page,
     // and the form in the column, with the privacy note and the other ways to start beneath it. The .ui's centred
     // column moves into the shell; its logo and title are the panel's now, and the card is the bare form.
     Vault::paintCanvas(this);
     m_shell = new VaultUnlockShell(this);
-    m_shell->setStepsVisible(false);
     m_ui->centerRow->removeWidget(m_ui->column);
     m_ui->verticalLayout->removeWidget(m_ui->scrollArea);
     m_ui->scrollArea->hide();
@@ -745,7 +744,7 @@ void AccountStartWidget::updateShell()
     const bool hasAccounts = m_controller && !m_controller->account()->knownAccounts().isEmpty();
     const bool busy = !m_ui->busyLabel->text().isEmpty();
 
-    // The dark panel's words for each page, as on the web app
+    // The panel's words for each page, as on the web app
     switch (page) {
     case Page::Accounts:
         m_shell->setHero(tr("Accounts"),
@@ -754,23 +753,52 @@ void AccountStartWidget::updateShell()
         break;
     case Page::SelfHosted:
         m_shell->setHero(tr("Self-hosted"),
-                         tr("Your server,\nyour vaults."),
-                         tr("Pair this device with your own OpenVireo sync server. Everything is still encrypted "
-                            "before it leaves this device."));
+                         tr("Your server,\nyour data."),
+                         tr("Sync your databases through an OpenVireo sync server you run. No OpenVireo account "
+                            "needed."));
         break;
     case Page::Mfa:
+        m_shell->setHero(tr("Two-step verification"),
+                         tr("One more\ncheck."),
+                         tr("The code from your authenticator app proves it's you, even if someone else has your "
+                            "password."));
+        break;
     case Page::SignIn:
         if (m_welcomeBack) {
             m_shell->setHero(tr("Welcome back"),
                              tr("Good to see\nyou again."),
                              tr("Sign in with your master password. Your Secret Key is already saved on this device."));
         } else {
-            m_shell->setHero(tr("Sign in"),
-                             tr("Your passwords,\nencrypted here."),
-                             tr("Your vaults are decrypted only on your devices. The server holds ciphertext, and "
-                                "nobody there can read it."));
+            m_shell->setHero(tr("OpenVireo account"),
+                             tr("Your vaults,\non every device."),
+                             tr("Sign in and your vaults follow you between OpenVireo on your computers, your phone "
+                                "and the web. Everything is encrypted here before it leaves."));
         }
         break;
+    }
+
+    // The steps follow what is happening: signing in, or pairing with a sync server. The accounts list has none.
+    const bool selfHosted = page == Page::SelfHosted;
+    if (page == Page::Accounts) {
+        m_shell->setStepsVisible(false);
+    } else {
+        const auto kind = selfHosted ? StepsKind::SelfHosted : StepsKind::Account;
+        if (kind != m_stepsKind) {
+            m_stepsKind = kind;
+            if (selfHosted) {
+                m_shell->steps()->setSteps({{tr("Enter the server."), tr("Any OpenVireo sync server you run.")},
+                                            {tr("Pair this device."), tr("With a code from another device or the admin.")},
+                                            {tr("Choose what syncs."), tr("Each database keeps its own master password.")}});
+            } else {
+                m_shell->steps()->setSteps(
+                    {{tr("Sign in."), tr("Your password stays here; the server only checks a proof of it.")},
+                     {tr("Make your key."), tr("Your password and Secret Key become your vault key, on this device.")},
+                     {tr("Sync your vaults."), tr("Encrypted vaults download and open here.")}});
+            }
+        }
+        // Pairing has the server already; signing in runs its first step until the account answers
+        m_shell->steps()->setProgress(selfHosted && busy ? 1 : 0, busy);
+        m_shell->setStepsVisible(true);
     }
 
     // The column's top-right link

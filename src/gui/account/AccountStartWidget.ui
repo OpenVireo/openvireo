@@ -227,7 +227,7 @@
                    <item>
                     <widget class="QLabel" name="signInIntro">
                      <property name="text">
-                      <string>Your vaults sync between OpenVireo on your computers and OpenVireo Web.</string>
+                      <string>Your vaults sync between OpenVireo on your computers, your phone and OpenVireo Web.</string>
                      </property>
                      <property name="wordWrap">
                       <bool>true</bool>

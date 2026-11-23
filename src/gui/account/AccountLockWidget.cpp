@@ -99,7 +99,7 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
     cardLayout->setContentsMargins(0, 0, 0, 0);
     cardLayout->setSpacing(0);
 
-    // The lock tile of the old centred card; the dark panel carries the lock now
+    // The lock tile of the old centred card; the panel carries the lock now
     m_tile->setFixedSize(TileSize, TileSize);
     m_tile->hide();
     m_headline->setObjectName("accountLockHeadline");

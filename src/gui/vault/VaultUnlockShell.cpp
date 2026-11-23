@@ -24,16 +24,18 @@
 #include <QDesktopServices>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QScrollArea>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QWindow>
 
 namespace
 {
     const QString Site = QStringLiteral("https://openvireo.com");
 
-    // The dark panel is the same in light and dark mode, as on the account site
+    // The panel is a shade of the window's canvas, light or dark with the theme, as the top bar was
     struct HeroColors
     {
         QColor background;
@@ -46,6 +48,7 @@ namespace
         QColor dot;
         QColor done;
         QColor onDone;
+        QColor edge;
     };
 
     HeroColors heroColors()
@@ -53,18 +56,32 @@ namespace
         const auto p = FluentTheme::palette();
         if (p.highContrast) {
             // High contrast: the scheme's own colours, every line in the text colour
-            return {p.canvas, p.text, p.text, p.text, p.text, p.text, p.canvas, p.canvas, p.accent, p.onAccent};
+            return {p.canvas, p.text, p.text, p.text, p.text, p.text, p.canvas, p.canvas, p.accent, p.onAccent, p.text};
         }
-        return {QColor(0x07, 0x10, 0x0a),
-                QColor(0xee, 0xf2, 0xef),
-                QColor(0xa3, 0xad, 0xa6),
-                QColor(0x7f, 0x8a, 0x82),
-                QColor(0xa6, 0xd9, 0x92),
-                QColor(0x22, 0x29, 0x25),
-                QColor(0x11, 0x17, 0x13),
-                QColor(0x16, 0x24, 0x1a),
+        if (FluentTheme::isDark()) {
+            return {QColor(0x0d, 0x12, 0x0e),
+                    QColor(0xee, 0xf2, 0xef),
+                    QColor(0xa9, 0xb3, 0xab),
+                    QColor(0x86, 0x91, 0x8a),
+                    QColor(0x8f, 0xd1, 0x6f),
+                    QColor(0x2a, 0x33, 0x2d),
+                    QColor(0x16, 0x1c, 0x18),
+                    QColor(0x1a, 0x26, 0x1c),
+                    QColor(0x3c, 0x7d, 0x20),
+                    QColor(Qt::white),
+                    QColor(0x2a, 0x33, 0x2d)};
+        }
+        return {QColor(0xe8, 0xed, 0xe6),
+                QColor(0x0b, 0x0f, 0x0c),
+                QColor(0x4c, 0x57, 0x4f),
+                QColor(0x5a, 0x65, 0x5d),
+                QColor(0x2f, 0x6a, 0x18),
+                QColor(0xd6, 0xdd, 0xd3),
+                QColor(Qt::white),
+                QColor(0xdc, 0xea, 0xd3),
                 QColor(0x3c, 0x7d, 0x20),
-                QColor(Qt::white)};
+                QColor(Qt::white),
+                QColor(0xd6, 0xdd, 0xd3)};
     }
 
     QString rgba(const QColor& c)
@@ -230,6 +247,10 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
     m_heroFoot->setText(tr("Open source under GPLv3"));
     hero->addWidget(m_heroFoot);
     m_hero->setMaximumWidth(720);
+#ifdef Q_OS_MACOS
+    // With no title bar above it, the panel moves the window
+    m_hero->installEventFilter(this);
+#endif
 
     // The column: a top-right link, the form in the middle, the legal links at the bottom. It scrolls when a long
     // form doesn't fit the window's height, and otherwise fills it.
@@ -326,6 +347,17 @@ bool VaultUnlockShell::isHeroVisible() const
     return m_hero->isVisibleTo(this);
 }
 
+bool VaultUnlockShell::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_hero && event->type() == QEvent::MouseButtonPress
+        && static_cast<QMouseEvent*>(event)->button() == Qt::LeftButton && window()->windowHandle()
+        && !window()->isFullScreen()) {
+        window()->windowHandle()->startSystemMove();
+        return true;
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 void VaultUnlockShell::resizeEvent(QResizeEvent* event)
 {
     m_hero->setVisible(width() >= HeroBreakpoint);
@@ -342,7 +374,8 @@ void VaultUnlockShell::applyTheme()
 {
     const auto p = FluentTheme::palette();
     const auto c = heroColors();
-    m_hero->setStyleSheet(QStringLiteral("QFrame#vaultUnlockHero { background-color: %1; }").arg(rgba(c.background)));
+    m_hero->setStyleSheet(QStringLiteral("QFrame#vaultUnlockHero { background-color: %1; border-right: 1px solid %2; }")
+                              .arg(rgba(c.background), rgba(c.edge)));
 
     const auto setColor = [](QLabel* label, const QColor& textColor) {
         auto palette = label->palette();

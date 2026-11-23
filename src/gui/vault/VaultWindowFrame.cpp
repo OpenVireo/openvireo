@@ -104,6 +104,15 @@ bool VaultWindowFrame::isUnified() const
     return m_titleBar;
 }
 
+void VaultWindowFrame::setTitleBarShown(bool shown)
+{
+    if (!m_titleBar || m_titleBar->isHidden() == !shown) {
+        return;
+    }
+    m_titleBar->setVisible(shown);
+    scheduleSync();
+}
+
 bool VaultWindowFrame::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == m_window) {
@@ -155,7 +164,10 @@ void VaultWindowFrame::syncChrome()
     m_titleBar->setSystemReservedLeadingWidth(m_window->isFullScreen() ? 0 : m_chrome->nativeTitleBarLeadingInset());
 
     auto options = m_chrome->options();
-    options.titleBarRect = QRect(m_titleBar->mapTo(m_window, QPoint(0, 0)), m_titleBar->size());
+    // A hidden title bar still places the window controls where they'd be with it
+    options.titleBarRect = m_titleBar->isHidden()
+                               ? QRect(0, 0, m_window->width(), TitleBarHeight)
+                               : QRect(m_titleBar->mapTo(m_window, QPoint(0, 0)), m_titleBar->size());
     m_chrome->configure(options);
 }
 

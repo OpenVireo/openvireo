@@ -24,6 +24,7 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileInfo>
+#include <functional>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -677,6 +678,32 @@ MainWindow::MainWindow()
     updateMenuActionState();
 }
 
+namespace
+{
+    // Calls back when a widget is shown or hidden, however that happens
+    class VisibilityWatcher : public QObject
+    {
+    public:
+        VisibilityWatcher(QObject* parent, std::function<void()> changed)
+            : QObject(parent)
+            , m_changed(std::move(changed))
+        {
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::ShowToParent || event->type() == QEvent::HideToParent) {
+                m_changed();
+            }
+            return QObject::eventFilter(watched, event);
+        }
+
+    private:
+        std::function<void()> m_changed;
+    };
+} // namespace
+
 void MainWindow::setupAccounts()
 {
     m_accountController = new AccountController(m_ui->tabWidget, nullptr, this);
@@ -695,6 +722,11 @@ void MainWindow::setupAccounts()
     m_lockScreen->setController(m_accountController);
     m_lockScreen->setVisible(false);
     m_ui->verticalLayout_5->insertWidget(1, m_lockScreen, 1);
+    // Both reach the window's edges, with no strip above the panel
+    m_welcomeMargins = m_ui->verticalLayout_5->contentsMargins();
+    auto* watcher = new VisibilityWatcher(this, [this] { updateHomeChrome(); });
+    m_startScreen->installEventFilter(watcher);
+    m_lockScreen->installEventFilter(watcher);
     connect(m_lockScreen, &AccountLockWidget::switchAccountRequested, this, &MainWindow::showStartScreen);
     connect(m_lockScreen, &AccountLockWidget::dismissRequested, this, [this] {
         m_lockScreenDismissed = true;
@@ -880,6 +912,24 @@ bool MainWindow::wantsAccountLockScreen() const
     const auto state = account->state();
     return !account->isServiceAccount()
            && (state == AccountManager::State::Locked || state == AccountManager::State::SigningIn);
+}
+
+bool MainWindow::isFullBleedHomeShown() const
+{
+    return (m_startScreen && !m_startScreen->isHidden()) || (m_lockScreen && !m_lockScreen->isHidden());
+}
+
+void MainWindow::updateHomeChrome()
+{
+    const bool fullBleed = isFullBleedHomeShown();
+    m_ui->verticalLayout_5->setContentsMargins(fullBleed ? QMargins() : m_welcomeMargins);
+    m_ui->verticalLayout_5->setSpacing(fullBleed ? 0 : -1);
+    // The welcome screen's spacers would otherwise keep a row above the panel
+    for (auto* spacer : {m_ui->horizontalSpacer, m_ui->horizontalSpacer_2}) {
+        spacer->changeSize(50, fullBleed ? 0 : 20, QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
+    }
+    m_ui->verticalLayout_5->invalidate();
+    updateTopChrome();
 }
 
 void MainWindow::updateHomeScreen()
@@ -1565,7 +1615,7 @@ void MainWindow::updateMenuActionState()
                                   && m_accountController->account()->state() != AccountManager::State::SignedOut
                                   && currentIndex == WelcomeScreen && !isStartScreenShown();
         m_vaultHeader->setVisible(shownDbWidget != nullptr || accountShown);
-        updateNotificationChrome();
+        updateTopChrome();
     }
 }
 
@@ -2477,7 +2527,7 @@ void MainWindow::setupNotifications()
     Vault::paintCanvas(promptHost);
     m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_ui->stackedWidget), promptHost);
 
-    connect(m_notifications, &NotificationCenter::changed, this, &MainWindow::updateNotificationChrome);
+    connect(m_notifications, &NotificationCenter::changed, this, &MainWindow::updateTopChrome);
     connect(m_notifications, &NotificationCenter::posted, this, [this](quint64 id) {
         const auto notification = m_notifications->find(id);
         if (!notification) {
@@ -2503,7 +2553,7 @@ void MainWindow::setupNotifications()
     });
 
     postPreReleaseNotice();
-    updateNotificationChrome();
+    updateTopChrome();
 }
 
 void MainWindow::postPreReleaseNotice()
@@ -2554,12 +2604,19 @@ void MainWindow::showNotifications(quint64 focusId)
     m_notificationFlyout->showFor(anchor ? anchor : m_ui->centralwidget, focusId);
 }
 
-void MainWindow::updateNotificationChrome()
+void MainWindow::updateTopChrome()
 {
+    const bool headerShown = m_vaultHeader && !m_vaultHeader->isHidden();
+    // The start and lock screens have no bar above their panel: no bell, and on macOS no empty title bar, the window
+    // controls floating over the panel. The notifications wait for the welcome screen or a database.
+    const bool fullBleed = m_ui->stackedWidget->currentIndex() == WelcomeScreen && isFullBleedHomeShown();
     if (m_cornerBar) {
         // Only where the header is hidden, and only with something to show
-        const bool headerShown = m_vaultHeader && !m_vaultHeader->isHidden();
-        m_cornerBar->setVisible(!headerShown && (!BuildInfo::isStable() || !m_notifications->isEmpty()));
+        m_cornerBar->setVisible(!headerShown && !fullBleed
+                                && (!BuildInfo::isStable() || !m_notifications->isEmpty()));
+    }
+    if (m_vaultFrame) {
+        m_vaultFrame->setTitleBarShown(headerShown || !fullBleed);
     }
     m_ui->actionNotifications->setIcon(NotificationButton::icon(m_notifications));
 }

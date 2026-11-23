@@ -160,6 +160,14 @@ private:
     QLabel* m_dividerLabel = nullptr;
     QFrame* m_callout = nullptr;
     bool m_welcomeBack = false;
+    // Which steps the panel shows: none yet, signing in, or pairing with a sync server
+    enum class StepsKind
+    {
+        None,
+        Account,
+        SelfHosted
+    };
+    StepsKind m_stepsKind = StepsKind::None;
     QString m_signInHeadingText;
     QString m_signInIntroText;
 };

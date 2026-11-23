@@ -28,7 +28,7 @@ class QSpacerItem;
 class QVBoxLayout;
 
 /**
- * The three steps of an unlock in the dark panel: enter the password, make the key, open the vault.
+ * The three steps of an unlock in the panel: enter the password, make the key, open the vault.
  * They follow the real unlock; a caller that can't tell the last two apart stays on "make the key".
  */
 class VaultUnlockSteps : public QFrame
@@ -68,7 +68,7 @@ private:
 
 /**
  * The split unlock layout shared by the account lock screen and a locked database, matching the web app and the
- * account site's sign-in page: a dark panel with the logo, an eyebrow, a heading and the steps, and a column with
+ * account site's sign-in page: a panel in a shade of the window's canvas with the logo, an eyebrow, a heading and the steps, and a column with
  * the form, a top-right link and a legal footer. Below 900px wide the panel hides and the column is enough.
  */
 class VaultUnlockShell : public QWidget
@@ -91,6 +91,7 @@ public:
     static constexpr int HeroBreakpoint = 900;
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
