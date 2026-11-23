@@ -70,8 +70,8 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFile>
-#include <QInputDialog>
 #include <QLabel>
+#include <QDialog>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
@@ -1150,10 +1150,13 @@ void TestGuiAccounts::testAcceptsAnInvitation()
 
     // The link from the email, pasted into the Accept Invitation box
     QTimer::singleShot(0, this, [this, link] {
-        auto* input = m_mainWindow->findChild<QInputDialog*>();
-        QVERIFY(input);
-        input->setTextValue(link);
-        input->accept();
+        // A Fluent content dialog with a text field
+        fluent::dialogs_flyouts::ContentDialog* input = nullptr;
+        QTRY_VERIFY(input = m_mainWindow->findChild<fluent::dialogs_flyouts::ContentDialog*>("vaultInputDialog"));
+        auto* field = input->findChild<QLineEdit*>("vaultInputField");
+        QVERIFY(field);
+        field->setText(link);
+        input->done(fluent::dialogs_flyouts::ContentDialog::ResultPrimary);
     });
     m_mainWindow->acceptAccountInvitation();
     QTRY_COMPARE(messages.size(), 2);
@@ -1784,7 +1787,7 @@ void TestGuiAccounts::testLockScreenUnlocksTheAccount()
         QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), before + 1, 10000);
     }
     QVERIFY(!m_mainWindow->isAccountLockScreenShown());
-    QInputDialog* noDialog = nullptr;
+    QDialog* noDialog = nullptr;
 
     // Locking the vault in front (e.g. the inactivity timer) shows the account's lock screen
     auto* work = tabs->currentDatabaseWidget();
@@ -1829,7 +1832,7 @@ void TestGuiAccounts::testLockScreenUnlocksTheAccount()
     QVERIFY(!m_mainWindow->findChild<QWidget*>("welcomeWidget")->isHidden());
     accountAction(m_mainWindow.data(), tr("&Unlock Account…"))->trigger();
     QTRY_VERIFY(m_mainWindow->isAccountLockScreenShown());
-    QVERIFY(!(noDialog = m_mainWindow->findChild<QInputDialog*>()));
+    QVERIFY(!(noDialog = m_mainWindow->findChild<QDialog*>("vaultInputDialog")));
 }
 
 void TestGuiAccounts::testLockScreenStaysInFrontOfLocalDatabases()

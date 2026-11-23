@@ -20,7 +20,6 @@
 
 #include <QColorDialog>
 #include <QDialogButtonBox>
-#include <QInputDialog>
 #include <QListView>
 
 #include "core/Clock.h"

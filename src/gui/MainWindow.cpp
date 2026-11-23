@@ -26,7 +26,6 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
-#include <QInputDialog>
 #include <QLabel>
 #include <QList>
 #include <QMimeData>
@@ -74,6 +73,7 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
+#include "gui/vault/VaultInputDialog.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "keys/drivers/YubiKey.h"
 #include <components/layout/Card.h>
@@ -1062,8 +1062,7 @@ void MainWindow::createAccountVault()
     }
     if (orgs.isEmpty()) {
         bool ok = false;
-        const auto name = QInputDialog::getText(
-            this, tr("New vault"), tr("Name of the new vault:"), QLineEdit::Normal, tr("Personal"), &ok);
+        const auto name = VaultInputDialog::getText(this, tr("New vault"), tr("Name of the new vault:"), tr("Personal"), &ok);
         if (ok && !name.trimmed().isEmpty()) {
             m_accountController->createVault(name.trimmed());
         }
@@ -1103,12 +1102,8 @@ void MainWindow::createAccountVault()
 void MainWindow::acceptAccountInvitation()
 {
     bool ok = false;
-    const auto link = QInputDialog::getText(this,
-                                            tr("Accept invitation"),
-                                            tr("Paste the link or the invitation code from the email:"),
-                                            QLineEdit::Normal,
-                                            {},
-                                            &ok);
+    const auto link = VaultInputDialog::getText(
+        this, tr("Accept invitation"), tr("Paste the link or the invitation code from the email:"), {}, &ok);
     if (ok && !link.trimmed().isEmpty()) {
         m_accountController->acceptInvitation(link.trimmed());
     }
@@ -1130,14 +1125,13 @@ void MainWindow::moveDatabaseToAccount()
         name = QFileInfo(dbWidget->database()->filePath()).completeBaseName();
     }
     bool ok = false;
-    name = QInputDialog::getText(this,
-                                 tr("Move to account"),
-                                 tr("A copy of this database becomes a vault of your account, encrypted with a new "
-                                    "vault key instead of its master password, and syncs with your account from now "
-                                    "on. The file itself isn't changed.\n\nName of the vault:"),
-                                 QLineEdit::Normal,
-                                 name,
-                                 &ok);
+    name = VaultInputDialog::getText(this,
+                                     tr("Move to account"),
+                                     tr("A copy of this database becomes a vault of your account, encrypted with a new "
+                                        "vault key instead of its master password, and syncs with your account from "
+                                        "now on. The file itself isn't changed.\n\nName of the vault:"),
+                                     name,
+                                     &ok);
     if (ok && !name.trimmed().isEmpty()) {
         m_accountController->moveToAccount(dbWidget, name.trimmed());
     }

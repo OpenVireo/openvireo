@@ -24,7 +24,6 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QHostInfo>
-#include <QInputDialog>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -61,7 +60,9 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/tag/TagView.h"
 #include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEntryEditCard.h"
+#include "gui/vault/VaultInputDialog.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
@@ -1095,7 +1096,7 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
                 cmdTruncated = cmdTruncated.left(400) + " […]";
             }
             // The message box owns the checkbox and deletes it on closing
-            auto checkbox = new QCheckBox(tr("Remember my choice"));
+            auto checkbox = new VaultCheckBox(tr("Remember my choice"));
             bool remember = false;
             QObject::connect(checkbox, &QCheckBox::toggled, [&](bool checked) { remember = checked; });
 
@@ -2571,15 +2572,16 @@ void DatabaseWidget::saveSearch(const QString& searchtext)
     QStringList searches(m_db->metadata()->savedSearches().keys());
     searches.prepend("");
 
-    QInputDialog dialog(this);
-    connect(this, &DatabaseWidget::databaseLockRequested, &dialog, &QInputDialog::reject);
+    VaultInputDialog dialog(this);
+    connect(this, &DatabaseWidget::databaseLockRequested, &dialog, &VaultInputDialog::reject);
 
-    dialog.setComboBoxEditable(true);
     dialog.setComboBoxItems(searches);
     dialog.setOkButtonText(tr("Save"));
     dialog.setLabelText(tr("Enter a unique name or overwrite an existing search from the list:"));
     dialog.setWindowTitle(tr("Save Search"));
-    dialog.exec();
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
 
     auto name = dialog.textValue();
     if (!name.isEmpty()) {

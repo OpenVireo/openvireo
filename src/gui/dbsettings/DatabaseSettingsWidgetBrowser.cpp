@@ -21,7 +21,7 @@
 
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QProgressDialog>
+#include "gui/vault/VaultInputDialog.h"
 
 #include "browser/BrowserService.h"
 #include "browser/BrowserSettings.h"
@@ -283,8 +283,8 @@ void DatabaseSettingsWidgetBrowser::removeStoredPermissions()
 
     QList<Entry*> entries = m_db->rootGroup()->entriesRecursive();
 
-    QProgressDialog progress(tr("Removing stored permissions…"), tr("Abort"), 0, entries.count());
-    progress.setWindowModality(Qt::WindowModal);
+    VaultProgressDialog progress(
+        this, tr("Forget site-specific settings"), tr("Removing stored permissions…"), tr("Abort"), entries.count());
 
     uint counter = 0;
     for (Entry* entry : entries) {

@@ -36,6 +36,7 @@
 #include "gui/UrlTools.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/passkeys/PasskeyImporter.h"
+#include "gui/vault/VaultInputDialog.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
@@ -43,13 +44,11 @@
 #include <QCheckBox>
 #include <QCryptographicHash>
 #include <QHostAddress>
-#include <QInputDialog>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QListWidget>
 #include <QLocalSocket>
 #include <QLocale>
-#include <QProgressDialog>
 #include <QStringView>
 #include <QUrl>
 
@@ -601,18 +600,16 @@ QString BrowserService::storeKey(const QString& key)
     }
 
     while (id.isEmpty()) {
-        QInputDialog keyDialog(m_currentDatabaseWidget);
+        VaultInputDialog keyDialog(m_currentDatabaseWidget);
         connect(m_currentDatabaseWidget, SIGNAL(databaseLockRequested()), &keyDialog, SLOT(reject()));
         keyDialog.setWindowTitle(tr("OpenVireo - New key association request"));
         keyDialog.setLabelText(tr("You have received an association request for the following database:\n%1\n\n"
                                   "Give the connection a unique name or ID, for example:\nchrome-laptop.")
                                    .arg(db->metadata()->name().toHtmlEscaped()));
         keyDialog.setOkButtonText(tr("Save and allow access"));
-        keyDialog.setWindowFlags(keyDialog.windowFlags() | Qt::WindowStaysOnTopHint);
+        // A request from the browser: a Fluent window of its own, above the browser
+        keyDialog.setStaysOnTop(true);
         raiseWindow();
-        keyDialog.show();
-        keyDialog.activateWindow();
-        keyDialog.raise();
         auto ok = keyDialog.exec();
 
         id = keyDialog.textValue();
