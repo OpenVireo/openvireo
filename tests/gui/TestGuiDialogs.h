@@ -49,6 +49,7 @@ private slots:
     void testProgressDialog();
     void testMessageBoxWithoutWindow();
     void testScreenshots();
+    void testStockWidgetScreenshots();
 
 private:
     struct DialogCase

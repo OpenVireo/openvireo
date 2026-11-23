@@ -64,6 +64,21 @@
 #include <components/status_info/ProgressRing.h>
 
 #include <QApplication>
+#include <QCalendarWidget>
+#include <QDateTimeEdit>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QMenu>
+#include <QPlainTextEdit>
+#include <QProgressBar>
+#include <QScrollArea>
+#include <QSplitter>
+#include <QTabWidget>
+#include <QToolButton>
+#include <QToolTip>
+#include <QTreeWidget>
+#include <QVBoxLayout>
 #include <QComboBox>
 #include <QDir>
 #include <QLabel>
@@ -675,6 +690,101 @@ void TestGuiDialogs::testScreenshots()
             progress.reset();
         }
         QTest::qWait(300);
+    }
+
+    config()->set(Config::GUI_ApplicationTheme, originalTheme);
+    kpxcApp->applyTheme();
+}
+
+// The stock Qt widgets still drawn by the application style, for comparing style changes:
+// headers and sort indicators, scroll bars, splitters, tabs, date/time fields, menus and tooltips
+void TestGuiDialogs::testStockWidgetScreenshots()
+{
+    const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
+    if (dir.isEmpty()) {
+        QSKIP("Set OPENVIREO_VAULT_SCREENSHOT_DIR to save screenshots");
+    }
+    const auto path = [&dir](const QString& name, const QString& theme) {
+        return QDir(dir).absoluteFilePath(QString("%1-%2.png").arg(name, theme));
+    };
+    const auto originalTheme = config()->get(Config::GUI_ApplicationTheme);
+
+    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark"), QStringLiteral("highcontrast")}) {
+        applyScreenshotTheme(theme);
+        QTest::qWait(200);
+
+        QWidget gallery;
+        gallery.resize(760, 520);
+        auto* layout = new QVBoxLayout(&gallery);
+        auto* tabs = new QTabWidget(&gallery);
+        layout->addWidget(tabs);
+
+        auto* page = new QWidget(tabs);
+        auto* pageLayout = new QVBoxLayout(page);
+        auto* splitter = new QSplitter(Qt::Horizontal, page);
+        auto* tree = new QTreeWidget(splitter);
+        tree->setHeaderLabels({"Title", "Username", "Reason"});
+        for (int i = 0; i < 30; ++i) {
+            new QTreeWidgetItem(tree, {QString("Entry %1").arg(i), "user@example.com", "Reused password"});
+        }
+        tree->setSortingEnabled(true);
+        tree->sortByColumn(0, Qt::AscendingOrder);
+        tree->setCurrentItem(tree->topLevelItem(2));
+        auto* scroll = new QScrollArea(splitter);
+        auto* scrolled = new QPlainTextEdit(scroll);
+        scrolled->setPlainText(QString("A long note\n").repeated(60));
+        scroll->setWidget(scrolled);
+        scroll->setWidgetResizable(true);
+        pageLayout->addWidget(splitter, 1);
+
+        auto* box = new QGroupBox("Group box", page);
+        auto* boxLayout = new QHBoxLayout(box);
+        auto* dateTime = new QDateTimeEdit(QDateTime(QDate(2026, 11, 23), QTime(9, 30)), box);
+        dateTime->setCalendarPopup(true);
+        boxLayout->addWidget(dateTime);
+        auto* tool = new QToolButton(box);
+        tool->setText("Tool");
+        boxLayout->addWidget(tool);
+        auto* progress = new QProgressBar(box);
+        progress->setValue(60);
+        boxLayout->addWidget(progress);
+        auto* disabled = new QDateTimeEdit(box);
+        disabled->setEnabled(false);
+        boxLayout->addWidget(disabled);
+        pageLayout->addWidget(box);
+        tabs->addTab(page, "Stock widgets");
+        tabs->addTab(new QWidget(tabs), "Second tab");
+
+        gallery.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&gallery));
+        QTest::qWait(250);
+        QVERIFY(gallery.grab().save(path("stock-widgets", theme)));
+
+        QMenu menu;
+        menu.addAction("First action");
+        menu.addAction("Checked action")->setCheckable(true);
+        menu.actions().last()->setChecked(true);
+        menu.addSeparator();
+        menu.addMenu("Submenu")->addAction("Inner");
+        menu.addAction("Disabled action")->setEnabled(false);
+        menu.popup(gallery.mapToGlobal(QPoint(40, 40)));
+        QTest::qWait(250);
+        QVERIFY(menu.grab().save(path("stock-menu", theme)));
+        menu.hide();
+
+        QToolTip::showText(gallery.mapToGlobal(QPoint(60, 60)), "A tooltip on a stock widget", &gallery);
+        QTest::qWait(400);
+        for (auto* top : QApplication::topLevelWidgets()) {
+            if (top->inherits("QTipLabel") && top->isVisible()) {
+                QVERIFY(top->grab().save(path("stock-tooltip", theme)));
+            }
+        }
+        QToolTip::hideText();
+
+        auto* calendar = dateTime->calendarWidget();
+        calendar->resize(calendar->sizeHint());
+        QVERIFY(calendar->grab().save(path("stock-calendar", theme)));
+        gallery.hide();
     }
 
     config()->set(Config::GUI_ApplicationTheme, originalTheme);
