@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>OpenVireo - Pick Characters</string>
+   <string>Pick Characters</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="sizeConstraint">
@@ -52,9 +52,9 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QCheckBox" name="pressTab">
+      <widget class="VaultCheckBox" name="pressTab">
        <property name="text">
-        <string>Press &amp;Tab between characters</string>
+        <string>Press Tab between characters</string>
        </property>
        <property name="checked">
         <bool>true</bool>
@@ -62,7 +62,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QDialogButtonBox" name="buttonBox">
+      <widget class="VaultDialogButtonBox" name="buttonBox">
        <property name="standardButtons">
         <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
        </property>
@@ -78,6 +78,16 @@
    <extends>QLineEdit</extends>
    <header>gui/PasswordWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -21,6 +21,7 @@
 #include "DatabaseTabWidget.h"
 #include "DatabaseWidget.h"
 #include "GuiTools.h"
+#include "gui/vault/VaultWidgets.h"
 
 #include <QFileInfo>
 #include <QLayout>
@@ -43,6 +44,11 @@ DatabaseOpenDialog::DatabaseOpenDialog(QWidget* parent)
 
     connect(m_view, &DatabaseOpenWidget::dialogFinished, this, &DatabaseOpenDialog::complete);
 
+    // A Fluent window of its own: the unlock card on the window canvas, as in the main window's unlock view, with
+    // the databases to choose from as a pivot above it
+    Vault::paintCanvas(this);
+    Vault::followTheme(m_tabBar, [tabBar = m_tabBar.data()] { tabBar->setStyleSheet(Vault::pivotStyleSheet()); });
+    m_tabBar->setDrawBase(false);
     m_tabBar->setAutoHide(true);
     m_tabBar->setExpanding(false);
     connect(m_tabBar, &QTabBar::currentChanged, this, &DatabaseOpenDialog::tabChanged);
@@ -50,7 +56,7 @@ DatabaseOpenDialog::DatabaseOpenDialog(QWidget* parent)
     auto* layout = new QVBoxLayout();
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    layout->addWidget(m_tabBar);
+    layout->addWidget(m_tabBar, 0, Qt::AlignHCenter);
     layout->addWidget(m_view);
     setLayout(layout);
     setMinimumWidth(700);

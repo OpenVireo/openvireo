@@ -5,14 +5,5 @@
 # stand-alone Fluent window or a Stepper wizard, and leaves this list then.
 # Don't add forms to it: use the Vault* drop-ins from gui/vault/VaultControls.h.
 
-# Stand-alone Fluent windows
-src/autotype/AutoTypeSelectDialog.ui
-src/autotype/PickcharsDialog.ui
-src/browser/BrowserEntrySaveDialog.ui
-src/fdosecrets/widgets/AccessControlDialog.ui
-# Already Fluent; the stock buttons are hidden and only hold the labels and logic
-src/browser/BrowserAccessControlDialog.ui
-src/browser/BrowserPasskeysConfirmationDialog.ui
-
 # Stepper wizards
 src/gui/account/SignUpWizard.ui

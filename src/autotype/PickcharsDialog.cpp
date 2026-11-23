@@ -20,12 +20,13 @@
 
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultControls.h"
 
 #include <QPushButton>
 #include <QShortcut>
 
 PickcharsDialog::PickcharsDialog(const QString& string, QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::PickcharsDialog())
 {
     if (string.isEmpty()) {
@@ -50,7 +51,7 @@ PickcharsDialog::PickcharsDialog(const QString& string, QWidget* parent)
 
     int count = 0;
     for (const auto& ch : string) {
-        auto btn = new QPushButton(QString::number(count + 1));
+        auto btn = new VaultButton(QString::number(count + 1));
         btn->setProperty("char", ch);
         btn->setProperty("count", count);
         connect(btn, &QPushButton::clicked, this, &PickcharsDialog::charSelected);
@@ -63,6 +64,11 @@ PickcharsDialog::PickcharsDialog(const QString& string, QWidget* parent)
         m_ui->charsGrid->addItem(new QSpacerItem(5, 5, QSizePolicy::MinimumExpanding), count / width, count % width);
     }
     m_ui->charsGrid->itemAtPosition(0, 0)->widget()->setFocus();
+
+    // Pops up over whatever application is to be typed into: a Fluent window of its own
+    setPresentation(OwnWindow);
+    setMaximumDialogWidth(720);
+    setCommands(m_ui->buttonBox);
 
     connect(m_ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(m_ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -150,7 +156,7 @@ void PickcharsDialog::charSelected()
 
 void PickcharsDialog::showEvent(QShowEvent* event)
 {
-    QDialog::showEvent(event);
+    VaultDialog::showEvent(event);
 
     GuiTools::centerWidgetOnActiveScreen(this);
 }

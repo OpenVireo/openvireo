@@ -22,7 +22,8 @@
 
 #include <QAbstractTableModel>
 #include <QCheckBox>
-#include <QDialog>
+#include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultDialog.h"
 #include <QPixmap>
 #include <QPointer>
 #include <QPushButton>
@@ -52,7 +53,7 @@ enum class AuthOption
 Q_DECLARE_FLAGS(AuthOptions, AuthOption);
 Q_DECLARE_OPERATORS_FOR_FLAGS(AuthOptions);
 
-class AccessControlDialog : public QDialog
+class AccessControlDialog : public VaultDialog
 {
     Q_OBJECT
 
@@ -125,7 +126,7 @@ private:
     QSet<QUuid> m_selected;
 };
 
-class AccessControlDialog::DenyButton : public QPushButton
+class AccessControlDialog::DenyButton : public VaultButton
 {
     Q_OBJECT
 

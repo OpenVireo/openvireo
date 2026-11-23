@@ -46,7 +46,7 @@ enum MENU_FIELD
 };
 
 AutoTypeSelectDialog::AutoTypeSelectDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::AutoTypeSelectDialog())
     , m_lastMatch(nullptr, QString())
 {
@@ -88,9 +88,16 @@ AutoTypeSelectDialog::AutoTypeSelectDialog(QWidget* parent)
     m_actionMenu->installEventFilter(this);
     m_ui->action->setMenu(m_actionMenu);
     m_ui->action->installEventFilter(this);
-    connect(m_ui->action, &QToolButton::clicked, this, &AutoTypeSelectDialog::activateCurrentMatch);
+    connect(m_ui->action, &QAbstractButton::clicked, this, &AutoTypeSelectDialog::activateCurrentMatch);
+    m_ui->action->setFluentStyle(fluent::basicinput::Button::Accent);
 
     connect(m_ui->cancelButton, SIGNAL(clicked()), SLOT(reject()));
+
+    // Pops up over whatever application is to be typed into: a Fluent window of its own
+    setPresentation(OwnWindow);
+    setMaximumDialogWidth(720);
+    setCommands(QList<QAbstractButton*>{m_ui->action, m_ui->cancelButton});
+    setInitialFocus(m_ui->search);
 
     auto sortColumn = config()->get(Config::AutoTypeDialogSortColumn).toInt();
     auto sortOrder = config()->get(Config::AutoTypeDialogSortOrder).toInt();
@@ -409,7 +416,7 @@ void AutoTypeSelectDialog::buildActionMenu()
 
 void AutoTypeSelectDialog::showEvent(QShowEvent* event)
 {
-    QDialog::showEvent(event);
+    VaultDialog::showEvent(event);
 
     // Resize to last used size
     QSize size = config()->get(Config::GUI_AutoTypeSelectDialogSize).toSize();

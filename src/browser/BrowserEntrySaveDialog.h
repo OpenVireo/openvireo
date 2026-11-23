@@ -19,6 +19,8 @@
 #ifndef KEEPASSXC_BROWSERENTRYSAVEDIALOG_H
 #define KEEPASSXC_BROWSERENTRYSAVEDIALOG_H
 
+#include "gui/vault/VaultDialog.h"
+
 #include "gui/DatabaseTabWidget.h"
 
 class QListWidgetItem;
@@ -30,7 +32,7 @@ namespace Ui
     class BrowserEntrySaveDialog;
 }
 
-class BrowserEntrySaveDialog : public QDialog
+class BrowserEntrySaveDialog : public VaultDialog
 {
     Q_OBJECT
 

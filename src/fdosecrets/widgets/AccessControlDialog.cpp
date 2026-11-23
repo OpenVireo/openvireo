@@ -26,6 +26,9 @@
 #include "core/Entry.h"
 #include "core/Global.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultControls.h"
+
+#include <QBoxLayout>
 
 #include <QWindow>
 
@@ -36,7 +39,8 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
                                          const QString& app,
                                          const FdoSecrets::PeerInfo& info,
                                          AuthOptions authOptions)
-    : m_ui(new Ui::AccessControlDialog())
+    : VaultDialog(nullptr)
+    , m_ui(new Ui::AccessControlDialog())
     , m_rememberCheck()
     , m_model(new EntryModel(entries))
     , m_decisions()
@@ -49,6 +53,9 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
         window->setTransientParent(parent);
     }
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+    // A request from another program: a Fluent window of its own, never a card over the main window
+    setPresentation(OwnWindow);
+    setMaximumDialogWidth(640);
 
     connect(this, &QDialog::finished, this, &AccessControlDialog::dialogFinished);
 
@@ -74,21 +81,30 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
 
     setupDetails(info);
 
-    // the button box
+    // Remember and Details sit above the commands, which are the button box's
     QString detailsButtonText = tr("Details");
-    auto detailsButton =
-        m_ui->buttonBox->addButton(detailsButtonText + QStringLiteral(" >>"), QDialogButtonBox::HelpRole);
+    auto detailsButton = new VaultButton(detailsButtonText, this);
+    detailsButton->setObjectName("detailsButton");
     detailsButton->setCheckable(true);
+    detailsButton->setFluentStyle(fluent::basicinput::Button::Subtle);
 
     QString tooltip = QStringLiteral("<p align='justify'>%1</p>")
                           .arg(tr("Your decision will be remembered for the duration while both the requesting client "
                                   "AND OpenVireo are running."));
 
-    m_rememberCheck = new QCheckBox(tr("Remember"), this);
+    m_rememberCheck = new VaultCheckBox(tr("Remember"), this);
     m_rememberCheck->setObjectName("rememberCheck"); // for testing
     m_rememberCheck->setChecked(true);
-    m_ui->buttonBox->addButton(m_rememberCheck, QDialogButtonBox::ActionRole);
     m_rememberCheck->setToolTip(tooltip);
+
+    auto options = new QHBoxLayout();
+    options->setContentsMargins(0, 0, 0, 0);
+    options->addWidget(m_rememberCheck);
+    options->addStretch();
+    options->addWidget(detailsButton);
+    auto dialogLayout = qobject_cast<QVBoxLayout*>(layout());
+    Q_ASSERT(dialogLayout);
+    dialogLayout->insertLayout(dialogLayout->count() - 1, options);
 
     auto allowButton = m_ui->buttonBox->addButton(tr("Allow Selected"), QDialogButtonBox::AcceptRole);
     allowButton->setDefault(true);
@@ -98,17 +114,13 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
 
     auto allowAllButton = m_ui->buttonBox->addButton(tr("Allow All && &Future"), QDialogButtonBox::AcceptRole);
     allowAllButton->setToolTip(tooltip);
+    setCommands(m_ui->buttonBox);
 
     connect(cancelButton, &QPushButton::clicked, this, [this]() { done(DenyAll); });
     connect(allowButton, &QPushButton::clicked, this, [this]() { done(AllowSelected); });
     connect(allowAllButton, &QPushButton::clicked, this, [this]() { done(AllowAll); });
-    connect(detailsButton, &QPushButton::clicked, this, [this, detailsButton, detailsButtonText](bool checked) {
+    connect(detailsButton, &QPushButton::toggled, this, [this](bool checked) {
         m_ui->detailsContainer->setVisible(checked);
-        if (checked) {
-            detailsButton->setText(detailsButtonText + QStringLiteral(" <<"));
-        } else {
-            detailsButton->setText(detailsButtonText + QStringLiteral(" >>"));
-        }
         adjustSize();
     });
 
@@ -130,7 +142,7 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
     // adjust size after we initialize the button box
     adjustSize();
 
-    allowButton->setFocus();
+    setInitialFocus(m_ui->itemsTable);
 }
 
 AccessControlDialog::~AccessControlDialog() = default;
@@ -295,7 +307,7 @@ bool AccessControlDialog::EntryModel::removeRows(int row, int count, const QMode
 }
 
 AccessControlDialog::DenyButton::DenyButton(QWidget* p, const QModelIndex& idx)
-    : QPushButton(p)
+    : VaultButton(p)
     , m_index(idx)
     , m_uuid()
 {

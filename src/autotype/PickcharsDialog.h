@@ -18,14 +18,14 @@
 #ifndef KEEPASSXC_PICKCHARSDIALOG_H
 #define KEEPASSXC_PICKCHARSDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 
 namespace Ui
 {
     class PickcharsDialog;
 }
 
-class PickcharsDialog : public QDialog
+class PickcharsDialog : public VaultDialog
 {
     Q_OBJECT
 

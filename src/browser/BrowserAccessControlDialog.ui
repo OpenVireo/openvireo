@@ -84,7 +84,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="allowButton">
+      <widget class="VaultButton" name="allowButton">
        <property name="accessibleName">
         <string>Allow access to entries</string>
        </property>
@@ -100,7 +100,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="denyButton">
+      <widget class="VaultButton" name="denyButton">
        <property name="text">
         <string>Deny All</string>
        </property>
@@ -129,6 +129,11 @@
    <extends>QTableWidget</extends>
    <header>browser/CustomTableWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

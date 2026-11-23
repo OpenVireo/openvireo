@@ -131,7 +131,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="VaultButton" name="cancelButton">
        <property name="text">
         <string>Cancel</string>
        </property>
@@ -141,14 +141,14 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="updateButton">
+      <widget class="VaultButton" name="updateButton">
        <property name="text">
         <string>Update</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="confirmButton">
+      <widget class="VaultButton" name="confirmButton">
        <property name="text">
         <string>Authenticate</string>
        </property>
@@ -158,6 +158,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

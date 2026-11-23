@@ -23,7 +23,7 @@
 #include "gui/GuiTools.h"
 
 BrowserEntrySaveDialog::BrowserEntrySaveDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::BrowserEntrySaveDialog())
 {
     this->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
@@ -31,6 +31,14 @@ BrowserEntrySaveDialog::BrowserEntrySaveDialog(QWidget* parent)
     m_ui->setupUi(this);
     connect(m_ui->okButton, SIGNAL(clicked()), this, SLOT(accept()));
     connect(m_ui->cancelButton, SIGNAL(clicked()), this, SLOT(reject()));
+
+    // Asked for by the browser: a Fluent window of its own, as the access request is
+    setPresentation(OwnWindow);
+    setWindowTitle(tr("Select Database"));
+    m_ui->okButton->setText(tr("Save"));
+    m_ui->okButton->setDefault(true);
+    setCommands(QList<QAbstractButton*>{m_ui->okButton, m_ui->cancelButton});
+    setInitialFocus(m_ui->itemsList);
 
     m_ui->itemsList->setSelectionMode(QAbstractItemView::SingleSelection);
     m_ui->label->setText(QString(tr("You have multiple databases open.\n"
@@ -43,7 +51,7 @@ BrowserEntrySaveDialog::~BrowserEntrySaveDialog()
 
 void BrowserEntrySaveDialog::showEvent(QShowEvent* event)
 {
-    QDialog::showEvent(event);
+    VaultDialog::showEvent(event);
     GuiTools::centerWidgetOnActiveScreen(this);
 }
 

@@ -20,7 +20,7 @@
 #define KEEPASSX_AUTOTYPESELECTDIALOG_H
 
 #include "autotype/AutoTypeMatch.h"
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QTimer>
 
 class Database;
@@ -31,7 +31,7 @@ namespace Ui
     class AutoTypeSelectDialog;
 }
 
-class AutoTypeSelectDialog : public QDialog
+class AutoTypeSelectDialog : public VaultDialog
 {
     Q_OBJECT
 

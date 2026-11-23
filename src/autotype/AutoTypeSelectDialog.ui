@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Auto-Type - OpenVireo</string>
+   <string>Auto-Type</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="topMargin">
@@ -142,7 +142,7 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="searchCheckBox">
+       <widget class="VaultCheckBox" name="searchCheckBox">
         <property name="text">
          <string>Search all open databases</string>
         </property>
@@ -165,7 +165,7 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="search">
+    <widget class="VaultLineEdit" name="search">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -205,17 +205,14 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
       </spacer>
      </item>
      <item>
-      <widget class="QToolButton" name="action">
+      <widget class="VaultSplitButton" name="action">
        <property name="text">
         <string>Type Sequence</string>
-       </property>
-       <property name="popupMode">
-        <enum>QToolButton::MenuButtonPopup</enum>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="VaultButton" name="cancelButton">
        <property name="text">
         <string>Cancel</string>
        </property>
@@ -233,6 +230,26 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
    <class>AutoTypeMatchView</class>
    <extends>QTableView</extends>
    <header>autotype/AutoTypeMatchView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultSplitButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
