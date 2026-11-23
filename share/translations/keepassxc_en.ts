@@ -3123,6 +3123,10 @@ This may prevent connection to the browser plugin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No stored keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Do you really want to disconnect all browsers?
 This may prevent connection to the browser plugin.</source>
         <translation type="unfinished"></translation>
@@ -5332,6 +5336,10 @@ Would you like to correct it?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No custom icons yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Apply to this group only</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5437,6 +5445,10 @@ Would you like to correct it?</source>
     </message>
     <message>
         <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No plugin data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6811,17 +6823,6 @@ The command has to exit. In case of `sftp` as last commend `exit` has to be sent
     </message>
     <message>
         <source>This account server has no share page.</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>KMessageWidget</name>
-    <message>
-        <source>&amp;Close</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Close message</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -8925,6 +8926,10 @@ Name of the vault:</source>
     </message>
     <message>
         <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No passkeys to export</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -13344,6 +13349,14 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No applications are connected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No databases are open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>&lt;b&gt;Warning:&lt;/b&gt; </source>
         <translation type="unfinished"></translation>
     </message>
@@ -14663,6 +14676,13 @@ Example: JBSWY3DPEHPK3PXP</source>
     </message>
     <message>
         <source>Check the entries before they are imported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultInfoBar</name>
+    <message>
+        <source>Close message</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
