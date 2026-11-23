@@ -1697,6 +1697,13 @@
     </message>
 </context>
 <context>
+    <name>AutoTypeMatchView</name>
+    <message>
+        <source>No matching entries</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>AutoTypePlatformWayland</name>
     <message>
         <source>No symbol found for key: &apos;%1&apos;</source>
@@ -2691,6 +2698,10 @@ Do you want to overwrite the passkey in %1 - %2?</source>
     </message>
     <message>
         <source>Failed to parse CSV file: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a CSV file to preview its rows</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4511,6 +4522,10 @@ Disable safe saves and try again?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No window associations yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Type the username and password into another window with a global shortcut</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4535,6 +4550,10 @@ Disable safe saves and try again?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No additional URLs yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>&lt;empty URL&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4552,6 +4571,10 @@ Disable safe saves and try again?</source>
     </message>
     <message>
         <source>History</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No earlier versions yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5669,6 +5692,10 @@ This may cause the affected plugins to malfunction.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No attachments yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Select files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6086,18 +6113,6 @@ Would you like to overwrite the existing attachment?</source>
 </context>
 <context>
     <name>EntryView</name>
-    <message>
-        <source>Fit to window</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Fit to contents</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Reset to defaults</source>
-        <translation type="unfinished"></translation>
-    </message>
     <message numerus="yes">
         <source>+ %1 entry(s)...</source>
         <translation type="unfinished">
@@ -6320,6 +6335,10 @@ You can enable the DuckDuckGo website icon service in the security section of th
     </message>
     <message>
         <source>Status</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No URLs to download icons from</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8507,6 +8526,10 @@ Name of the vault:</source>
     </message>
     <message>
         <source>Details</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No changes to merge</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -13584,6 +13607,10 @@ This option is deprecated, use --set-key-file instead.</source>
     </message>
     <message>
         <source>Read only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only you have access so far</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
