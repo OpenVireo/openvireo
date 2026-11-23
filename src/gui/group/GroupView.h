@@ -36,7 +36,6 @@ public:
     void setCurrentGroup(Group* group);
     void expandGroup(Group* group, bool expand = true);
     void sortGroups(bool reverse = false);
-    void setNavigationStyle(bool enabled);
 
 signals:
     void groupSelectionChanged();
@@ -61,8 +60,6 @@ private:
 
     GroupModel* const m_model;
     bool m_updatingExpanded;
-    // Vault Index layout: draw groups as Fluent navigation items
-    bool m_navigationStyle = false;
 };
 
 #endif // KEEPASSX_GROUPVIEW_H

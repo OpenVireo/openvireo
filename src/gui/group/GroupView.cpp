@@ -21,7 +21,6 @@
 #include <QDragMoveEvent>
 #include <QMimeData>
 #include <QPainter>
-#include <QPainterPath>
 #include <QShortcut>
 #include <QStyledItemDelegate>
 
@@ -29,6 +28,7 @@
 #include "core/Group.h"
 #include "gui/group/GroupModel.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultTable.h"
 
 #include <FluentQt/Foundation.h>
 
@@ -139,6 +139,15 @@ GroupView::GroupView(Database* db, QWidget* parent)
 
     modelReset();
 
+    // Groups are Fluent navigation items on the navigation pane's surface
+    setItemDelegate(new GroupNavItemDelegate(m_model, this));
+    setFrameShape(QFrame::NoFrame);
+    setIndentation(16);
+    setMouseTracking(true);
+    viewport()->setAttribute(Qt::WA_Hover);
+    viewport()->setAutoFillBackground(false);
+    Vault::useFluentScrollBars(this);
+
     setDragEnabled(true);
     viewport()->setAcceptDrops(true);
     setDropIndicatorShown(true);
@@ -177,49 +186,13 @@ void GroupView::changeDatabase(const QSharedPointer<Database>& newDb)
     setColumnWidth(0, sizeHintForColumn(0));
 }
 
-void GroupView::setNavigationStyle(bool enabled)
-{
-    if (m_navigationStyle == enabled) {
-        return;
-    }
-    m_navigationStyle = enabled;
-
-    setItemDelegate(enabled ? new GroupNavItemDelegate(m_model, this) : new QStyledItemDelegate(this));
-    setFrameShape(enabled ? QFrame::NoFrame : QFrame::StyledPanel);
-    setIndentation(enabled ? 16 : style()->pixelMetric(QStyle::PM_TreeViewIndentation, nullptr, this));
-    setMouseTracking(enabled);
-    viewport()->setAttribute(Qt::WA_Hover, enabled);
-    // Let the navigation pane's surface show through
-    viewport()->setAutoFillBackground(!enabled);
-}
-
 void GroupView::drawRow(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    if (!m_navigationStyle) {
-        QTreeView::drawRow(painter, option, index);
-        return;
-    }
-
-    const auto p = FluentTheme::palette();
     const bool selected = selectionModel()->isSelected(index);
     const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
-
-    painter->save();
-    painter->setRenderHint(QPainter::Antialiasing);
-    QRectF row = QRectF(option.rect).adjusted(4, 2, -4, -2);
-    if (selected || hovered) {
-        QPainterPath path;
-        path.addRoundedRect(row, 4, 4);
-        painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
-        FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
-    }
     // The root's chevron sits where the pill would, so the root shows only the highlight
-    if (selected && index.parent().isValid()) {
-        QPainterPath pill;
-        pill.addRoundedRect(QRectF(row.left(), row.center().y() - 8, 3, 16), 1.5, 1.5);
-        painter->fillPath(pill, p.accent);
-    }
-    painter->restore();
+    Vault::paintNavigationRow(
+        painter, QRectF(option.rect).adjusted(4, 2, -4, -2), selected, hovered, index.parent().isValid());
 
     // The style must not paint its own selection or hover highlight over ours
     QStyleOptionViewItem plain(option);
@@ -229,11 +202,6 @@ void GroupView::drawRow(QPainter* painter, const QStyleOptionViewItem& option, c
 
 void GroupView::drawBranches(QPainter* painter, const QRect& rect, const QModelIndex& index) const
 {
-    if (!m_navigationStyle) {
-        QTreeView::drawBranches(painter, rect, index);
-        return;
-    }
-
     if (!model()->hasChildren(index)) {
         return;
     }

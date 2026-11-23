@@ -1231,7 +1231,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 
     m_entryView = new EntryView(m_mainWidget);
     m_entryView->setListMode(true);
-    m_groupView->setNavigationStyle(true);
 
     auto navPane = new VaultNavPane(m_groupSplitter, m_mainSplitter);
     m_vaultNavPane = navPane;

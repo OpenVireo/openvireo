@@ -21,9 +21,67 @@
 #include "core/Database.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
+#include "gui/vault/VaultWidgets.h"
 
 #include <QMenu>
+#include <QPainter>
+#include <QStyledItemDelegate>
+
+namespace
+{
+    constexpr int TagRowHeight = 32;
+
+    // A tag as a navigation item on the navigation pane, matching the groups above it
+    class TagNavItemDelegate : public QStyledItemDelegate
+    {
+    public:
+        using QStyledItemDelegate::QStyledItemDelegate;
+
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            auto size = QStyledItemDelegate::sizeHint(option, index);
+            size.setHeight(TagRowHeight);
+            return size;
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            const auto p = FluentTheme::palette();
+            const bool selected = option.state.testFlag(QStyle::State_Selected);
+            const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
+            const QRectF row = QRectF(option.rect).adjusted(4, 2, -4, -2);
+            Vault::paintNavigationRow(painter, row, selected, hovered);
+
+            painter->save();
+            const bool focused = option.state.testFlag(QStyle::State_HasFocus) && option.widget
+                                 && option.widget->hasFocus() && !selected;
+            if (focused) {
+                // Moving through the tags with Ctrl held changes focus without selecting
+                painter->setRenderHint(QPainter::Antialiasing);
+                painter->setPen(QPen(p.focus, 2));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawRoundedRect(row.adjusted(1, 1, -1, -1), 4, 4);
+            }
+            QRect rect = option.rect.adjusted(16, 0, -12, 0);
+            const auto icon = index.data(Qt::DecorationRole).value<QIcon>();
+            if (!icon.isNull()) {
+                icon.paint(painter, QRect(rect.left(), rect.center().y() - 8, 16, 16));
+            }
+            rect.setLeft(rect.left() + 28);
+            const auto font = Vault::font(Typography::FontRole::Body);
+            painter->setFont(font);
+            painter->setPen(option.state.testFlag(QStyle::State_Enabled) ? p.text : p.textDisabled);
+            painter->drawText(rect,
+                              Qt::AlignLeft | Qt::AlignVCenter,
+                              QFontMetrics(font).elidedText(
+                                  index.data(Qt::DisplayRole).toString(), Qt::ElideRight, rect.width()));
+            painter->restore();
+        }
+    };
+} // namespace
 
 TagView::TagView(QWidget* parent)
     : QListView(parent)
@@ -34,6 +92,10 @@ TagView::TagView(QWidget* parent)
     setSelectionMode(QListView::ExtendedSelection);
     setSelectionBehavior(QListView::SelectRows);
     setContextMenuPolicy(Qt::CustomContextMenu);
+    setItemDelegate(new TagNavItemDelegate(this));
+    setMouseTracking(true);
+    viewport()->setAttribute(Qt::WA_Hover);
+    Vault::useFluentScrollBars(this);
 
     connect(this, &QListView::customContextMenuRequested, this, &TagView::contextMenuRequested);
 }
