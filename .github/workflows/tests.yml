@@ -152,11 +152,12 @@ jobs:
         export PATH="$PWD/vcpkg_installed/x64-windows-release/bin:$PATH"
         ctest --output-on-failure --timeout 900 && exit 0
         # ctest captures nothing from the tests here, so rerun each failed one with QtTest writing to a file
-        for name in $(cut -d: -f2 Testing/Temporary/LastTestsFailed.log); do
+        for name in $(tr -d '\r' < Testing/Temporary/LastTestsFailed.log | cut -d: -f2); do
           exe=$(find tests -name "$name.exe" | head -1)
           [ -n "$exe" ] || continue
           echo "::group::$name"
-          "$exe" -o "$name.txt,txt" || true
+          code=0; "$exe" -o "$name.txt,txt" || code=$?
+          echo "$name exited with $code"
           cat "$name.txt" 2>/dev/null | grep -vE '^PASS ' || echo "(no output)"
           echo "::endgroup::"
         done

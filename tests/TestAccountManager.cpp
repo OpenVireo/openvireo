@@ -1407,7 +1407,10 @@ void TestAccountManager::testOfflineUnlockFromCache()
     QVERIFY(!coreCache.contains("Mine"));
     QVERIFY(!coreCache.contains(toBase64Url(manager->keyset().encSk).toUtf8()));
     QVERIFY(!coreCache.contains(AccountManager::storedSecretKey(ServerId, Email).toUtf8()));
+#ifndef Q_OS_WIN
+    // On Windows the user's profile folder ACL protects the cache; Qt only maps the read-only flag to these bits
     QVERIFY(!(file.permissions() & (QFileDevice::ReadOther | QFileDevice::ReadGroup)));
+#endif
     QVERIFY(manager->hasOfflineCache());
     QVERIFY(!manager->isOffline());
 
