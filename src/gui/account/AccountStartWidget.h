@@ -28,13 +28,15 @@
 
 class AccountController;
 class QVBoxLayout;
+class VaultUnlockShell;
 
 namespace Ui
 {
     class AccountStartWidget;
 }
 
-// A full-width row on the start screen for another way to use KeePassXC: a Fluent glyph and the text, left-aligned
+// A full-width row on the start screen: with a description, a link card as on the web app (a bold title, a line
+// beneath it and a chevron); without one, a known account's row with a Fluent glyph and the text, left-aligned
 class AccountStartOptionButton : public QPushButton
 {
     Q_OBJECT
@@ -43,6 +45,7 @@ public:
     explicit AccountStartOptionButton(QWidget* parent = nullptr);
 
     void setGlyph(const QString& glyph);
+    void setDescription(const QString& description);
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -51,6 +54,7 @@ protected:
 
 private:
     QString m_glyph;
+    QString m_description;
 };
 
 // A one-line label that elides its text to the width it gets, so a long value doesn't widen the card
@@ -131,6 +135,7 @@ private:
     void signOutKnownAccount(const AccountManager::KnownAccount& account);
     void removeKnownAccount(const AccountManager::KnownAccount& account);
     void setSignInFormFor(bool welcomeBack);
+    void updateShell();
     void setBusy(const QString& message);
     void showError(const QString& message);
     void applyTheme();
@@ -147,6 +152,14 @@ private:
     QLabel* m_accountsIntro = nullptr;
     QLabel* m_accountsLink = nullptr;
     QVBoxLayout* m_accountRows = nullptr;
+    // The split layout shared with the unlock screens, as on the web app's sign-in page
+    VaultUnlockShell* m_shell = nullptr;
+    QLabel* m_topLink = nullptr;
+    QWidget* m_divider = nullptr;
+    QList<QWidget*> m_dividerLines;
+    QLabel* m_dividerLabel = nullptr;
+    QFrame* m_callout = nullptr;
+    bool m_welcomeBack = false;
     QString m_signInHeadingText;
     QString m_signInIntroText;
 };

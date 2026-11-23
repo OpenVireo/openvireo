@@ -25,6 +25,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
+#include <QScrollArea>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -190,6 +191,8 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
     , m_heading(new QLabel(m_hero))
     , m_heroText(new QLabel(m_hero))
     , m_steps(new VaultUnlockSteps(m_hero))
+    , m_stepsGap(new QSpacerItem(0, 32, QSizePolicy::Minimum, QSizePolicy::Fixed))
+    , m_scroll(new QScrollArea(this))
     , m_heroFoot(new QLabel(m_hero))
     , m_topRow(new QHBoxLayout())
     , m_contentLayout(new QVBoxLayout())
@@ -221,19 +224,23 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
     hero->addSpacing(20);
     m_heroText->setWordWrap(true);
     hero->addWidget(m_heroText);
-    hero->addSpacing(32);
+    hero->addSpacerItem(m_stepsGap);
     hero->addWidget(m_steps);
     hero->addStretch(1);
     m_heroFoot->setText(tr("Open source under GPLv3"));
     hero->addWidget(m_heroFoot);
     m_hero->setMaximumWidth(720);
 
-    // The column: a top-right link, the form in the middle, the legal links at the bottom
-    auto* column = new QVBoxLayout();
+    // The column: a top-right link, the form in the middle, the legal links at the bottom. It scrolls when a long
+    // form doesn't fit the window's height, and otherwise fills it.
+    auto* columnWidget = new QWidget(m_scroll);
+    columnWidget->setAutoFillBackground(false);
+    auto* column = new QVBoxLayout(columnWidget);
     column->setContentsMargins(40, 32, 40, 24);
     column->setSpacing(0);
     m_topRow->addStretch();
     column->addLayout(m_topRow);
+    column->addSpacing(24);
     column->addStretch(2);
     auto* centre = new QHBoxLayout();
     centre->addStretch();
@@ -241,6 +248,7 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
     centre->addStretch();
     column->addLayout(centre);
     column->addStretch(3);
+    column->addSpacing(32);
     auto* legal = new QHBoxLayout();
     legal->setSpacing(24);
     legal->addStretch();
@@ -249,7 +257,7 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
                                                   {tr("Terms"), Site + "/terms/"},
                                                   {tr("Privacy"), Site + "/privacy/"}};
     for (const auto& link : links) {
-        auto* label = new QLabel(this);
+        auto* label = new QLabel(columnWidget);
         label->setProperty("href", link.second);
         label->setProperty("linkText", link.first);
         label->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
@@ -264,7 +272,14 @@ VaultUnlockShell::VaultUnlockShell(QWidget* parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(m_hero, 21);
-    layout->addLayout(column, 20);
+    m_scroll->setObjectName("vaultUnlockColumn");
+    m_scroll->setFrameShape(QFrame::NoFrame);
+    m_scroll->setWidgetResizable(true);
+    m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_scroll->setWidget(columnWidget);
+    // The viewport paints the column's layer colour (applyTheme), not the window's
+    m_scroll->viewport()->setAutoFillBackground(true);
+    layout->addWidget(m_scroll, 20);
 
     m_steps->setSteps({{tr("Enter your password."), tr("Only on this device.")},
                        {tr("Make your key."), tr("Your password is stretched into the key that opens your vault.")},
@@ -285,9 +300,16 @@ VaultUnlockSteps* VaultUnlockShell::steps() const
     return m_steps;
 }
 
+void VaultUnlockShell::setStepsVisible(bool visible)
+{
+    m_steps->setVisible(visible);
+    m_stepsGap->changeSize(0, visible ? 32 : 0, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    m_hero->layout()->invalidate();
+}
+
 void VaultUnlockShell::setContent(QWidget* content)
 {
-    content->setParent(this);
+    content->setParent(m_scroll->widget());
     content->setMaximumWidth(440);
     content->setMinimumWidth(qMin(360, content->minimumWidth() > 0 ? content->minimumWidth() : 360));
     m_contentLayout->addWidget(content);
@@ -295,7 +317,7 @@ void VaultUnlockShell::setContent(QWidget* content)
 
 void VaultUnlockShell::setTopLink(QWidget* link)
 {
-    link->setParent(this);
+    link->setParent(m_scroll->widget());
     m_topRow->addWidget(link);
 }
 
@@ -356,6 +378,10 @@ void VaultUnlockShell::applyTheme()
         label->setText(
             linkHtml(label->property("href").toString(), label->property("linkText").toString(), p.textSecondary));
     }
+    auto columnPalette = m_scroll->viewport()->palette();
+    columnPalette.setColor(QPalette::Window, p.layer);
+    columnPalette.setColor(QPalette::Base, p.layer);
+    m_scroll->viewport()->setPalette(columnPalette);
     m_steps->applyTheme();
     update();
 }

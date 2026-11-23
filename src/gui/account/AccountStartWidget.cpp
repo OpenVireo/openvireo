@@ -26,6 +26,8 @@
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultMetrics.h"
+#include "gui/vault/VaultUnlockShell.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAction>
@@ -38,24 +40,11 @@
 
 namespace
 {
-    // Start screen layout: the column's widest, the card's padding (less on a narrow window), the option rows'
-    // height, and the inset of their glyph and text
-    constexpr int ColumnWidth = 488;
-    constexpr int CardPadding = 32;
-    constexpr int CompactCardPadding = 20;
+    // Start screen layout: a known account row's height, a link card's height, and the inset of their glyph and text
     constexpr int OptionHeight = 48;
+    constexpr int LinkCardHeight = 68;
     constexpr int OptionPadding = 20;
     constexpr int OptionGlyphSize = 16;
-
-    // Card and option row outline: between the card stroke and the strong stroke, so they read on the canvas
-    QColor outlineColor(const FluentTheme::Palette& p)
-    {
-        auto stroke = p.strokeStrong;
-        if (!p.highContrast) {
-            stroke.setAlphaF(stroke.alphaF() * 0.3);
-        }
-        return stroke;
-    }
 
     QString linkHtml(const QString& text, const QColor& color)
     {
@@ -109,15 +98,27 @@ void AccountStartOptionButton::setGlyph(const QString& glyph)
     update();
 }
 
+void AccountStartOptionButton::setDescription(const QString& description)
+{
+    m_description = description;
+    updateGeometry();
+    update();
+}
+
 QSize AccountStartOptionButton::sizeHint() const
 {
     const QFontMetrics metrics(Vault::font(Typography::FontRole::Body));
+    if (!m_description.isEmpty()) {
+        const QFontMetrics strong(Vault::font(Typography::FontRole::BodyStrong));
+        const int textWidth = qMax(strong.horizontalAdvance(text()), metrics.horizontalAdvance(m_description));
+        return {OptionPadding * 2 + textWidth + 16 + OptionGlyphSize, LinkCardHeight};
+    }
     return {OptionPadding * 2 + OptionGlyphSize + 12 + metrics.horizontalAdvance(text()), OptionHeight};
 }
 
 QSize AccountStartOptionButton::minimumSizeHint() const
 {
-    return {OptionPadding * 2 + OptionGlyphSize, OptionHeight};
+    return {OptionPadding * 2 + OptionGlyphSize, m_description.isEmpty() ? OptionHeight : LinkCardHeight};
 }
 
 void AccountStartOptionButton::paintEvent(QPaintEvent* event)
@@ -127,16 +128,44 @@ void AccountStartOptionButton::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
+    const bool hover = isEnabled() && (isDown() || underMouse());
     QPainterPath path;
-    path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8);
-    painter.fillPath(path, p.layer);
-    if (isEnabled() && (isDown() || underMouse())) {
-        painter.fillPath(path, isDown() ? p.subtlePressed : p.subtleHover);
+    path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), VaultMetrics::PanelRadius, VaultMetrics::PanelRadius);
+    painter.fillPath(path, hover && !isDown() ? p.surface : p.layer);
+    if (isDown()) {
+        painter.fillPath(path, p.subtlePressed);
     }
-    painter.setPen(hasFocus() ? QPen(p.accent, 2) : QPen(outlineColor(p), 1));
+    const auto stroke = p.highContrast ? p.text : hover ? p.strokeStrong : p.stroke;
+    painter.setPen(hasFocus() ? QPen(p.accent, 2) : QPen(stroke, 1));
     painter.drawPath(path);
 
     const auto color = isEnabled() ? p.text : p.textDisabled;
+    if (!m_description.isEmpty()) {
+        // A link card: the title and a line beneath it, and a chevron on the right
+        const QRect chevron(width() - OptionPadding - OptionGlyphSize, 0, OptionGlyphSize, height());
+        const QRect area = rect().adjusted(OptionPadding, 0, -(OptionPadding + OptionGlyphSize + 16), 0);
+        const auto title = Vault::font(Typography::FontRole::BodyStrong);
+        const auto body = Vault::font(Typography::FontRole::Body);
+        const QFontMetrics titleMetrics(title);
+        const QFontMetrics bodyMetrics(body);
+        const int gap = 2;
+        const int top = (height() - titleMetrics.height() - gap - bodyMetrics.height()) / 2;
+        painter.setFont(title);
+        painter.setPen(color);
+        painter.drawText(QRect(area.left(), top, area.width(), titleMetrics.height()),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         titleMetrics.elidedText(text(), Qt::ElideRight, area.width()));
+        painter.setFont(body);
+        painter.setPen(isEnabled() ? p.textSecondary : p.textDisabled);
+        painter.drawText(QRect(area.left(), top + titleMetrics.height() + gap, area.width(), bodyMetrics.height()),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         bodyMetrics.elidedText(m_description, Qt::ElideRight, area.width()));
+        QFont glyphFont(Typography::FontFamily::FluentIcons);
+        glyphFont.setPixelSize(12);
+        painter.setFont(glyphFont);
+        painter.drawText(chevron, Qt::AlignCenter, Typography::Icons::ChevronRight);
+        return;
+    }
     const QRect glyph(OptionPadding, 0, OptionGlyphSize, height());
     QFont glyphFont(Typography::FontFamily::FluentIcons);
     glyphFont.setPixelSize(OptionGlyphSize);
@@ -160,14 +189,84 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
     m_ui->messageWidget->setCloseButtonVisible(true);
     m_ui->busyLabel->setVisible(false);
 
-    // A centered column on the window canvas: the logo, a sign-in card, and the other ways to start beneath it
+    // The split layout of the web app's sign-in page (VaultUnlockShell): a dark panel with a heading for the page,
+    // and the form in the column, with the privacy note and the other ways to start beneath it. The .ui's centred
+    // column moves into the shell; its logo and title are the panel's now, and the card is the bare form.
     Vault::paintCanvas(this);
-    m_ui->scrollArea->viewport()->setAutoFillBackground(false);
-    m_ui->scrollContents->setAutoFillBackground(false);
-    m_ui->logoLabel->setPixmap(icons()->applicationIcon().pixmap(64));
+    m_shell = new VaultUnlockShell(this);
+    m_shell->setStepsVisible(false);
+    m_ui->centerRow->removeWidget(m_ui->column);
+    m_ui->verticalLayout->removeWidget(m_ui->scrollArea);
+    m_ui->scrollArea->hide();
+    m_ui->verticalLayout->addWidget(m_shell);
+    m_shell->setContent(m_ui->column);
+    m_topLink = new QLabel(this);
+    m_topLink->setObjectName("startTopLink");
+    m_shell->setTopLink(m_topLink);
+    connect(m_topLink, &QLabel::linkActivated, this, [this](const QString& link) {
+        m_ui->messageWidget->hideMessage();
+        if (link == QLatin1String("#accounts")) {
+            setSignInFormFor(false);
+            showPage(Page::Accounts);
+        } else if (link == QLatin1String("#create")) {
+            createAccount();
+        } else {
+            showPage(Page::SignIn);
+        }
+    });
+
+    for (auto* widget : std::initializer_list<QWidget*>{m_ui->logoLabel, m_ui->titleLabel, m_ui->subtitleLabel}) {
+        widget->hide();
+    }
+    for (auto* spacer : {m_ui->logoSpacer, m_ui->subtitleSpacer}) {
+        spacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    }
+    m_ui->cardLayout->setContentsMargins(0, 0, 0, 0);
     m_ui->pages->setFrameShape(QFrame::NoFrame);
-    m_ui->selfHostedButton->setGlyph(Typography::Icons::Storage);
-    m_ui->localButton->setGlyph(Typography::Icons::Folder);
+    for (auto* button : {m_ui->signInButton, m_ui->createAccountButton, m_ui->mfaVerifyButton, m_ui->mfaCancelButton,
+                         m_ui->pairButton, m_ui->selfHostedBackButton}) {
+        button->setMinimumHeight(48);
+        Vault::makePill(button);
+    }
+    m_ui->signInButtonSpacer->changeSize(0, 10, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    m_ui->signInIntroSpacer->changeSize(0, 24, QSizePolicy::Minimum, QSizePolicy::Fixed);
+
+    // Beneath the form, as on the web: the privacy note, an "or" divider, and the other ways in as link cards
+    m_ui->optionsLayout->setContentsMargins(0, 0, 0, 0);
+    m_ui->optionsLayout->setSpacing(12);
+    m_ui->optionsLayout->removeItem(m_ui->privacyRow);
+    m_callout = new QFrame(m_ui->optionsWidget);
+    m_callout->setObjectName("startPrivacyNote");
+    m_ui->privacyRow->setContentsMargins(18, 16, 18, 16);
+    m_ui->privacyRow->setSpacing(12);
+    m_callout->setLayout(m_ui->privacyRow);
+    m_ui->privacyIcon->setParent(m_callout);
+    m_ui->localHint->setParent(m_callout);
+    m_ui->privacyIcon->setContentsMargins(0, 2, 0, 0);
+    m_ui->localHint->setText(
+        tr("Only encrypted data and sealed keys leave this device. Without an account, nothing leaves it at all."));
+    m_ui->optionsLayout->insertSpacing(0, 16);
+    m_ui->optionsLayout->insertWidget(1, m_callout);
+
+    m_divider = new QWidget(m_ui->optionsWidget);
+    m_divider->setObjectName("startDivider");
+    auto* dividerLayout = new QHBoxLayout(m_divider);
+    dividerLayout->setContentsMargins(0, 12, 0, 12);
+    dividerLayout->setSpacing(16);
+    for (int i = 0; i < 2; ++i) {
+        auto* line = new QWidget(m_divider);
+        line->setFixedHeight(1);
+        line->setAttribute(Qt::WA_StyledBackground, true);
+        m_dividerLines.append(line);
+    }
+    m_dividerLabel = new QLabel(tr("or"), m_divider);
+    dividerLayout->addWidget(m_dividerLines.at(0), 1, Qt::AlignVCenter);
+    dividerLayout->addWidget(m_dividerLabel);
+    dividerLayout->addWidget(m_dividerLines.at(1), 1, Qt::AlignVCenter);
+    m_ui->optionsLayout->insertWidget(2, m_divider);
+
+    m_ui->selfHostedButton->setDescription(tr("Pair with a server you run yourself"));
+    m_ui->localButton->setDescription(tr("Open a .kdbx file on this device"));
 
     // Labels sit just above their fields, and headings just above their intro
     for (auto* label : {m_ui->emailLabel,
@@ -181,8 +280,12 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
     m_ui->secretKeyHint->setContentsMargins(0, 6, 0, 0);
     for (auto* heading : {m_ui->signInHeading, m_ui->mfaHeading, m_ui->selfHostedHeading}) {
         heading->setContentsMargins(0, 0, 0, 4);
+        heading->setWordWrap(true);
     }
-    m_ui->subtitleLabel->setContentsMargins(0, 4, 0, 0);
+    for (auto* intro : {m_ui->mfaIntro, m_ui->selfHostedIntro}) {
+        intro->setContentsMargins(0, 8, 0, 0);
+    }
+    m_ui->signInIntro->setContentsMargins(0, 8, 0, 0);
     m_ui->busyLabel->setContentsMargins(0, 16, 0, 0);
     m_ui->serverEdit->setVisible(false);
     for (auto* field : {m_ui->emailEdit,
@@ -234,15 +337,10 @@ AccountStartWidget::AccountStartWidget(QWidget* parent)
     connect(addAccount, &QPushButton::clicked, this, &AccountStartWidget::showAddAccount);
     m_ui->pages->addWidget(m_accountsPage);
 
-    m_accountsLink = new QLabel(m_ui->signInPage);
-    m_accountsLink->setObjectName("backToAccountsLink");
-    m_accountsLink->setContentsMargins(0, 12, 0, 0);
-    m_ui->signInPage->layout()->addWidget(m_accountsLink);
-    connect(m_accountsLink, &QLabel::linkActivated, this, [this] {
-        m_ui->messageWidget->hideMessage();
-        setSignInFormFor(false);
-        showPage(Page::Accounts);
-    });
+    m_accountsHeading->setWordWrap(true);
+    m_accountsIntro->setContentsMargins(0, 8, 0, 0);
+    // "Back to your accounts" is the column's top-right link, as on the web
+    m_accountsLink = m_topLink;
 
     Vault::followTheme(this, [this] { applyTheme(); });
 
@@ -316,11 +414,6 @@ void AccountStartWidget::showEvent(QShowEvent* event)
 
 void AccountStartWidget::resizeEvent(QResizeEvent* event)
 {
-    // A narrow window gives the card's fields more of its width
-    const auto margins = m_ui->scrollLayout->contentsMargins();
-    const int column = qMin(ColumnWidth, width() - margins.left() - margins.right());
-    const int padding = column < 400 ? CompactCardPadding : CardPadding;
-    m_ui->cardLayout->setContentsMargins(padding, padding, padding, padding - 4);
     QWidget::resizeEvent(event);
 }
 
@@ -330,10 +423,10 @@ void AccountStartWidget::applyTheme()
     Vault::styleLabel(m_ui->titleLabel, Typography::FontRole::Title, p.text);
     Vault::styleLabel(m_ui->subtitleLabel, Typography::FontRole::Body, p.textSecondary);
     for (auto* heading : {m_ui->signInHeading, m_ui->mfaHeading, m_ui->selfHostedHeading, m_accountsHeading}) {
-        Vault::styleLabel(heading, Typography::FontRole::Subtitle, p.text);
+        Vault::styleHeading(heading, 40, p.text);
     }
     for (auto* intro : {m_ui->signInIntro, m_ui->mfaIntro, m_ui->selfHostedIntro, m_accountsIntro}) {
-        Vault::styleLabel(intro, Typography::FontRole::Body, p.textSecondary);
+        Vault::styleLabel(intro, Typography::FontRole::BodyLarge, p.textSecondary);
     }
     for (auto* label : {m_ui->emailLabel,
                         m_ui->passwordLabel,
@@ -351,8 +444,6 @@ void AccountStartWidget::applyTheme()
 
     Vault::styleLabel(m_ui->secretKeyLink, Typography::FontRole::Body, p.accentText);
     m_ui->secretKeyLink->setText(linkHtml(tr("Use a different Secret Key"), p.accentText));
-    Vault::styleLabel(m_accountsLink, Typography::FontRole::Caption, p.accentText);
-    m_accountsLink->setText(linkHtml(tr("Back to your accounts"), p.accentText));
     Vault::styleLabel(m_ui->recoverLink, Typography::FontRole::Caption, p.accentText);
     m_ui->recoverLink->setText(linkHtml(tr("Can't sign in? Lost your password or Emergency Kit"), p.accentText));
     Vault::styleLabel(m_ui->serverLabel, Typography::FontRole::Caption, p.textSecondary);
@@ -369,13 +460,24 @@ void AccountStartWidget::applyTheme()
     m_ui->serverChangeLink->setText(linkHtml(tr("Change"), p.accentText));
     Vault::styleLabel(m_ui->serverIcon, Typography::FontRole::Caption, p.textSecondary);
     setGlyph(m_ui->serverIcon, Typography::Icons::World, 14);
-    Vault::styleLabel(m_ui->privacyIcon, Typography::FontRole::Caption, p.textSecondary);
-    setGlyph(m_ui->privacyIcon, Typography::Icons::Shield, 14);
+    Vault::styleLabel(m_ui->privacyIcon, Typography::FontRole::Body, p.accentText);
+    setGlyph(m_ui->privacyIcon, Typography::Icons::Shield, 16);
+    Vault::styleLabel(m_ui->localHint, Typography::FontRole::Body, p.textSecondary);
+    m_callout->setStyleSheet(QStringLiteral("QFrame#startPrivacyNote { background-color: %1; border: %2;"
+                                            " border-radius: %3px; }")
+                                 .arg(p.canvas.name(QColor::HexArgb),
+                                      p.highContrast ? QStringLiteral("1px solid %1").arg(p.text.name())
+                                                     : QStringLiteral("none"))
+                                 .arg(VaultMetrics::PanelRadius));
+    Vault::styleLabel(m_dividerLabel, Typography::FontRole::Caption, p.textTertiary);
+    for (auto* line : m_dividerLines) {
+        line->setStyleSheet(QStringLiteral("background-color: %1;").arg((p.highContrast ? p.text : p.stroke).name()));
+    }
 
-    m_ui->card->setStyleSheet(QStringLiteral("QFrame#card { background-color: %1; border: 1px solid %2;"
-                                             " border-radius: 8px; }"
-                                             "QStackedWidget#pages { background: transparent; border: none; }")
-                                  .arg(p.layer.name(QColor::HexArgb), outlineColor(p).name(QColor::HexArgb)));
+    // The bare form in the column: no card around it
+    m_ui->card->setStyleSheet(QStringLiteral("QFrame#card { background: transparent; border: none; }"
+                                             "QStackedWidget#pages { background: transparent; border: none; }"));
+    updateShell();
     m_ui->selfHostedButton->update();
     m_ui->localButton->update();
 }
@@ -421,8 +523,8 @@ void AccountStartWidget::setSignInFormFor(bool welcomeBack)
          std::initializer_list<QWidget*>{m_ui->serverIcon, m_ui->serverLabel, m_ui->serverValueLabel, m_ui->serverChangeLink}) {
         widget->setVisible(!welcomeBack);
     }
-    const bool hasAccounts = m_controller && !m_controller->account()->knownAccounts().isEmpty();
-    m_accountsLink->setVisible(hasAccounts);
+    m_welcomeBack = welcomeBack;
+    updateShell();
 }
 
 void AccountStartWidget::updateAccountsPage()
@@ -609,6 +711,7 @@ void AccountStartWidget::showPage(Page page)
     m_ui->pages->updateGeometry();
     // The other ways to start sit beneath the sign-in card only
     m_ui->optionsWidget->setVisible(page == Page::SignIn || page == Page::Accounts);
+    updateShell();
     switch (page) {
     case Page::Accounts:
         break;
@@ -633,12 +736,83 @@ void AccountStartWidget::showPage(Page page)
     }
 }
 
+void AccountStartWidget::updateShell()
+{
+    if (!m_shell) {
+        return;
+    }
+    const auto page = currentPage();
+    const bool hasAccounts = m_controller && !m_controller->account()->knownAccounts().isEmpty();
+    const bool busy = !m_ui->busyLabel->text().isEmpty();
+
+    // The dark panel's words for each page, as on the web app
+    switch (page) {
+    case Page::Accounts:
+        m_shell->setHero(tr("Accounts"),
+                         tr("Pick up where\nyou left off."),
+                         tr("Accounts stay signed in here, so going back to one takes only its master password."));
+        break;
+    case Page::SelfHosted:
+        m_shell->setHero(tr("Self-hosted"),
+                         tr("Your server,\nyour vaults."),
+                         tr("Pair this device with your own OpenVireo sync server. Everything is still encrypted "
+                            "before it leaves this device."));
+        break;
+    case Page::Mfa:
+    case Page::SignIn:
+        if (m_welcomeBack) {
+            m_shell->setHero(tr("Welcome back"),
+                             tr("Good to see\nyou again."),
+                             tr("Sign in with your master password. Your Secret Key is already saved on this device."));
+        } else {
+            m_shell->setHero(tr("Sign in"),
+                             tr("Your passwords,\nencrypted here."),
+                             tr("Your vaults are decrypted only on your devices. The server holds ciphertext, and "
+                                "nobody there can read it."));
+        }
+        break;
+    }
+
+    // The column's top-right link
+    const auto p = FluentTheme::palette();
+    const auto link = [&p](const QString& href, const QString& text) {
+        return QStringLiteral("<a href=\"%1\" style=\"color: %2; text-decoration: none\"><b>%3</b></a>")
+            .arg(href, p.accentText.name(), text.toHtmlEscaped());
+    };
+    QString top;
+    if (!busy) {
+        switch (page) {
+        case Page::SignIn:
+            top = hasAccounts ? link(QStringLiteral("#accounts"), tr("Back to your accounts"))
+                              : tr("New to OpenVireo?") + QLatin1Char(' ')
+                                    + link(QStringLiteral("#create"), tr("Create account"));
+            break;
+        case Page::SelfHosted:
+            top = tr("Have an account?") + QLatin1Char(' ') + link(QStringLiteral("#signin"), tr("Sign in"));
+            break;
+        case Page::Accounts:
+        case Page::Mfa:
+            break;
+        }
+    }
+    Vault::styleLabel(m_topLink, Typography::FontRole::Body, p.textSecondary);
+    m_topLink->setText(top);
+    m_topLink->setVisible(!top.isEmpty());
+
+    // With no accounts here, creating one is the top-right link; with some, it's a button under the form
+    m_ui->createAccountButton->setVisible(hasAccounts && !m_welcomeBack);
+    m_ui->signInButtonSpacer->changeSize(
+        0, m_ui->createAccountButton->isVisibleTo(m_ui->signInPage) ? 10 : 0, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    m_ui->signInPage->layout()->invalidate();
+}
+
 void AccountStartWidget::setBusy(const QString& message)
 {
     m_ui->busyLabel->setText(message);
     m_ui->busyLabel->setVisible(!message.isEmpty());
     m_ui->pages->setEnabled(message.isEmpty());
     m_ui->optionsWidget->setEnabled(message.isEmpty());
+    updateShell();
     if (!message.isEmpty()) {
         m_ui->messageWidget->hideMessage();
     }

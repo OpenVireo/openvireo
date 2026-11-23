@@ -23,6 +23,8 @@
 
 class QHBoxLayout;
 class QLabel;
+class QScrollArea;
+class QSpacerItem;
 class QVBoxLayout;
 
 /**
@@ -78,6 +80,8 @@ public:
 
     void setHero(const QString& eyebrow, const QString& heading, const QString& text);
     VaultUnlockSteps* steps() const;
+    // Only the unlock screens show the steps; sign-in and the other pages before an account have none
+    void setStepsVisible(bool visible);
     // The form; the shell keeps it at most 440px wide, centred in the column
     void setContent(QWidget* content);
     // Top right of the column, e.g. "Not jdoe? Switch account"
@@ -100,6 +104,8 @@ private:
     QLabel* m_heading;
     QLabel* m_heroText;
     VaultUnlockSteps* m_steps;
+    QSpacerItem* m_stepsGap;
+    QScrollArea* m_scroll;
     QLabel* m_heroFoot;
     QHBoxLayout* m_topRow;
     QVBoxLayout* m_contentLayout;
