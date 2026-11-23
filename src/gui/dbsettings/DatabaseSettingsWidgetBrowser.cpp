@@ -18,6 +18,7 @@
 
 #include "DatabaseSettingsWidgetBrowser.h"
 #include "ui_DatabaseSettingsWidgetBrowser.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -121,6 +122,7 @@ void DatabaseSettingsWidgetBrowser::buildVaultPage()
     ui->customDataTable->horizontalHeader()->setDefaultSectionSize(KeyColumnWidth);
     ui->customDataTable->horizontalHeader()->setHighlightSections(false);
     ui->customDataTable->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    Vault::styleTable(ui->customDataTable, tr("No stored keys"));
     keysLayout->addWidget(ui->customDataTable, 1);
     keysLayout->addWidget(ui->removeCustomDataButton, 0, Qt::AlignTop);
     storedKeys->addWidget(keys);

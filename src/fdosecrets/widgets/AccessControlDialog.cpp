@@ -19,6 +19,7 @@
 
 #include "AccessControlDialog.h"
 #include "ui_AccessControlDialog.h"
+#include "gui/vault/VaultTable.h"
 
 #include "fdosecrets/dbus/DBusClient.h"
 #include "fdosecrets/widgets/RowButtonHelper.h"
@@ -74,6 +75,8 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
     m_ui->itemsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_ui->itemsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_ui->itemsTable->resizeColumnsToContents();
+    Vault::styleTable(m_ui->itemsTable);
+    Vault::styleTable(m_ui->procTree);
 
     // the info widget
     m_ui->exePathWarn->setMessageType(VaultInfoBar::Warning);

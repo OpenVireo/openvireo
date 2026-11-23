@@ -17,6 +17,7 @@
 
 #include "DatabaseSettingsWidgetMaintenance.h"
 #include "ui_DatabaseSettingsWidgetMaintenance.h"
+#include "gui/vault/VaultTable.h"
 
 #include "core/Group.h"
 #include "core/Metadata.h"
@@ -45,6 +46,7 @@ DatabaseSettingsWidgetMaintenance::DatabaseSettingsWidgetMaintenance(QWidget* pa
     m_ui->setupUi(this);
 
     m_ui->customIconsView->setModel(m_customIconModel);
+    Vault::styleTable(m_ui->customIconsView);
 
     connect(m_ui->deleteButton, SIGNAL(clicked()), SLOT(removeCustomIcon()));
     connect(m_ui->purgeButton, SIGNAL(clicked()), SLOT(purgeUnusedCustomIcons()));

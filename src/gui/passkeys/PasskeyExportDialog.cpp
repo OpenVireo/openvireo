@@ -17,6 +17,7 @@
 
 #include "PasskeyExportDialog.h"
 #include "ui_PasskeyExportDialog.h"
+#include "gui/vault/VaultTable.h"
 
 #include "core/Entry.h"
 #include "gui/FileDialog.h"
@@ -32,6 +33,7 @@ PasskeyExportDialog::PasskeyExportDialog(QWidget* parent)
     m_ui->exportButton->setDefault(true);
     setCommands(QList<QAbstractButton*>{m_ui->cancelButton, m_ui->exportButton});
 
+    Vault::styleTable(m_ui->itemsTable, tr("No passkeys to export"));
     connect(m_ui->exportButton, SIGNAL(clicked()), SLOT(accept()));
     connect(m_ui->cancelButton, SIGNAL(clicked()), SLOT(reject()));
     connect(m_ui->itemsTable->selectionModel(),

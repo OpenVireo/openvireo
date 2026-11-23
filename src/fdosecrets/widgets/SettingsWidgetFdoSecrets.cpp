@@ -17,6 +17,7 @@
 
 #include "SettingsWidgetFdoSecrets.h"
 #include "ui_SettingsWidgetFdoSecrets.h"
+#include "gui/vault/VaultTable.h"
 
 #include "fdosecrets/FdoSecretsPlugin.h"
 #include "fdosecrets/FdoSecretsSettings.h"
@@ -250,6 +251,9 @@ SettingsWidgetFdoSecrets::SettingsWidgetFdoSecrets(FdoSecretsPlugin* plugin, QWi
     dbViewHeader->setSectionsClickable(false);
     dbViewHeader->setSectionResizeMode(QHeaderView::Stretch);
     dbViewHeader->setSectionResizeMode(SettingsDatabaseModel::ColumnManage, QHeaderView::ResizeToContents);
+
+    Vault::styleTable(m_ui->tableClients, tr("No applications are connected"));
+    Vault::styleTable(m_ui->tableDatabases, tr("No databases are open"));
 
     // prompt the user to save settings before the sections are enabled
     connect(m_plugin, &FdoSecretsPlugin::secretServiceStarted, this, &SettingsWidgetFdoSecrets::updateServiceState);

@@ -15,20 +15,22 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "gui/vault/VaultTable.h"
+
 #include <QAbstractItemView>
-#include <QStyledItemDelegate>
 
 #include <functional>
 
 namespace
 {
-    class WidgetItemDelegate : public QStyledItemDelegate
+    // Draws the Fluent row behind the cell's editor, like the rest of a table styled with Vault::styleTable()
+    class WidgetItemDelegate : public VaultTableDelegate
     {
         std::function<QWidget*(QWidget*, const QModelIndex&)> m_create;
 
     public:
         explicit WidgetItemDelegate(QObject* parent, std::function<QWidget*(QWidget*, const QModelIndex&)>&& create)
-            : QStyledItemDelegate(parent)
+            : VaultTableDelegate(parent)
             , m_create(std::move(create))
         {
         }

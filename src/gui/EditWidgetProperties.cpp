@@ -17,6 +17,7 @@
 
 #include "EditWidgetProperties.h"
 #include "ui_EditWidgetProperties.h"
+#include "gui/vault/VaultTable.h"
 
 #include "MessageBox.h"
 #include "core/CustomData.h"
@@ -32,6 +33,7 @@ EditWidgetProperties::EditWidgetProperties(QWidget* parent)
     m_ui->setupUi(this);
     m_ui->removeCustomDataButton->setEnabled(false);
     m_ui->customDataTable->setModel(m_customDataModel);
+    Vault::styleTable(m_ui->customDataTable, tr("No plugin data"));
 
     // clang-format off
     connect(m_ui->customDataTable->selectionModel(),

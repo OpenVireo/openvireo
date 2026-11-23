@@ -25,6 +25,7 @@
 #include <QAbstractScrollArea>
 #include <QEvent>
 #include <QHeaderView>
+#include <QListView>
 #include <QLabel>
 #include <QPaintEvent>
 #include <QPainter>
@@ -314,7 +315,10 @@ void Vault::styleTable(QAbstractItemView* view, const QString& emptyText)
         view->setMouseTracking(true);
         view->viewport()->setAttribute(Qt::WA_Hover);
         view->setFrameShape(QFrame::StyledPanel);
-        if (!qobject_cast<VaultTableDelegate*>(view->itemDelegate())) {
+        // Icon grids keep the stock delegate, which lays out a tile per item; rows get the Fluent delegate
+        const auto* list = qobject_cast<QListView*>(view);
+        const bool iconGrid = list && list->viewMode() == QListView::IconMode;
+        if (!iconGrid && !qobject_cast<VaultTableDelegate*>(view->itemDelegate())) {
             view->setItemDelegate(new VaultTableDelegate(view));
         }
         if (auto* table = qobject_cast<QTableView*>(view)) {

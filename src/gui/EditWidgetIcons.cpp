@@ -18,6 +18,7 @@
 
 #include "EditWidgetIcons.h"
 #include "ui_EditWidgetIcons.h"
+#include "gui/vault/VaultTable.h"
 
 #include "core/Clock.h"
 #include "core/Config.h"
@@ -57,6 +58,8 @@ EditWidgetIcons::EditWidgetIcons(QWidget* parent)
 
     m_ui->defaultIconsView->setModel(m_defaultIconModel);
     m_ui->customIconsView->setModel(m_customIconModel);
+    Vault::styleTable(m_ui->defaultIconsView);
+    Vault::styleTable(m_ui->customIconsView, tr("No custom icons yet"));
 
     m_ui->applyIconToPushButton->setMenu(createApplyIconToMenu());
 

@@ -18,6 +18,7 @@
 
 #include "BrowserEntrySaveDialog.h"
 #include "ui_BrowserEntrySaveDialog.h"
+#include "gui/vault/VaultTable.h"
 
 #include "gui/DatabaseWidget.h"
 #include "gui/GuiTools.h"
@@ -41,6 +42,7 @@ BrowserEntrySaveDialog::BrowserEntrySaveDialog(QWidget* parent)
     setInitialFocus(m_ui->itemsList);
 
     m_ui->itemsList->setSelectionMode(QAbstractItemView::SingleSelection);
+    Vault::styleTable(m_ui->itemsList);
     m_ui->label->setText(QString(tr("You have multiple databases open.\n"
                                     "Please select the correct database for saving credentials.")));
 }

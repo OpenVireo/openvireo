@@ -17,6 +17,7 @@
 
 #include "DatabaseSettingsWidgetFdoSecrets.h"
 #include "ui_DatabaseSettingsWidgetFdoSecrets.h"
+#include "gui/vault/VaultTable.h"
 
 #include "fdosecrets/FdoSecretsSettings.h"
 
@@ -116,6 +117,7 @@ void DatabaseSettingsWidgetFdoSecrets::loadSettings(QSharedPointer<Database> db)
 
     m_model.reset(new GroupModelNoRecycle(m_db.data()));
     m_ui->selectGroup->setModel(m_model.data());
+    Vault::styleTable(m_ui->selectGroup);
 
     Group* recycleBin = nullptr;
     if (m_db->metadata() && m_db->metadata()->recycleBin()) {
