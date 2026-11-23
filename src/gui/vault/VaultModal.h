@@ -29,6 +29,11 @@ class QHBoxLayout;
 class QLabel;
 class QPushButton;
 
+namespace fluent::navigation
+{
+    class Stepper;
+}
+
 /**
  * Presents a widget as a modal card over the main window, styled after
  * Slack's preferences: a dimmed backdrop, a rounded card with a title and
@@ -121,32 +126,23 @@ private:
 };
 
 /**
- * Numbered steps down the side of a modal that stands in for a wizard: finished
- * ones carry a check, the current one is outlined in the accent color. A finished
- * step can be clicked to go back to it.
+ * Numbered steps down the side of a modal that stands in for a wizard, as a Fluent Stepper: finished steps carry a
+ * check and the current one is highlighted. A finished step can be clicked to go back to it.
  */
 class VaultStepList : public QWidget
 {
 public:
-    VaultStepList(QStringList titles, QWidget* parent);
+    VaultStepList(QStringList titles, QWidget* parent, Qt::Orientation orientation = Qt::Vertical);
 
     void setCurrent(int current);
+    fluent::navigation::Stepper* stepper() const;
 
     std::function<void(int)> onStepClicked;
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-
 private:
-    QRect rowRect(int index) const;
-    int stepAt(const QPoint& pos) const;
-
     QStringList m_titles;
+    fluent::navigation::Stepper* m_stepper;
     int m_current = 0;
-    int m_hovered = -1;
 };
 
 #endif // KEEPASSXC_VAULTMODAL_H

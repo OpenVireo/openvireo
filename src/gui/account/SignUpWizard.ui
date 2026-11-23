@@ -190,7 +190,7 @@
     <widget class="QLabel" name="busyLabel"/>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel</set>
      </property>
@@ -218,6 +218,11 @@
   <customwidget>
    <class>VaultLineEdit</class>
    <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>

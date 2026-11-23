@@ -1,9 +1,4 @@
 # Forms that may still use stock controls, checked by check-fluent-ui.sh.
 #
-# Every form here is a dialog that Phase 4 of the Fluent-only UI plan redesigns
-# (openvireo-dev-guide plans/fluent-only-ui.md): it becomes a VaultModal card, a
-# stand-alone Fluent window or a Stepper wizard, and leaves this list then.
-# Don't add forms to it: use the Vault* drop-ins from gui/vault/VaultControls.h.
-
-# Stepper wizards
-src/gui/account/SignUpWizard.ui
+# Empty since Phase 4 of the Fluent-only UI plan (openvireo-dev-guide plans/fluent-only-ui.md) redesigned the last
+# dialogs. Don't add forms to it: use the Vault* drop-ins from gui/vault/VaultControls.h.

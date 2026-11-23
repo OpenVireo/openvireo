@@ -24,13 +24,16 @@
 #include "account/AccountManager.h"
 #include "gui/Clipboard.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultModal.h"
 
 #include <QDir>
 #include <QFontDatabase>
+#include <QBoxLayout>
 #include <QPushButton>
+#include <QStackedWidget>
 
 SignUpWizard::SignUpWizard(AccountController* controller, QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::SignUpWizard())
     , m_controller(controller)
 {
@@ -40,6 +43,17 @@ SignUpWizard::SignUpWizard(AccountController* controller, QWidget* parent)
     m_ui->busyLabel->setVisible(false);
     m_ui->serverValue->setText(AccountController::hostedServerUrl());
     m_ui->pages->setCurrentIndex(0);
+    setNamePrefix(QStringLiteral("vaultSignUp"));
+    setMaximumDialogWidth(640);
+    setCommands(m_ui->buttonBox);
+
+    // The two steps as a Fluent stepper above the pages, which hold the wizard's logic
+    m_steps = new VaultStepList({tr("Account"), tr("Secret Key")}, this, Qt::Horizontal);
+    m_steps->setObjectName("signUpSteps");
+    if (auto* layout = qobject_cast<QBoxLayout*>(this->layout())) {
+        layout->insertWidget(0, m_steps);
+    }
+    connect(m_ui->pages, &QStackedWidget::currentChanged, m_steps, [this](int index) { m_steps->setCurrent(index); });
 
     auto font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     font.setPointSize(font.pointSize() + 6);

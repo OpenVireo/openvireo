@@ -18,12 +18,13 @@
 #ifndef KEEPASSXC_SIGNUPWIZARD_H
 #define KEEPASSXC_SIGNUPWIZARD_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QPointer>
 #include <QScopedPointer>
 
 class AccountController;
 class QPushButton;
+class VaultStepList;
 
 namespace Ui
 {
@@ -34,7 +35,7 @@ namespace Ui
  * Creates an OpenVireo account in two steps: the email and master password, then the Secret Key, with
  * Copy and the Emergency Kit to save (EmergencyKitDialog shows it again later). The account is signed in and unlocked when it closes.
  */
-class SignUpWizard : public QDialog
+class SignUpWizard : public VaultDialog
 {
     Q_OBJECT
 
@@ -63,6 +64,7 @@ private:
     const QScopedPointer<Ui::SignUpWizard> m_ui;
     QPointer<AccountController> m_controller;
     QPushButton* m_nextButton;
+    VaultStepList* m_steps;
     QString m_secretKey;
     bool m_registering = false;
     bool m_kitSaved = false;
