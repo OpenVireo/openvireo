@@ -20,7 +20,7 @@
 
 #include "core/Merger.h"
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QMenu>
 
 namespace Ui
@@ -30,7 +30,7 @@ namespace Ui
 
 class Database;
 
-class MergeDialog : public QDialog
+class MergeDialog : public VaultDialog
 {
     Q_OBJECT
 

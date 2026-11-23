@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_PASSKEYEXPORTDIALOG_H
 #define KEEPASSXC_PASSKEYEXPORTDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QTableWidget>
 
 class Entry;
@@ -28,7 +28,7 @@ namespace Ui
     class PasskeyExportDialog;
 }
 
-class PasskeyExportDialog : public QDialog
+class PasskeyExportDialog : public VaultDialog
 {
     Q_OBJECT
 

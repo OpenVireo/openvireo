@@ -18,7 +18,7 @@
 #ifndef KEEPASSX_ICONDOWNLOADERDIALOG_H
 #define KEEPASSX_ICONDOWNLOADERDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QMap>
 #include <QMutex>
 
@@ -33,7 +33,7 @@ namespace Ui
     class IconDownloaderDialog;
 }
 
-class IconDownloaderDialog : public QDialog
+class IconDownloaderDialog : public VaultDialog
 {
     Q_OBJECT
 

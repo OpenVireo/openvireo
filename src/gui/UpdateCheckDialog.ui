@@ -87,21 +87,15 @@
         </widget>
        </item>
        <item>
-        <widget class="QProgressBar" name="progressBar">
+        <widget class="VaultProgressBar" name="progressBar">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimum">
-          <number>0</number>
-         </property>
-         <property name="maximum">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <number>0</number>
+         <property name="isIndeterminate">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -126,7 +120,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -137,6 +131,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultProgressBar</class>
+   <extends>QWidget</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

@@ -20,7 +20,7 @@
 
 #include "account/VaultSharing.h"
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QPointer>
 #include <QScopedPointer>
 
@@ -34,7 +34,7 @@ namespace Ui
  * account by email (after showing that account's fingerprint to compare), changing access, and removing
  * members, which rotates the vault key in the same step.
  */
-class ShareVaultDialog : public QDialog
+class ShareVaultDialog : public VaultDialog
 {
     Q_OBJECT
 
@@ -58,6 +58,7 @@ private slots:
     void updateButtons();
 
 private:
+    void setupVaultLayout();
     void setBusy(const QString& message);
     void finish(bool ok, const QString& error, const QString& success);
     QString selectedPrincipal() const;

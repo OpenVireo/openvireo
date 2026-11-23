@@ -39,14 +39,14 @@
       <enum>QLayout::SetDefaultConstraint</enum>
      </property>
      <item>
-      <widget class="QProgressBar" name="progressBar">
+      <widget class="VaultProgressBar" name="progressBar">
        <property name="value">
         <number>0</number>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="VaultButton" name="cancelButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -137,7 +137,7 @@ You can enable the DuckDuckGo website icon service in the security section of th
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="closeButton">
+    <widget class="VaultButton" name="closeButton">
      <property name="text">
       <string>Close</string>
      </property>
@@ -149,6 +149,18 @@ You can enable the DuckDuckGo website icon service in the security section of th
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultProgressBar</class>
+   <extends>QWidget</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>cancelButton</tabstop>
   <tabstop>tableView</tabstop>

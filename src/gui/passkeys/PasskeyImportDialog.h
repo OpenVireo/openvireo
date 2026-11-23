@@ -20,7 +20,7 @@
 
 #include "core/Database.h"
 #include "core/Group.h"
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QUuid>
 
 namespace Ui
@@ -28,7 +28,7 @@ namespace Ui
     class PasskeyImportDialog;
 }
 
-class PasskeyImportDialog : public QDialog
+class PasskeyImportDialog : public VaultDialog
 {
     Q_OBJECT
 

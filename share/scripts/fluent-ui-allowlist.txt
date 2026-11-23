@@ -14,20 +14,5 @@ src/fdosecrets/widgets/AccessControlDialog.ui
 src/browser/BrowserAccessControlDialog.ui
 src/browser/BrowserPasskeysConfirmationDialog.ui
 
-# VaultModal cards
-src/gui/AboutDialog.ui
-src/gui/CloneDialog.ui
-src/gui/IconDownloaderDialog.ui
-src/gui/MergeDialog.ui
-src/gui/TotpDialog.ui
-src/gui/UpdateCheckDialog.ui
-src/gui/account/ShareVaultDialog.ui
-src/gui/entry/EditEntryAttachmentsDialog.ui
-src/gui/entry/PreviewEntryAttachmentsDialog.ui
-src/gui/passkeys/PasskeyExportDialog.ui
-src/gui/passkeys/PasskeyImportDialog.ui
-src/gui/reports/ReportsDialog.ui
-src/sshagent/OpenSSHKeyGenDialog.ui
-
 # Stepper wizards
 src/gui/account/SignUpWizard.ui

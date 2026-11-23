@@ -34,7 +34,7 @@
 #include <QStandardItemModel>
 
 IconDownloaderDialog::IconDownloaderDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::IconDownloaderDialog())
     , m_dataModel(new QStandardItemModel(this))
 {
@@ -42,6 +42,10 @@ IconDownloaderDialog::IconDownloaderDialog(QWidget* parent)
 
     m_ui->setupUi(this);
     showFallbackMessage(false);
+    setNamePrefix(QStringLiteral("vaultIconDownloader"));
+    setMaximumDialogWidth(720);
+    m_ui->progressBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    setCommands(QList<QAbstractButton*>{m_ui->closeButton});
 
     m_dataModel->clear();
     m_dataModel->setHorizontalHeaderLabels({tr("URL"), tr("Status")});

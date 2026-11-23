@@ -28,13 +28,17 @@
 #include <QShortcut>
 
 TotpDialog::TotpDialog(QWidget* parent, Entry* entry)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::TotpDialog())
     , m_entry(entry)
 {
     setAttribute(Qt::WA_DeleteOnClose);
 
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultTotp"));
+    setMaximumDialogWidth(480);
+    m_ui->progressBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_ui->timerLabel->setAlignment(Qt::AlignHCenter);
 
     m_step = m_entry->totpSettings()->step;
     resetCounter();

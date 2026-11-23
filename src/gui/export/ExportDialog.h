@@ -20,14 +20,14 @@
 
 #include "core/Database.h"
 #include "gui/DatabaseTabWidget.h"
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 
 namespace Ui
 {
     class ExportDialog;
 }
 
-class ExportDialog : public QDialog
+class ExportDialog : public VaultDialog
 {
     Q_OBJECT
 

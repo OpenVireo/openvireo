@@ -25,7 +25,7 @@
 #include <QShortcut>
 
 MergeDialog::MergeDialog(QSharedPointer<Database> source, QSharedPointer<Database> target, QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::MergeDialog())
     , m_headerContextMenu(new VaultMenu())
     , m_sourceDatabase(std::move(source))
@@ -36,6 +36,8 @@ MergeDialog::MergeDialog(QSharedPointer<Database> source, QSharedPointer<Databas
     setWindowModality(Qt::WindowModality::ApplicationModal);
 
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultMerge"));
+    setMaximumDialogWidth(900);
 
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Merge"));
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setFocus();
@@ -48,7 +50,7 @@ MergeDialog::MergeDialog(QSharedPointer<Database> source, QSharedPointer<Databas
 }
 
 MergeDialog::MergeDialog(const Merger::ChangeList& changes, QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::MergeDialog())
     , m_headerContextMenu(new VaultMenu())
     , m_changes(changes)
@@ -56,6 +58,8 @@ MergeDialog::MergeDialog(const Merger::ChangeList& changes, QWidget* parent)
     setAttribute(Qt::WA_DeleteOnClose);
 
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultMerge"));
+    setMaximumDialogWidth(900);
 
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setFocus();
     m_ui->buttonBox->button(QDialogButtonBox::Abort)->hide();

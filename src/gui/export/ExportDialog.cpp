@@ -20,15 +20,42 @@
 
 #include "gui/FileDialog.h"
 #include "gui/HtmlGuiExporter.h"
+#include "gui/vault/VaultSettingsPage.h"
+
+#include <QPushButton>
+
+#include <components/status_info/InfoBar.h>
 
 ExportDialog::ExportDialog(QSharedPointer<const Database> db, DatabaseTabWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::ExportDialog())
     , m_db(std::move(db))
 {
     m_ui->setupUi(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
+    setNamePrefix(QStringLiteral("vaultExport"));
+    setCommands(m_ui->buttonBox);
+    m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Export"));
+
+    // The warning above a settings card for the order
+    {
+        VaultSettingsPage page(this, {});
+        m_ui->messageWidget->hide();
+        using fluent::status_info::InfoBar;
+        auto* warning = new InfoBar(this);
+        warning->setObjectName("exportWarning");
+        warning->setSeverity(InfoBar::Warning);
+        warning->setTitle(tr("Anyone with the file can read your passwords"));
+        warning->setIsClosable(false);
+        warning->setIsOpen(true);
+        warning->setSizePolicy(QSizePolicy::Expanding, warning->sizePolicy().verticalPolicy());
+        page.addWidget(warning);
+        auto* options = page.addSection();
+        options->addSetting(m_ui->sortingStrategyLabel, m_ui->sortingStrategy);
+        m_ui->buttonBox->hide();
+        page.finish();
+    }
 
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
     connect(m_ui->buttonBox, SIGNAL(accepted()), SLOT(exportDatabase()));
@@ -37,11 +64,6 @@ ExportDialog::ExportDialog(QSharedPointer<const Database> db, DatabaseTabWidget*
     m_ui->sortingStrategy->addItem(getStrategyName(BY_NAME_DESC), BY_NAME_DESC);
     m_ui->sortingStrategy->addItem(getStrategyName(BY_DATABASE_ORDER), BY_DATABASE_ORDER);
 
-    m_ui->messageWidget->setCloseButtonVisible(false);
-    m_ui->messageWidget->setAutoHideTimeout(-1);
-    m_ui->messageWidget->showMessage(tr("You are about to export your database to an unencrypted file.\n"
-                                        "This will leave your passwords and sensitive information vulnerable!\n"),
-                                     MessageWidget::Warning);
 }
 
 ExportDialog::~ExportDialog() = default;

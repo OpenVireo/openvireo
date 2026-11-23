@@ -37,7 +37,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="dialogButtons">
+    <widget class="VaultDialogButtonBox" name="dialogButtons">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
@@ -51,6 +51,11 @@
    <extends>QWidget</extends>
    <header location="global">gui/entry/attachments/AttachmentWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

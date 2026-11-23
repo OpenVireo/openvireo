@@ -19,7 +19,7 @@
 #ifndef KEEPASSX_TOTPDIALOG_H
 #define KEEPASSX_TOTPDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 
 #include "core/Database.h"
 #include "gui/DatabaseWidget.h"
@@ -29,7 +29,7 @@ namespace Ui
     class TotpDialog;
 }
 
-class TotpDialog : public QDialog
+class TotpDialog : public VaultDialog
 {
     Q_OBJECT
 

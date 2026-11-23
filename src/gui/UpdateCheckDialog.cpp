@@ -25,12 +25,13 @@
 #include "networking/UpdateChecker.h"
 
 UpdateCheckDialog::UpdateCheckDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::UpdateCheckDialog())
 {
     m_ui->setupUi(this);
     setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
     setAttribute(Qt::WA_DeleteOnClose);
+    setNamePrefix(QStringLiteral("vaultUpdateCheck"));
 
     m_ui->iconLabel->setPixmap(icons()->applicationIcon().pixmap(48));
 

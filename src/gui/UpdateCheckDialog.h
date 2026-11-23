@@ -18,6 +18,8 @@
 #ifndef KEEPASSXC_UPDATECHECKDIALOG_H
 #define KEEPASSXC_UPDATECHECKDIALOG_H
 
+#include "gui/vault/VaultDialog.h"
+
 #include "config-keepassx.h"
 #include "core/Global.h"
 #include "gui/MessageBox.h"
@@ -27,7 +29,7 @@ namespace Ui
     class UpdateCheckDialog;
 }
 
-class UpdateCheckDialog : public QDialog
+class UpdateCheckDialog : public VaultDialog
 {
     Q_OBJECT
 

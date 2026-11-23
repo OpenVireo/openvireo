@@ -330,7 +330,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="copyToClipboard">
+        <widget class="VaultButton" name="copyToClipboard">
          <property name="text">
           <string>Copy to clipboard</string>
          </property>
@@ -341,7 +341,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Close</set>
      </property>
@@ -349,6 +349,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>scrollArea</tabstop>

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>OpenVireo - Passkey Export</string>
+   <string>Export Passkeys</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -87,7 +87,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="VaultButton" name="cancelButton">
        <property name="text">
         <string>Cancel</string>
        </property>
@@ -97,7 +97,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="exportButton">
+      <widget class="VaultButton" name="exportButton">
        <property name="accessibleName">
         <string>Export entries</string>
        </property>
@@ -116,6 +116,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultButton</class>
+   <extends>QPushButton</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

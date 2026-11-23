@@ -21,7 +21,7 @@
 
 #include <core/Tools.h>
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QPointer>
 
 namespace Ui
@@ -29,7 +29,7 @@ namespace Ui
     class PreviewEntryAttachmentsDialog;
 }
 
-class PreviewEntryAttachmentsDialog : public QDialog
+class PreviewEntryAttachmentsDialog : public VaultDialog
 {
     Q_OBJECT
 

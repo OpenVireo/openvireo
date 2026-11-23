@@ -30,12 +30,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QProgressBar" name="progressBar">
+    <widget class="VaultProgressBar" name="progressBar">
      <property name="value">
       <number>0</number>
-     </property>
-     <property name="textVisible">
-      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -47,7 +44,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Close|QDialogButtonBox::Ok</set>
      </property>
@@ -55,6 +52,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultProgressBar</class>
+   <extends>QWidget</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

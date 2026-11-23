@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_OPENSSHKEYGENDIALOG_H
 #define KEEPASSXC_OPENSSHKEYGENDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 class OpenSSHKey;
 
 namespace Ui
@@ -26,7 +26,7 @@ namespace Ui
     class OpenSSHKeyGenDialog;
 }
 
-class OpenSSHKeyGenDialog : public QDialog
+class OpenSSHKeyGenDialog : public VaultDialog
 {
     Q_OBJECT
 

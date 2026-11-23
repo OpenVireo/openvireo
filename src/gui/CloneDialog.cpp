@@ -18,8 +18,12 @@
 #include "CloneDialog.h"
 #include "ui_CloneDialog.h"
 
+#include <QPushButton>
+
+#include "gui/vault/VaultSettingsPage.h"
+
 CloneDialog::CloneDialog(DatabaseWidget* parent, Database* db, Entry* entry)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::CloneDialog())
 {
     m_db = db;
@@ -28,9 +32,23 @@ CloneDialog::CloneDialog(DatabaseWidget* parent, Database* db, Entry* entry)
 
     m_ui->setupUi(this);
 
-    window()->layout()->setSizeConstraint(QLayout::SetFixedSize);
     setWindowFlag(Qt::WindowContextHelpButtonHint, false);
     setAttribute(Qt::WA_DeleteOnClose);
+    setNamePrefix(QStringLiteral("vaultClone"));
+    setCommands(m_ui->buttonBox);
+    m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Clone"));
+
+    // The options are switches on settings cards
+    {
+        VaultSettingsPage page(this, {});
+        auto* options = page.addSection();
+        options->addToggle(m_ui->titleClone, tr("So the copy is easy to tell apart from the original"));
+        options->addToggle(m_ui->referencesClone,
+                           tr("The copy follows the original's username and password when they change"));
+        options->addToggle(m_ui->historyClone, tr("The copy keeps the original's earlier versions"));
+        m_ui->buttonBox->hide();
+        page.finish();
+    }
 
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
     connect(m_ui->buttonBox, SIGNAL(accepted()), SLOT(cloneEntry()));

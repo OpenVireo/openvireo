@@ -21,9 +21,11 @@
 #include "account/AccountManager.h"
 #include "account/VaultKeyring.h"
 #include "gui/MessageBox.h"
+#include "gui/vault/VaultSettingsPage.h"
 
 #include <QFontDatabase>
 #include <QHeaderView>
+#include <QLabel>
 #include <QPushButton>
 
 namespace
@@ -51,7 +53,7 @@ namespace
 } // namespace
 
 ShareVaultDialog::ShareVaultDialog(VaultSharing* sharing, const QString& vaultId, QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::ShareVaultDialog())
     , m_sharing(sharing)
     , m_vaultId(vaultId)
@@ -110,8 +112,49 @@ ShareVaultDialog::ShareVaultDialog(VaultSharing* sharing, const QString& vaultId
             }
         });
     }
+    setupVaultLayout();
     updateButtons();
     reload();
+}
+
+// Laid out like the share link dialog: the members and the person to share with as Fluent settings cards. Over the
+// main window the dialog is a modal card with Close in its footer.
+void ShareVaultDialog::setupVaultLayout()
+{
+    setNamePrefix(QStringLiteral("vaultShareVault"));
+    setMaximumDialogWidth(720);
+    setCommands(m_ui->buttonBox);
+
+    VaultSettingsPage page(this, {});
+    page.addWidget(m_ui->messageWidget);
+    m_ui->introLabel->setWordWrap(true);
+    page.addWidget(m_ui->introLabel);
+
+    auto* members = page.addSection(tr("Members"));
+    m_ui->membersTree->setMinimumHeight(160);
+    members->addWidget(m_ui->membersTree);
+    members->addSetting(m_ui->selectedRoleLabel,
+                        QWidgetList{m_ui->selectedRoleCombo, m_ui->changeRoleButton, m_ui->removeButton},
+                        tr("For the member selected above"));
+    auto* rotationCaption = new QLabel(tr("New key"), this);
+    m_ui->rotationLabel->setWordWrap(true);
+    members->addSetting(VaultSettingsCaption(rotationCaption, m_ui->rotationLabel), m_ui->rotateButton);
+
+    auto* add = page.addSection(m_ui->addGroup);
+    auto* emailCaption = new QLabel(tr("Email"), this);
+    add->addSetting(VaultSettingsCaption(emailCaption),
+                    QWidgetList{m_ui->emailEdit, m_ui->addRoleCombo, m_ui->lookupButton},
+                    tr("Look the person up, then check their fingerprint with them"));
+    auto* recipientCaption = new QLabel(tr("Recipient"), this);
+    m_ui->recipientLabel->setWordWrap(true);
+    add->addSetting(VaultSettingsCaption(recipientCaption, m_ui->recipientLabel), m_ui->shareButton);
+    m_ui->shareButton->setDefault(false);
+
+    m_ui->ownFingerprintLabel->setWordWrap(true);
+    page.addWidget(m_ui->ownFingerprintLabel);
+    page.addWidget(m_ui->statusLabel);
+    m_ui->buttonBox->hide();
+    page.finish();
 }
 
 ShareVaultDialog::~ShareVaultDialog() = default;

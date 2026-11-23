@@ -42,6 +42,7 @@
 #include "gui/ApplicationSettingsWidget.h"
 #include "gui/CategoryListWidget.h"
 #include "gui/CloneDialog.h"
+#include "gui/MergeDialog.h"
 #include "gui/DatabaseTabWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/MessageBox.h"
@@ -50,6 +51,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/TotpDialog.h"
+#include "gui/vault/VaultModal.h"
 #include "gui/TotpSetupDialog.h"
 #include "gui/databasekey/KeyFileEditWidget.h"
 #include "gui/databasekey/PasswordEditWidget.h"
@@ -379,20 +381,12 @@ void TestGui::testMergeDatabase()
     QTest::keyClicks(editPasswordMerge, "a");
     QTest::keyClick(editPasswordMerge, Qt::Key_Enter);
 
-    // Confirm merge in confirmation dialog
-    auto focusedWindow = QApplication::topLevelWindows().last();
-    QVERIFY(focusedWindow);
-    QTRY_VERIFY(focusedWindow->title().contains("Merge"));
-
-    auto topLevelWidgets = QApplication::topLevelWidgets();
-    QWidget* mergeDialog = nullptr;
-    for (auto* widget : topLevelWidgets) {
-        if (widget && widget->objectName() == "MergeDialog") {
-            mergeDialog = widget;
-        }
-    }
-
-    QVERIFY(mergeDialog);
+    // Confirm merge in the confirmation card over the window
+    QPointer<MergeDialog> mergeDialog;
+    QTRY_VERIFY(mergeDialog = m_mainWindow->findChild<MergeDialog*>("MergeDialog"));
+    QTRY_VERIFY(mergeDialog->isVisible());
+    QVERIFY(mergeDialog->isCard());
+    QVERIFY(mergeDialog->modal()->findChild<QWidget*>("vaultMergeTitle"));
     QTest::keyClick(mergeDialog, Qt::Key_Enter);
 
     QTRY_COMPARE(dbMergeSpy.count(), 1);
@@ -1149,7 +1143,8 @@ void TestGui::testTotp()
     // Test the TOTP value
     triggerAction("actionEntryTotp");
 
-    auto* totpDialog = m_dbWidget->findChild<TotpDialog*>("TotpDialog");
+    auto* totpDialog = m_mainWindow->findChild<TotpDialog*>("TotpDialog");
+    QVERIFY(totpDialog && totpDialog->isCard());
     auto* totpLabel = totpDialog->findChild<QLabel*>("totpLabel");
 
     QTRY_COMPARE(totpLabel->text().replace(" ", ""), entry->totp());
@@ -1528,9 +1523,18 @@ void TestGui::testCloneEntry()
 
     triggerAction("actionEntryClone");
 
-    auto* cloneDialog = m_dbWidget->findChild<CloneDialog*>("CloneDialog");
-    auto* cloneButtonBox = cloneDialog->findChild<QDialogButtonBox*>("buttonBox");
-    QTest::mouseClick(cloneButtonBox->button(QDialogButtonBox::Ok), Qt::LeftButton);
+    auto* cloneDialog = m_mainWindow->findChild<CloneDialog*>("CloneDialog");
+    QVERIFY(cloneDialog && cloneDialog->isCard());
+    // The card's footer stands in for the dialog's buttons
+    QPushButton* cloneButton = nullptr;
+    for (auto* button : cloneDialog->modal()->findChild<QWidget*>("vaultCloneFooter")->findChildren<QPushButton*>()) {
+        if (button->text() == "Clone" && button->isVisible()) {
+            cloneButton = button;
+        }
+    }
+    QVERIFY(cloneButton);
+    QTest::mouseClick(cloneButton, Qt::LeftButton);
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultModal*>("vaultCloneModal"));
 
     QCOMPARE(entryView->model()->rowCount(), 2);
     Entry* entryClone = entryView->entryFromIndex(entryView->model()->index(1, 1));

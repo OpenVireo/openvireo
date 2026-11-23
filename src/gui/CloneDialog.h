@@ -18,7 +18,7 @@
 #ifndef KEEPASSX_CLONEDIALOG_H
 #define KEEPASSX_CLONEDIALOG_H
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 
 #include "core/Database.h"
 #include "gui/DatabaseWidget.h"
@@ -28,7 +28,7 @@ namespace Ui
     class CloneDialog;
 }
 
-class CloneDialog : public QDialog
+class CloneDialog : public VaultDialog
 {
     Q_OBJECT
 

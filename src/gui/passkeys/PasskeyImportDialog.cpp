@@ -25,12 +25,15 @@
 #include <QFileInfo>
 
 PasskeyImportDialog::PasskeyImportDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::PasskeyImportDialog())
 {
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultPasskeyImport"));
+    m_ui->importButton->setDefault(true);
+    setCommands(QList<QAbstractButton*>{m_ui->cancelButton, m_ui->importButton});
 
     connect(this, SIGNAL(updateGroups()), this, SLOT(addGroups()));
     connect(this, SIGNAL(updateEntries()), this, SLOT(addEntries()));

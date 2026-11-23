@@ -109,7 +109,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="addGroup">
+    <widget class="VaultCard" name="addGroup">
      <property name="title">
       <string>Share with someone</string>
      </property>
@@ -183,7 +183,7 @@
     <widget class="QLabel" name="statusLabel"/>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Close</set>
      </property>
@@ -211,6 +211,17 @@
   <customwidget>
    <class>VaultLineEdit</class>
    <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>

@@ -22,12 +22,15 @@
 #include "gui/FileDialog.h"
 
 PasskeyExportDialog::PasskeyExportDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::PasskeyExportDialog())
 {
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultPasskeyExport"));
+    m_ui->exportButton->setDefault(true);
+    setCommands(QList<QAbstractButton*>{m_ui->cancelButton, m_ui->exportButton});
 
     connect(m_ui->exportButton, SIGNAL(clicked()), SLOT(accept()));
     connect(m_ui->cancelButton, SIGNAL(clicked()), SLOT(reject()));

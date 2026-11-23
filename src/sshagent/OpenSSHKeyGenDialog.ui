@@ -86,10 +86,10 @@
     </widget>
    </item>
    <item row="1" column="1" colspan="3">
-    <widget class="QLineEdit" name="commentLineEdit"/>
+    <widget class="VaultLineEdit" name="commentLineEdit"/>
    </item>
    <item row="2" column="0" colspan="4">
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -104,6 +104,16 @@
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>

@@ -24,10 +24,13 @@
 #include <QPushButton>
 
 PreviewEntryAttachmentsDialog::PreviewEntryAttachmentsDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::PreviewEntryAttachmentsDialog)
 {
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultPreviewAttachment"));
+    setMaximumDialogWidth(860);
+    setFillHeight(true);
 
     // Disable the help button in the title bar
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);

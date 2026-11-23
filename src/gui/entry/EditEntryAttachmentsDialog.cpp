@@ -26,10 +26,13 @@
 #include <QPushButton>
 
 EditEntryAttachmentsDialog::EditEntryAttachmentsDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::EditEntryAttachmentsDialog)
 {
     m_ui->setupUi(this);
+    setNamePrefix(QStringLiteral("vaultEditAttachment"));
+    setMaximumDialogWidth(860);
+    setFillHeight(true);
 
     m_ui->dialogButtons->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 

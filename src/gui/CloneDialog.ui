@@ -18,7 +18,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QCheckBox" name="titleClone">
+    <widget class="VaultCheckBox" name="titleClone">
      <property name="text">
       <string>Append ' - Clone' to title</string>
      </property>
@@ -28,14 +28,14 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="referencesClone">
+    <widget class="VaultCheckBox" name="referencesClone">
      <property name="text">
       <string>Replace username and password with references</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="historyClone">
+    <widget class="VaultCheckBox" name="historyClone">
      <property name="text">
       <string>Copy history</string>
      </property>
@@ -61,7 +61,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
@@ -69,6 +69,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VaultCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

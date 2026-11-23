@@ -19,12 +19,14 @@
 #include "OpenSSHKey.h"
 #include "OpenSSHKeyGen.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultSettingsPage.h"
 #include "ui_OpenSSHKeyGenDialog.h"
+#include <QPushButton>
 #include <QHostInfo>
 #include <QProcessEnvironment>
 
 OpenSSHKeyGenDialog::OpenSSHKeyGenDialog(QWidget* parent)
-    : QDialog(parent)
+    : VaultDialog(parent)
     , m_ui(new Ui::OpenSSHKeyGenDialog())
     , m_key(nullptr)
 {
@@ -44,6 +46,22 @@ OpenSSHKeyGenDialog::OpenSSHKeyGenDialog(QWidget* parent)
     connect(m_ui->typeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(typeChanged()));
 
     typeChanged();
+
+    setNamePrefix(QStringLiteral("vaultSshKeyGen"));
+    setCommands(m_ui->buttonBox);
+    if (auto* generate = m_ui->buttonBox->button(QDialogButtonBox::Ok)) {
+        generate->setText(tr("Generate"));
+    }
+    // The key's settings as settings cards
+    {
+        VaultSettingsPage page(this, {});
+        auto* key = page.addSection();
+        key->addSetting(m_ui->typeLabel, m_ui->typeComboBox);
+        key->addSetting(m_ui->bitsLabel, m_ui->bitsComboBox);
+        key->addSetting(m_ui->commentLabel, m_ui->commentLineEdit, tr("Usually who the key is for and where"));
+        m_ui->buttonBox->hide();
+        page.finish();
+    }
 }
 
 // Required for QScopedPointer

@@ -19,7 +19,7 @@
 
 #include "attachments/AttachmentTypes.h"
 
-#include <QDialog>
+#include "gui/vault/VaultDialog.h"
 #include <QPointer>
 
 namespace Ui
@@ -29,7 +29,7 @@ namespace Ui
 
 class EntryAttachments;
 
-class EditEntryAttachmentsDialog : public QDialog
+class EditEntryAttachmentsDialog : public VaultDialog
 {
     Q_OBJECT
 
