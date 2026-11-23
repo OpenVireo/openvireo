@@ -1241,7 +1241,8 @@ void TestGuiFdoSecrets::testDuplicateName()
     VERIFY(service);
 
     // when two databases have the same name, one of it will have part of its uuid suffixed
-    const QString pathNoSuffix = QStringLiteral("/org/freedesktop/secrets/collection/KeePassXC");
+    const QString pathNoSuffix =
+        QStringLiteral("/org/freedesktop/secrets/collection/") + QFileInfo(*m_dbFile).completeBaseName();
     DBUS_GET(colls, service->collections());
     COMPARE(colls.size(), 2);
     COMPARE(colls[0].path(), pathNoSuffix);

@@ -282,10 +282,10 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     connect(
         m_ui->serverLoadDatabasesButton, &QPushButton::clicked, this, &ImportWizardPageSelect::loadSyncServerDatabases);
 
-    registerField("ImportType", this);
+    registerField("ImportType", this, "importType");
     registerField("ImportFile", m_ui->importFileEdit);
-    registerField("ImportIntoType", m_ui->importIntoGroupBox); // This is intentional
-    registerField("ImportInto", m_ui->importIntoLabel); // This is intentional
+    registerField("ImportIntoType", this, "importIntoType");
+    registerField("ImportInto", this, "importInto");
     registerField("ImportPassword", m_ui->passwordEdit, "text", "textChanged");
     registerField("ImportKeyFile", m_ui->keyFileEdit);
     registerField("DownloadCommand", m_ui->downloadCommand);

@@ -19,6 +19,7 @@
 #define KEEPASSXC_IMPORTWIZARDPAGESELECT_H
 
 #include <QPointer>
+#include <QVariant>
 #include <QWizardPage>
 
 class QListWidgetItem;
@@ -33,6 +34,11 @@ namespace Ui
 class ImportWizardPageSelect : public QWizardPage
 {
     Q_OBJECT
+    // Storage for the ImportType, ImportIntoType and ImportInto wizard fields. QWizard needs a real property
+    // to write a field to; widgets without one only worked where Qt fell back to a dynamic property.
+    Q_PROPERTY(int importType MEMBER m_importType)
+    Q_PROPERTY(int importIntoType MEMBER m_importIntoType)
+    Q_PROPERTY(QVariant importInto MEMBER m_importInto)
 
 public:
     explicit ImportWizardPageSelect(QWidget* parent = nullptr);
@@ -74,6 +80,9 @@ private:
     void updateImportChoices();
 
     QScopedPointer<Ui::ImportWizardPageSelect> m_ui;
+    int m_importType = 0;
+    int m_importIntoType = 0;
+    QVariant m_importInto;
     // The cards below the choice of source in the Vault Index layout
     QWidget* m_details = nullptr;
     QWidget* m_newVaultRow = nullptr;
