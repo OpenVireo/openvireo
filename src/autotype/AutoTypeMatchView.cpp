@@ -19,6 +19,7 @@
 #include "AutoTypeMatchView.h"
 #include "AutoTypeMatchModel.h"
 #include "core/Entry.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QHeaderView>
 #include <QKeyEvent>
@@ -60,6 +61,7 @@ AutoTypeMatchView::AutoTypeMatchView(QWidget* parent)
     sortByColumn(0, Qt::AscendingOrder);
 
     setContextMenuPolicy(Qt::CustomContextMenu);
+    Vault::styleTable(this, tr("No matching entries"));
 
     connect(this, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
         emit matchActivated(matchFromIndex(index));

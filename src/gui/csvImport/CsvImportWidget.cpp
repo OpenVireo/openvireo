@@ -28,6 +28,7 @@
 #include "format/KeePass2Writer.h"
 #include "gui/MessageBox.h"
 #include "gui/csvImport/CsvParserModel.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QStringListModel>
 
@@ -99,6 +100,7 @@ CsvImportWidget::CsvImportWidget(QWidget* parent)
 
     m_parserModel->setHeaderLabels(m_columnHeader);
     m_ui->tableViewFields->setModel(m_parserModel);
+    Vault::styleTable(m_ui->tableViewFields, tr("Choose a CSV file to preview its rows"));
 
     connect(m_ui->spinBoxSkip, SIGNAL(valueChanged(int)), SLOT(skippedChanged(int)));
     connect(m_ui->comboBoxCodec, SIGNAL(currentIndexChanged(int)), SLOT(parse()));

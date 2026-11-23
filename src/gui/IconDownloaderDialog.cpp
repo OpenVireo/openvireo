@@ -26,6 +26,7 @@
 #include "gui/IconDownloader.h"
 #include "gui/IconModels.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultTable.h"
 #include "osutils/OSUtils.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
@@ -52,6 +53,7 @@ IconDownloaderDialog::IconDownloaderDialog(QWidget* parent)
 
     m_ui->tableView->setModel(m_dataModel);
     m_ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->tableView, tr("No URLs to download icons from"));
 
     connect(m_ui->cancelButton, SIGNAL(clicked()), SLOT(abortDownloads()));
     connect(m_ui->closeButton, SIGNAL(clicked()), SLOT(close()));

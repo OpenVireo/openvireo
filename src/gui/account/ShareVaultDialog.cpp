@@ -22,6 +22,7 @@
 #include "account/VaultKeyring.h"
 #include "gui/MessageBox.h"
 #include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QFontDatabase>
 #include <QHeaderView>
@@ -67,6 +68,8 @@ ShareVaultDialog::ShareVaultDialog(VaultSharing* sharing, const QString& vaultId
     m_ui->membersTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     m_ui->membersTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_ui->membersTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    m_ui->membersTree->setRootIsDecorated(false);
+    Vault::styleTable(m_ui->membersTree, tr("Only you have access so far"));
     const auto fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_ui->recipientLabel->setFont(fixed);
     m_ui->recipientLabel->setVisible(false);

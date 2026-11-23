@@ -20,6 +20,7 @@
 
 #include "core/Database.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QPushButton>
 #include <QShortcut>
@@ -144,6 +145,7 @@ void MergeDialog::setupChangeTable()
     m_ui->changeTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_ui->changeTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_ui->changeTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    Vault::styleTable(m_ui->changeTable, tr("No changes to merge"));
 
     // Create the header context menu
     for (auto column : columns()) {
