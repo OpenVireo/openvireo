@@ -396,14 +396,14 @@ namespace FakeAccount
         if (path == "auth/register/start") {
             const auto session = server.next("reg-");
             server.registrations.insert(session, json.value("email").toString());
-            QByteArray response;
+            QByteArray registrationResponse;
             try {
                 const auto step = ov::opaque_server_registration_response(slice(b64("request")));
                 server.registrationStates.insert(session, toByteArray(step.state));
-                response = toByteArray(step.message);
+                registrationResponse = toByteArray(step.message);
             } catch (const rust::Error&) {
             }
-            reply(200, {{"session_id", session}, {"response", toBase64Url(response)}, {"user_id", uuid()}});
+            reply(200, {{"session_id", session}, {"response", toBase64Url(registrationResponse)}, {"user_id", uuid()}});
         } else if (path == "auth/register/finish") {
             const auto session = json.value("session_id").toString();
             Server::User user;

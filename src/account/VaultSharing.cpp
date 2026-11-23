@@ -430,9 +430,9 @@ void VaultSharing::createFromDatabase(const QSharedPointer<Database>& db,
     db->setKdf(kdf);
     db->setKey(key, true, true);
     QByteArray data;
-    QString error;
-    if (!VaultKeyring::writeVault(db.data(), &data, &error)) {
-        done({}, {}, error);
+    QString writeError;
+    if (!VaultKeyring::writeVault(db.data(), &data, &writeError)) {
+        done({}, {}, writeError);
         return;
     }
 

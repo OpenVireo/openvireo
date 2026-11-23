@@ -415,20 +415,20 @@ void SyncServerClient::send(const QByteArray& verb,
         m_replies.remove(reply);
         reply->deleteLater();
 
-        Response response;
-        response.status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        response.body = reply->readAll();
-        response.etag = QString::fromLatin1(reply->rawHeader("ETag"));
+        Response result;
+        result.status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        result.body = reply->readAll();
+        result.etag = QString::fromLatin1(reply->rawHeader("ETag"));
         bool ok = false;
         auto revision = reply->rawHeader("X-Database-Revision").toLongLong(&ok);
         if (ok) {
-            response.revision = revision;
+            result.revision = revision;
         }
-        response.serverTime = parseHttpDate(reply->rawHeader("Date"));
-        if (response.status == 0) {
-            response.networkError = reply->errorString();
+        result.serverTime = parseHttpDate(reply->rawHeader("Date"));
+        if (result.status == 0) {
+            result.networkError = reply->errorString();
         }
-        callback(response);
+        callback(result);
     });
 #else
     Q_UNUSED(verb)

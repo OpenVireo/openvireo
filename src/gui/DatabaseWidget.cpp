@@ -2019,8 +2019,8 @@ void DatabaseWidget::updateSyncEvents(const RemoteParams* params)
 
     m_syncEvents = new SyncEventStream(*params, this);
     connect(m_syncEvents, &SyncEventStream::databaseChanged, this, [this](const SyncEventStream::Event& event) {
-        const auto* params = autoSyncParams();
-        if (!params || event.databaseId != params->remoteDatabaseId()) {
+        const auto* syncParams = autoSyncParams();
+        if (!syncParams || event.databaseId != syncParams->remoteDatabaseId()) {
             return;
         }
         // Our own uploads come back as events too; only sync for versions we haven't got

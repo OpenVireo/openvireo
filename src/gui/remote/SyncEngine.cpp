@@ -90,11 +90,11 @@ namespace
             *result = db;
         });
         QPointer<QObject> guard(context);
-        QObject::connect(thread, &QThread::finished, thread, [thread, result, guard, done = std::move(done)] {
+        QObject::connect(thread, &QThread::finished, thread, [thread, result, guard, onDone = std::move(done)] {
             thread->deleteLater();
             QSharedPointer<Database> db(*result);
             if (guard) {
-                done(db);
+                onDone(db);
             }
         });
         thread->start();
