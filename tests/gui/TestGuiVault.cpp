@@ -2179,6 +2179,16 @@ void TestGuiVault::testViewScreenshots()
 
         m_dbWidget->switchToDatabaseSettings();
         save("dbsettings", theme);
+        auto* dbModal = m_mainWindow->findChild<VaultModal*>("vaultDatabaseSettingsModal");
+        QVERIFY(dbModal);
+        auto* dbCategories = dbModal->findChild<QListWidget*>("categoryList");
+        QVERIFY(dbCategories);
+        // Security, Remote Sync, Browser Integration and Maintenance
+        for (int row = 1; row < dbCategories->count(); ++row) {
+            dbCategories->setCurrentRow(row);
+            save(QString("dbsettings-%1").arg(row), theme);
+        }
+        dbCategories->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 
         m_dbWidget->switchToDatabaseReports();
