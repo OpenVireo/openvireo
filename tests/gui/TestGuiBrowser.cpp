@@ -38,6 +38,7 @@
 #include "gui/entry/EditEntryWidget.h"
 #include "gui/entry/EntryView.h"
 #include "gui/vault/VaultEntryEditCard.h"
+#include "gui/vault/VaultResponsive.h"
 
 int main(int argc, char* argv[])
 {
@@ -49,6 +50,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     TestGuiBrowser tc;
     QTEST_SET_MAIN_SOURCE_PATH
     return QTest::qExec(&tc, argc, argv);

@@ -285,6 +285,17 @@ void EntryDetailCard::setGroup(Group* group)
     m_pages->setCurrentIndex(0);
 }
 
+void EntryDetailCard::setStacked(bool stacked)
+{
+    m_stacked = stacked;
+    for (auto* row : {m_usernameRow, m_passwordRow, m_totpRow, m_urlRow}) {
+        row->setStacked(stacked);
+    }
+    for (auto* row : m_attributeRows) {
+        row->setStacked(stacked);
+    }
+}
+
 void EntryDetailCard::refresh()
 {
     if (!m_entry) {
@@ -414,8 +425,7 @@ void EntryDetailCard::updateTotp()
 
     const auto step = m_entry->totpSettings()->step;
     const auto remaining = step - (Clock::currentSecondsSinceEpoch() % step);
-    m_totpRow->value()->setText(
-        tr("%1   %2 s left").arg(formatTotp(m_entry->totp()), QString::number(remaining)));
+    m_totpRow->value()->setText(tr("%1   %2 s left").arg(formatTotp(m_entry->totp()), QString::number(remaining)));
     if (!m_totpTimer->isActive()) {
         m_totpTimer->start();
     }
@@ -448,6 +458,7 @@ void EntryDetailCard::updateAttributes()
         const bool revealed = m_revealedAttributes.contains(key);
 
         auto* row = new VaultFieldRow(key, m_attributes);
+        row->setStacked(m_stacked);
         row->caption()->setToolTip(key);
         row->caption()->setWordWrap(true);
         row->value()->setWordWrap(true);

@@ -156,6 +156,11 @@ MainWindow::MainWindow()
     // Where supported, the header doubles as the window's title bar
     m_vaultFrame = new VaultWindowFrame(this, m_vaultHeader);
     m_ui->verticalLayout->insertWidget(0, m_vaultFrame->widget());
+    connect(m_vaultHeader, &VaultHeaderBar::narrowChanged, m_vaultFrame, [this](bool narrow) {
+        m_vaultFrame->setHeaderRows(narrow ? 2 : 1);
+    });
+    // The vault reflows down to a phone-like width, like the web app
+    setMinimumWidth(Vault::MinimumWindowWidth);
     m_vaultHeader->setVisible(false);
     // Stands in for the toolbar's widget action: enabled while a database is shown
     m_searchWidgetAction = new QAction(this);

@@ -57,6 +57,9 @@ public:
     // Without the title bar, the window controls float over the top of the window's content, as on the sign-in
     // screen, whose panel reaches the top edge
     void setTitleBarShown(bool shown);
+    // The header's rows of controls: two in a narrow window, where the search sits under the rest. The window
+    // controls stay beside the first row.
+    void setHeaderRows(int rows);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

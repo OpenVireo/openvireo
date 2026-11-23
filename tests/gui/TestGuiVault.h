@@ -38,6 +38,7 @@ private slots:
     void cleanupTestCase();
 
     void testLayout();
+    void testResponsiveLayout();
     void testEntryListMode();
     void testDetailCardFollowsSelection();
     void testDetailCardAttributes();

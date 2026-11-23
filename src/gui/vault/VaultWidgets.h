@@ -26,6 +26,7 @@
 #include <design/Typography.h>
 
 class QAction;
+class QGridLayout;
 class QHBoxLayout;
 class QLabel;
 
@@ -79,6 +80,9 @@ public:
     QLabel* value() const;
     fluent::basicinput::Button* addButton(const QString& glyph, const QString& toolTip);
     void applyColors();
+    // The caption above the value instead of beside it, for a narrow window
+    void setStacked(bool stacked);
+    bool isStacked() const;
 
 protected:
     void enterEvent(QEnterEvent* event) override;
@@ -89,6 +93,8 @@ private:
     QLabel* m_caption;
     QLabel* m_value;
     QHBoxLayout* m_buttons;
+    QGridLayout* m_grid;
+    bool m_stacked = false;
     bool m_hovered = false;
 };
 

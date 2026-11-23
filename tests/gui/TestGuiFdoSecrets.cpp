@@ -37,6 +37,7 @@
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
+#include "gui/vault/VaultResponsive.h"
 #include "util/FdoSecretsProxy.h"
 #include "util/TemporaryFile.h"
 
@@ -57,6 +58,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     TestGuiFdoSecrets tc;
     QTEST_SET_MAIN_SOURCE_PATH
     return QTest::qExec(&tc, argc, argv);

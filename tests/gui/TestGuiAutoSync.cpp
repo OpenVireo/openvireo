@@ -40,6 +40,7 @@
 #include "gui/remote/SyncHistoryDialog.h"
 #include "gui/remote/SyncServerClient.h"
 #include "gui/remote/SyncTokenStore.h"
+#include "gui/vault/VaultResponsive.h"
 #include "keys/PasswordKey.h"
 
 #include <QDialogButtonBox>
@@ -65,6 +66,8 @@ int main(int argc, char* argv[])
     app.setApplicationName("OpenVireo");
     app.setQuitOnLastWindowClosed(false);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     TestGuiAutoSync tc;
     QTEST_SET_MAIN_SOURCE_PATH
     return QTest::qExec(&tc, argc, argv);

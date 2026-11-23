@@ -65,6 +65,7 @@
 #include "gui/vault/VaultInputDialog.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultResponsive.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultWidgets.h"
 #include "remote/RemoteHandler.h"
@@ -404,6 +405,11 @@ QString DatabaseWidget::displayFilePath() const
 
 QHash<Config::ConfigKey, QList<int>> DatabaseWidget::splitterSizes() const
 {
+    if (m_vaultResponsive) {
+        return {{Config::GUI_SplitterState, m_vaultResponsive->mainSplitterSizes()},
+                {Config::GUI_VaultSplitterState, m_vaultResponsive->previewSplitterSizes()},
+                {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
+    }
     return {{Config::GUI_SplitterState, m_mainSplitter->sizes()},
             {Config::GUI_VaultSplitterState, m_previewSplitter->sizes()},
             {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
@@ -419,13 +425,21 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
             if (value.size() < 2) {
                 value = QList({static_cast<int>(width() * 0.25), static_cast<int>(width() * 0.75)});
             }
-            m_mainSplitter->setSizes(value);
+            if (m_vaultResponsive) {
+                m_vaultResponsive->setMainSplitterSizes(value);
+            } else {
+                m_mainSplitter->setSizes(value);
+            }
             break;
         case Config::GUI_VaultSplitterState:
             if (value.size() < 2) {
                 value = QList({static_cast<int>(width() * 0.3), static_cast<int>(width() * 0.4)});
             }
-            m_previewSplitter->setSizes(value);
+            if (m_vaultResponsive) {
+                m_vaultResponsive->setPreviewSplitterSizes(value);
+            } else {
+                m_previewSplitter->setSizes(value);
+            }
             break;
         case Config::GUI_GroupSplitterState:
             // The tag list is sized to its tags
@@ -1270,8 +1284,8 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     m_mainSplitter->setStretchFactor(1, 100);
 
     // Groups and tags sit directly on the navigation pane
-    for (QAbstractItemView* view : {static_cast<QAbstractItemView*>(m_groupView.data()),
-                                    static_cast<QAbstractItemView*>(m_tagView.data())}) {
+    for (QAbstractItemView* view :
+         {static_cast<QAbstractItemView*>(m_groupView.data()), static_cast<QAbstractItemView*>(m_tagView.data())}) {
         view->setFrameShape(QFrame::NoFrame);
         view->viewport()->setAutoFillBackground(false);
     }
@@ -1291,6 +1305,20 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     fitVaultTagList();
     // Panes are separated by surfaces, not grip lines
     m_mainSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background: transparent; image: none; }"));
+
+    // The panes reflow for the window's width, like the web app
+    m_vaultResponsive = new VaultResponsiveLayout({m_mainWidget,
+                                                   m_mainSplitter,
+                                                   navPane,
+                                                   surface,
+                                                   m_previewSplitter,
+                                                   listHost,
+                                                   cardHost,
+                                                   m_vaultCommandBar,
+                                                   m_detailCard,
+                                                   m_entryView,
+                                                   {m_groupView, m_tagView}},
+                                                  this);
 
     // The command bar shows the search state; the label only holds its text
     auto unused = new QWidget(m_mainWidget);
@@ -1327,6 +1355,7 @@ void DatabaseWidget::showVaultEditor(VaultEntryEditCard* card)
     // The groups and the list stay in view but wait until the entry is saved or set aside
     m_vaultNavPane->setEnabled(false);
     m_vaultCommandBar->setEditorButtons(card->editor()->buttonBox());
+    m_vaultResponsive->setEditing(true);
     m_entryView->setEnabled(false);
     if (!m_vaultDimmers.isEmpty()) {
         // Already editing, as when returning from an entry's history
@@ -1360,6 +1389,7 @@ void DatabaseWidget::hideVaultEditor()
     m_vaultCardStack->setCurrentWidget(m_detailCard);
     m_vaultNavPane->setEnabled(true);
     m_vaultCommandBar->setEditorButtons(nullptr);
+    m_vaultResponsive->setEditing(false);
     m_entryView->setEnabled(true);
     for (const auto& dimmer : m_vaultDimmers) {
         delete dimmer.data();
@@ -2506,6 +2536,10 @@ void DatabaseWidget::search(const QString& searchtext)
         endSearch();
         return;
     }
+    // The results show in the list
+    if (m_vaultResponsive) {
+        m_vaultResponsive->showList();
+    }
 
     auto searchGroup = m_db->rootGroup();
     if (m_searchLimitGroup && m_nextSearchLabelText.isEmpty()) {
@@ -2600,6 +2634,11 @@ void DatabaseWidget::onGroupChanged()
     }
 
     updateVaultCommandBar();
+    if (m_vaultResponsive) {
+        // A new group shows its entries
+        m_vaultResponsive->showList();
+        m_vaultResponsive->closeGroups();
+    }
     emit groupChanged();
 }
 
@@ -2703,6 +2742,9 @@ void DatabaseWidget::onEntryChanged(Entry* entry)
         } else {
             m_detailCard->setGroup(groupView()->currentGroup());
         }
+    }
+    if (m_vaultResponsive) {
+        m_vaultResponsive->setHasEntry(entry);
     }
 
     emit entrySelectionChanged();

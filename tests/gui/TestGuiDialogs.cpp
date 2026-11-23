@@ -55,6 +55,7 @@
 #include "browser/BrowserEntrySaveDialog.h"
 #include "gui/passkeys/PasskeyExportDialog.h"
 #include "gui/passkeys/PasskeyImportDialog.h"
+#include "gui/vault/VaultResponsive.h"
 #endif
 #ifdef KPXC_FEATURE_SSHAGENT
 #include "sshagent/OpenSSHKeyGenDialog.h"
@@ -98,6 +99,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     QTEST_DISABLE_KEYPAD_NAVIGATION
     TestGuiDialogs tc;
     QTEST_SET_MAIN_SOURCE_PATH

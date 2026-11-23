@@ -58,6 +58,7 @@
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/wizard/ImportWizard.h"
+#include "gui/vault/VaultResponsive.h"
 #include "keys/PasswordKey.h"
 
 #include "quickunlock/QuickUnlockInterface.h"
@@ -94,6 +95,8 @@ int main(int argc, char* argv[])
     app.setApplicationName("OpenVireo");
     app.setQuitOnLastWindowClosed(false);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     TestGuiAccounts tc;
     QTEST_SET_MAIN_SOURCE_PATH
     return QTest::qExec(&tc, argc, argv);

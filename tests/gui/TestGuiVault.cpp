@@ -46,13 +46,13 @@
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
 #include "gui/TotpSetupDialog.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/entry/EntryAttachmentsWidget.h"
 #include "gui/entry/EntryListItemDelegate.h"
 #include "gui/entry/EntryView.h"
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
 #include "gui/reports/ReportsDialog.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
@@ -61,8 +61,10 @@
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
 #include "gui/vault/VaultPanes.h"
+#include "gui/vault/VaultResponsive.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/vault/VaultTable.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "gui/wizard/ImportWizard.h"
 
@@ -84,6 +86,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QScopeGuard>
 #include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -104,6 +107,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     QTEST_DISABLE_KEYPAD_NAVIGATION
     TestGuiVault tc;
     QTEST_SET_MAIN_SOURCE_PATH
@@ -261,6 +266,107 @@ void TestGuiVault::testLayout()
     QVERIFY(header);
     QVERIFY(header->isVisible());
     QVERIFY(header->findChild<SearchWidget*>("SearchWidget"));
+}
+
+void TestGuiVault::testResponsiveLayout()
+{
+    // Lay out again as if the window were resized past a breakpoint
+    auto relayout = [this](Vault::Layout layout) {
+        Vault::setLayoutForTests(layout);
+        const auto size = m_mainWindow->size();
+        m_mainWindow->resize(size.width() + 1, size.height());
+        QApplication::processEvents();
+        m_mainWindow->resize(size);
+        QApplication::processEvents();
+    };
+    // The other tests expect the wide layout, also when a check here fails
+    auto restore = qScopeGuard([relayout] { relayout(Vault::Layout::Wide); });
+    selectGroup(m_workGroup);
+    selectEntry(m_github);
+
+    auto* navPane = m_dbWidget->findChild<VaultNavPane*>();
+    auto* groupView = m_dbWidget->findChild<GroupView*>("groupView");
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+    auto* details = m_dbWidget->findChild<EntryDetailCard*>();
+    auto* groupsButton = m_dbWidget->findChild<QAbstractButton*>("vaultGroupsButton");
+    auto* backButton = m_dbWidget->findChild<QAbstractButton*>("vaultBackButton");
+    auto* newEntry = m_dbWidget->findChild<QAbstractButton*>("vaultNewEntryButton");
+    auto* newEntryIcon = m_dbWidget->findChild<QAbstractButton*>("vaultNewEntryIconButton");
+    auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
+    QVERIFY(navPane && groupView && entryView && details && groupsButton && backButton && newEntry && newEntryIcon);
+
+    // Medium: the groups fold into the title, which opens them over the entries
+    relayout(Vault::Layout::Medium);
+    QVERIFY(!navPane->isVisible());
+    QVERIFY(groupsButton->isVisible());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(details->isVisible());
+    QVERIFY(!header->isNarrow());
+    auto* flyout = m_dbWidget->findChild<VaultGroupsFlyout*>();
+    QVERIFY(flyout);
+    QTest::mouseClick(groupsButton, Qt::LeftButton);
+    QTRY_VERIFY(flyout->isVisible());
+    QVERIFY(navPane->isVisible());
+    QVERIFY(flyout->isAncestorOf(navPane));
+    QVERIFY(flyout->panelRect().width() > 0);
+
+    // Picking a group closes them
+    const auto groupRect = groupView->visualRect(groupView->currentIndex());
+    QTest::mouseClick(groupView->viewport(), Qt::LeftButton, {}, groupRect.center());
+    QTRY_VERIFY(!flyout->isVisible());
+
+    // So does Escape, without closing the database
+    QTest::mouseClick(groupsButton, Qt::LeftButton);
+    QTRY_VERIFY(flyout->isVisible());
+    QTest::keyClick(groupView, Qt::Key_Escape);
+    QTRY_VERIFY(!flyout->isVisible());
+    QCOMPARE(m_tabWidget->currentDatabaseWidget(), m_dbWidget.data());
+
+    // Narrow: one pane at a time, search on its own row
+    relayout(Vault::Layout::Narrow);
+    QVERIFY(header->isNarrow());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(!details->isVisible());
+    QVERIFY(newEntryIcon->isVisible());
+    QVERIFY(!newEntry->isVisible());
+    QVERIFY(!backButton->isVisible());
+
+    // Picking an entry shows its details, with the captions above the values
+    selectEntry(m_github);
+    QTest::mouseClick(
+        entryView->viewport(), Qt::LeftButton, {}, entryView->visualRect(entryView->currentIndex()).center());
+    QTRY_VERIFY(details->isVisible());
+    QVERIFY(!entryView->isVisible());
+    QVERIFY(backButton->isVisible());
+    QVERIFY(!newEntryIcon->isVisible());
+    for (auto* row : details->findChildren<VaultFieldRow*>()) {
+        // Rows of a previous entry linger until deleted later
+        if (row->isVisibleTo(details)) {
+            QVERIFY(row->isStacked());
+        }
+    }
+
+    // Back returns to the list
+    QTest::mouseClick(backButton, Qt::LeftButton);
+    QTRY_VERIFY(entryView->isVisible());
+    QVERIFY(!details->isVisible());
+
+    // Wide again: all three panes, as before
+    relayout(Vault::Layout::Wide);
+    QVERIFY(!header->isNarrow());
+    QVERIFY(navPane->isVisible());
+    QVERIFY(!flyout->isVisible());
+    QVERIFY(!flyout->isAncestorOf(navPane));
+    QVERIFY(!groupsButton->isVisible());
+    QVERIFY(entryView->isVisible());
+    QVERIFY(details->isVisible());
+    QVERIFY(newEntry->isVisible());
+    for (auto* row : details->findChildren<VaultFieldRow*>()) {
+        // Rows of a previous entry linger until deleted later
+        if (row->isVisibleTo(details)) {
+            QVERIFY(!row->isStacked());
+        }
+    }
 }
 
 void TestGuiVault::testEntryListMode()
@@ -2149,8 +2255,7 @@ void TestGuiVault::testScreenshots()
             QDir(dir).absoluteFilePath(QString("vault-settings-autotype-%1.png").arg(theme))));
         auto* categories =
             m_mainWindow->findChild<ApplicationSettingsWidget*>()->findChild<QListWidget*>("categoryList");
-        for (const auto& name :
-             {QStringLiteral("Browser Integration"), QStringLiteral("SSH Agent")}) {
+        for (const auto& name : {QStringLiteral("Browser Integration"), QStringLiteral("SSH Agent")}) {
             const auto items = categories->findItems(name, Qt::MatchExactly);
             if (items.isEmpty()) {
                 continue;

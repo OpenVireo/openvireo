@@ -34,6 +34,7 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsModal.h"
+#include "gui/vault/VaultResponsive.h"
 
 #include <FluentQt/FluentQt.h>
 
@@ -53,6 +54,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     QTEST_DISABLE_KEYPAD_NAVIGATION
     TestGuiHighContrast tc;
     QTEST_SET_MAIN_SOURCE_PATH

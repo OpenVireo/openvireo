@@ -40,6 +40,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QTimer>
@@ -68,7 +69,13 @@ VaultSurface::VaultSurface(QWidget* parent)
     : QWidget(parent)
 {
     // Room on the right and below for the canvas to show around the rounded surface
-    setContentsMargins(0, 0, Gutter, Gutter);
+    setGutters(0, Gutter, Gutter);
+}
+
+void VaultSurface::setGutters(int left, int right, int bottom)
+{
+    setContentsMargins(left, 0, right, bottom);
+    update();
 }
 
 void VaultSurface::paintEvent(QPaintEvent* event)
@@ -78,7 +85,9 @@ void VaultSurface::paintEvent(QPaintEvent* event)
     constexpr qreal radius = VaultMetrics::SurfaceRadius;
 
     // A rounded card on the canvas, as in the web app
-    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -Gutter - 0.5, -Gutter - 0.5);
+    const auto gutters = contentsMargins();
+    const QRectF r =
+        QRectF(rect()).adjusted(gutters.left() + 0.5, 0.5, -gutters.right() - 0.5, -gutters.bottom() - 0.5);
     QPainterPath path;
     path.addRoundedRect(r, radius, radius);
 
@@ -264,17 +273,36 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     layout->setContentsMargins(14, 10, 14, 10);
     layout->setSpacing(4);
 
+    // Back to the list, in place of the title while one entry's details fill a narrow window
+    m_backButton = new fluent::basicinput::Button(this);
+    m_backButton->setObjectName("vaultBackButton");
+    m_backButton->setFluentStyle(fluent::basicinput::Button::Subtle);
+    m_backButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    m_backButton->setIconGlyph(Typography::Icons::ChevronLeft);
+    Vault::makePill(m_backButton);
+    m_backButton->hide();
+    connect(m_backButton, &QAbstractButton::clicked, this, &VaultCommandBar::backRequested);
+    layout->addWidget(m_backButton, 0, Qt::AlignVCenter);
+
     // The title and count share a baseline; onThemeUpdated() lowers the count by the difference in their ascents
-    auto* heading = new QWidget(this);
-    auto* headingLayout = new QHBoxLayout(heading);
+    m_heading = new QWidget(this);
+    auto* headingLayout = new QHBoxLayout(m_heading);
     headingLayout->setContentsMargins(0, 0, 0, 0);
     headingLayout->setSpacing(10);
     m_title->setMinimumWidth(0);
     m_title->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     m_count->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     headingLayout->addWidget(m_title, 0, Qt::AlignTop);
+    // Without the groups pane, the title opens the groups
+    m_groupsButton = Vault::iconButton(Typography::Icons::ChevronDown, tr("Show groups"), m_heading);
+    m_groupsButton->setObjectName("vaultGroupsButton");
+    m_groupsButton->setFluentSize(fluent::basicinput::Button::Small);
+    m_groupsButton->hide();
+    connect(m_groupsButton, &QAbstractButton::clicked, this, &VaultCommandBar::groupsRequested);
+    headingLayout->addWidget(m_groupsButton, 0, Qt::AlignVCenter);
     headingLayout->addWidget(m_count, 0, Qt::AlignTop);
-    layout->addWidget(heading, 0, Qt::AlignVCenter);
+    m_title->installEventFilter(this);
+    layout->addWidget(m_heading, 0, Qt::AlignVCenter);
     layout->addStretch();
 
     // The entry commands, which Cancel and Save replace while an entry is edited
@@ -284,34 +312,58 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     commandsLayout->setSpacing(4);
     layout->addWidget(m_commands);
 
-    auto* newEntry = new fluent::basicinput::Button(tr("New Entry"), m_commands);
+    // Each group of commands sits in a holder, so the layout can hide it while the buttons follow their actions
+    auto addHolder = [this, commandsLayout] {
+        auto* holder = new QWidget(m_commands);
+        auto* holderLayout = new QHBoxLayout(holder);
+        holderLayout->setContentsMargins(0, 0, 0, 0);
+        holderLayout->setSpacing(4);
+        commandsLayout->addWidget(holder);
+        return holder;
+    };
+
+    m_newEntryLabelled = addHolder();
+    auto* newEntry = new fluent::basicinput::Button(tr("New Entry"), m_newEntryLabelled);
     newEntry->setObjectName("vaultNewEntryButton");
     newEntry->setFluentStyle(fluent::basicinput::Button::Accent);
     newEntry->setFluentLayout(fluent::basicinput::Button::IconBefore);
     newEntry->setIconGlyph(Typography::Icons::Add);
     Vault::makePill(newEntry);
     Vault::bindAction(newEntry, "actionEntryNew");
-    commandsLayout->addWidget(newEntry);
-    commandsLayout->addSpacing(4);
+    m_newEntryLabelled->layout()->addWidget(newEntry);
+    m_newEntryLabelled->setContentsMargins(0, 0, 4, 0);
 
-    auto addCommand = [this, commandsLayout](const QString& glyph, const QString& toolTip, const QString& action) {
-        auto* button = Vault::iconButton(glyph, toolTip, m_commands);
+    // Just the + in a narrow window
+    m_newEntryIcon = addHolder();
+    m_newEntryIcon->hide();
+    auto* newEntryIcon = Vault::iconButton(Typography::Icons::Add, tr("New Entry"), m_newEntryIcon);
+    newEntryIcon->setObjectName("vaultNewEntryIconButton");
+    newEntryIcon->setFluentStyle(fluent::basicinput::Button::Accent);
+    Vault::bindAction(newEntryIcon, "actionEntryNew");
+    m_newEntryIcon->layout()->addWidget(newEntryIcon);
+
+    auto addCommand = [](QWidget* holder, const QString& glyph, const QString& toolTip, const QString& action) {
+        auto* button = Vault::iconButton(glyph, toolTip, holder);
         Vault::bindAction(button, action);
-        commandsLayout->addWidget(button);
+        holder->layout()->addWidget(button);
         return button;
     };
-    addCommand(Typography::Icons::Keyboard, tr("Perform Auto-Type"), "actionEntryAutoTypeSequence");
-    addCommand(Typography::Icons::Edit, tr("Edit entry"), "actionEntryEdit");
-    addCommand(Typography::Icons::Delete, tr("Delete entry"), "actionEntryDelete");
+    m_entryCommands = addHolder();
+    addCommand(m_entryCommands, Typography::Icons::Keyboard, tr("Perform Auto-Type"), "actionEntryAutoTypeSequence");
+    addCommand(m_entryCommands, Typography::Icons::Edit, tr("Edit entry"), "actionEntryEdit");
+    addCommand(m_entryCommands, Typography::Icons::Delete, tr("Delete entry"), "actionEntryDelete");
 
-    auto* separator = new QFrame(m_commands);
+    auto* separator = new QFrame(m_entryCommands);
+    separator->setObjectName("vaultEntryCommandsSeparator");
     separator->setFrameShape(QFrame::VLine);
     separator->setFixedHeight(20);
-    commandsLayout->addSpacing(4);
-    commandsLayout->addWidget(separator);
-    commandsLayout->addSpacing(4);
+    auto* entryCommandsLayout = static_cast<QHBoxLayout*>(m_entryCommands->layout());
+    entryCommandsLayout->addSpacing(4);
+    entryCommandsLayout->addWidget(separator);
+    entryCommandsLayout->addSpacing(4);
 
-    addCommand(Typography::Icons::Lock, tr("Lock database"), "actionLockDatabase");
+    m_lockCommand = addHolder();
+    addCommand(m_lockCommand, Typography::Icons::Lock, tr("Lock database"), "actionLockDatabase");
 
     // Less frequent commands, all mirrored from the main window menus
     auto* more = Vault::iconButton(Typography::Icons::More, tr("More commands"), m_commands);
@@ -376,6 +428,68 @@ void VaultCommandBar::setTitle(const QString& title, int entryCount)
 {
     m_title->setText(title);
     m_count->setText(tr("%n entries", "", entryCount));
+    updateMode();
+}
+
+void VaultCommandBar::setLayoutMode(Vault::Layout layout, bool showingDetails)
+{
+    const bool resized = layout != m_layout;
+    m_layout = layout;
+    m_showingDetails = showingDetails;
+    updateMode();
+    if (resized) {
+        onThemeUpdated();
+    }
+}
+
+void VaultCommandBar::setGroupsOpen(bool open)
+{
+    m_groupsButton->setIconGlyph(open ? Typography::Icons::ChevronUp : Typography::Icons::ChevronDown);
+    m_groupsButton->setToolTip(open ? tr("Hide groups") : tr("Show groups"));
+    m_groupsButton->setAccessibleName(m_groupsButton->toolTip());
+}
+
+void VaultCommandBar::updateMode()
+{
+    const bool narrow = m_layout == Vault::Layout::Narrow;
+    const bool editing = m_editorButtons;
+    const bool back = narrow && m_showingDetails && !editing;
+
+    m_backButton->setVisible(back);
+    m_backButton->setText(m_title->text());
+    m_backButton->setToolTip(tr("Back to the entries"));
+    m_heading->setVisible(!back);
+    m_groupsButton->setVisible(m_layout != Vault::Layout::Wide);
+    m_groupsButton->setEnabled(!editing);
+    m_title->setCursor(m_groupsButton->isVisible() && !editing ? Qt::PointingHandCursor : Qt::ArrowCursor);
+    m_count->setVisible(!(narrow && m_showingDetails));
+
+    m_newEntryLabelled->setVisible(!narrow);
+    m_newEntryIcon->setVisible(narrow && !m_showingDetails);
+    m_entryCommands->setVisible(!narrow || m_showingDetails);
+    m_lockCommand->setVisible(!(narrow && m_showingDetails));
+    // The divider separates the entry commands from Lock, so it goes with it
+    if (auto* separator = m_entryCommands->findChild<QFrame*>("vaultEntryCommandsSeparator")) {
+        separator->setVisible(m_lockCommand->isVisibleTo(this));
+    }
+
+    if (auto* barLayout = layout()) {
+        barLayout->setContentsMargins(narrow ? QMargins(8, 8, 8, 6) : QMargins(14, 10, 14, 10));
+    }
+}
+
+bool VaultCommandBar::eventFilter(QObject* watched, QEvent* event)
+{
+    // The title itself opens the groups too, like the chevron beside it
+    if (watched == m_title && event->type() == QEvent::MouseButtonRelease && m_groupsButton->isVisible()
+        && m_groupsButton->isEnabled()) {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            emit groupsRequested();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void VaultCommandBar::setEditorButtons(QDialogButtonBox* buttons)
@@ -383,6 +497,7 @@ void VaultCommandBar::setEditorButtons(QDialogButtonBox* buttons)
     m_editorButtons = buttons;
     m_commands->setVisible(!buttons);
     m_editCommands->setVisible(buttons);
+    updateMode();
     if (!buttons) {
         return;
     }
@@ -409,7 +524,7 @@ QAbstractButton* VaultCommandBar::editorButton(std::initializer_list<QDialogButt
 void VaultCommandBar::onThemeUpdated()
 {
     const auto p = FluentTheme::palette();
-    Vault::styleHeading(m_title, 30, p.text);
+    Vault::styleHeading(m_title, m_layout == Vault::Layout::Narrow ? 24 : 30, p.text);
     Vault::styleLabel(m_count, Typography::FontRole::Caption, p.textTertiary);
     const int baselineOffset = QFontMetrics(m_title->font()).ascent() - QFontMetrics(m_count->font()).ascent();
     m_count->setContentsMargins(0, qMax(0, baselineOffset), 0, 0);
@@ -980,8 +1095,9 @@ void VaultAccountButton::refresh()
     setVisible(m_controller->mode() == AccountController::Mode::Account && state != AccountManager::State::SignedOut);
     m_locked = state != AccountManager::State::Unlocked;
     m_offline = !m_locked && account->isOffline();
-    const auto status = m_locked ? tr("Account locked") : m_offline ? tr("Offline: changes sync when back online")
-                                                                    : tr("Account unlocked");
+    const auto status = m_locked    ? tr("Account locked")
+                        : m_offline ? tr("Offline: changes sync when back online")
+                                    : tr("Account unlocked");
     setToolTip(QStringLiteral("%1\n%2").arg(account->email(), status));
     update();
 }
@@ -1099,8 +1215,10 @@ VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, Q
 
     // Picker on the left, sync status on the right, search centered between equal side columns
     auto* layout = new QGridLayout(this);
+    m_layout = layout;
     layout->setContentsMargins(12, 8, 12, 4);
     layout->setHorizontalSpacing(12);
+    layout->setVerticalSpacing(8);
     layout->addWidget(m_databasePicker, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
 
     searchWidget->setParent(this);
@@ -1112,16 +1230,62 @@ VaultHeaderBar::VaultHeaderBar(DatabaseTabWidget* tabs, QWidget* searchWidget, Q
     center->addWidget(searchWidget, 100);
     center->addStretch(1);
     layout->addLayout(center, 0, 1);
+    m_searchLayout = center;
     m_statusLayout = new QHBoxLayout();
     m_statusLayout->setSpacing(8);
     m_statusLayout->addStretch(1);
-    m_statusLayout->addWidget(m_syncChip, 0, Qt::AlignVCenter);
+    // The sync status steps aside in a narrow window; its holder hides it without touching its own visibility
+    m_syncHolder = new QWidget(this);
+    auto* syncLayout = new QHBoxLayout(m_syncHolder);
+    syncLayout->setContentsMargins(0, 0, 0, 0);
+    syncLayout->addWidget(m_syncChip);
+    m_statusLayout->addWidget(m_syncHolder, 0, Qt::AlignVCenter);
     m_statusLayout->addWidget(m_accountButton, 0, Qt::AlignVCenter);
     layout->addLayout(m_statusLayout, 0, 2);
 
     layout->setColumnStretch(0, 1);
     layout->setColumnStretch(1, 3);
     layout->setColumnStretch(2, 1);
+}
+
+void VaultHeaderBar::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateLayout();
+}
+
+void VaultHeaderBar::updateLayout()
+{
+    // In a narrow window the search takes its own row under the picker and the account
+    // The window's width, like the vault below, not the header's, which the macOS window controls narrow
+    const bool narrow = Vault::layoutForWidth(window()->width()) == Vault::Layout::Narrow;
+    if (narrow == m_narrow) {
+        return;
+    }
+    m_narrow = narrow;
+    m_layout->removeItem(m_searchLayout);
+    if (narrow) {
+        m_layout->addLayout(m_searchLayout, 1, 0, 1, 3);
+        m_layout->setColumnStretch(0, 1);
+        m_layout->setColumnStretch(1, 0);
+        m_layout->setColumnStretch(2, 0);
+    } else {
+        m_layout->addLayout(m_searchLayout, 0, 1);
+        m_layout->setColumnStretch(0, 1);
+        m_layout->setColumnStretch(1, 3);
+        m_layout->setColumnStretch(2, 1);
+    }
+    // On its own row the search fills the width
+    if (auto* search = m_searchLayout->itemAt(1)->widget()) {
+        search->setMaximumWidth(narrow ? QWIDGETSIZE_MAX : 440);
+    }
+    m_syncHolder->setVisible(!narrow);
+    emit narrowChanged(narrow);
+}
+
+bool VaultHeaderBar::isNarrow() const
+{
+    return m_narrow;
 }
 
 void VaultHeaderBar::setAccountController(AccountController* controller)
@@ -1133,7 +1297,7 @@ void VaultHeaderBar::setAccountController(AccountController* controller)
 void VaultHeaderBar::insertStatusWidget(QWidget* widget, QWidget* before)
 {
     widget->setParent(this);
-    const int index = m_statusLayout->indexOf(before);
+    const int index = m_statusLayout->indexOf(before == m_syncChip ? m_syncHolder : before);
     m_statusLayout->insertWidget(index < 0 ? m_statusLayout->count() : index, widget, 0, Qt::AlignVCenter);
 }
 

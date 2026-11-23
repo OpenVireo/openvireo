@@ -25,6 +25,7 @@
 #include "gui/MainWindow.h"
 #include "gui/notifications/NotificationCenter.h"
 #include "gui/notifications/NotificationWidgets.h"
+#include "gui/vault/VaultResponsive.h"
 #include "util/TemporaryFile.h"
 
 #include <QDir>
@@ -40,6 +41,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     QTEST_DISABLE_KEYPAD_NAVIGATION
     TestNotifications tc;
     QTEST_SET_MAIN_SOURCE_PATH

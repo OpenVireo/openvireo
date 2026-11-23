@@ -50,6 +50,7 @@ class SyncScheduler;
 class SyncEventStream;
 class EntryDetailCard;
 class VaultCommandBar;
+class VaultResponsiveLayout;
 class VaultModal;
 class VaultSectionHeader;
 class VaultEntryEditCard;
@@ -403,6 +404,7 @@ private:
     QPointer<VaultSettingsModal> m_vaultGroupModal;
     bool m_vaultGroupEditing = false;
     QPointer<QWidget> m_vaultNavPane;
+    QPointer<VaultResponsiveLayout> m_vaultResponsive;
     QPointer<VaultSectionHeader> m_vaultTagsHeader;
     QList<QPointer<QWidget>> m_vaultDimmers;
 

@@ -46,6 +46,7 @@
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
 #include "gui/wizard/ImportWizard.h"
+#include "gui/vault/VaultResponsive.h"
 #include "mock/MockClock.h"
 
 #include <QAbstractButton>
@@ -77,6 +78,8 @@ int main(int argc, char* argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setAttribute(Qt::AA_Use96Dpi, true);
     app.applyTheme();
+    // The window can be narrower than the wide layout on CI screens; TestGuiVault covers the others
+    Vault::setLayoutForTests(Vault::Layout::Wide);
     QTEST_DISABLE_KEYPAD_NAVIGATION
     TestDocsScreenshots tc;
     QTEST_SET_MAIN_SOURCE_PATH

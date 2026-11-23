@@ -51,6 +51,8 @@ public:
     void setEntry(Entry* entry);
     void setGroup(Group* group);
     void refresh();
+    // Captions above the values, for a narrow window
+    void setStacked(bool stacked);
     void onThemeUpdated() override;
 
 protected:
@@ -66,6 +68,7 @@ private:
 
     QPointer<Entry> m_entry;
     QPointer<Group> m_group;
+    bool m_stacked = false;
     bool m_usernameRevealed = false;
     bool m_passwordRevealed = false;
     bool m_totpRevealed = false;

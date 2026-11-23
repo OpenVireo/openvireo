@@ -24,6 +24,7 @@
 
 #include <QAction>
 #include <QEvent>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
@@ -245,15 +246,52 @@ VaultFieldRow::VaultFieldRow(const QString& caption, QWidget* parent)
     m_value->setMinimumWidth(0);
     m_value->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
-    auto* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(14, 6, 8, 6);
-    layout->setSpacing(12);
-    layout->addWidget(m_caption);
-    layout->addWidget(m_value, 1);
+    m_grid = new QGridLayout(this);
+    m_grid->setContentsMargins(14, 6, 8, 6);
+    m_grid->setHorizontalSpacing(12);
+    m_grid->setVerticalSpacing(2);
+    m_grid->addWidget(m_caption, 0, 0);
+    m_grid->addWidget(m_value, 0, 1);
     m_buttons->setSpacing(2);
-    layout->addLayout(m_buttons);
+    m_grid->addLayout(m_buttons, 0, 2);
+    m_grid->setColumnStretch(1, 1);
 
     applyColors();
+}
+
+void VaultFieldRow::setStacked(bool stacked)
+{
+    if (stacked == m_stacked) {
+        return;
+    }
+    m_stacked = stacked;
+    m_grid->removeWidget(m_caption);
+    m_grid->removeWidget(m_value);
+    m_grid->removeItem(m_buttons);
+    m_grid->setColumnStretch(0, 0);
+    m_grid->setColumnStretch(1, 0);
+    if (stacked) {
+        // Caption on its own line; the value and its buttons share the line below
+        m_caption->setMinimumWidth(0);
+        m_caption->setMaximumWidth(QWIDGETSIZE_MAX);
+        m_grid->addWidget(m_caption, 0, 0, 1, 2);
+        m_grid->addWidget(m_value, 1, 0);
+        m_grid->addLayout(m_buttons, 1, 1);
+        m_grid->setColumnStretch(0, 1);
+        m_grid->setContentsMargins(14, 8, 8, 6);
+    } else {
+        m_caption->setFixedWidth(96);
+        m_grid->addWidget(m_caption, 0, 0);
+        m_grid->addWidget(m_value, 0, 1);
+        m_grid->addLayout(m_buttons, 0, 2);
+        m_grid->setColumnStretch(1, 1);
+        m_grid->setContentsMargins(14, 6, 8, 6);
+    }
+}
+
+bool VaultFieldRow::isStacked() const
+{
+    return m_stacked;
 }
 
 QLabel* VaultFieldRow::caption() const

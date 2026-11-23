@@ -22,6 +22,8 @@ image::main_interface.png[]
 
 When a database syncs with a sync server or belongs to an OpenVireo account, a sync status chip at the far right of the header shows whether it is synced, syncing, offline, or needs your attention; click it to sync again or to act on the problem. In account mode an account button next to it shows who is signed in and opens the account menu.
 
+The layout adapts to the window's width, like the web app. Below 1100 pixels the sidebar folds away: click the group name above the entries (or the arrow beside it) to drop the groups down over the list, and pick a group or press kbd:[Esc] to close them. Below 760 pixels the entries and the entry details take turns: click an entry to open its details and the back button to return to the list, and the search box moves to its own row. The window can be made as narrow as 400 pixels.
+
 [TIP]
 ====
 Starting with version 2.7.0, double-click copying of entry usernames and passwords is disabled by default.

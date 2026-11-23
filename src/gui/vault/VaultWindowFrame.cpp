@@ -165,10 +165,21 @@ void VaultWindowFrame::syncChrome()
 
     auto options = m_chrome->options();
     // A hidden title bar still places the window controls where they'd be with it
-    options.titleBarRect = m_titleBar->isHidden()
-                               ? QRect(0, 0, m_window->width(), TitleBarHeight)
-                               : QRect(m_titleBar->mapTo(m_window, QPoint(0, 0)), m_titleBar->size());
+    options.titleBarRect = m_titleBar->isHidden() ? QRect(0, 0, m_window->width(), TitleBarHeight)
+                                                  : QRect(m_titleBar->mapTo(m_window, QPoint(0, 0)),
+                                                          QSize(m_titleBar->width(), TitleBarHeight));
     m_chrome->configure(options);
+}
+
+void VaultWindowFrame::setHeaderRows(int rows)
+{
+    if (!m_titleBar) {
+        return;
+    }
+    // The second row is the search box with the gap above it
+    constexpr int SecondRowHeight = 44;
+    m_titleBar->setTitleBarHeight(TitleBarHeight + qMax(0, rows - 1) * SecondRowHeight);
+    scheduleSync();
 }
 
 void VaultWindowFrame::scheduleSync()

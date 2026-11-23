@@ -28,8 +28,12 @@
 
 #include <components/foundation/FluentElement.h>
 
+#include "gui/vault/VaultResponsive.h"
+
 class AccountController;
+class QGridLayout;
 class QHBoxLayout;
+class QLayout;
 class Database;
 class DatabaseTabWidget;
 class DatabaseWidget;
@@ -64,6 +68,9 @@ public:
     explicit VaultSurface(QWidget* parent = nullptr);
 
     static constexpr int Gutter = 16;
+
+    // Room for the canvas to show around the surface: none on the left while the groups pane sits there
+    void setGutters(int left, int right, int bottom);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -129,16 +136,40 @@ public:
     explicit VaultCommandBar(QWidget* parent = nullptr);
 
     void setTitle(const QString& title, int entryCount);
+    // Fit the window's layout: without the groups pane the title opens the groups; in Narrow showing one entry's
+    // details, a back button takes the title's place and the entry commands move here from the list
+    void setLayoutMode(Vault::Layout layout, bool showingDetails);
+    // The groups flyout opened from the title is open
+    void setGroupsOpen(bool open);
     // Show Cancel and Save for the editor with these buttons in place of the entry commands, or the
     // entry commands again when null
     void setEditorButtons(QDialogButtonBox* buttons);
     void onThemeUpdated() override;
 
+signals:
+    // The title was clicked while the groups are folded into it
+    void groupsRequested();
+    // Back to the list from one entry's details
+    void backRequested();
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
     QAbstractButton* editorButton(std::initializer_list<QDialogButtonBox::StandardButton> which) const;
+    void updateMode();
 
+    Vault::Layout m_layout = Vault::Layout::Wide;
+    bool m_showingDetails = false;
+    QWidget* m_heading;
     QLabel* m_title;
     QLabel* m_count;
+    fluent::basicinput::Button* m_groupsButton;
+    fluent::basicinput::Button* m_backButton;
+    QWidget* m_newEntryLabelled;
+    QWidget* m_newEntryIcon;
+    QWidget* m_entryCommands;
+    QWidget* m_lockCommand;
     QWidget* m_commands;
     QWidget* m_editCommands;
     fluent::basicinput::Button* m_cancelButton;
@@ -284,11 +315,23 @@ public:
     void setAccountController(AccountController* controller);
     // Add a widget to the status group on the right, before another one of its widgets
     void insertStatusWidget(QWidget* widget, QWidget* before);
+    // In a narrow window the search sits on a second row
+    bool isNarrow() const;
+
+signals:
+    void narrowChanged(bool narrow);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
+    void updateLayout();
+
+    QGridLayout* m_layout;
+    QLayout* m_searchLayout;
+    QWidget* m_syncHolder;
+    bool m_narrow = false;
     QHBoxLayout* m_statusLayout;
     VaultDatabasePicker* m_databasePicker;
     VaultSyncChip* m_syncChip;
