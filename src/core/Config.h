@@ -86,12 +86,8 @@ public:
 
         GUI_Language,
         GUI_HideMenubar,
-        GUI_HideToolbar,
-        GUI_MovableToolbar,
         GUI_HideGroupPanel,
-        GUI_HidePreviewPanel,
         GUI_AlwaysOnTop,
-        GUI_ToolButtonStyle,
         GUI_LaunchAtStartup,
         GUI_ShowTrayIcon,
         GUI_TrayIconAppearance,
@@ -116,7 +112,6 @@ public:
         GUI_MainWindowState,
         GUI_ListViewState,
         GUI_SearchViewState,
-        GUI_PreviewSplitterState,
         GUI_SplitterState,
         GUI_GroupSplitterState,
         GUI_VaultSplitterState,
@@ -193,7 +188,6 @@ public:
         Account_ServerUrl,
         Account_SelfHostedServerUrl,
         Account_AllowOfflineUnlock,
-
 
         PasswordGenerator_LowerCase,
         PasswordGenerator_UpperCase,

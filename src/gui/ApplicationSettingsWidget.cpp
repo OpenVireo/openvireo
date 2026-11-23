@@ -225,7 +225,6 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     auto mouseWheelFilter = new MouseWheelEventFilter(this);
     m_generalUi->faviconTimeoutSpinBox->installEventFilter(mouseWheelFilter);
     m_generalUi->alternativeSaveComboBox->installEventFilter(mouseWheelFilter);
-    m_generalUi->toolButtonStyleComboBox->installEventFilter(mouseWheelFilter);
     m_generalUi->languageComboBox->installEventFilter(mouseWheelFilter);
     m_generalUi->trayIconAppearance->installEventFilter(mouseWheelFilter);
     m_generalUi->fontSizeComboBox->installEventFilter(mouseWheelFilter);
@@ -236,11 +235,6 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     m_generalUi->menubarShowCheckBox->setVisible(false);
 #endif
 
-    // The Vault Index layout has no toolbar, so none of the toolbar options apply
-    m_generalUi->toolbarShowCheckBox->setVisible(false);
-    m_generalUi->toolButtonStyleLabel->setVisible(false);
-    m_generalUi->toolButtonStyleComboBox->setVisible(false);
-    m_generalUi->toolbarMovableCheckBox->setVisible(false);
     buildVaultGeneralPage();
     buildVaultSecurityPage();
     buildVaultAutoTypePage();
@@ -465,22 +459,8 @@ void ApplicationSettingsWidget::loadSettings()
     }
 
     m_generalUi->menubarShowCheckBox->setChecked(!config()->get(Config::GUI_HideMenubar).toBool());
-    m_generalUi->toolbarShowCheckBox->setChecked(!config()->get(Config::GUI_HideToolbar).toBool());
-    m_generalUi->toolbarMovableCheckBox->setChecked(config()->get(Config::GUI_MovableToolbar).toBool());
     m_generalUi->monospaceNotesCheckBox->setChecked(config()->get(Config::GUI_MonospaceNotes).toBool());
     m_generalUi->colorPasswordsCheckBox->setChecked(config()->get(Config::GUI_ColorPasswords).toBool());
-
-    m_generalUi->toolButtonStyleComboBox->clear();
-    m_generalUi->toolButtonStyleComboBox->addItem(tr("Icon only"), Qt::ToolButtonIconOnly);
-    m_generalUi->toolButtonStyleComboBox->addItem(tr("Text only"), Qt::ToolButtonTextOnly);
-    m_generalUi->toolButtonStyleComboBox->addItem(tr("Text beside icon"), Qt::ToolButtonTextBesideIcon);
-    m_generalUi->toolButtonStyleComboBox->addItem(tr("Text under icon"), Qt::ToolButtonTextUnderIcon);
-    m_generalUi->toolButtonStyleComboBox->addItem(tr("Follow style"), Qt::ToolButtonFollowStyle);
-    int toolButtonStyleIndex =
-        m_generalUi->toolButtonStyleComboBox->findData(config()->get(Config::GUI_ToolButtonStyle));
-    if (toolButtonStyleIndex >= 0) {
-        m_generalUi->toolButtonStyleComboBox->setCurrentIndex(toolButtonStyleIndex);
-    }
 
     m_generalUi->fontSizeComboBox->clear();
     m_generalUi->fontSizeComboBox->addItem(tr("Small"), -1);
@@ -503,13 +483,8 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->appThemeComboBox->addItem(tr("Dark"), QStringLiteral("dark"));
     m_generalUi->appThemeComboBox->addItem(tr("High contrast"), QStringLiteral("highcontrast"));
     auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
-    int appThemeIndex = m_generalUi->appThemeComboBox->findData(appTheme);
-    if (appThemeIndex < 0) {
-        // Keep the classic theme selectable when it is already in use
-        m_generalUi->appThemeComboBox->addItem(tr("Classic"), appTheme);
-        appThemeIndex = m_generalUi->appThemeComboBox->count() - 1;
-    }
-    m_generalUi->appThemeComboBox->setCurrentIndex(appThemeIndex);
+    // A theme that is no longer offered follows the system, as applyTheme() does
+    m_generalUi->appThemeComboBox->setCurrentIndex(qMax(0, m_generalUi->appThemeComboBox->findData(appTheme)));
 
     m_generalUi->systrayShowCheckBox->setChecked(config()->get(Config::GUI_ShowTrayIcon).toBool());
     systrayToggled(m_generalUi->systrayShowCheckBox->isChecked());
@@ -671,12 +646,9 @@ void ApplicationSettingsWidget::saveSettings()
     config()->set(Config::GUI_Language, language);
 
     config()->set(Config::GUI_HideMenubar, !m_generalUi->menubarShowCheckBox->isChecked());
-    config()->set(Config::GUI_HideToolbar, !m_generalUi->toolbarShowCheckBox->isChecked());
-    config()->set(Config::GUI_MovableToolbar, m_generalUi->toolbarMovableCheckBox->isChecked());
     config()->set(Config::GUI_MonospaceNotes, m_generalUi->monospaceNotesCheckBox->isChecked());
     config()->set(Config::GUI_ColorPasswords, m_generalUi->colorPasswordsCheckBox->isChecked());
 
-    config()->set(Config::GUI_ToolButtonStyle, m_generalUi->toolButtonStyleComboBox->currentData().toString());
     config()->set(Config::GUI_FontSizeOffset, m_generalUi->fontSizeComboBox->currentData().toInt());
     config()->set(Config::GUI_ApplicationTheme, m_generalUi->appThemeComboBox->currentData().toString());
 

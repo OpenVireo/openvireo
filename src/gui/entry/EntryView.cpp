@@ -467,8 +467,7 @@ void EntryView::resetFixedColumns()
 
             // Increase column width, if sorting, to accommodate icon and arrow
             auto width = ICON_ONLY_SECTION_SIZE;
-            if (header()->sortIndicatorSection() == col
-                && config()->get(Config::GUI_ApplicationTheme).toString() != "classic") {
+            if (header()->sortIndicatorSection() == col) {
                 width += 18;
             }
             header()->resizeSection(col, width);

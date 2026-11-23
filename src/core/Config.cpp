@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-#define CONFIG_VERSION 3
+#define CONFIG_VERSION 4
 #define QS QStringLiteral
 
 enum ConfigType
@@ -106,12 +106,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     // GUI
     {Config::GUI_Language, {QS("GUI/Language"), Roaming, QS("system")}},
     {Config::GUI_HideMenubar, {QS("GUI/HideMenubar"), Roaming, false}},
-    {Config::GUI_HideToolbar, {QS("GUI/HideToolbar"), Roaming, false}},
-    {Config::GUI_MovableToolbar, {QS("GUI/MovableToolbar"), Roaming, false}},
     {Config::GUI_HideGroupPanel, {QS("GUI/HideGroupPanel"), Roaming, false}},
-    {Config::GUI_HidePreviewPanel, {QS("GUI/HidePreviewPanel"), Roaming, false}},
     {Config::GUI_AlwaysOnTop, {QS("GUI/GUI_AlwaysOnTop"), Local, false}},
-    {Config::GUI_ToolButtonStyle, {QS("GUI/ToolButtonStyle"), Roaming, Qt::ToolButtonIconOnly}},
     {Config::GUI_LaunchAtStartup, {QS("GUI/LaunchAtStartup"), Roaming, false}},
     {Config::GUI_ShowTrayIcon, {QS("GUI/ShowTrayIcon"), Roaming, false}},
     {Config::GUI_TrayIconAppearance, {QS("GUI/TrayIconAppearance"), Roaming, {}}},
@@ -140,7 +136,6 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_SearchViewState, {QS("GUI/SearchViewState"), Local, {}}},
     {Config::GUI_SplitterState, {QS("GUI/SplitterState"), Local, {}}},
     {Config::GUI_GroupSplitterState, {QS("GUI/GroupSplitterState"), Local, {}}},
-    {Config::GUI_PreviewSplitterState, {QS("GUI/PreviewSplitterState"), Local, {}}},
     {Config::GUI_VaultSplitterState, {QS("GUI/VaultSplitterState"), Local, {}}},
     {Config::GUI_AutoTypeSelectDialogSize, {QS("GUI/AutoTypeSelectDialogSize"), Local, QSize(600, 250)}},
     {Config::GUI_OrgAdminLastOrg, {QS("GUI/OrgAdminLastOrg"), Local, {}}},
@@ -374,8 +369,8 @@ void Config::exportSettings(const QString& fileName) const
 static const QHash<QString, Config::ConfigKey> deprecationMap = {
     // 2.3.4
     {QS("security/hidepassworddetails"), Config::Security_HidePasswordPreviewPanel},
-    {QS("GUI/HideDetailsView"), Config::GUI_HidePreviewPanel},
-    {QS("GUI/DetailSplitterState"), Config::GUI_PreviewSplitterState},
+    {QS("GUI/HideDetailsView"), Config::Deleted},
+    {QS("GUI/DetailSplitterState"), Config::Deleted},
     {QS("security/IconDownloadFallbackToGoogle"), Config::Security_IconDownloadFallback},
 
     // 2.6.0
@@ -446,7 +441,14 @@ static const QHash<QString, Config::ConfigKey> deprecationMap = {
     {QS("KeeShare/QuietSuccess"), Config::Deleted},
     {QS("KeeShare/Own"), Config::Deleted},
     {QS("KeeShare/Foreign"), Config::Deleted},
-    {QS("KeeShare/Active"), Config::Deleted}};
+    {QS("KeeShare/Active"), Config::Deleted},
+
+    // OpenVireo 1.1: the classic layout was removed
+    {QS("GUI/HideToolbar"), Config::Deleted},
+    {QS("GUI/MovableToolbar"), Config::Deleted},
+    {QS("GUI/ToolButtonStyle"), Config::Deleted},
+    {QS("GUI/HidePreviewPanel"), Config::Deleted},
+    {QS("GUI/PreviewSplitterState"), Config::Deleted}};
 
 /**
  * Migrate settings from previous versions.
@@ -521,6 +523,11 @@ void Config::migrate()
         // Convert: true (open browser) -> 0, false (edit entry) -> 2
         set(URLDoubleClickAction, openUrlOnDoubleClick ? 0 : 2);
         // Keep the old setting for now for compatibility
+    }
+
+    // OpenVireo 1.1: the classic theme was removed, so it follows the system
+    if (previousVersion < 4 && get(GUI_ApplicationTheme).toString() == QS("classic")) {
+        set(GUI_ApplicationTheme, QS("auto"));
     }
 
     m_settings->setValue("ConfigVersion", CONFIG_VERSION);

@@ -28,6 +28,7 @@ private slots:
 
     void testUpgrade();
     void testURLDoubleClickMigration();
+    void testClassicLayoutMigration();
 };
 
 #endif // KEEPASSX_TESTCONFIG_H

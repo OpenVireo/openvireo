@@ -82,3 +82,35 @@ void TestConfig::testURLDoubleClickMigration()
 
     tempFile2.remove();
 }
+
+void TestConfig::testClassicLayoutMigration()
+{
+    // A config from before the classic theme and layout were removed
+    TemporaryFile tempFile;
+    tempFile.open();
+
+    QSettings oldConfig(tempFile.fileName(), QSettings::IniFormat);
+    oldConfig.setValue("ConfigVersion", 3);
+    oldConfig.setValue("GUI/ApplicationTheme", "classic");
+    oldConfig.setValue("GUI/HideToolbar", true);
+    oldConfig.setValue("GUI/MovableToolbar", true);
+    oldConfig.setValue("GUI/ToolButtonStyle", Qt::ToolButtonTextOnly);
+    oldConfig.setValue("GUI/HidePreviewPanel", true);
+    oldConfig.sync();
+    tempFile.close();
+
+    Config::createConfigFromFile(tempFile.fileName());
+
+    // The classic theme follows the system now
+    QCOMPARE(config()->get(Config::GUI_ApplicationTheme).toString(), QString("auto"));
+
+    // Settings only the classic layout read are gone
+    QSettings migrated(tempFile.fileName(), QSettings::IniFormat);
+    QCOMPARE(migrated.value("ConfigVersion").toInt(), 4);
+    QCOMPARE(migrated.value("GUI/ApplicationTheme").toString(), QString("auto"));
+    for (const auto& key : {"GUI/HideToolbar", "GUI/MovableToolbar", "GUI/ToolButtonStyle", "GUI/HidePreviewPanel"}) {
+        QVERIFY2(!migrated.contains(key), key);
+    }
+
+    tempFile.remove();
+}

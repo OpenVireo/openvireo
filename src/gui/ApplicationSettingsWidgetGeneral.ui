@@ -822,41 +822,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="2">
-                 <widget class="VaultCheckBox" name="toolbarMovableCheckBox">
-                  <property name="enabled">
-                   <bool>true</bool>
-                  </property>
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string>Movable toolbar</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="VaultComboBox" name="toolButtonStyleComboBox">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="focusPolicy">
-                   <enum>Qt::FocusPolicy::StrongFocus</enum>
-                  </property>
-                  <property name="accessibleName">
-                   <string>Toolbar button style</string>
-                  </property>
-                  <property name="sizeAdjustPolicy">
-                   <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-                  </property>
-                 </widget>
-                </item>
                 <item row="0" column="1">
                  <widget class="VaultComboBox" name="languageComboBox">
                   <property name="sizePolicy">
@@ -873,28 +838,6 @@
                   </property>
                   <property name="sizeAdjustPolicy">
                    <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="toolButtonStyleLabel">
-                  <property name="enabled">
-                   <bool>true</bool>
-                  </property>
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string>Toolbar button style:</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-                  </property>
-                  <property name="buddy">
-                   <cstring>toolButtonStyleComboBox</cstring>
                   </property>
                  </widget>
                 </item>
@@ -958,13 +901,6 @@
                  </widget>
                 </item>
                </layout>
-              </item>
-              <item>
-               <widget class="VaultCheckBox" name="toolbarShowCheckBox">
-                <property name="text">
-                 <string>Show toolbar</string>
-                </property>
-               </widget>
               </item>
               <item>
                <widget class="VaultCheckBox" name="menubarShowCheckBox">
@@ -1280,9 +1216,6 @@
   <tabstop>dropToBackgroundOnCopyRadioButton</tabstop>
   <tabstop>faviconTimeoutSpinBox</tabstop>
   <tabstop>languageComboBox</tabstop>
-  <tabstop>toolButtonStyleComboBox</tabstop>
-  <tabstop>toolbarMovableCheckBox</tabstop>
-  <tabstop>toolbarShowCheckBox</tabstop>
   <tabstop>menubarShowCheckBox</tabstop>
   <tabstop>colorPasswordsCheckBox</tabstop>
   <tabstop>monospaceNotesCheckBox</tabstop>

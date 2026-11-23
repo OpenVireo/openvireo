@@ -2689,14 +2689,12 @@ void MainWindow::initViewMenu()
     m_ui->actionThemeLight->setData("light");
     m_ui->actionThemeDark->setData("dark");
     m_ui->actionThemeHighContrast->setData("highcontrast");
-    m_ui->actionThemeClassic->setData("classic");
 
     auto themeActions = new QActionGroup(this);
     themeActions->addAction(m_ui->actionThemeAuto);
     themeActions->addAction(m_ui->actionThemeLight);
     themeActions->addAction(m_ui->actionThemeDark);
     themeActions->addAction(m_ui->actionThemeHighContrast);
-    themeActions->addAction(m_ui->actionThemeClassic);
 
     auto theme = config()->get(Config::GUI_ApplicationTheme).toString();
     for (auto action : themeActions->actions()) {
@@ -2711,7 +2709,7 @@ void MainWindow::initViewMenu()
     });
 
     // The theme can be changed from this menu or from the application settings
-    connect(config(), &Config::changed, this, [this, theme, themeActions](Config::ConfigKey key) {
+    connect(config(), &Config::changed, this, [themeActions](Config::ConfigKey key) {
         if (key != Config::GUI_ApplicationTheme) {
             return;
         }
@@ -2722,14 +2720,7 @@ void MainWindow::initViewMenu()
                 break;
             }
         }
-        if ((newTheme == "classic" || theme == "classic") && newTheme != theme) {
-            QTimer::singleShot(200, this, [this] {
-                restartApp(
-                    tr("You must restart the application to apply this setting. Would you like to restart now?"));
-            });
-        } else {
-            kpxcApp->applyTheme();
-        }
+        kpxcApp->applyTheme();
     });
 
 #ifdef Q_OS_MACOS
@@ -2842,7 +2833,6 @@ void MainWindow::initActionCollection()
                     m_ui->actionThemeLight,
                     m_ui->actionThemeDark,
                     m_ui->actionThemeHighContrast,
-                    m_ui->actionThemeClassic,
 #ifndef Q_OS_MACOS
                     m_ui->actionShowMenubar,
 #endif

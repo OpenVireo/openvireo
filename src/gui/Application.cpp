@@ -133,11 +133,7 @@ Application::Application(int& argc, char** argv)
             << QObject::tr("The lock file could not be created. Single-instance mode disabled.").toUtf8().constData();
     }
 
-    connect(osUtils, &OSUtilsBase::interfaceThemeChanged, this, [this]() {
-        if (config()->get(Config::GUI_ApplicationTheme).toString() != "classic") {
-            applyTheme();
-        }
-    });
+    connect(osUtils, &OSUtilsBase::interfaceThemeChanged, this, [this]() { applyTheme(); });
 }
 
 Application::~Application()
@@ -181,7 +177,8 @@ FluentTheme::HighContrastColors Application::highContrastColors()
 void Application::applyTheme()
 {
     auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
-    if (appTheme == "auto") {
+    // Anything else, such as the removed classic theme, follows the system
+    if (appTheme != "light" && appTheme != "dark" && appTheme != "highcontrast") {
         if (osUtils->isHighContrastMode()) {
             appTheme = "highcontrast";
         } else {
@@ -206,25 +203,11 @@ void Application::applyTheme()
         setPalette(s->standardPalette());
         setStyle(s);
         FluentTheme::apply(m_darkTheme);
-    } else if (appTheme == "dark") {
+    } else {
         m_darkTheme = true;
         auto* s = new DarkStyle;
         setPalette(s->standardPalette());
         setStyle(s);
-        FluentTheme::apply(m_darkTheme);
-    } else {
-        // Classic mode, don't check for dark theme on Windows
-        // because Qt 5.x does not support it
-#if defined(Q_OS_WIN)
-        m_darkTheme = false;
-#else
-        m_darkTheme = osUtils->isDarkMode();
-#endif
-        QFile stylesheetFile(":/styles/base/classicstyle.qss");
-        if (stylesheetFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            setStyleSheet(stylesheetFile.readAll());
-            stylesheetFile.close();
-        }
         FluentTheme::apply(m_darkTheme);
     }
     applyFontSize();

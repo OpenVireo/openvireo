@@ -28,7 +28,6 @@ DatabaseWidgetStateSync::DatabaseWidgetStateSync(QObject* parent)
 {
     m_splitterSizes = {
         {Config::GUI_SplitterState, variantToIntList(config()->get(Config::GUI_SplitterState))},
-        {Config::GUI_PreviewSplitterState, variantToIntList(config()->get(Config::GUI_PreviewSplitterState))},
         {Config::GUI_GroupSplitterState, variantToIntList(config()->get(Config::GUI_GroupSplitterState))},
         {Config::GUI_VaultSplitterState, variantToIntList(config()->get(Config::GUI_VaultSplitterState))}};
     m_listViewState = config()->get(Config::GUI_ListViewState).toByteArray();
@@ -48,8 +47,6 @@ void DatabaseWidgetStateSync::sync()
 {
     m_syncTimer.stop();
     config()->set(Config::GUI_SplitterState, intListToVariant(m_splitterSizes.value(Config::GUI_SplitterState)));
-    config()->set(Config::GUI_PreviewSplitterState,
-                  intListToVariant(m_splitterSizes.value(Config::GUI_PreviewSplitterState)));
     config()->set(Config::GUI_GroupSplitterState,
                   intListToVariant(m_splitterSizes.value(Config::GUI_GroupSplitterState)));
     config()->set(Config::GUI_VaultSplitterState,

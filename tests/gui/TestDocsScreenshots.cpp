@@ -545,7 +545,7 @@ void TestDocsScreenshots::mainWindow()
           {"B", rectOf(search), true},
           {"C", rectOf(entries), true},
           {"D", rectOf(detail), true}});
-    // The command bar takes over from the classic toolbar
+    // The command bar holds the entry commands
     if (auto* commandBar = m_dbWidget->findChild<VaultCommandBar*>()) {
         save("toolbar", {}, rectOf(commandBar));
     }

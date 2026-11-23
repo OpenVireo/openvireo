@@ -391,7 +391,7 @@ private:
     QPointer<TagView> m_tagView;
     QPointer<EntryView> m_entryView;
 
-    // Vault Index layout (Fluent-Qt); null in the classic layout
+    // Vault Index layout (Fluent-Qt)
     QPointer<VaultCommandBar> m_vaultCommandBar;
     QPointer<EntryDetailCard> m_detailCard;
     // Entry editors shown in place of the detail card, the one showing (null when not editing),

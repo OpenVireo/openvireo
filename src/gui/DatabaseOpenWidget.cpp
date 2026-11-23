@@ -239,7 +239,7 @@ void DatabaseOpenWidget::setupVaultStyle()
 void DatabaseOpenWidget::applyCardStyle()
 {
     const auto p = FluentTheme::palette();
-    // A database's public color outlines its card, as it outlines the classic unlock box
+    // A database's public color outlines its card
     const auto color = m_db ? m_db->publicColor() : QString();
     // Without one, the outline sits between the card stroke and the strong stroke, so the card reads on the canvas
     auto stroke = p.strokeStrong;

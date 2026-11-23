@@ -367,7 +367,6 @@
      <addaction name="actionThemeLight"/>
      <addaction name="actionThemeDark"/>
      <addaction name="actionThemeHighContrast"/>
-     <addaction name="actionThemeClassic"/>
     </widget>
     <addaction name="actionNotifications"/>
     <addaction name="separator"/>
@@ -1116,17 +1115,6 @@
    </property>
    <property name="toolTip">
     <string>Set Theme: High Contrast</string>
-   </property>
-  </action>
-  <action name="actionThemeClassic">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Classic (Platform-native)</string>
-   </property>
-   <property name="toolTip">
-    <string>Set Theme: Classic</string>
    </property>
   </action>
   <action name="actionShowMenubar">

@@ -760,11 +760,11 @@ void TestGuiVault::testToolbarSettingsHidden()
     QVERIFY(settingsWidget);
     QTRY_VERIFY(settingsWidget->isVisible());
 
-    // The Vault Index layout has no toolbar to show, style or move
-    QVERIFY(settingsWidget->findChild<QWidget*>("toolbarShowCheckBox")->isHidden());
-    QVERIFY(settingsWidget->findChild<QWidget*>("toolButtonStyleLabel")->isHidden());
-    QVERIFY(settingsWidget->findChild<QWidget*>("toolButtonStyleComboBox")->isHidden());
-    QVERIFY(settingsWidget->findChild<QWidget*>("toolbarMovableCheckBox")->isHidden());
+    // There is no toolbar to show, style or move
+    QVERIFY(!settingsWidget->findChild<QWidget*>("toolbarShowCheckBox"));
+    QVERIFY(!settingsWidget->findChild<QWidget*>("toolButtonStyleLabel"));
+    QVERIFY(!settingsWidget->findChild<QWidget*>("toolButtonStyleComboBox"));
+    QVERIFY(!settingsWidget->findChild<QWidget*>("toolbarMovableCheckBox"));
     QVERIFY(!settingsWidget->findChild<QWidget*>("languageComboBox")->isHidden());
 
     QTest::keyClick(settingsWidget, Qt::Key_Escape);
