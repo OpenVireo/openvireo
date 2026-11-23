@@ -26,6 +26,7 @@
 #include "gui/Icons.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QMenu>
 #include <QPointer>
@@ -151,6 +152,7 @@ ReportsWidgetHealthcheck::ReportsWidgetHealthcheck(QWidget* parent)
     m_ui->healthcheckTableView->setModel(m_modelProxy.data());
     m_ui->healthcheckTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_ui->healthcheckTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->healthcheckTableView, tr("Congratulations, everything is healthy!"));
 
     connect(m_ui->healthcheckTableView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(customMenuRequested(QPoint)));
     connect(m_ui->healthcheckTableView, SIGNAL(doubleClicked(QModelIndex)), SLOT(emitEntryActivated(QModelIndex)));
@@ -285,13 +287,9 @@ void ReportsWidgetHealthcheck::calculateHealth()
         addHealthRow(item->health, item->group, item->entry, item->exclude);
     }
 
-    // Set the table header
-    if (m_referencesModel->rowCount() == 0) {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Congratulations, everything is healthy!"));
-    } else {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("") << tr("Title") << tr("Path") << tr("Score")
-                                                                   << tr("Reason"));
-    }
+    // Set the table header; without rows the table shows its empty state instead
+    m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("") << tr("Title") << tr("Path") << tr("Score")
+                                                               << tr("Reason"));
 
     // Restore sorting options that was stored before the model was cleared
     m_ui->healthcheckTableView->sortByColumn(sortColumn, sortOrder);

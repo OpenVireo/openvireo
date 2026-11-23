@@ -26,6 +26,7 @@
 #include "gui/Icons.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QJsonDocument>
 #include <QMenu>
@@ -106,6 +107,8 @@ ReportsWidgetBrowserStatistics::ReportsWidgetBrowserStatistics(QWidget* parent)
     m_ui->browserStatisticsTableView->setModel(m_modelProxy.data());
     m_ui->browserStatisticsTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_ui->browserStatisticsTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->browserStatisticsTableView,
+                      tr("No entries with a URL, or none has browser extension settings saved."));
 
     connect(m_ui->browserStatisticsTableView,
             SIGNAL(customContextMenuRequested(QPoint)),
@@ -233,12 +236,9 @@ void ReportsWidgetBrowserStatistics::calculateBrowserStatistics()
     }
 
     // Set the table header
-    if (m_referencesModel->rowCount() == 0) {
-        m_referencesModel->setHorizontalHeaderLabels(
-            QStringList() << tr("No entries with a URL, or none has browser extension settings saved."));
-    } else {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Path") << tr("URLs")
-                                                                   << tr("Allowed URLs") << tr("Denied URLs"));
+    m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Path") << tr("URLs")
+                                                               << tr("Allowed URLs") << tr("Denied URLs"));
+    if (m_referencesModel->rowCount() > 0) {
         m_ui->browserStatisticsTableView->sortByColumn(0, Qt::AscendingOrder);
     }
 

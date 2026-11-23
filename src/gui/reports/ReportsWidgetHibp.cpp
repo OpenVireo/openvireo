@@ -23,7 +23,9 @@
 #include "core/Metadata.h"
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QMenu>
 #include <QShortcut>
@@ -68,6 +70,7 @@ ReportsWidgetHibp::ReportsWidgetHibp(QWidget* parent)
     m_ui->hibpTableView->setModel(m_modelProxy.data());
     m_ui->hibpTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_ui->hibpTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->hibpTableView, tr("Congratulations, no exposed passwords!"));
 
     connect(m_ui->hibpTableView, SIGNAL(doubleClicked(QModelIndex)), SLOT(emitEntryActivated(QModelIndex)));
     connect(m_ui->hibpTableView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(customMenuRequested(QPoint)));
@@ -115,7 +118,6 @@ void ReportsWidgetHibp::makeHibpTable()
 
     // If there were no findings, display a motivational message
     if (m_pwndPasswords.isEmpty() && m_error.isEmpty()) {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Congratulations, no exposed passwords!"));
         m_ui->stackedWidget->setCurrentIndex(1);
         return;
     }
@@ -143,7 +145,7 @@ void ReportsWidgetHibp::makeHibpTable()
     const auto showExcluded = m_ui->showKnownBadCheckBox->isChecked();
 
     // The colors for table cells
-    const auto red = QBrush("red");
+    const auto red = QBrush(FluentTheme::palette().critical);
 
     // Build the table
     bool anyExcluded = false;
@@ -185,14 +187,13 @@ void ReportsWidgetHibp::makeHibpTable()
         auto row = QList<QStandardItem*>();
         row << new QStandardItem(m_error);
         m_referencesModel->appendRow(row);
-        row[0]->setForeground(QBrush(QColor("red")));
+        row[0]->setForeground(red);
     }
 
     // If we're done and everything is good, display a motivational message
 #ifdef KPXC_FEATURE_NETWORK
     if (m_downloader.passwordsRemaining() == 0 && m_pwndPasswords.isEmpty() && m_error.isEmpty()) {
         m_referencesModel->clear();
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Congratulations, no exposed passwords!"));
     }
 #endif
 

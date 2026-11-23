@@ -25,6 +25,7 @@
 #include "core/Metadata.h"
 #include "core/PasswordHealth.h"
 #include "gui/Icons.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QPointer>
 #include <QStandardItemModel>
@@ -41,6 +42,7 @@ ReportsWidgetStatistics::ReportsWidgetStatistics(QWidget* parent)
     m_ui->statisticsTableView->setModel(m_referencesModel.data());
     m_ui->statisticsTableView->setSelectionMode(QAbstractItemView::NoSelection);
     m_ui->statisticsTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->statisticsTableView);
 }
 
 ReportsWidgetStatistics::~ReportsWidgetStatistics() = default;

@@ -31,6 +31,7 @@
 #include "gui/passkeys/PasskeyImporter.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultTable.h"
 
 #include <QMenu>
 #include <QPointer>
@@ -101,6 +102,7 @@ ReportsWidgetPasskeys::ReportsWidgetPasskeys(QWidget* parent)
     m_ui->passkeysTableView->setModel(m_modelProxy.data());
     m_ui->passkeysTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_ui->passkeysTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    Vault::styleTable(m_ui->passkeysTableView, tr("No entries with passkeys."));
 
     connect(m_ui->passkeysTableView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(customMenuRequested(QPoint)));
     connect(m_ui->passkeysTableView, SIGNAL(doubleClicked(QModelIndex)), SLOT(emitEntryActivated(QModelIndex)));
@@ -196,11 +198,9 @@ void ReportsWidgetPasskeys::updateEntries()
     }
 
     // Set the table header
-    if (m_referencesModel->rowCount() == 0) {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("No entries with passkeys."));
-    } else {
-        m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Path") << tr("Username")
-                                                                   << tr("Relying Party") << tr("URLs"));
+    m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Path") << tr("Username")
+                                                               << tr("Relying Party") << tr("URLs"));
+    if (m_referencesModel->rowCount() > 0) {
         m_ui->passkeysTableView->sortByColumn(0, Qt::AscendingOrder);
     }
 
