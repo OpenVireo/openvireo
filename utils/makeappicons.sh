@@ -114,7 +114,6 @@ map() {
         internet-web-browser)               echo web                            ;;
         keyboard-shortcuts)                 echo apple-keyboard-command         ;;
         key-enter)                          echo keyboard-variant               ;;
-        message-close)                      echo close                          ;;
         move-down)                          echo chevron-double-down            ;;
         move-up)                            echo chevron-double-up              ;;
         object-locked)                      echo lock-outline                   ;;

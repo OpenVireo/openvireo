@@ -198,7 +198,6 @@ Files: share/icons/application/scalable/actions/application-exit.svg
        share/icons/application/scalable/actions/help-about.svg
        share/icons/application/scalable/actions/lock-question.svg
        share/icons/application/scalable/actions/keyboard-shortcuts.svg
-       share/icons/application/scalable/actions/message-close.svg
        share/icons/application/scalable/actions/move-down.svg
        share/icons/application/scalable/actions/move-up.svg
        share/icons/application/scalable/actions/object-locked.svg
