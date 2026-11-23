@@ -18,7 +18,6 @@
 #include "KeyComponentWidget.h"
 #include "ui_KeyComponentWidget.h"
 
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 #include <QLabel>
@@ -49,22 +48,20 @@ KeyComponentWidget::KeyComponentWidget(QWidget* parent)
 
     // In the Vault Index layout the component is a settings card: its title and state on the left, the buttons for
     // the state on the right, and the fields below while editing. The pages keep the logic.
-    if (FluentTheme::vaultLayoutEnabled()) {
-        m_vaultTitle = new QLabel(this);
-        m_vaultDescription = new QLabel(this);
-        auto card = new VaultSettingsCard(this);
-        card->setObjectName("keyComponentCard");
-        card->setSetting({m_vaultTitle, m_vaultDescription},
-                         {m_ui->addButton, m_ui->cancelButton, m_ui->changeButton, m_ui->removeButton},
-                         {});
-        card->setCollapsible(false);
-        card->addWidget(m_ui->stackedWidget);
-        m_ui->groupBox->hide();
-        layout()->addWidget(card);
+    m_vaultTitle = new QLabel(this);
+    m_vaultDescription = new QLabel(this);
+    auto card = new VaultSettingsCard(this);
+    card->setObjectName("keyComponentCard");
+    card->setSetting({m_vaultTitle, m_vaultDescription},
+                     {m_ui->addButton, m_ui->cancelButton, m_ui->changeButton, m_ui->removeButton},
+                     {});
+    card->setCollapsible(false);
+    card->addWidget(m_ui->stackedWidget);
+    m_ui->groupBox->hide();
+    layout()->addWidget(card);
 
-        connect(m_ui->stackedWidget, &QStackedWidget::currentChanged, this, &KeyComponentWidget::updateVaultCard);
-        updateVaultCard();
-    }
+    connect(m_ui->stackedWidget, &QStackedWidget::currentChanged, this, &KeyComponentWidget::updateVaultCard);
+    updateVaultCard();
 }
 
 void KeyComponentWidget::showEvent(QShowEvent* event)

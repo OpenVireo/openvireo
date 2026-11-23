@@ -195,13 +195,11 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
 {
     m_ui->setupUi(this);
 
-    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
-
     struct Source
     {
         QString icon;
         QString label;
-        // Name and file type on the tiles of the Vault Index layout
+        // Name and file type on the tiles
         QString name;
         QString description;
         ImportWizard::ImportType type;
@@ -254,8 +252,7 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
          ImportWizard::IMPORT_KEEPASS1},
     };
     for (const auto& source : sources) {
-        auto item = new QListWidgetItem(
-            icons()->icon(source.icon), m_vaultLayout ? source.name : source.label, m_ui->importTypeList);
+        auto item = new QListWidgetItem(icons()->icon(source.icon), source.name, m_ui->importTypeList);
         item->setData(Qt::UserRole, source.type);
         item->setData(SourceDescriptionRole, source.description);
         item->setData(Qt::AccessibleTextRole, source.label);
@@ -297,9 +294,7 @@ ImportWizardPageSelect::ImportWizardPageSelect(QWidget* parent)
     registerField("SyncServerToken", m_ui->serverTokenEdit);
     registerField("SyncServerDatabaseId", m_ui->serverDatabaseIdChoice, "currentText", "currentTextChanged");
 
-    if (m_vaultLayout) {
-        setupVaultLayout();
-    }
+    setupVaultLayout();
     setupImportChoices();
     connect(m_ui->existingDatabaseRadio, &QRadioButton::toggled, this, &ImportWizardPageSelect::updateImportChoices);
 }
@@ -523,9 +518,6 @@ void ImportWizardPageSelect::initializePage()
 {
     setField("ImportType", m_ui->importTypeList->currentItem()->data(Qt::UserRole).toInt());
     updateImportChoices();
-    if (!m_vaultLayout) {
-        adjustSize();
-    }
 }
 
 bool ImportWizardPageSelect::validatePage()
@@ -701,34 +693,16 @@ void ImportWizardPageSelect::chooseKeyFile()
 
 void ImportWizardPageSelect::setCredentialState(bool passwordEnabled, bool keyFileEnable)
 {
-    bool passwordStateChanged = m_ui->passwordLabel->isVisible() != passwordEnabled;
     m_ui->passwordLabel->setVisible(passwordEnabled);
     m_ui->passwordEdit->setVisible(passwordEnabled);
 
-    bool keyFileStateChanged = m_ui->keyFileLabel->isVisible() != keyFileEnable;
     m_ui->keyFileLabel->setVisible(keyFileEnable);
     m_ui->keyFileEdit->setVisible(keyFileEnable);
     m_ui->keyFileButton->setVisible(keyFileEnable);
-
-    // Workaround Qt bug where the wizard window is not updated when the internal layout changes. In the Vault
-    // Index layout, the window is the main window, which the modal's cards don't size.
-    if (window() && !m_vaultLayout) {
-        int height = window()->height();
-        if (passwordStateChanged) {
-            auto diff = m_ui->passwordEdit->height() + m_ui->inputFields->layout()->spacing();
-            height += passwordEnabled ? diff : -diff;
-        }
-        if (keyFileStateChanged) {
-            auto diff = m_ui->keyFileEdit->height() + m_ui->inputFields->layout()->spacing();
-            height += keyFileEnable ? diff : -diff;
-        }
-        window()->resize(window()->width(), height);
-    }
 }
 
 void ImportWizardPageSelect::setDownloadCommand(bool downloadCommandEnabled)
 {
-    bool downloadCommandStateChanged = m_ui->downloadCommandLabel->isVisible() != downloadCommandEnabled;
     m_ui->downloadCommandLabel->setVisible(downloadCommandEnabled);
     m_ui->downloadCommand->setVisible(downloadCommandEnabled);
     m_ui->downloadCommandInputLabel->setVisible(downloadCommandEnabled);
@@ -740,22 +714,10 @@ void ImportWizardPageSelect::setDownloadCommand(bool downloadCommandEnabled)
     m_ui->importFileLabel->setVisible(!downloadCommandEnabled);
     m_ui->importFileEdit->setVisible(!downloadCommandEnabled);
     m_ui->importFileButton->setVisible(!downloadCommandEnabled);
-
-    // Workaround Qt bug where the wizard window is not updated when the internal layout changes
-    if (window() && !m_vaultLayout) {
-        int height = window()->height();
-        if (downloadCommandStateChanged) {
-            auto diff = m_ui->downloadCommand->height() + m_ui->downloadCommandInput->height()
-                        + m_ui->temporaryDatabaseRadio->height() + m_ui->inputFields->layout()->spacing();
-            height += downloadCommandEnabled ? diff : -diff;
-        }
-        window()->resize(window()->width(), height);
-    }
 }
 
 void ImportWizardPageSelect::setSyncServer(bool syncServerEnabled)
 {
-    bool stateChanged = m_ui->syncServerFields->isVisible() != syncServerEnabled;
     m_ui->syncServerFields->setVisible(syncServerEnabled);
     if (syncServerEnabled) {
         m_ui->importFileLabel->setVisible(false);
@@ -764,19 +726,8 @@ void ImportWizardPageSelect::setSyncServer(bool syncServerEnabled)
         m_ui->temporaryDatabaseRadio->setVisible(true);
     }
     // The server copy keeps its own credentials, so a "new" database is really a local copy of it
-    if (m_vaultLayout) {
-        m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local copy (keeps the server database's credentials)")
-                                                          : tr("New database"));
-    } else {
-        m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local Copy (keeps the server database's credentials)")
-                                                          : tr("New Database"));
-    }
-
-    // Workaround Qt bug where the wizard window is not updated when the internal layout changes
-    if (window() && stateChanged && !m_vaultLayout) {
-        auto diff = m_ui->syncServerFields->sizeHint().height() + m_ui->inputFields->layout()->spacing();
-        window()->resize(window()->width(), window()->height() + (syncServerEnabled ? diff : -diff));
-    }
+    m_ui->newDatabaseRadio->setText(syncServerEnabled ? tr("Local copy (keeps the server database's credentials)")
+                                                      : tr("New database"));
 }
 
 void ImportWizardPageSelect::loadSyncServerDatabases()

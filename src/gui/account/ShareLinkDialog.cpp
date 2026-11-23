@@ -34,8 +34,6 @@
 #include <QBuffer>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QDialogButtonBox>
-#include <QFormLayout>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
@@ -72,15 +70,6 @@ namespace
         return chars.mid(0, 4) + "-" + chars.mid(4, 4) + "-" + chars.mid(8);
     }
 
-    // A Fluent control in the Vault Index layout, the stock Qt one otherwise
-    template <typename Fluent, typename Classic, typename... Args> Classic* make(bool vault, Args&&... args)
-    {
-        if (vault) {
-            return new Fluent(std::forward<Args>(args)...);
-        }
-        return new Classic(std::forward<Args>(args)...);
-    }
-
     // The bar holding the commands at the bottom of a content dialog: the window canvas below a divider
     class CommandBar : public QWidget
     {
@@ -108,29 +97,20 @@ ShareLinkDialog::ShareLinkDialog(ItemShare* shares, const QString& vaultId, Entr
     , m_shares(shares)
     , m_vaultId(vaultId)
     , m_entry(entry)
-    , m_vault(FluentTheme::vaultLayoutEnabled())
 {
     setWindowTitle(entry ? tr("Share %1").arg(entry->title()) : tr("Share Text"));
     m_blocked = shares ? shares->blockedReason(vaultId) : QString();
 
-    if (m_vault) {
-        setupVaultLayout();
-    } else {
-        setupClassicLayout();
-    }
+    setupVaultLayout();
 
     connect(m_usePasscode, &QCheckBox::toggled, this, [this](bool on) {
         if (on && m_passcode->text().isEmpty()) {
             m_passcode->setText(newPasscode());
         }
-        // The Fluent layout shows the passcode only while it's asked for; the classic one greys it out
-        if (m_vault) {
-            m_passcode->setVisible(on);
-            m_regenerate->setVisible(on);
-            refitWindow();
-        } else {
-            m_regenerate->setEnabled(on);
-        }
+        // The passcode shows only while it's asked for
+        m_passcode->setVisible(on);
+        m_regenerate->setVisible(on);
+        refitWindow();
         updateState();
     });
     connect(m_regenerate, &QPushButton::clicked, this, [this] { m_passcode->setText(newPasscode()); });
@@ -159,9 +139,7 @@ ShareLinkDialog* ShareLinkDialog::present(ItemShare* shares, const QString& vaul
     if (dialog->showAsModal()) {
         dialog->presentAsModal();
     } else {
-        if (dialog->m_vault) {
-            dialog->fitWindow();
-        }
+        dialog->fitWindow();
         dialog->open();
     }
     return dialog;
@@ -171,7 +149,7 @@ void ShareLinkDialog::addFieldChoices(QWidget* parent, QLayout* layout)
 {
     const auto defaults = ItemShare::defaultFields();
     for (const auto& field : ItemShare::shareableFields(m_entry)) {
-        auto* box = make<VaultCheckBox, QCheckBox>(m_vault, field.label, parent);
+        auto* box = new VaultCheckBox(field.label, parent);
         box->setProperty("fieldName", field.name);
         box->setChecked(defaults.contains(field.name));
         connect(box, &QCheckBox::toggled, this, &ShareLinkDialog::updateState);
@@ -179,7 +157,7 @@ void ShareLinkDialog::addFieldChoices(QWidget* parent, QLayout* layout)
         layout->addWidget(box);
     }
     if (m_fieldBoxes.isEmpty()) {
-        auto* nothing = m_vault ? OrgAdmin::label(parent, Typography::FontRole::Body, true) : new QLabel(parent);
+        auto* nothing = OrgAdmin::label(parent, Typography::FontRole::Body, true);
         nothing->setText(tr("This entry has nothing to share."));
         layout->addWidget(nothing);
     }
@@ -187,14 +165,12 @@ void ShareLinkDialog::addFieldChoices(QWidget* parent, QLayout* layout)
 
 void ShareLinkDialog::addTextFields(QWidget* parent, QLayout* layout)
 {
-    m_title = make<VaultLineEdit, QLineEdit>(m_vault, parent);
+    m_title = new VaultLineEdit(parent);
     m_title->setPlaceholderText(tr("Title (optional)"));
     m_title->setMaxLength(100);
-    m_text = make<VaultPlainTextEdit, QPlainTextEdit>(m_vault, parent);
+    m_text = new VaultPlainTextEdit(parent);
     m_text->setPlaceholderText(tr("Text to share"));
-    if (m_vault) {
-        m_text->setMinimumHeight(140);
-    }
+    m_text->setMinimumHeight(140);
     connect(m_text, &QPlainTextEdit::textChanged, this, &ShareLinkDialog::updateState);
     layout->addWidget(m_title);
     layout->addWidget(m_text);
@@ -202,110 +178,27 @@ void ShareLinkDialog::addTextFields(QWidget* parent, QLayout* layout)
 
 void ShareLinkDialog::addOptions(QWidget* parent)
 {
-    m_expiry = make<VaultComboBox, QComboBox>(m_vault, parent);
+    m_expiry = new VaultComboBox(parent);
     m_expiry->addItem(tr("1 hour"), Hour);
     m_expiry->addItem(tr("1 day"), Day);
     m_expiry->addItem(tr("7 days"), 7 * Day);
     m_expiry->addItem(tr("14 days"), 14 * Day);
     m_expiry->addItem(tr("30 days"), 30 * Day);
     m_expiry->setCurrentIndex(2);
-    m_opens = make<VaultComboBox, QComboBox>(m_vault, parent);
+    m_opens = new VaultComboBox(parent);
     m_opens->addItem(tr("Any number of times"), 0);
     m_opens->addItem(tr("Once"), 1);
     m_opens->addItem(tr("5 times"), 5);
-    m_usePasscode = make<VaultCheckBox, QCheckBox>(m_vault, tr("Require a passcode"), parent);
-    m_passcode = make<VaultLineEdit, QLineEdit>(m_vault, parent);
+    m_usePasscode = new VaultCheckBox(tr("Require a passcode"), parent);
+    m_passcode = new VaultLineEdit(parent);
     m_passcode->setObjectName("shareLinkPasscode");
     m_passcode->setToolTip(tr("At least 6 characters. Send it separately from the link."));
-    if (m_vault) {
-        auto* regenerate = new VaultButton(parent);
-        regenerate->setFluentLayout(fluent::basicinput::Button::IconOnly);
-        regenerate->setIconGlyph(Typography::Icons::Refresh);
-        regenerate->setToolTip(tr("New passcode"));
-        regenerate->setAccessibleName(tr("New passcode"));
-        m_regenerate = regenerate;
-    } else {
-        m_regenerate = new QPushButton(tr("New"), parent);
-        m_regenerate->setEnabled(false);
-    }
-}
-
-void ShareLinkDialog::setupClassicLayout()
-{
-    setMinimumWidth(480);
-    auto* layout = new QVBoxLayout(this);
-    m_message = new MessageWidget(this);
-    m_message->setHidden(true);
-    layout->addWidget(m_message);
-
-    // The form
-    m_formPage = new QWidget(this);
-    auto* formLayout = new QVBoxLayout(m_formPage);
-    formLayout->setContentsMargins(0, 0, 0, 0);
-    if (m_entry) {
-        auto* hint = new QLabel(tr("Choose what to include. The link holds a copy: later changes to the entry don't "
-                                   "reach it."),
-                                m_formPage);
-        hint->setWordWrap(true);
-        formLayout->addWidget(hint);
-        addFieldChoices(m_formPage, formLayout);
-        auto* warning = new QLabel(tr("Sharing the one-time code shares its secret: whoever opens the link can make "
-                                      "codes for this account, even after the link ends."),
-                                   m_formPage);
-        warning->setWordWrap(true);
-        warning->setStyleSheet("color: palette(highlight);");
-        formLayout->addWidget(warning);
-        m_totpWarning = warning;
-    } else {
-        addTextFields(m_formPage, formLayout);
-    }
-
-    addOptions(m_formPage);
-    auto* options = new QFormLayout();
-    options->addRow(tr("Link expires after:"), m_expiry);
-    options->addRow(tr("Can be opened:"), m_opens);
-    options->addRow(m_usePasscode);
-    auto* passcodeRow = new QHBoxLayout();
-    passcodeRow->addWidget(m_passcode, 1);
-    passcodeRow->addWidget(m_regenerate);
-    options->addRow(tr("Passcode:"), passcodeRow);
-    formLayout->addLayout(options);
-    formLayout->addStretch(1);
-    layout->addWidget(m_formPage);
-
-    // The link, once made
-    m_resultPage = new QWidget(this);
-    auto* resultLayout = new QVBoxLayout(m_resultPage);
-    resultLayout->setContentsMargins(0, 0, 0, 0);
-    m_linkInfo = new QLabel(m_resultPage);
-    m_linkInfo->setWordWrap(true);
-    m_link = new QLineEdit(m_resultPage);
-    m_link->setReadOnly(true);
-    m_link->setObjectName("shareLinkUrl");
-    auto* copyRow = new QHBoxLayout();
-    m_copyLink = new QPushButton(tr("Copy Link"), m_resultPage);
-    m_copyPasscode = new QPushButton(tr("Copy Passcode"), m_resultPage);
-    m_copyPasscode->setObjectName("shareLinkCopyPasscode");
-    copyRow->addWidget(m_copyLink);
-    copyRow->addWidget(m_copyPasscode);
-    copyRow->addStretch(1);
-    m_qr = new SquareSvgWidget(m_resultPage);
-    auto* manage = new QLabel(tr("You can see when it's opened, and revoke it, from Account → Shared Links."),
-                              m_resultPage);
-    manage->setWordWrap(true);
-    resultLayout->addWidget(m_linkInfo);
-    resultLayout->addWidget(m_link);
-    resultLayout->addLayout(copyRow);
-    resultLayout->addWidget(m_qr, 0, Qt::AlignHCenter);
-    resultLayout->addWidget(manage);
-    m_resultPage->hide();
-    layout->addWidget(m_resultPage);
-
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    m_closeButton = buttons->button(QDialogButtonBox::Cancel);
-    m_createButton = buttons->addButton(tr("Make Link"), QDialogButtonBox::AcceptRole);
-    m_createButton->setDefault(true);
-    layout->addWidget(buttons);
+    auto* regenerate = new VaultButton(parent);
+    regenerate->setFluentLayout(fluent::basicinput::Button::IconOnly);
+    regenerate->setIconGlyph(Typography::Icons::Refresh);
+    regenerate->setToolTip(tr("New passcode"));
+    regenerate->setAccessibleName(tr("New passcode"));
+    m_regenerate = regenerate;
 }
 
 // In the Vault Index layout, the choices read as Fluent settings cards: the fields to include as check boxes on a
@@ -486,7 +379,7 @@ void ShareLinkDialog::setupVaultLayout()
 bool ShareLinkDialog::showAsModal() const
 {
     auto* parent = parentWidget();
-    if (!m_vault || !parent) {
+    if (!parent) {
         return false;
     }
     // Over another dialog, such as Shared Links, a card would sit inside that dialog, so it is a window instead
@@ -538,14 +431,6 @@ void ShareLinkDialog::presentAsModal()
 
 void ShareLinkDialog::showMessage(const QString& text, MessageWidget::MessageType type, bool persistent)
 {
-    if (!m_infoBar) {
-        if (persistent) {
-            m_message->showMessage(text, type, MessageWidget::DisableAutoHide);
-        } else {
-            m_message->showMessage(text, type);
-        }
-        return;
-    }
     using fluent::status_info::InfoBar;
     switch (type) {
     case MessageWidget::Positive:
@@ -580,13 +465,9 @@ void ShareLinkDialog::showMessage(const QString& text, MessageWidget::MessageTyp
 
 void ShareLinkDialog::hideMessage()
 {
-    if (m_infoBar) {
-        m_infoBar->setProperty("generation", m_infoBar->property("generation").toInt() + 1);
-        m_infoBar->hide();
-        refitWindow();
-    } else {
-        m_message->hide();
-    }
+    m_infoBar->setProperty("generation", m_infoBar->property("generation").toInt() + 1);
+    m_infoBar->hide();
+    refitWindow();
 }
 
 void ShareLinkDialog::updateState()
@@ -673,33 +554,25 @@ void ShareLinkDialog::showLink(const QString& url, const QString& expires)
         QBuffer buffer;
         qrc.writeSvg(&buffer, logicalDpiX());
         m_qr->load(buffer.data());
-        if (!m_vault) {
-            const auto size = static_cast<int>(logicalDpiX() * 2);
-            m_qr->setMinimumSize(size, size);
-        }
     }
     hideMessage();
     m_formPage->hide();
     m_resultPage->show();
     m_createButton->hide();
-    if (m_vault) {
-        // Done is all that's left to do
-        m_closeButton->setText(tr("Done"));
-        if (auto* button = qobject_cast<fluent::basicinput::Button*>(m_closeButton)) {
-            button->setFluentStyle(fluent::basicinput::Button::Accent);
-        }
-        m_closeButton->setDefault(true);
-        m_copyLink->setFocus();
-    } else {
-        m_closeButton->setText(tr("Close"));
+    // Done is all that's left to do
+    m_closeButton->setText(tr("Done"));
+    if (auto* button = qobject_cast<fluent::basicinput::Button*>(m_closeButton)) {
+        button->setFluentStyle(fluent::basicinput::Button::Accent);
     }
+    m_closeButton->setDefault(true);
+    m_copyLink->setFocus();
     refitWindow();
 }
 
 void ShareLinkDialog::refitWindow()
 {
     // Once its layout has taken in what showed or hid
-    if (m_vault && !m_vaultCommands->isHidden()) {
+    if (!m_vaultCommands->isHidden()) {
         QTimer::singleShot(0, this, &ShareLinkDialog::fitWindow);
     }
 }

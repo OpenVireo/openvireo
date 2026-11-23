@@ -20,7 +20,6 @@
 #include "SSHAgent.h"
 #include "ui_AgentSettingsWidget.h"
 
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 AgentSettingsWidget::AgentSettingsWidget(QWidget* parent)
@@ -40,9 +39,7 @@ AgentSettingsWidget::AgentSettingsWidget(QWidget* parent)
     m_ui->sshAuthSockMessageWidget->setAutoHideTimeout(-1);
     connect(m_ui->enableSSHAgentCheckBox, SIGNAL(toggled(bool)), SLOT(toggleSettingsEnabled()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 AgentSettingsWidget::~AgentSettingsWidget()

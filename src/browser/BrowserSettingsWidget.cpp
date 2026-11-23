@@ -20,7 +20,6 @@
 
 #include "BrowserSettings.h"
 #include "config-keepassx.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -94,9 +93,7 @@ BrowserSettingsWidget::BrowserSettingsWidget(QWidget* parent)
     m_ui->customExtensionLabel->setVisible(false);
 #endif
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void BrowserSettingsWidget::buildVaultPage()

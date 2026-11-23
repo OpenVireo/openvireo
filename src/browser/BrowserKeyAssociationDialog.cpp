@@ -160,8 +160,7 @@ BrowserKeyAssociationDialog::BrowserKeyAssociationDialog(const QString& database
 
 bool BrowserKeyAssociationDialog::canShowOver(QWidget* widget)
 {
-    return FluentTheme::vaultLayoutEnabled() && widget && widget->window()->isVisible()
-           && !widget->window()->isMinimized();
+    return widget && widget->window()->isVisible() && !widget->window()->isMinimized();
 }
 
 QString BrowserKeyAssociationDialog::name() const

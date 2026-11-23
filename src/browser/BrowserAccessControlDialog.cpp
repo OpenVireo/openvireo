@@ -112,9 +112,7 @@ BrowserAccessControlDialog::BrowserAccessControlDialog(QWidget* parent)
     connect(m_ui->itemsTable, SIGNAL(acceptSelections()), SLOT(accept()));
     connect(m_ui->itemsTable, SIGNAL(focusInWithoutSelections()), this, SLOT(selectionChanged()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultLayout();
-    }
+    setupVaultLayout();
 }
 
 BrowserAccessControlDialog::~BrowserAccessControlDialog()

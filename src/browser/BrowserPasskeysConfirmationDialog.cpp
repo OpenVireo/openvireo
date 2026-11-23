@@ -20,7 +20,6 @@
 
 #include "core/Entry.h"
 #include "gui/GuiTools.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
 #include "gui/vault/VaultWidgets.h"
@@ -72,7 +71,7 @@ BrowserPasskeysConfirmationDialog::BrowserPasskeysConfirmationDialog(QWidget* pa
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(updateSeconds()));
 
     // The browser raises the window before asking, so the dialog can show over it
-    if (FluentTheme::vaultLayoutEnabled() && parent && parent->window()->isVisible()) {
+    if (parent && parent->window()->isVisible()) {
         setupVaultLayout();
     }
 }

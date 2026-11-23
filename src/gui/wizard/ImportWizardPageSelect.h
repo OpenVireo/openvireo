@@ -74,7 +74,6 @@ private:
     void updateImportChoices();
 
     QScopedPointer<Ui::ImportWizardPageSelect> m_ui;
-    bool m_vaultLayout = false;
     // The cards below the choice of source in the Vault Index layout
     QWidget* m_details = nullptr;
     QWidget* m_newVaultRow = nullptr;

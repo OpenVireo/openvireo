@@ -27,7 +27,6 @@
 
 #include "core/SignalMultiplexer.h"
 #include "gui/Icons.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSearchHelp.h"
 #include "gui/vault/VaultWidgets.h"
@@ -42,9 +41,7 @@ SearchWidget::SearchWidget(QWidget* parent)
     , m_clearSearchTimer(new QTimer(this))
 {
     m_ui->setupUi(this);
-    if (FluentTheme::vaultLayoutEnabled()) {
-        useFluentSearchBox();
-    }
+    useFluentSearchBox();
     setFocusProxy(m_ui->searchEdit);
 
     if (m_fluentSearch) {

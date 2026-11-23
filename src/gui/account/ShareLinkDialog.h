@@ -57,7 +57,6 @@ private slots:
     void create();
 
 private:
-    void setupClassicLayout();
     void setupVaultLayout();
     void addFieldChoices(QWidget* parent, QLayout* layout);
     void addTextFields(QWidget* parent, QLayout* layout);
@@ -76,9 +75,7 @@ private:
     QString m_vaultId;
     QPointer<Entry> m_entry;
     QString m_blocked;
-    bool m_vault;
 
-    MessageWidget* m_message = nullptr;
     fluent::status_info::InfoBar* m_infoBar = nullptr;
     QWidget* m_formPage = nullptr;
     QWidget* m_resultPage = nullptr;

@@ -231,18 +231,12 @@ void TestGuiVault::testLayout()
     QVERIFY(m_dbWidget->findChild<VaultCommandBar*>());
     QVERIFY(m_dbWidget->findChild<EntryDetailCard*>());
 
-    // Commands move out of the toolbar; search moves into the header
-    auto* toolBar = m_mainWindow->findChild<QToolBar*>("toolBar");
-    QVERIFY(toolBar->isHidden());
+    // Commands sit next to the entries, not in a toolbar; search is in the header
+    QVERIFY(!m_mainWindow->findChild<QToolBar*>());
     auto* header = m_mainWindow->findChild<VaultHeaderBar*>();
     QVERIFY(header);
     QVERIFY(header->isVisible());
     QVERIFY(header->findChild<SearchWidget*>("SearchWidget"));
-
-    // The classic preview panel never shows
-    auto* preview = m_dbWidget->findChild<QWidget*>("previewWidget");
-    QVERIFY(preview);
-    QVERIFY(!preview->isVisible());
 }
 
 void TestGuiVault::testEntryListMode()

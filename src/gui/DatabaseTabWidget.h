@@ -105,13 +105,12 @@ signals:
     void databaseLocked(DatabaseWidget* dbWidget);
     void activeDatabaseChanged(DatabaseWidget* dbWidget);
     void tabNameChanged();
-    void tabVisibilityChanged(bool tabsVisible);
     void messageGlobal(const QString&, MessageWidget::MessageType type);
     void messageDismissGlobal();
     void databaseUnlockDialogFinished(bool accepted, DatabaseWidget* dbWidget);
 
 private slots:
-    void toggleTabbar();
+    void hideTabBar();
     void emitActiveDatabaseChanged();
     void emitDatabaseLockChanged();
     void handleDatabaseUnlockDialogFinished(bool accepted, DatabaseWidget* dbWidget);

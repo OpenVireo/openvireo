@@ -38,7 +38,6 @@ namespace Ui
 class AccountController;
 class AccountLockWidget;
 class AccountStartWidget;
-class AccountVaultsPane;
 class InactivityTimer;
 class SearchWidget;
 class VaultHeaderBar;
@@ -67,7 +66,6 @@ public:
     void restoreConfigState();
     AccountController* accountController() const;
     AccountStartWidget* startScreen() const;
-    AccountVaultsPane* accountVaultsPane() const;
     // Whether the start screen shows in place of the welcome screen
     bool isStartScreenShown() const;
     AccountLockWidget* accountLockScreen() const;
@@ -150,7 +148,6 @@ private slots:
     // Pin the pre-release notice to the notification list, unless dismissed for this version
     void postPreReleaseNotice();
     void updateMenuActionState();
-    void updateToolbarSeparatorVisibility();
     void updateWindowTitle();
     void showAboutDialog();
     void performUpdateCheck();
@@ -193,8 +190,8 @@ private slots:
     void updateTrayIcon();
     void updateProgressBar(int percentage, QString message);
     void focusSearchWidget();
-    void enableMenuAndToolbar();
-    void disableMenuAndToolbar();
+    void enableMenu();
+    void disableMenu();
     void clearSSHAgent();
 
 private slots:
@@ -248,7 +245,6 @@ private:
     QPointer<VaultWindowFrame> m_vaultFrame;
     QPointer<VaultSettingsModal> m_settingsModal;
     QPointer<VaultModal> m_passwordGeneratorModal;
-    bool m_vaultLayout = false;
     // Global messages go to the notification center behind the bell; blocking prompts show in the prompt bar
     QPointer<NotificationCenter> m_notifications;
     QPointer<NotificationButton> m_notificationButton;
@@ -267,7 +263,6 @@ private:
     int m_lastAccountState = -1;
     // The pinned "Working offline" entry while the account works from its offline cache
     quint64 m_offlineNotice = 0;
-    AccountVaultsPane* m_accountPane = nullptr;
     QPointer<QMenu> m_accountMenu;
     QPointer<QAction> m_actionAccountSignIn;
     QPointer<QAction> m_actionAccountUnlock;
@@ -296,7 +291,6 @@ private:
     bool m_appExiting = false;
     bool m_restartRequested = false;
     bool m_contextMenuFocusLock = false;
-    bool m_showToolbarSeparator = false;
     bool m_allowScreenCapture = false;
     bool m_minimizedToSystemTray = false;
     qint64 m_lastFocusOutTime = 0;

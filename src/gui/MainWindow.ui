@@ -43,16 +43,6 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="Line" name="toolbarSeparator">
-      <property name="frameShadow">
-       <enum>QFrame::Plain</enum>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -385,11 +375,9 @@
     <addaction name="actionAlwaysOnTop"/>
     <addaction name="actionAllowScreenCapture"/>
     <addaction name="separator"/>
-    <addaction name="actionShowPreviewPanel"/>
     <addaction name="actionShowGroupPanel"/>
     <addaction name="separator"/>
     <addaction name="actionShowMenubar"/>
-    <addaction name="actionShowToolbar"/>
     <addaction name="separator"/>
     <addaction name="actionHideUsernames"/>
     <addaction name="actionHidePasswords"/>
@@ -400,45 +388,6 @@
    <addaction name="menuTools"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
-  </widget>
-  <widget class="KPToolBar" name="toolBar">
-   <property name="contextMenuPolicy">
-    <enum>Qt::PreventContextMenu</enum>
-   </property>
-   <property name="movable">
-    <bool>false</bool>
-   </property>
-   <property name="iconSize">
-    <size>
-     <width>26</width>
-     <height>26</height>
-    </size>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-   <addaction name="actionDatabaseOpen"/>
-   <addaction name="actionDatabaseSave"/>
-   <addaction name="actionLockDatabaseToolbar"/>
-   <addaction name="separator"/>
-   <addaction name="actionEntryNew"/>
-   <addaction name="actionEntryEdit"/>
-   <addaction name="actionEntryDelete"/>
-   <addaction name="separator"/>
-   <addaction name="actionEntryCopyUsername"/>
-   <addaction name="actionEntryCopyPassword"/>
-   <addaction name="actionEntryCopyURL"/>
-   <addaction name="actionEntryAutoType"/>
-   <addaction name="separator"/>
-   <addaction name="actionDatabaseSettings"/>
-   <addaction name="actionReports"/>
-   <addaction name="separator"/>
-   <addaction name="actionPasswordGenerator"/>
-   <addaction name="actionSettings"/>
-   <addaction name="separator"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -1194,34 +1143,6 @@
     <string>Toggle Show Menubar</string>
    </property>
   </action>
-  <action name="actionShowToolbar">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show Toolbar</string>
-   </property>
-   <property name="toolTip">
-    <string>Toggle Show Toolbar</string>
-   </property>
-  </action>
-  <action name="actionShowPreviewPanel">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show Preview Panel</string>
-   </property>
-   <property name="toolTip">
-    <string>Toggle Show Preview Panel</string>
-   </property>
-  </action>
   <action name="actionNotifications">
    <property name="text">
     <string>Notifications</string>
@@ -1306,11 +1227,6 @@
    </property>
    <property name="shortcut">
     <string notr="true">Ctrl+R</string>
-   </property>
-  </action>
-  <action name="actionLockDatabaseToolbar">
-   <property name="text">
-    <string>&amp;Lock Database</string>
    </property>
   </action>
   <action name="actionExportXML">
@@ -1400,11 +1316,6 @@
    <extends>QWidget</extends>
    <header>gui/WelcomeWidget.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>KPToolBar</class>
-   <extends>QToolBar</extends>
-   <header>gui/widgets/KPToolBar.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

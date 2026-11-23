@@ -73,9 +73,7 @@ void ImportWizardPageReview::initializePage()
     m_ui->messageWidget->hideMessage();
     m_ui->messageWidget->setAnimate(false);
     m_ui->messageWidget->setCloseButtonVisible(false);
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultLayout();
-    }
+    setupVaultLayout();
 
     auto importType = field("ImportType").toInt();
     switch (importType) {

@@ -21,7 +21,6 @@
 #include "core/Base32.h"
 #include "core/Totp.h"
 #include "gui/MessageBox.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 #include <components/status_info/InfoBar.h>
@@ -97,11 +96,7 @@ TotpSetupDialog::TotpSetupDialog(QWidget* parent, Entry* entry)
     m_ui->setupUi(this);
     setAttribute(Qt::WA_DeleteOnClose);
     setWindowFlag(Qt::WindowContextHelpButtonHint, false);
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultLayout();
-    } else {
-        setFixedSize(sizeHint());
-    }
+    setupVaultLayout();
 
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
     connect(m_ui->buttonBox, SIGNAL(accepted()), SLOT(saveSettings()));

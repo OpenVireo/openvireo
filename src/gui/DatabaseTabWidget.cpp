@@ -35,7 +35,6 @@
 #include "gui/MessageBox.h"
 #include "gui/account/AccountController.h"
 #include "gui/export/ExportDialog.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultNewDatabaseModal.h"
 #ifdef Q_OS_MACOS
@@ -51,11 +50,9 @@ DatabaseTabWidget::DatabaseTabWidget(QWidget* parent)
     , m_importWizard(nullptr)
     , m_databaseOpenInProgress(false)
 {
-    auto* tabBar = new QTabBar(this);
-    tabBar->setAcceptDrops(true);
-    tabBar->setChangeCurrentOnDrag(true);
-    setTabBar(tabBar);
+    // The header's database picker switches databases, so the tab bar never shows
     setDocumentMode(true);
+    hideTabBar();
 
     // clang-format off
     connect(this, SIGNAL(tabCloseRequested(int)), SLOT(closeDatabaseTab(int)));
@@ -79,18 +76,10 @@ DatabaseTabWidget::DatabaseTabWidget(QWidget* parent)
 
 DatabaseTabWidget::~DatabaseTabWidget() = default;
 
-void DatabaseTabWidget::toggleTabbar()
+void DatabaseTabWidget::hideTabBar()
 {
-    // The Vault Index layout switches databases from the header's database picker
-    if (count() > 1 && !FluentTheme::vaultLayoutEnabled()) {
-        tabBar()->show();
-        setFocusPolicy(Qt::StrongFocus);
-        emit tabVisibilityChanged(true);
-    } else {
-        tabBar()->hide();
-        setFocusPolicy(Qt::NoFocus);
-        emit tabVisibilityChanged(false);
-    }
+    tabBar()->hide();
+    setFocusPolicy(Qt::NoFocus);
 }
 
 /**
@@ -102,33 +91,23 @@ void DatabaseTabWidget::toggleTabbar()
 QSharedPointer<Database> DatabaseTabWidget::execNewDatabaseWizard()
 {
     QSharedPointer<Database> db;
-    if (FluentTheme::vaultLayoutEnabled()) {
-        // The menus stay usable behind the modal, so don't stack a second one
-        if (window()->findChild<VaultNewDatabaseModal*>()) {
-            return {};
-        }
-        // A modal over the window instead of the wizard. Wait for it like the wizard's exec(),
-        // since callers need the database right away.
-        QPointer<VaultNewDatabaseModal> modal = new VaultNewDatabaseModal(window());
-        QEventLoop loop;
-        connect(modal, &VaultNewDatabaseModal::finished, &loop, [&](QSharedPointer<Database> created) {
-            db = std::move(created);
-            loop.quit();
-        });
-        // The window going away takes the modal with it
-        connect(modal, &QObject::destroyed, &loop, &QEventLoop::quit);
-        modal->open();
-        loop.exec(QEventLoop::DialogExec);
-        delete modal;
-    } else {
-        // use QScopedPointer to ensure deletion after scope ends, but still parent
-        // it to this to make it modal and allow easier access in unit tests
-        QScopedPointer<NewDatabaseWizard> wizard(new NewDatabaseWizard(this));
-        if (!wizard->exec()) {
-            return {};
-        }
-        db = wizard->takeDatabase();
+    // The menus stay usable behind the modal, so don't stack a second one
+    if (window()->findChild<VaultNewDatabaseModal*>()) {
+        return {};
     }
+    // A modal over the window instead of the wizard. Wait for it like the wizard's exec(),
+    // since callers need the database right away.
+    QPointer<VaultNewDatabaseModal> modal = new VaultNewDatabaseModal(window());
+    QEventLoop loop;
+    connect(modal, &VaultNewDatabaseModal::finished, &loop, [&](QSharedPointer<Database> created) {
+        db = std::move(created);
+        loop.quit();
+    });
+    // The window going away takes the modal with it
+    connect(modal, &QObject::destroyed, &loop, &QEventLoop::quit);
+    modal->open();
+    loop.exec(QEventLoop::DialogExec);
+    delete modal;
 
     if (!db) {
         return {};
@@ -258,7 +237,7 @@ void DatabaseTabWidget::addDatabaseTab(DatabaseWidget* dbWidget, bool inBackgrou
 
     int index = addTab(dbWidget, "");
     updateTabName(index);
-    toggleTabbar();
+    hideTabBar();
     if (!inBackground) {
         setCurrentIndex(index);
     }
@@ -287,7 +266,7 @@ void DatabaseTabWidget::addDatabaseTab(DatabaseWidget* dbWidget, bool inBackgrou
 void DatabaseTabWidget::importFile()
 {
     // The menus stay usable behind the modal, so don't stack a second one
-    if (FluentTheme::vaultLayoutEnabled() && window()->findChild<VaultImportModal*>()) {
+    if (window()->findChild<VaultImportModal*>()) {
         return;
     }
 
@@ -296,9 +275,7 @@ void DatabaseTabWidget::importFile()
     // In the Vault Index layout, the wizard shows in a modal over the window. It closes when the wizard finishes,
     // before the import below runs, so made first.
     QPointer<VaultImportModal> modal;
-    if (FluentTheme::vaultLayoutEnabled()) {
-        modal = new VaultImportModal(window(), m_importWizard);
-    }
+    modal = new VaultImportModal(window(), m_importWizard);
 
     connect(m_importWizard.data(), &QWizard::finished, [&](int result) {
         if (result != QDialog::Accepted) {
@@ -491,7 +468,7 @@ bool DatabaseTabWidget::closeDatabaseTab(DatabaseWidget* dbWidget)
 
     removeTab(tabIndex);
     dbWidget->deleteLater();
-    toggleTabbar();
+    hideTabBar();
     emit databaseClosed(filePath);
     return true;
 }

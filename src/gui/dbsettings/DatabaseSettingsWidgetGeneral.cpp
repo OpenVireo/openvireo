@@ -73,9 +73,7 @@ DatabaseSettingsWidgetGeneral::DatabaseSettingsWidgetGeneral(QWidget* parent)
     connect(m_ui->historyMaxSizeCheckBox, SIGNAL(toggled(bool)), m_ui->historyMaxSizeSpinBox, SLOT(setEnabled(bool)));
     connect(m_ui->autosaveDelayCheckBox, SIGNAL(toggled(bool)), m_ui->autosaveDelaySpinBox, SLOT(setEnabled(bool)));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void DatabaseSettingsWidgetGeneral::buildVaultPage()
@@ -298,20 +296,10 @@ void DatabaseSettingsWidgetGeneral::pickPublicColor()
 void DatabaseSettingsWidgetGeneral::setupPublicColorButton(const QColor& color)
 {
     m_ui->dbPublicColorClearButton->setVisible(color.isValid());
-    if (FluentTheme::vaultLayoutEnabled()) {
-        // A Fluent button draws its own face, so the color shows as a swatch in it, or a palette while unset
-        m_ui->dbPublicColorButton->setIconGlyph(color.isValid() ? QString() : Typography::Icons::Color);
-        m_ui->dbPublicColorButton->setIcon(color.isValid() ? colorSwatch(color, devicePixelRatioF()) : QIcon());
-        m_ui->dbPublicColorButton->setProperty("color", color.isValid() ? color.name() : QVariant());
-        return;
-    }
-    if (color.isValid()) {
-        m_ui->dbPublicColorButton->setStyleSheet(QString("background-color:%1").arg(color.name()));
-        m_ui->dbPublicColorButton->setProperty("color", color.name());
-    } else {
-        m_ui->dbPublicColorButton->setStyleSheet("");
-        m_ui->dbPublicColorButton->setProperty("color", {});
-    }
+    // A Fluent button draws its own face, so the color shows as a swatch in it, or a palette while unset
+    m_ui->dbPublicColorButton->setIconGlyph(color.isValid() ? QString() : Typography::Icons::Color);
+    m_ui->dbPublicColorButton->setIcon(color.isValid() ? colorSwatch(color, devicePixelRatioF()) : QIcon());
+    m_ui->dbPublicColorButton->setProperty("color", color.isValid() ? color.name() : QVariant());
 }
 
 void DatabaseSettingsWidgetGeneral::pickPublicIcon()
@@ -358,10 +346,8 @@ void DatabaseSettingsWidgetGeneral::setupPublicIconButton(int iconIndex)
 {
     auto valid = iconIndex >= 0 && iconIndex < databaseIcons()->count();
     m_ui->dbPublicIconClearButton->setVisible(valid);
-    if (FluentTheme::vaultLayoutEnabled()) {
-        // While unset, the button shows a plus to pick an icon instead of an empty face
-        m_ui->dbPublicIconButton->setIconGlyph(valid ? QString() : Typography::Icons::Add);
-    }
+    // While unset, the button shows a plus to pick an icon instead of an empty face
+    m_ui->dbPublicIconButton->setIconGlyph(valid ? QString() : Typography::Icons::Add);
     if (valid) {
         m_ui->dbPublicIconButton->setIcon(databaseIcons()->icon(iconIndex));
         m_ui->dbPublicIconButton->setProperty("iconIndex", iconIndex);

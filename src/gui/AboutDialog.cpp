@@ -97,23 +97,7 @@ AboutDialog::AboutDialog(QWidget* parent)
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(close()));
     connect(m_ui->copyToClipboard, SIGNAL(clicked()), SLOT(copyToClipboard()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultLayout();
-        return;
-    }
-
-    resize(minimumSize());
-    setWindowFlags(Qt::Sheet);
-    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
-    m_ui->nameLabel->setText(m_ui->nameLabel->text().replace("${VERSION}", KEEPASSXC_VERSION));
-    QFont nameLabelFont = m_ui->nameLabel->font();
-    nameLabelFont.setPointSize(nameLabelFont.pointSize() + 4);
-    m_ui->nameLabel->setFont(nameLabelFont);
-
-    m_ui->iconLabel->setPixmap(icons()->applicationIcon().pixmap(48));
-
-    m_ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(true);
+    setupVaultLayout();
 }
 
 AboutDialog::~AboutDialog() = default;

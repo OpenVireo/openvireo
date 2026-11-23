@@ -29,7 +29,6 @@
 #include "SyncTokenStore.h"
 #include "gui/MessageBox.h"
 #include "gui/account/AccountController.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 #include <QFile>
@@ -92,9 +91,7 @@ DatabaseSettingsWidgetRemote::DatabaseSettingsWidgetRemote(QWidget* parent)
            "Pair Device… on another device, or from openvireo-sync-server devices pair <user>")
             .arg(SyncTokenStore::description()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void DatabaseSettingsWidgetRemote::buildVaultPage()

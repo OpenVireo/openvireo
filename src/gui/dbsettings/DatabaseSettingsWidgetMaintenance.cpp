@@ -53,9 +53,7 @@ DatabaseSettingsWidgetMaintenance::DatabaseSettingsWidgetMaintenance(QWidget* pa
             this,
             SLOT(selectionChanged()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void DatabaseSettingsWidgetMaintenance::buildVaultPage()

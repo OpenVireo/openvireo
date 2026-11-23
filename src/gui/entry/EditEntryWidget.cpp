@@ -347,9 +347,7 @@ void EditEntryWidget::setupAdvanced()
     connect(m_advancedUi->bgColorButton, SIGNAL(clicked()), SLOT(pickColor()));
     // clang-format on
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultAdvanced();
-    }
+    setupVaultAdvanced();
 }
 
 // In the Vault Index layout, the Advanced page fits the narrow detail pane as Fluent settings cards. The attributes
@@ -497,9 +495,7 @@ void EditEntryWidget::setupAutoType()
     connect(m_autoTypeUi->windowSequenceEdit, SIGNAL(textChanged(QString)), SLOT(applyCurrentAssoc()));
     // clang-format on
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultAutoType();
-    }
+    setupVaultAutoType();
 }
 
 // In the Vault Index layout, the Auto-Type page fits the narrow detail pane as Fluent settings cards: a switch for

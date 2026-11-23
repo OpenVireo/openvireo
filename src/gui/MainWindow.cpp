@@ -33,7 +33,6 @@
 #include <QShortcut>
 #include <QStatusBar>
 #include <QTimer>
-#include <QToolButton>
 #include <QWindow>
 
 #include <algorithm>
@@ -57,21 +56,19 @@
 #include "gui/account/AccountController.h"
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
+#include "gui/account/DeleteAccountDialog.h"
 #include "gui/account/EmergencyKitDialog.h"
 #include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SharedLinksDialog.h"
-#include "gui/account/DeleteAccountDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/entry/EntryView.h"
 #include "gui/notifications/NotificationCenter.h"
 #include "gui/notifications/NotificationWidgets.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/remote/RemoteSettings.h"
-#include "gui/styles/FluentTheme.h"
-#include "gui/vault/AccountVaultsPane.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
@@ -151,49 +148,31 @@ MainWindow::MainWindow()
 
     setAcceptDrops(true);
 
-    // Setup the search widget in the toolbar, or in the header for the Vault Index layout
-    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
+    // Setup the search widget in the header
     m_searchWidget = new SearchWidget();
     m_searchWidget->connectSignals(m_actionMultiplexer);
-    if (m_vaultLayout) {
-        m_vaultHeader = new VaultHeaderBar(m_ui->tabWidget, m_searchWidget, m_ui->centralwidget);
-        // Where supported, the header doubles as the window's title bar
-        m_vaultFrame = new VaultWindowFrame(this, m_vaultHeader);
-        m_ui->verticalLayout->insertWidget(0, m_vaultFrame->widget());
-        m_vaultHeader->setVisible(false);
-        // Stands in for the toolbar's widget action: enabled while a database is shown
-        m_searchWidgetAction = new QAction(this);
-        connect(m_searchWidgetAction, &QAction::changed, this, [this] {
-            m_searchWidget->setVisible(m_searchWidgetAction->isEnabled());
-        });
-        connect(m_ui->tabWidget,
-                &DatabaseTabWidget::activeDatabaseChanged,
-                m_vaultHeader->syncChip(),
-                &VaultSyncChip::setDatabaseWidget);
-        // Settings open in a modal over the window instead of replacing it
-        m_settingsModal =
-            new VaultSettingsModal(this, m_ui->settingsWidget, tr("Settings"), QStringLiteral("vaultSettings"));
-        setupVaultPasswordGenerator();
-        Vault::paintCanvas(m_ui->welcomeWidget->parentWidget());
-    } else {
-        m_searchWidgetAction = m_ui->toolBar->addWidget(m_searchWidget);
-    }
+    m_vaultHeader = new VaultHeaderBar(m_ui->tabWidget, m_searchWidget, m_ui->centralwidget);
+    // Where supported, the header doubles as the window's title bar
+    m_vaultFrame = new VaultWindowFrame(this, m_vaultHeader);
+    m_ui->verticalLayout->insertWidget(0, m_vaultFrame->widget());
+    m_vaultHeader->setVisible(false);
+    // Stands in for the toolbar's widget action: enabled while a database is shown
+    m_searchWidgetAction = new QAction(this);
+    connect(m_searchWidgetAction, &QAction::changed, this, [this] {
+        m_searchWidget->setVisible(m_searchWidgetAction->isEnabled());
+    });
+    connect(m_ui->tabWidget,
+            &DatabaseTabWidget::activeDatabaseChanged,
+            m_vaultHeader->syncChip(),
+            &VaultSyncChip::setDatabaseWidget);
+    // Settings open in a modal over the window instead of replacing it
+    m_settingsModal =
+        new VaultSettingsModal(this, m_ui->settingsWidget, tr("Settings"), QStringLiteral("vaultSettings"));
+    setupVaultPasswordGenerator();
+    Vault::paintCanvas(m_ui->welcomeWidget->parentWidget());
     m_searchWidgetAction->setEnabled(false);
 
     new QShortcut(QKeySequence::Find, this, SLOT(focusSearchWidget()));
-
-    connect(m_searchWidget, &SearchWidget::searchCanceled, this, [this] {
-        if (!m_vaultLayout) {
-            m_ui->toolBar->setExpanded(false);
-            m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
-        }
-    });
-    connect(m_searchWidget, &SearchWidget::lostFocus, this, [this] {
-        if (!m_vaultLayout) {
-            m_ui->toolBar->setExpanded(false);
-            m_ui->toolBar->setVisible(!config()->get(Config::GUI_HideToolbar).toBool());
-        }
-    });
 
     m_countDefaultAttributes = m_ui->menuEntryCopyAttribute->actions().size();
 
@@ -254,19 +233,6 @@ MainWindow::MainWindow()
     autotypeMenu->addAction(m_ui->actionEntryAutoTypeURL);
     autotypeMenu->addAction(m_ui->actionEntryAutoTypeURLEnter);
     m_ui->actionEntryAutoType->setMenu(autotypeMenu);
-    auto autoTypeButton = qobject_cast<QToolButton*>(m_ui->toolBar->widgetForAction(m_ui->actionEntryAutoType));
-    if (autoTypeButton) {
-        autoTypeButton->setPopupMode(QToolButton::MenuButtonPopup);
-    }
-
-    auto databaseLockMenu = new VaultMenu(this);
-    databaseLockMenu->addAction(m_ui->actionLockAllDatabases);
-    m_ui->actionLockDatabaseToolbar->setMenu(databaseLockMenu);
-    auto databaseLockButton =
-        qobject_cast<QToolButton*>(m_ui->toolBar->widgetForAction(m_ui->actionLockDatabaseToolbar));
-    if (databaseLockButton) {
-        databaseLockButton->setPopupMode(QToolButton::MenuButtonPopup);
-    }
 
     connect(m_ui->tabWidget, &DatabaseTabWidget::databaseLocked, this, &MainWindow::databaseLocked);
     connect(m_ui->tabWidget, &DatabaseTabWidget::databaseUnlocked, this, &MainWindow::databaseUnlocked);
@@ -338,9 +304,6 @@ MainWindow::MainWindow()
         autoType()->registerGlobalShortcut(globalAutoTypeKey, globalAutoTypeModifiers);
     }
 
-    m_ui->toolbarSeparator->setVisible(false);
-    m_showToolbarSeparator = config()->get(Config::GUI_ApplicationTheme).toString() != "classic";
-
     m_ui->actionEntryAutoType->setVisible(autoType()->isAvailable());
     m_ui->actionAllowScreenCapture->setVisible(osUtils->canPreventScreenCapture());
 
@@ -409,7 +372,6 @@ MainWindow::MainWindow()
     m_ui->actionPasskeys->setIcon(icons()->icon("passkey"));
     m_ui->actionImportPasskey->setIcon(icons()->icon("document-import"));
     m_ui->actionLockDatabase->setIcon(icons()->icon("database-lock"));
-    m_ui->actionLockDatabaseToolbar->setIcon(icons()->icon("database-lock"));
     m_ui->actionLockAllDatabases->setIcon(icons()->icon("database-lock-all"));
     m_ui->actionQuit->setIcon(icons()->icon("application-exit"));
     m_ui->actionDatabaseMerge->setIcon(icons()->icon("database-merge"));
@@ -506,10 +468,8 @@ MainWindow::MainWindow()
     connect(m_ui->tabWidget, SIGNAL(currentChanged(int)), SLOT(updateMenuActionState()));
     connect(m_ui->tabWidget, SIGNAL(databaseLocked(DatabaseWidget*)), SLOT(databaseStatusChanged(DatabaseWidget*)));
     connect(m_ui->tabWidget, SIGNAL(databaseUnlocked(DatabaseWidget*)), SLOT(databaseStatusChanged(DatabaseWidget*)));
-    connect(m_ui->tabWidget, SIGNAL(tabVisibilityChanged(bool)), SLOT(updateToolbarSeparatorVisibility()));
     connect(m_ui->stackedWidget, SIGNAL(currentChanged(int)), SLOT(updateMenuActionState()));
     connect(m_ui->stackedWidget, SIGNAL(currentChanged(int)), SLOT(updateWindowTitle()));
-    connect(m_ui->stackedWidget, SIGNAL(currentChanged(int)), SLOT(updateToolbarSeparatorVisibility()));
     connect(m_ui->settingsWidget, SIGNAL(accepted()), SLOT(applySettingsChanges()));
     connect(m_ui->settingsWidget, SIGNAL(settingsReset()), SLOT(applySettingsChanges()));
     connect(m_ui->settingsWidget, SIGNAL(accepted()), SLOT(switchToDatabases()));
@@ -537,7 +497,6 @@ MainWindow::MainWindow()
     connect(m_ui->actionExportXML, SIGNAL(triggered()), m_ui->tabWidget, SLOT(exportToXML()));
     connect(
         m_ui->actionLockDatabase, SIGNAL(triggered()), m_ui->tabWidget, SLOT(lockAndSwitchToFirstUnlockedDatabase()));
-    connect(m_ui->actionLockDatabaseToolbar, SIGNAL(triggered()), m_ui->actionLockDatabase, SIGNAL(triggered()));
     connect(m_ui->actionLockAllDatabases, SIGNAL(triggered()), m_ui->tabWidget, SLOT(lockDatabases()));
     connect(m_ui->actionQuit, SIGNAL(triggered()), SLOT(appExit()));
 
@@ -617,8 +576,6 @@ MainWindow::MainWindow()
     // Install event filter for empty-area drag and menubar toggle
     auto* eventFilter = new MainWindowEventFilter(this);
     m_ui->menubar->installEventFilter(eventFilter);
-    m_ui->toolBar->installEventFilter(eventFilter);
-    m_ui->tabWidget->tabBar()->installEventFilter(eventFilter);
     installEventFilter(eventFilter);
 
 #ifdef Q_OS_MACOS
@@ -711,9 +668,9 @@ MainWindow::MainWindow()
     statusBar()->addPermanentWidget(m_progressBar);
     connect(clipboard(), &Clipboard::updateCountdown, this, &MainWindow::updateProgressBar);
     m_actionMultiplexer.connect(SIGNAL(updateSyncProgress(int, QString)), this, SLOT(updateProgressBar(int, QString)));
-    m_actionMultiplexer.connect(SIGNAL(databaseSyncInProgress()), this, SLOT(disableMenuAndToolbar()));
-    m_actionMultiplexer.connect(SIGNAL(databaseSyncCompleted(QString)), this, SLOT(enableMenuAndToolbar()));
-    m_actionMultiplexer.connect(SIGNAL(databaseSyncFailed(QString, const QString)), this, SLOT(enableMenuAndToolbar()));
+    m_actionMultiplexer.connect(SIGNAL(databaseSyncInProgress()), this, SLOT(disableMenu()));
+    m_actionMultiplexer.connect(SIGNAL(databaseSyncCompleted(QString)), this, SLOT(enableMenu()));
+    m_actionMultiplexer.connect(SIGNAL(databaseSyncFailed(QString, const QString)), this, SLOT(enableMenu()));
 
     setupAccounts();
     restoreConfigState();
@@ -749,21 +706,6 @@ void MainWindow::setupAccounts()
     connect(m_ui->welcomeWidget, &WelcomeWidget::signInRequested, this, &MainWindow::showStartScreen);
 
     // The account's vaults beside the databases; the Vault Index layout lists them in the header's database picker
-    if (!m_vaultLayout) {
-        m_accountPane = new AccountVaultsPane(m_accountController, m_ui->centralwidget);
-        auto* row = new QWidget(m_ui->centralwidget);
-        auto* rowLayout = new QHBoxLayout(row);
-        rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(0);
-        const auto index = m_ui->verticalLayout->indexOf(m_ui->stackedWidget);
-        m_ui->verticalLayout->removeWidget(m_ui->stackedWidget);
-        rowLayout->addWidget(m_accountPane);
-        rowLayout->addWidget(m_ui->stackedWidget, 1);
-        m_ui->verticalLayout->insertWidget(index, row, 1);
-        connect(m_accountPane, &AccountVaultsPane::shareRequested, this, &MainWindow::showShareVaultDialog);
-        connect(m_accountPane, &AccountVaultsPane::newVaultRequested, this, &MainWindow::createAccountVault);
-        connect(m_accountPane, &AccountVaultsPane::serviceAccountsRequested, this, &MainWindow::showServiceAccounts);
-    }
 
     m_accountMenu = new VaultMenu(tr("&Account"), this);
     m_accountMenu->setObjectName("menuAccount");
@@ -832,16 +774,13 @@ void MainWindow::setupAccounts()
     }
 
     auto* account = m_accountController->account();
-    if (!m_accountPane) {
-        // Without the sidebar's unlock form, failed unlocks show above the window
-        connect(account, &AccountManager::error, this, [this](const QString& message) {
-            // The lock screen shows unlock errors on its card
-            if (m_accountController->account()->state() == AccountManager::State::Locked
-                && !isAccountLockScreenShown()) {
-                displayGlobalMessage(message, MessageWidget::Error);
-            }
-        });
-    }
+    // Failed unlocks show above the window
+    connect(account, &AccountManager::error, this, [this](const QString& message) {
+        // The lock screen shows unlock errors on its card
+        if (m_accountController->account()->state() == AccountManager::State::Locked && !isAccountLockScreenShown()) {
+            displayGlobalMessage(message, MessageWidget::Error);
+        }
+    });
     connect(account, &AccountManager::stateChanged, this, &MainWindow::updateAccountActions);
     connect(account, &AccountManager::stateChanged, this, &MainWindow::handleAccountStateChanged);
     connect(account, &AccountManager::offlineChanged, this, &MainWindow::updateAccountActions);
@@ -914,11 +853,6 @@ AccountController* MainWindow::accountController() const
 AccountStartWidget* MainWindow::startScreen() const
 {
     return m_startScreen;
-}
-
-AccountVaultsPane* MainWindow::accountVaultsPane() const
-{
-    return m_accountPane;
 }
 
 bool MainWindow::isStartScreenShown() const
@@ -1044,9 +978,6 @@ void MainWindow::showShareVaultDialog(const QString& vaultId)
     if (id.isEmpty()) {
         id = m_accountController->vaultIdOf(m_ui->tabWidget->currentDatabaseWidget());
     }
-    if (id.isEmpty() && m_accountPane) {
-        id = m_accountPane->selectedVault();
-    }
     if (id.isEmpty()) {
         displayGlobalMessage(tr("Select a vault of your account to share."), MessageWidget::Information);
         return;
@@ -1113,23 +1044,11 @@ void MainWindow::showEmergencyKit()
 void MainWindow::showServiceAccounts()
 {
     // In the Vault Index layout the window is a card over this one, like Settings
-    if (FluentTheme::vaultLayoutEnabled()) {
-        auto* modal = findChild<OrgAdminModal*>();
-        if (!modal) {
-            modal = new OrgAdminModal(this, new ServiceAccountsDialog(m_accountController->account(), this));
-        }
-        modal->open();
-        return;
+    auto* modal = findChild<OrgAdminModal*>();
+    if (!modal) {
+        modal = new OrgAdminModal(this, new ServiceAccountsDialog(m_accountController->account(), this));
     }
-    auto* open = findChild<ServiceAccountsDialog*>();
-    if (open && open->isVisible()) {
-        open->raise();
-        open->activateWindow();
-        return;
-    }
-    auto* dialog = new ServiceAccountsDialog(m_accountController->account(), this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->open();
+    modal->open();
 }
 
 void MainWindow::createAccountVault()
@@ -1630,7 +1549,6 @@ void MainWindow::updateMenuActionState()
     m_ui->actionDatabaseClose->setEnabled(dbWidget);
     m_ui->actionLockDatabase->setEnabled(databaseUnlocked);
     m_ui->actionLockAllDatabases->setEnabled(hasLockableDatabase);
-    m_ui->actionLockDatabaseToolbar->setEnabled(hasLockableDatabase);
     m_ui->actionDatabaseSettings->setEnabled(inDatabase || inDatabaseSettings);
     m_ui->actionDatabaseSecurity->setEnabled(inDatabase || inDatabaseSettings);
     m_ui->actionReports->setEnabled(inDatabase || inReports);
@@ -1654,26 +1572,6 @@ void MainWindow::updateMenuActionState()
                                   && currentIndex == WelcomeScreen && !isStartScreenShown();
         m_vaultHeader->setVisible(shownDbWidget != nullptr || accountShown);
         updateNotificationChrome();
-    }
-}
-
-void MainWindow::updateToolbarSeparatorVisibility()
-{
-    if (!m_showToolbarSeparator || m_vaultLayout) {
-        m_ui->toolbarSeparator->setVisible(false);
-        return;
-    }
-
-    switch (m_ui->stackedWidget->currentIndex()) {
-    case DatabaseTabScreen:
-        m_ui->toolbarSeparator->setVisible(!m_ui->tabWidget->tabBar()->isVisible()
-                                           && m_ui->tabWidget->tabBar()->count() == 1);
-        break;
-    case SettingsScreen:
-        m_ui->toolbarSeparator->setVisible(true);
-        break;
-    default:
-        m_ui->toolbarSeparator->setVisible(false);
     }
 }
 
@@ -1720,11 +1618,6 @@ void MainWindow::showAboutDialog()
                 &DatabaseWidget::databaseLockRequested,
                 aboutDialog,
                 &AboutDialog::close);
-    }
-
-    if (!m_vaultLayout) {
-        aboutDialog->open();
-        return;
     }
 
     // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
@@ -2159,31 +2052,11 @@ bool MainWindow::focusNextPrevChild(bool next)
     // Only navigate around the main window if the database widget is showing the entry view
     auto dbWidget = m_ui->tabWidget->currentDatabaseWidget();
     if (dbWidget && dbWidget->isVisible() && dbWidget->isEntryViewActive()) {
-        // Search Widget <-> Tab Widget <-> DbWidget
-        if (next) {
-            if (m_searchWidget->hasFocus()) {
-                if (m_ui->tabWidget->count() > 1) {
-                    m_ui->tabWidget->setFocus(Qt::TabFocusReason);
-                } else {
-                    dbWidget->setFocus(Qt::TabFocusReason);
-                }
-            } else if (m_ui->tabWidget->hasFocus()) {
-                dbWidget->setFocus(Qt::TabFocusReason);
-            } else {
-                focusSearchWidget();
-            }
+        // Search Widget <-> DbWidget
+        if (m_searchWidget->hasFocus()) {
+            dbWidget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
         } else {
-            if (m_searchWidget->hasFocus()) {
-                dbWidget->setFocus(Qt::BacktabFocusReason);
-            } else if (m_ui->tabWidget->hasFocus()) {
-                focusSearchWidget();
-            } else {
-                if (m_ui->tabWidget->count() > 1) {
-                    m_ui->tabWidget->setFocus(Qt::BacktabFocusReason);
-                } else {
-                    focusSearchWidget();
-                }
-            }
+            focusSearchWidget();
         }
         return true;
     }
@@ -2195,23 +2068,17 @@ bool MainWindow::focusNextPrevChild(bool next)
 void MainWindow::focusSearchWidget()
 {
     if (m_searchWidgetAction->isEnabled()) {
-        if (!m_vaultLayout) {
-            m_ui->toolBar->setVisible(true);
-            m_ui->toolBar->setExpanded(true);
-        }
         m_searchWidget->focusSearch();
     }
 }
 
-void MainWindow::enableMenuAndToolbar()
+void MainWindow::enableMenu()
 {
-    m_ui->toolBar->setDisabled(false);
     m_ui->menubar->setDisabled(false);
 }
 
-void MainWindow::disableMenuAndToolbar()
+void MainWindow::disableMenu()
 {
-    m_ui->toolBar->setDisabled(true);
     m_ui->menubar->setDisabled(true);
 }
 
@@ -2236,8 +2103,6 @@ void MainWindow::restoreWindowInformation()
 {
     restoreGeometry(config()->get(Config::GUI_MainWindowGeometry).toByteArray());
     restoreState(config()->get(Config::GUI_MainWindowState).toByteArray());
-    // Saved state from the classic layout would bring the toolbar back
-    m_ui->toolBar->setHidden(m_vaultLayout || config()->get(Config::GUI_HideToolbar).toBool());
 }
 
 bool MainWindow::saveLastDatabases()
@@ -2382,10 +2247,7 @@ void MainWindow::applySettingsChanges()
         m_inactivityTimer->deactivate();
     }
 
-    auto hideToolbar = config()->get(Config::GUI_HideToolbar).toBool();
     auto hideMenubar = config()->get(Config::GUI_HideMenubar).toBool();
-
-    m_ui->actionShowToolbar->setChecked(!hideToolbar);
     m_ui->actionShowMenubar->setChecked(!hideMenubar);
 
 #ifndef Q_OS_MACOS
@@ -2393,22 +2255,6 @@ void MainWindow::applySettingsChanges()
     // so force height of 0 instead and use maximumHeight() > 0 instead of isVisible() elsewhere
     m_ui->menubar->setMaximumHeight(hideMenubar ? 0 : QWIDGETSIZE_MAX);
 #endif
-
-    auto movable = config()->get(Config::GUI_MovableToolbar).toBool();
-    m_ui->toolBar->setMovable(movable);
-    if (!movable) {
-        // Move the toolbar back to the top of the main window
-        addToolBar(Qt::TopToolBarArea, m_ui->toolBar);
-    }
-    // The Vault Index layout puts its commands next to the entries instead of in the toolbar
-    m_ui->toolBar->setHidden(m_vaultLayout || config()->get(Config::GUI_HideToolbar).toBool());
-
-    bool isOk = false;
-    const auto toolButtonStyle =
-        static_cast<Qt::ToolButtonStyle>(config()->get(Config::GUI_ToolButtonStyle).toInt(&isOk));
-    if (isOk) {
-        m_ui->toolBar->setToolButtonStyle(toolButtonStyle);
-    }
 
     updateTrayIcon();
 
@@ -2600,50 +2446,42 @@ void MainWindow::setupNotifications()
     connect(m_notificationPeek, &NotificationPeek::showAllRequested, this, [this] { showNotifications(); });
     connect(m_ui->actionNotifications, &QAction::triggered, this, [this] { showNotifications(); });
 
-    if (m_vaultLayout) {
-        // Build pill and bell in the header's status group, and in a bar of their own on screens without it
-        auto* buildBadge = new BuildBadge();
-        connect(buildBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
-        m_vaultHeader->insertStatusWidget(buildBadge, m_vaultHeader->syncChip());
-        m_notificationButton = new NotificationButton(m_notifications);
-        connect(m_notificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
-        m_vaultHeader->insertStatusWidget(m_notificationButton, m_vaultHeader->accountButton());
+    // Build pill and bell in the header's status group, and in a bar of their own on screens without it
+    auto* buildBadge = new BuildBadge();
+    connect(buildBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
+    m_vaultHeader->insertStatusWidget(buildBadge, m_vaultHeader->syncChip());
+    m_notificationButton = new NotificationButton(m_notifications);
+    connect(m_notificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
+    m_vaultHeader->insertStatusWidget(m_notificationButton, m_vaultHeader->accountButton());
 
-        m_cornerBar = new QWidget(m_ui->centralwidget);
-        m_cornerBar->setObjectName("notificationCornerBar");
-        auto* cornerLayout = new QHBoxLayout(m_cornerBar);
-        cornerLayout->setContentsMargins(12, 8, 12, 0);
-        cornerLayout->setSpacing(8);
-        cornerLayout->addStretch();
-        auto* cornerBadge = new BuildBadge(m_cornerBar);
-        connect(cornerBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
-        cornerLayout->addWidget(cornerBadge);
-        m_cornerNotificationButton = new NotificationButton(m_notifications, m_cornerBar);
-        connect(m_cornerNotificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
-        cornerLayout->addWidget(m_cornerNotificationButton);
-        Vault::paintCanvas(m_cornerBar);
-        m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_vaultFrame->widget()) + 1, m_cornerBar);
-    } else {
-        // The classic layout has no header, so the bell goes on the toolbar
-        m_ui->toolBar->addAction(m_ui->actionNotifications);
-        Vault::followTheme(m_ui->actionNotifications, [this] { updateNotificationChrome(); });
-    }
+    m_cornerBar = new QWidget(m_ui->centralwidget);
+    m_cornerBar->setObjectName("notificationCornerBar");
+    auto* cornerLayout = new QHBoxLayout(m_cornerBar);
+    cornerLayout->setContentsMargins(12, 8, 12, 0);
+    cornerLayout->setSpacing(8);
+    cornerLayout->addStretch();
+    auto* cornerBadge = new BuildBadge(m_cornerBar);
+    connect(cornerBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
+    cornerLayout->addWidget(cornerBadge);
+    m_cornerNotificationButton = new NotificationButton(m_notifications, m_cornerBar);
+    connect(m_cornerNotificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
+    cornerLayout->addWidget(m_cornerNotificationButton);
+    Vault::paintCanvas(m_cornerBar);
+    m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_vaultFrame->widget()) + 1, m_cornerBar);
 
     // Prompts that block the window until acted on, such as touching a hardware key, stay inline. A message bar
     // keeps its colors while the window is disabled, so the prompt stays readable.
     auto* promptHost = new QWidget(m_ui->centralwidget);
     auto* promptLayout = new QVBoxLayout(promptHost);
-    promptLayout->setContentsMargins(m_vaultLayout ? 12 : 0, 4, m_vaultLayout ? 12 : 0, 4);
+    promptLayout->setContentsMargins(12, 4, 12, 4);
     m_promptBar = new MessageWidget(promptHost);
     m_promptBar->setObjectName("promptBar");
     m_promptBar->setCloseButtonVisible(false);
     m_promptBar->hideMessage();
     promptLayout->addWidget(m_promptBar);
     promptHost->setVisible(false);
-    if (m_vaultLayout) {
-        Vault::paintCanvas(promptHost);
-    }
-    m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_ui->toolbarSeparator), promptHost);
+    Vault::paintCanvas(promptHost);
+    m_ui->verticalLayout->insertWidget(m_ui->verticalLayout->indexOf(m_ui->stackedWidget), promptHost);
 
     connect(m_notifications, &NotificationCenter::changed, this, &MainWindow::updateNotificationChrome);
     connect(m_notifications, &NotificationCenter::posted, this, [this](quint64 id) {
@@ -2708,9 +2546,6 @@ QWidget* MainWindow::notificationAnchor() const
         if (bell && bell->isVisible()) {
             return bell;
         }
-    }
-    if (!m_vaultLayout && m_ui->toolBar->isVisible()) {
-        return m_ui->toolBar->widgetForAction(m_ui->actionNotifications);
     }
     return nullptr;
 }
@@ -2897,10 +2732,6 @@ void MainWindow::initViewMenu()
         }
     });
 
-    // The Vault Index layout has no toolbar or preview panel
-    m_ui->actionShowToolbar->setVisible(!m_vaultLayout);
-    m_ui->actionShowPreviewPanel->setVisible(!m_vaultLayout);
-
 #ifdef Q_OS_MACOS
     m_ui->actionShowMenubar->setVisible(false);
 #else
@@ -2911,20 +2742,9 @@ void MainWindow::initViewMenu()
     });
 #endif
 
-    m_ui->actionShowToolbar->setChecked(!config()->get(Config::GUI_HideToolbar).toBool());
-    connect(m_ui->actionShowToolbar, &QAction::toggled, this, [this](bool checked) {
-        config()->set(Config::GUI_HideToolbar, !checked);
-        applySettingsChanges();
-    });
-
     m_ui->actionShowGroupPanel->setChecked(!config()->get(Config::GUI_HideGroupPanel).toBool());
     connect(m_ui->actionShowGroupPanel, &QAction::toggled, this, [](bool checked) {
         config()->set(Config::GUI_HideGroupPanel, !checked);
-    });
-
-    m_ui->actionShowPreviewPanel->setChecked(!config()->get(Config::GUI_HidePreviewPanel).toBool());
-    connect(m_ui->actionShowPreviewPanel, &QAction::toggled, this, [](bool checked) {
-        config()->set(Config::GUI_HidePreviewPanel, !checked);
     });
 
     connect(m_ui->actionAlwaysOnTop, &QAction::toggled, this, [this](bool checked) {
@@ -3026,9 +2846,7 @@ void MainWindow::initActionCollection()
 #ifndef Q_OS_MACOS
                     m_ui->actionShowMenubar,
 #endif
-                    m_ui->actionShowToolbar,
                     m_ui->actionShowGroupPanel,
-                    m_ui->actionShowPreviewPanel,
                     m_ui->actionAllowScreenCapture,
                     m_ui->actionAlwaysOnTop,
                     m_ui->actionHideUsernames,
@@ -3097,7 +2915,7 @@ MainWindowEventFilter::MainWindowEventFilter(QObject* parent)
 }
 
 /**
- * MainWindow event filter to initiate empty-area drag on the toolbar, menubar, and tabbar.
+ * MainWindow event filter to initiate empty-area drag on the menubar.
  * Also shows menubar with Alt when menubar itself is hidden.
  */
 bool MainWindowEventFilter::eventFilter(QObject* watched, QEvent* event)
@@ -3114,16 +2932,6 @@ bool MainWindowEventFilter::eventFilter(QObject* watched, QEvent* event)
             if (!mainWindow->m_ui->menubar->actionAt(mouseEvent->pos())) {
                 mainWindow->windowHandle()->startSystemMove();
                 return false;
-            }
-        } else if (watched == mainWindow->m_ui->toolBar) {
-            if (!mainWindow->m_ui->toolBar->isMovable() || mainWindow->m_ui->toolBar->cursor() != Qt::SizeAllCursor) {
-                mainWindow->windowHandle()->startSystemMove();
-                return false;
-            }
-        } else if (watched == mainWindow->m_ui->tabWidget->tabBar()) {
-            if (mainWindow->m_ui->tabWidget->tabBar()->tabAt(mouseEvent->pos()) == -1) {
-                mainWindow->windowHandle()->startSystemMove();
-                return true;
             }
         }
     } else if (eventType == QEvent::KeyRelease && watched == mainWindow) {

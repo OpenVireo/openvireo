@@ -35,7 +35,6 @@ namespace
     const QColor DarkOnAccent(0x0f, 0x1a, 0x0b);
 
     bool g_initialized = false;
-    bool g_vaultLayout = true;
     bool g_highContrast = false;
     FluentTheme::HighContrastColors g_highContrastColors;
     // The light palette with the KeePassXC accent; the light high-contrast scheme replaces it while active
@@ -179,16 +178,6 @@ namespace
         }
     }
 } // namespace
-
-bool FluentTheme::vaultLayoutEnabled()
-{
-    return g_vaultLayout;
-}
-
-void FluentTheme::setVaultLayoutEnabledForTests(bool enabled)
-{
-    g_vaultLayout = enabled;
-}
 
 void FluentTheme::apply(bool dark)
 {

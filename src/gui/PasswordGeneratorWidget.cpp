@@ -185,11 +185,9 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
         m_ui->passwordLengthLabel->setFont(defaultFont);
     }
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultHero();
-        setupVaultPivot();
-        setupVaultPages();
-    }
+    setupVaultHero();
+    setupVaultPivot();
+    setupVaultPages();
 
     // set default separator to Space
     m_ui->editWordSeparator->setText(PassphraseGenerator::DefaultSeparator);

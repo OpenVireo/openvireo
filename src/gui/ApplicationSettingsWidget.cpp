@@ -35,7 +35,6 @@
 #include "gui/Icons.h"
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/styles/StateColorPalette.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -238,15 +237,13 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
 #endif
 
     // The Vault Index layout has no toolbar, so none of the toolbar options apply
-    if (FluentTheme::vaultLayoutEnabled()) {
-        m_generalUi->toolbarShowCheckBox->setVisible(false);
-        m_generalUi->toolButtonStyleLabel->setVisible(false);
-        m_generalUi->toolButtonStyleComboBox->setVisible(false);
-        m_generalUi->toolbarMovableCheckBox->setVisible(false);
-        buildVaultGeneralPage();
-        buildVaultSecurityPage();
-        buildVaultAutoTypePage();
-    }
+    m_generalUi->toolbarShowCheckBox->setVisible(false);
+    m_generalUi->toolButtonStyleLabel->setVisible(false);
+    m_generalUi->toolButtonStyleComboBox->setVisible(false);
+    m_generalUi->toolbarMovableCheckBox->setVisible(false);
+    buildVaultGeneralPage();
+    buildVaultSecurityPage();
+    buildVaultAutoTypePage();
 
 #ifdef KPXC_FEATURE_UPDATES
     m_generalUi->updateChannelComboBox->addItem(tr("Stable releases"), UpdateFeed::StableChannel);

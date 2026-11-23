@@ -135,9 +135,7 @@ DatabaseOpenWidget::DatabaseOpenWidget(QWidget* parent)
     connect(m_ui->resetQuickUnlockButton, &QPushButton::pressed, this, [this] { resetQuickUnlock(); });
     m_ui->resetQuickUnlockButton->setShortcut(Qt::Key_Escape);
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultStyle();
-    }
+    setupVaultStyle();
 }
 
 void DatabaseOpenWidget::setupVaultStyle()

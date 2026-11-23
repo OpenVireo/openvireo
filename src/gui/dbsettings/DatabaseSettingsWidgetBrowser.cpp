@@ -28,7 +28,6 @@
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "gui/MessageBox.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 #include <components/status_info/InfoBar.h>
@@ -63,9 +62,7 @@ DatabaseSettingsWidgetBrowser::DatabaseSettingsWidgetBrowser(QWidget* parent)
     connect(m_ui->removeStoredPermissions, SIGNAL(clicked()), this, SLOT(removeStoredPermissions()));
     connect(m_ui->refreshDatabaseID, SIGNAL(clicked()), this, SLOT(refreshDatabaseID()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
     settingsWarning();
 }
 

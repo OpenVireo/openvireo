@@ -21,7 +21,6 @@
 
 #include "core/Global.h"
 #include "core/Group.h"
-#include "gui/styles/FluentTheme.h"
 
 #include <QAbstractButton>
 #include <QFrame>
@@ -37,41 +36,18 @@ ImportWizard::ImportWizard(QWidget* parent)
 
     setWindowTitle(tr("Import Wizard"));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        // The wizard is the content of a modal over the window, which names the steps and moves between them
-        setWizardStyle(ClassicStyle);
-        setOption(NoDefaultButton, true);
-        setButtonLayout({});
-        // The modal's footer has its own divider. Beside the frame holding the pages, the wizard has its ruler above
-        // the buttons, which it shows again on each layout, so give it no height instead.
-        auto pageFrame = m_pageSelect->parentWidget();
-        for (auto widget : pageFrame->parentWidget()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
-            if (widget != pageFrame && !qobject_cast<QAbstractButton*>(widget)) {
-                widget->setFixedHeight(0);
-            }
+    // The wizard is the content of a modal over the window, which names the steps and moves between them
+    setWizardStyle(ClassicStyle);
+    setOption(NoDefaultButton, true);
+    setButtonLayout({});
+    // The modal's footer has its own divider. Beside the frame holding the pages, the wizard has its ruler above
+    // the buttons, which it shows again on each layout, so give it no height instead.
+    auto pageFrame = m_pageSelect->parentWidget();
+    for (auto widget : pageFrame->parentWidget()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (widget != pageFrame && !qobject_cast<QAbstractButton*>(widget)) {
+            widget->setFixedHeight(0);
         }
-        return;
     }
-
-    setWizardStyle(MacStyle);
-    setOption(HaveHelpButton, false);
-    setOption(NoDefaultButton, false); // Needed for macOS
-
-    Q_INIT_RESOURCE(wizard);
-    setPixmap(BackgroundPixmap, QPixmap(":/wizard/background-pixmap.png"));
-
-    // Fix MacStyle QWizard page frame too bright in dark mode (QTBUG-70346, QTBUG-71696)
-    QPalette defaultPalette;
-    auto windowColor = defaultPalette.color(QPalette::Window);
-    windowColor.setAlpha(153);
-    auto baseColor = defaultPalette.color(QPalette::Base);
-    baseColor.setAlpha(153);
-
-    auto* pageFrame = findChildren<QFrame*>()[0];
-    auto framePalette = pageFrame->palette();
-    framePalette.setBrush(QPalette::Window, windowColor.lighter(120));
-    framePalette.setBrush(QPalette::Base, baseColor.lighter(120));
-    pageFrame->setPalette(framePalette);
 }
 
 ImportWizard::~ImportWizard()

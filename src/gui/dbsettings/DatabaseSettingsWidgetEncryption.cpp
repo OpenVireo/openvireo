@@ -26,7 +26,6 @@
 #include "format/KeePass2.h"
 #include "format/KeePass2Writer.h"
 #include "gui/MessageBox.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultSettingsPage.h"
 
 #include <QPushButton>
@@ -85,9 +84,7 @@ DatabaseSettingsWidgetEncryption::DatabaseSettingsWidgetEncryption(QWidget* pare
     connect(m_ui->memorySpinBox, SIGNAL(valueChanged(int)), SLOT(markDirty()));
     connect(m_ui->parallelismSpinBox, SIGNAL(valueChanged(int)), SLOT(markDirty()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void DatabaseSettingsWidgetEncryption::buildVaultPage()

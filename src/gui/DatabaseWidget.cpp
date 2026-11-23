@@ -44,7 +44,6 @@
 #include "gui/CloneDialog.h"
 #include "gui/DatabaseOpenDialog.h"
 #include "gui/DatabaseOpenWidget.h"
-#include "gui/EntryPreviewWidget.h"
 #include "gui/FileDialog.h"
 #include "gui/GuiTools.h"
 #include "gui/MainWindow.h"
@@ -94,7 +93,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     , m_mainSplitter(new QSplitter(m_mainWidget))
     , m_groupSplitter(new QSplitter(this))
     , m_messageWidget(new MessageWidget(this))
-    , m_previewView(new EntryPreviewWidget(this))
     , m_previewSplitter(new QSplitter(m_mainWidget))
     , m_searchingLabel(new QLabel(this))
     , m_editEntryWidget(new EditEntryWidget(this))
@@ -118,35 +116,30 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     }
 
     m_messageWidget->setHidden(true);
-    m_vaultLayout = FluentTheme::vaultLayoutEnabled();
 
     auto mainLayout = new QVBoxLayout();
     m_mainWidget->setLayout(mainLayout);
-    auto contentLayout = mainLayout;
-    if (m_vaultLayout) {
-        // The canvas carries the window background behind the navigation pane
-        mainLayout->setContentsMargins(0, 0, 0, 0);
-        auto canvas = new VaultCanvas(m_mainWidget);
-        mainLayout->addWidget(canvas);
-        contentLayout = new QVBoxLayout(canvas);
-        contentLayout->setContentsMargins(0, 0, 0, 0);
-        contentLayout->setSpacing(0);
-    }
+    // The canvas carries the window background behind the navigation pane
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    auto canvas = new VaultCanvas(m_mainWidget);
+    mainLayout->addWidget(canvas);
+    auto contentLayout = new QVBoxLayout(canvas);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setSpacing(0);
     contentLayout->addWidget(m_messageWidget);
     auto hbox = new QHBoxLayout();
     contentLayout->addLayout(hbox);
 
-    // Setup searches and tags view and place under groups
+    // Setup the tags view and place it under the groups; searching is done from the header
     m_tagView->setObjectName("tagView");
-    // The Vault Index layout searches from the header, so its sidebar only lists tags
-    m_tagView->setSearchesVisible(!m_vaultLayout);
+    m_tagView->setSearchesVisible(false);
     m_tagView->setDatabase(m_db);
     connect(m_tagView, SIGNAL(activated(QModelIndex)), this, SLOT(filterByTag()));
     connect(m_tagView, SIGNAL(clicked(QModelIndex)), this, SLOT(filterByTag()));
 
     auto tagsWidget = new QWidget();
     auto tagsLayout = new QVBoxLayout();
-    auto tagsTitle = new QLabel(m_vaultLayout ? tr("Tags") : tr("Searches and Tags"));
+    auto tagsTitle = new QLabel(tr("Tags"));
     tagsTitle->setProperty("title", true);
     tagsWidget->setObjectName("tagWidget");
     tagsWidget->setLayout(tagsLayout);
@@ -163,19 +156,10 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_groupSplitter->setSizes({1, 1});
     // Initial visibility based on config value
     m_groupSplitter->setVisible(!config()->get(Config::GUI_HideGroupPanel).toBool());
-    if (m_vaultLayout) {
-        connect(m_tagView->model(), &QAbstractItemModel::modelReset, this, &DatabaseWidget::fitVaultTagList);
-        fitVaultTagList();
-    }
+    connect(m_tagView->model(), &QAbstractItemModel::modelReset, this, &DatabaseWidget::fitVaultTagList);
+    fitVaultTagList();
 
-    m_previewView->setObjectName("previewWidget");
-    m_previewView->hide();
-
-    if (m_vaultLayout) {
-        setupVaultLayout(hbox);
-    } else {
-        setupClassicLayout(hbox);
-    }
+    setupVaultLayout(hbox);
 
     m_groupView->setObjectName("groupView");
     m_groupView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -199,29 +183,19 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     m_databaseSettingDialog->setObjectName("databaseSettingsDialog");
     m_databaseOpenWidget->setObjectName("databaseOpenWidget");
 
+    // Entries are edited in place of the detail card, so their editors aren't pages of the stack
     addChildWidget(m_mainWidget);
-    // The Vault Index layout edits entries in place of the detail card
-    if (!m_vaultLayout) {
-        addChildWidget(m_editEntryWidget);
-    }
     addChildWidget(m_editGroupWidget);
     addChildWidget(m_reportsDialog);
     addChildWidget(m_databaseSettingDialog);
-    if (!m_vaultLayout) {
-        addChildWidget(m_historyEditEntryWidget);
-    }
     addChildWidget(m_databaseOpenWidget);
 
     // clang-format off
     connect(m_mainSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
     connect(m_groupSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
     connect(m_previewSplitter, SIGNAL(splitterMoved(int,int)), SIGNAL(splitterSizesChanged()));
-    connect(this, SIGNAL(currentModeChanged(DatabaseWidget::Mode)), m_previewView, SLOT(setDatabaseMode(DatabaseWidget::Mode)));
-    connect(m_previewView, SIGNAL(entryUrlActivated(Entry*)), SLOT(openUrlForEntry(Entry*)));
-    connect(m_previewView, SIGNAL(copyTextRequested(const QString&)), SLOT(setClipboardTextAndMinimize(const QString&)));
     connect(m_entryView, SIGNAL(viewStateChanged()), SIGNAL(entryViewStateChanged()));
     connect(m_groupView, SIGNAL(groupSelectionChanged()), SLOT(onGroupChanged()));
-    connect(m_groupView, &GroupView::groupFocused, this, [this] { m_previewView->setGroup(currentGroup()); });
     connect(m_entryView, SIGNAL(entryActivated(Entry*,EntryModel::ModelColumn)),
         SLOT(entryActivationSignalReceived(Entry*,EntryModel::ModelColumn)));
     connect(m_entryView, SIGNAL(entrySelectionChanged(Entry*)), SLOT(onEntryChanged(Entry*)));
@@ -431,13 +405,8 @@ QString DatabaseWidget::displayFilePath() const
 
 QHash<Config::ConfigKey, QList<int>> DatabaseWidget::splitterSizes() const
 {
-    if (m_vaultLayout) {
-        return {{Config::GUI_SplitterState, m_mainSplitter->sizes()},
-                {Config::GUI_VaultSplitterState, m_previewSplitter->sizes()},
-                {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
-    }
     return {{Config::GUI_SplitterState, m_mainSplitter->sizes()},
-            {Config::GUI_PreviewSplitterState, m_previewSplitter->sizes()},
+            {Config::GUI_VaultSplitterState, m_previewSplitter->sizes()},
             {Config::GUI_GroupSplitterState, m_groupSplitter->sizes()}};
 }
 
@@ -453,34 +422,15 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
             }
             m_mainSplitter->setSizes(value);
             break;
-        case Config::GUI_PreviewSplitterState:
-            if (m_vaultLayout) {
-                break;
-            }
-            if (value.size() < 2) {
-                value = QList({static_cast<int>(height() * 0.8), static_cast<int>(height() * 0.2)});
-            }
-            m_previewSplitter->setSizes(value);
-            break;
         case Config::GUI_VaultSplitterState:
-            if (!m_vaultLayout) {
-                break;
-            }
             if (value.size() < 2) {
                 value = QList({static_cast<int>(width() * 0.3), static_cast<int>(width() * 0.4)});
             }
             m_previewSplitter->setSizes(value);
             break;
         case Config::GUI_GroupSplitterState:
-            if (m_vaultLayout) {
-                // The tag list is sized to its tags
-                fitVaultTagList();
-                break;
-            }
-            if (value.size() < 2) {
-                value = QList({static_cast<int>(height() * 0.6), static_cast<int>(height() * 0.4)});
-            }
-            m_groupSplitter->setSizes(value);
+            // The tag list is sized to its tags
+            fitVaultTagList();
             break;
         default:
             break;
@@ -549,7 +499,6 @@ void DatabaseWidget::clearAllWidgets()
     m_editEntryWidget->clear();
     m_historyEditEntryWidget->clear();
     m_editGroupWidget->clear();
-    m_previewView->clear();
     if (m_detailCard) {
         m_detailCard->setGroup(nullptr);
     }
@@ -676,11 +625,6 @@ void DatabaseWidget::setupTotp()
         connect(setupTotpDialog, SIGNAL(totpUpdated()), m_editEntryWidget, SLOT(updateTotp()));
     }
     connect(this, &DatabaseWidget::databaseLockRequested, setupTotpDialog, &TotpSetupDialog::close);
-
-    if (!m_vaultLayout) {
-        setupTotpDialog->open();
-        return;
-    }
 
     // Vault Index layout: the dialog opens as a modal card over the window, like the other editors
     setupTotpDialog->setWindowFlags(Qt::Widget);
@@ -1278,37 +1222,8 @@ void DatabaseWidget::deleteGroup()
     }
 }
 
-void DatabaseWidget::setupClassicLayout(QHBoxLayout* hbox)
-{
-    hbox->addWidget(m_mainSplitter);
-
-    auto rightHandSideWidget = new QWidget(m_mainSplitter);
-    auto rightHandSideVBox = new QVBoxLayout();
-    rightHandSideVBox->setContentsMargins(0, 0, 0, 0);
-    rightHandSideVBox->addWidget(m_searchingLabel);
-    rightHandSideVBox->addWidget(m_previewSplitter);
-    rightHandSideWidget->setLayout(rightHandSideVBox);
-    m_entryView = new EntryView(rightHandSideWidget);
-
-    m_mainSplitter->setChildrenCollapsible(false);
-    m_mainSplitter->addWidget(m_groupSplitter);
-    m_mainSplitter->addWidget(rightHandSideWidget);
-    m_mainSplitter->setStretchFactor(0, 0);
-    m_mainSplitter->setStretchFactor(1, 100);
-    m_mainSplitter->setSizes({1, 1});
-
-    m_previewSplitter->setOrientation(Qt::Vertical);
-    m_previewSplitter->setChildrenCollapsible(true);
-    m_previewSplitter->addWidget(m_entryView);
-    m_previewSplitter->addWidget(m_previewView);
-    m_previewSplitter->setStretchFactor(0, 100);
-    m_previewSplitter->setStretchFactor(1, 0);
-    m_previewSplitter->setSizes({1, 1});
-}
-
 /**
  * Vault Index layout: navigation pane | command bar over entry list | detail card.
- * Built from the same group, tag and entry views as the classic layout.
  */
 void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 {
@@ -1398,11 +1313,10 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     // Panes are separated by surfaces, not grip lines
     m_mainSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background: transparent; image: none; }"));
 
-    // The command bar shows the search state and the card replaces the preview panel
+    // The command bar shows the search state; the label only holds its text
     auto unused = new QWidget(m_mainWidget);
     unused->hide();
     m_searchingLabel->setParent(unused);
-    m_previewView->setParent(unused);
 
     auto model = m_entryView->model();
     connect(model, &QAbstractItemModel::rowsInserted, this, &DatabaseWidget::updateVaultCommandBar);
@@ -2056,11 +1970,6 @@ void DatabaseWidget::showServerHistory(const RemoteParams* params)
     });
     connect(this, &DatabaseWidget::databaseLockRequested, dialog, &QDialog::reject);
 
-    if (!m_vaultLayout) {
-        dialog->open();
-        return;
-    }
-
     // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
     dialog->setWindowFlags(Qt::Widget);
     dialog->buttonBox()->hide();
@@ -2146,22 +2055,14 @@ void DatabaseWidget::switchToHistoryView(Entry* entry)
 {
     auto entryTitle = m_editEntryWidget->currentEntry() ? m_editEntryWidget->currentEntry()->title() : "";
     m_historyEditEntryWidget->loadEntry(entry, false, true, entryTitle, m_db);
-    if (m_vaultLayout) {
-        m_vaultHistoryEditor->prepare(false);
-        showVaultEditor(m_vaultHistoryEditor);
-        return;
-    }
-    setCurrentWidget(m_historyEditEntryWidget);
+    m_vaultHistoryEditor->prepare(false);
+    showVaultEditor(m_vaultHistoryEditor);
 }
 
 void DatabaseWidget::switchBackToEntryEdit()
 {
-    if (m_vaultLayout) {
-        showVaultEditor(m_vaultEntryEditor);
-        m_vaultHistoryEditor->finish();
-        return;
-    }
-    setCurrentWidget(m_editEntryWidget);
+    showVaultEditor(m_vaultEntryEditor);
+    m_vaultHistoryEditor->finish();
 }
 
 void DatabaseWidget::switchToEntryEdit(Entry* entry)
@@ -2187,26 +2088,18 @@ void DatabaseWidget::switchToEntryEdit(Entry* entry, bool create)
 
     // Setup the entry edit widget and display
     m_editEntryWidget->loadEntry(entry, create, false, group->name(), m_db);
-    if (m_vaultLayout) {
-        m_vaultEntryEditor->prepare(create);
-        if (create) {
-            showVaultNewEntryModal();
-        } else {
-            showVaultEditor(m_vaultEntryEditor);
-        }
-        return;
+    m_vaultEntryEditor->prepare(create);
+    if (create) {
+        showVaultNewEntryModal();
+    } else {
+        showVaultEditor(m_vaultEntryEditor);
     }
-    setCurrentWidget(m_editEntryWidget);
 }
 
 void DatabaseWidget::switchToGroupEdit(Group* group, bool create)
 {
     m_editGroupWidget->loadGroup(group, create, m_db);
-    if (m_vaultLayout) {
-        showVaultGroupModal(create);
-        return;
-    }
-    setCurrentWidget(m_editGroupWidget);
+    showVaultGroupModal(create);
 }
 
 void DatabaseWidget::connectDatabaseSignals()
@@ -2493,11 +2386,7 @@ void DatabaseWidget::switchToDatabaseReports()
 {
     if (currentMode() != Mode::ReportsMode) {
         m_reportsDialog->load(m_db);
-        if (m_vaultLayout) {
-            showVaultModal(m_vaultReportsModal);
-            return;
-        }
-        setCurrentWidget(m_reportsDialog);
+        showVaultModal(m_vaultReportsModal);
     }
 }
 
@@ -2505,11 +2394,7 @@ void DatabaseWidget::switchToDatabaseSettings()
 {
     if (currentMode() != Mode::DatabaseSettingsMode) {
         m_databaseSettingDialog->load(m_db);
-        if (m_vaultLayout) {
-            showVaultModal(m_vaultDatabaseSettingsModal);
-            return;
-        }
-        setCurrentWidget(m_databaseSettingDialog);
+        showVaultModal(m_vaultDatabaseSettingsModal);
     }
 }
 
@@ -2734,8 +2619,6 @@ void DatabaseWidget::onGroupChanged()
         m_entryView->displayGroup(group);
     }
 
-    m_previewView->setGroup(group);
-
     updateVaultCommandBar();
     emit groupChanged();
 }
@@ -2806,14 +2689,8 @@ void DatabaseWidget::endSearch()
         m_entryView->displayGroup(currentGroup());
         emit listModeActivated();
         m_entryView->setFirstEntryActive();
-        // Enforce preview view update (prevents stale information if focus group is empty)
-        m_previewView->setEntry(currentSelectedEntry());
         // Reset selection on tag view; without Clear Search to return to, no tag stays current either
-        if (m_vaultLayout) {
-            m_tagView->selectionModel()->clear();
-        } else {
-            m_tagView->selectionModel()->clearSelection();
-        }
+        m_tagView->selectionModel()->clear();
     }
 
     m_searchingLabel->setVisible(false);
@@ -2840,11 +2717,6 @@ void DatabaseWidget::emitEntryContextMenuRequested(const QPoint& pos)
 
 void DatabaseWidget::onEntryChanged(Entry* entry)
 {
-    if (entry) {
-        m_previewView->setEntry(entry);
-    } else {
-        m_previewView->setGroup(groupView()->currentGroup());
-    }
     if (m_detailCard) {
         if (entry) {
             m_detailCard->setEntry(entry);
@@ -2918,9 +2790,8 @@ void DatabaseWidget::hideEvent(QHideEvent* event)
 
 bool DatabaseWidget::focusNextPrevChild(bool next)
 {
-    // [parent] <-> GroupView <-> TagView <-> EntryView <-> EntryPreview <-> [parent]
-    QWidget* details = m_detailCard ? static_cast<QWidget*>(m_detailCard) : m_previewView;
-    QList<QWidget*> sequence = {m_groupView, m_tagView, m_entryView, details};
+    // [parent] <-> GroupView <-> TagView <-> EntryView <-> EntryDetailCard <-> [parent]
+    QList<QWidget*> sequence = {m_groupView, m_tagView, m_entryView, m_detailCard.data()};
     auto widget = qApp->focusWidget();
     if (!widget) {
         return QStackedWidget::focusNextPrevChild(next);

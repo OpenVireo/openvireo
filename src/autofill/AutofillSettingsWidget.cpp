@@ -26,7 +26,6 @@
 #include "gui/DatabaseWidget.h"
 #include "gui/MainWindow.h"
 #include "gui/MessageWidget.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -64,9 +63,7 @@ AutofillSettingsWidget::AutofillSettingsWidget(QWidget* parent)
     connect(m_enableCheckBox, &QAbstractButton::toggled, this, &AutofillSettingsWidget::updateEnabledState);
     connect(m_openSettingsButton, &QAbstractButton::clicked, this, [] { AutofillPlatform::openProviderSettings(); });
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        buildVaultPage();
-    }
+    buildVaultPage();
 }
 
 void AutofillSettingsWidget::buildVaultPage()

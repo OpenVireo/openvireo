@@ -302,8 +302,7 @@ void OrgAdmin::NavigationDelegate::paint(QPainter* painter,
 
 bool OrgAdmin::Prompt::canShowFluent(QWidget* parent)
 {
-    return FluentTheme::vaultLayoutEnabled() && parent && parent->window()->isVisible()
-           && !parent->window()->isMinimized();
+    return parent && parent->window()->isVisible() && !parent->window()->isMinimized();
 }
 
 OrgAdmin::Prompt::Prompt(QWidget* parent, const QString& title, const QString& acceptText, const QString& objectName)

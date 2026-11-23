@@ -137,13 +137,11 @@ WelcomeWidget::WelcomeWidget(QWidget* parent)
     m_ui->signInLink->setText(
         QStringLiteral("<a href=\"#\">%1</a>").arg(tr("Sign in or create an account").toHtmlEscaped()));
 
-    if (FluentTheme::vaultLayoutEnabled()) {
-        setupVaultStyle();
-        if (versionLabel) {
-            Vault::followTheme(versionLabel, [versionLabel] {
-                Vault::styleLabel(versionLabel, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
-            });
-        }
+    setupVaultStyle();
+    if (versionLabel) {
+        Vault::followTheme(versionLabel, [versionLabel] {
+            Vault::styleLabel(versionLabel, Typography::FontRole::Caption, FluentTheme::palette().textSecondary);
+        });
     }
 
     refreshLastDatabases();

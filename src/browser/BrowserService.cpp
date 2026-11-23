@@ -36,7 +36,6 @@
 #include "gui/UrlTools.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/passkeys/PasskeyImporter.h"
-#include "gui/styles/FluentTheme.h"
 #ifdef Q_OS_MACOS
 #include "gui/osutils/macutils/MacUtils.h"
 #endif
@@ -470,11 +469,7 @@ QList<Entry*> BrowserService::confirmEntries(QList<Entry*>& entriesToConfirm,
 
     m_dialogActive = true;
     // In the Vault Index layout, the dialog shows over the window, so the window comes forward with it
-    if (FluentTheme::vaultLayoutEnabled()) {
-        raiseWindow(true);
-    } else {
-        updateWindowState();
-    }
+    raiseWindow(true);
     BrowserAccessControlDialog accessControlDialog(m_currentDatabaseWidget);
 
     connect(m_currentDatabaseWidget, SIGNAL(databaseLockRequested()), &accessControlDialog, SLOT(reject()));
@@ -587,9 +582,7 @@ QString BrowserService::storeKey(const QString& key)
 
     // In the Vault Index layout, the request shows as a Fluent content dialog over the window, which comes forward
     // with it. A name already in use is called out in the dialog, so it needs no second prompt to replace it.
-    if (FluentTheme::vaultLayoutEnabled()) {
-        raiseWindow(true);
-    }
+    raiseWindow(true);
     if (BrowserKeyAssociationDialog::canShowOver(m_currentDatabaseWidget)) {
         BrowserKeyAssociationDialog keyDialog(
             db->metadata()->name(),

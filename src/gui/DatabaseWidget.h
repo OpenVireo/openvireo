@@ -44,7 +44,6 @@ class QFile;
 class QMenu;
 class QSplitter;
 class QLabel;
-class EntryPreviewWidget;
 class TagView;
 class RemoteSettings;
 class SyncScheduler;
@@ -356,7 +355,6 @@ private slots:
 
 private:
     int addChildWidget(QWidget* w);
-    void setupClassicLayout(QHBoxLayout* hbox);
     void setupVaultLayout(QHBoxLayout* hbox);
     void updateVaultCommandBar();
     // The view in use: the inline entry editor while the Vault Index layout shows one, else the current page
@@ -381,7 +379,6 @@ private:
     QPointer<QSplitter> m_mainSplitter;
     QPointer<QSplitter> m_groupSplitter;
     QPointer<MessageWidget> m_messageWidget;
-    QPointer<EntryPreviewWidget> m_previewView;
     QPointer<QSplitter> m_previewSplitter;
     QPointer<QLabel> m_searchingLabel;
     QPointer<EditEntryWidget> m_editEntryWidget;
@@ -395,7 +392,6 @@ private:
     QPointer<EntryView> m_entryView;
 
     // Vault Index layout (Fluent-Qt); null in the classic layout
-    bool m_vaultLayout = false;
     QPointer<VaultCommandBar> m_vaultCommandBar;
     QPointer<EntryDetailCard> m_detailCard;
     // Entry editors shown in place of the detail card, the one showing (null when not editing),

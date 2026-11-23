@@ -32,7 +32,6 @@
 #include "core/Database.h"
 #include "core/Global.h"
 #include "gui/Icons.h"
-#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QScrollArea>
@@ -70,47 +69,39 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
     m_securityTabWidget->setObjectName("securityTabWidget");
     m_securityTabWidget->addTab(scrollArea, tr("Database Credentials"));
     // As settings cards, the encryption settings lose their own scroll area
-    if (FluentTheme::vaultLayoutEnabled()) {
-        auto* encryptionScrollArea = new QScrollArea(parent);
-        encryptionScrollArea->setFrameShape(QFrame::NoFrame);
-        encryptionScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        encryptionScrollArea->setWidgetResizable(true);
-        encryptionScrollArea->setWidget(m_encryptionWidget);
-        m_securityTabWidget->addTab(encryptionScrollArea, tr("Encryption Settings"));
-    } else {
-        m_securityTabWidget->addTab(m_encryptionWidget, tr("Encryption Settings"));
-    }
+    auto* encryptionScrollArea = new QScrollArea(parent);
+    encryptionScrollArea->setFrameShape(QFrame::NoFrame);
+    encryptionScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    encryptionScrollArea->setWidgetResizable(true);
+    encryptionScrollArea->setWidget(m_encryptionWidget);
+    m_securityTabWidget->addTab(encryptionScrollArea, tr("Encryption Settings"));
 
     m_securityTabWidget->setCurrentIndex(0);
 
     // Both security pages are settings cards in the Vault Index layout, so their tabs read as a Fluent pivot: plain
     // labels with an accent line under the current one. The style draws a tab widget's own bar on a filled base, so a
     // separate tab bar switches the tab widget, which keeps the current page for the dialog's code.
-    if (FluentTheme::vaultLayoutEnabled()) {
-        auto security = new QWidget(this);
-        auto pivot = new QTabBar(security);
-        pivot->setObjectName("securityPivot");
-        pivot->setDrawBase(false);
-        pivot->setExpanding(false);
-        for (int i = 0; i < m_securityTabWidget->count(); ++i) {
-            pivot->addTab(m_securityTabWidget->tabText(i));
-        }
-        connect(pivot, &QTabBar::currentChanged, m_securityTabWidget, &QTabWidget::setCurrentIndex);
-        connect(m_securityTabWidget, &QTabWidget::currentChanged, pivot, &QTabBar::setCurrentIndex);
-        m_securityTabWidget->tabBar()->hide();
-
-        auto layout = new QVBoxLayout(security);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(0);
-        layout->addWidget(pivot, 0, Qt::AlignLeft);
-        layout->addWidget(m_securityTabWidget, 1);
-        Vault::followTheme(security, [security] {
-            security->setStyleSheet(Vault::formStyleSheet() + QStringLiteral("QTabWidget::pane { border: none; }"));
-        });
-        addPage(tr("Security"), icons()->icon("security-high"), security);
-    } else {
-        addPage(tr("Security"), icons()->icon("security-high"), m_securityTabWidget);
+    auto security = new QWidget(this);
+    auto pivot = new QTabBar(security);
+    pivot->setObjectName("securityPivot");
+    pivot->setDrawBase(false);
+    pivot->setExpanding(false);
+    for (int i = 0; i < m_securityTabWidget->count(); ++i) {
+        pivot->addTab(m_securityTabWidget->tabText(i));
     }
+    connect(pivot, &QTabBar::currentChanged, m_securityTabWidget, &QTabWidget::setCurrentIndex);
+    connect(m_securityTabWidget, &QTabWidget::currentChanged, pivot, &QTabBar::setCurrentIndex);
+    m_securityTabWidget->tabBar()->hide();
+
+    auto layout = new QVBoxLayout(security);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(pivot, 0, Qt::AlignLeft);
+    layout->addWidget(m_securityTabWidget, 1);
+    Vault::followTheme(security, [security] {
+        security->setStyleSheet(Vault::formStyleSheet() + QStringLiteral("QTabWidget::pane { border: none; }"));
+    });
+    addPage(tr("Security"), icons()->icon("security-high"), security);
 
     addPage(tr("Remote Sync"), icons()->icon("remote-sync"), m_remoteWidget);
 

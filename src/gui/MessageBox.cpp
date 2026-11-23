@@ -18,8 +18,6 @@
 
 #include "MessageBox.h"
 
-#include "gui/styles/FluentTheme.h"
-
 #include <components/basicinput/Button.h>
 #include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/textfields/Label.h>
@@ -188,8 +186,7 @@ bool MessageBox::fluentMessageBox(QWidget* parent,
 {
     // The alert is drawn inside the parent's window, so it needs a visible one. Prompts for other applications'
     // windows and prompts that raise themselves above other applications stay native message boxes.
-    if (!FluentTheme::vaultLayoutEnabled() || m_overrideParent || action == MessageBox::Raise || !parent
-        || !parent->window()->isVisible()) {
+    if (m_overrideParent || action == MessageBox::Raise || !parent || !parent->window()->isVisible()) {
         return false;
     }
 
