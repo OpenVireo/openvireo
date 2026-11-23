@@ -69,6 +69,7 @@ private slots:
     void testAutoTypeSettingsPage();
     void testFeatureSettingsPages();
     void testSidebarListsOnlyTags();
+    void testListViews();
     void testScreenshots();
     void testViewScreenshots();
 

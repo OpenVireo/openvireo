@@ -38,6 +38,8 @@
 #include "gui/TotpDialog.h"
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/styles/highcontrast/HighContrastStyle.h"
 #include "gui/entry/EditEntryAttachmentsDialog.h"
 #include "gui/entry/PreviewEntryAttachmentsDialog.h"
 #include "gui/export/ExportDialog.h"
@@ -147,6 +149,25 @@ namespace
             dialog->deleteLater();
         }
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+} // namespace
+
+namespace
+{
+    // Screenshot themes: light, dark, and the light-on-dark high-contrast scheme whatever the system uses
+    void applyScreenshotTheme(const QString& theme)
+    {
+        if (theme == QLatin1String("highcontrast")) {
+            const auto colors = FluentTheme::highContrastColors(true);
+            auto* style = new HighContrastStyle(colors);
+            QApplication::setPalette(style->standardPalette());
+            QApplication::setStyle(style);
+            FluentTheme::applyHighContrast(colors);
+        } else {
+            config()->set(Config::GUI_ApplicationTheme, theme);
+            kpxcApp->applyTheme();
+        }
+        QApplication::processEvents();
     }
 } // namespace
 
@@ -580,9 +601,8 @@ void TestGuiDialogs::testScreenshots()
     };
     const auto originalTheme = config()->get(Config::GUI_ApplicationTheme);
 
-    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-        config()->set(Config::GUI_ApplicationTheme, theme);
-        kpxcApp->applyTheme();
+    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark"), QStringLiteral("highcontrast")}) {
+        applyScreenshotTheme(theme);
         QApplication::processEvents();
         QTest::qWait(200);
 

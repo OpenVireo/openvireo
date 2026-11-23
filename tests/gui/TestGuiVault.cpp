@@ -21,6 +21,7 @@
 #include "config-keepassx.h"
 #include "core/Config.h"
 #include "core/Database.h"
+#include "core/EntryAttachments.h"
 #include "core/EntryAttributes.h"
 #include "core/Group.h"
 #include "core/KdbxImport.h"
@@ -35,6 +36,7 @@
 #endif
 #include "gui/Application.h"
 #include "gui/ApplicationSettingsWidget.h"
+#include "gui/CategoryListWidget.h"
 #include "gui/DatabaseTabWidget.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/FileDialog.h"
@@ -44,10 +46,14 @@
 #include "gui/PasswordWidget.h"
 #include "gui/SearchWidget.h"
 #include "gui/TotpSetupDialog.h"
+#include "gui/styles/FluentTheme.h"
+#include "gui/styles/highcontrast/HighContrastStyle.h"
+#include "gui/entry/EntryAttachmentsWidget.h"
 #include "gui/entry/EntryListItemDelegate.h"
 #include "gui/entry/EntryView.h"
 #include "gui/group/GroupModel.h"
 #include "gui/group/GroupView.h"
+#include "gui/reports/ReportsDialog.h"
 #include "gui/vault/EntryDetailCard.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
@@ -57,6 +63,7 @@
 #include "gui/vault/VaultNewDatabaseModal.h"
 #include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultSettingsModal.h"
+#include "gui/vault/VaultTable.h"
 #include "gui/vault/VaultWindowFrame.h"
 #include "gui/wizard/ImportWizard.h"
 
@@ -84,6 +91,7 @@
 #include <QStackedWidget>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableView>
 #include <QTableWidget>
 #include <QTest>
 #include <QTimer>
@@ -113,6 +121,25 @@ namespace
             }
         }
         return false;
+    }
+} // namespace
+
+namespace
+{
+    // Screenshot themes: light, dark, and the light-on-dark high-contrast scheme whatever the system uses
+    void applyScreenshotTheme(const QString& theme)
+    {
+        if (theme == QLatin1String("highcontrast")) {
+            const auto colors = FluentTheme::highContrastColors(true);
+            auto* style = new HighContrastStyle(colors);
+            QApplication::setPalette(style->standardPalette());
+            QApplication::setStyle(style);
+            FluentTheme::applyHighContrast(colors);
+        } else {
+            config()->set(Config::GUI_ApplicationTheme, theme);
+            kpxcApp->applyTheme();
+        }
+        QApplication::processEvents();
     }
 } // namespace
 
@@ -2029,6 +2056,49 @@ void TestGuiVault::testSidebarListsOnlyTags()
     QTRY_VERIFY(tagView->isVisible());
 }
 
+void TestGuiVault::testListViews()
+{
+    // Groups, tags and entries scroll with Fluent scroll bars
+    auto* groupView = m_dbWidget->findChild<QAbstractItemView*>("groupView");
+    auto* tagView = m_dbWidget->findChild<QAbstractItemView*>("tagView");
+    auto* entryView = m_dbWidget->findChild<EntryView*>("entryView");
+    for (auto* view : {groupView, tagView, static_cast<QAbstractItemView*>(entryView)}) {
+        QVERIFY(view);
+        QVERIFY(qobject_cast<VaultScrollBar*>(view->verticalScrollBar()));
+    }
+
+    // A table with no rows shows what would be there instead of a blank box, and no header
+    EntryAttachments attachments;
+    EntryAttachmentsWidget widget;
+    widget.linkAttachments(&attachments);
+    widget.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&widget));
+    auto* view = widget.findChild<QTableView*>("attachmentsView");
+    QVERIFY(qobject_cast<VaultTableDelegate*>(view->itemDelegate()));
+    QVERIFY(qobject_cast<VaultScrollBar*>(view->verticalScrollBar()));
+    QCOMPARE(Vault::emptyText(view), QString("No attachments yet"));
+    QTRY_VERIFY(Vault::isEmptyStateVisible(view));
+    QVERIFY(view->horizontalHeader()->isHidden());
+    auto* label = view->viewport()->findChild<QLabel*>("vaultEmptyState");
+    QVERIFY(label);
+    QCOMPARE(label->text(), QString("No attachments yet"));
+
+    // The first row replaces it and brings the header back; the view keeps its model and selection
+    attachments.set("notes.txt", QByteArray("hello"));
+    QTRY_VERIFY(!Vault::isEmptyStateVisible(view));
+    QVERIFY(!label->isVisible());
+    QVERIFY(!view->horizontalHeader()->isHidden());
+    QCOMPARE(view->model()->rowCount(), 1);
+    view->selectRow(0);
+    QCOMPARE(view->selectionModel()->selectedRows().size(), 1);
+    // Rows are tall enough for Fluent list items, and the stock selection fill is off so the delegate draws it
+    QVERIFY(view->rowHeight(0) >= VaultTableDelegate::MinimumRowHeight);
+    QCOMPARE(view->palette().color(QPalette::Active, QPalette::Highlight).alpha(), 0);
+
+    attachments.remove("notes.txt");
+    QTRY_VERIFY(Vault::isEmptyStateVisible(view));
+}
+
 void TestGuiVault::testScreenshots()
 {
     const auto dir = qEnvironmentVariable("OPENVIREO_VAULT_SCREENSHOT_DIR");
@@ -2038,9 +2108,8 @@ void TestGuiVault::testScreenshots()
 
     selectGroup(m_workGroup);
     selectEntry(m_github);
-    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-        config()->set(Config::GUI_ApplicationTheme, theme);
-        kpxcApp->applyTheme();
+    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark"), QStringLiteral("highcontrast")}) {
+        applyScreenshotTheme(theme);
         QApplication::processEvents();
         QTest::qWait(200);
         QVERIFY(m_mainWindow->grab().save(QDir(dir).absoluteFilePath(QString("vault-%1.png").arg(theme))));
@@ -2133,9 +2202,8 @@ void TestGuiVault::testViewScreenshots()
         QVERIFY(m_github);
     };
 
-    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
-        config()->set(Config::GUI_ApplicationTheme, theme);
-        kpxcApp->applyTheme();
+    for (const auto& theme : {QStringLiteral("light"), QStringLiteral("dark"), QStringLiteral("highcontrast")}) {
+        applyScreenshotTheme(theme);
         selectGroup(m_workGroup);
         selectEntry(m_github);
 
@@ -2173,6 +2241,15 @@ void TestGuiVault::testViewScreenshots()
         m_dbWidget->createEntry();
         QTest::keyClicks(entryEditCard()->findChild<QLineEdit*>("urlEdit"), "https://www.example.org");
         save("entry-new", theme);
+        // A new entry's lists are empty: attachments and attributes, window associations
+        auto* newCategories = entryEditCard()->editor()->findChild<QListWidget*>("categoryList");
+        newCategories->setCurrentRow(1);
+        auto* newAdvanced = qobject_cast<QScrollArea*>(entryEditCard()->editor()->pageStack()->widget(1));
+        newAdvanced->ensureWidgetVisible(newAdvanced->findChild<QWidget*>("attachmentsWidget"));
+        save("entry-new-advanced", theme);
+        newCategories->setCurrentRow(3);
+        save("entry-new-autotype", theme);
+        newCategories->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 
         m_dbWidget->switchToGroupEdit();
@@ -2195,6 +2272,22 @@ void TestGuiVault::testViewScreenshots()
 
         m_dbWidget->switchToDatabaseReports();
         save("reports", theme);
+        // Health Check, Passkeys, Browser Statistics and HIBP
+        auto* reports = m_mainWindow->findChild<ReportsDialog*>("reportsDialog");
+        QVERIFY(reports);
+        auto* reportPages = reports->categoryList()->listWidget();
+        for (int row = 1; row < reportPages->count(); ++row) {
+            reportPages->setCurrentRow(row);
+            QTest::qWait(300);
+            // A selected row shows the table's selection state
+            for (auto* table : reports->findChildren<QTableView*>()) {
+                if (table->isVisible() && table->model() && table->model()->rowCount() > 1) {
+                    table->selectRow(1);
+                }
+            }
+            save(QString("reports-%1").arg(row), theme);
+        }
+        reportPages->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 
         m_mainWindow->findChild<QAction*>("actionPasswordGenerator")->trigger();
