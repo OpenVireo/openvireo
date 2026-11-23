@@ -109,18 +109,23 @@ namespace
     }
 } // namespace
 
-VaultButtonBar::VaultButtonBar(QDialogButtonBox* buttons, QWidget* parent)
+VaultButtonBar::VaultButtonBar(QDialogButtonBox* buttons, QWidget* parent, Mode mode)
     : QWidget(parent)
     , m_buttons(buttons)
+    , m_mode(mode)
     , m_layout(new QHBoxLayout(this))
 {
     setObjectName("vaultButtonBar");
     m_layout->setContentsMargins(0, 0, 0, 0);
     m_layout->setSpacing(8);
 
-    // The box stays shown, since DialogyWidget only clicks visible buttons for Enter and Escape, but out of
-    // the layout and outside the bar's bounds, where it is clipped away
-    buttons->setParent(this);
+    if (mode == Adopt) {
+        // The box stays shown, since DialogyWidget only clicks visible buttons for Enter and Escape, but out of
+        // the layout and outside the bar's bounds, where it is clipped away
+        buttons->setParent(this);
+    } else {
+        buttons->hide();
+    }
     buttons->installEventFilter(this);
     rebuild();
 }
@@ -189,8 +194,10 @@ void VaultButtonBar::rebuild()
     if (!m_buttons) {
         return;
     }
-    m_buttons->adjustSize();
-    m_buttons->move(-m_buttons->width(), -m_buttons->height());
+    if (m_mode == Adopt) {
+        m_buttons->adjustSize();
+        m_buttons->move(-m_buttons->width(), -m_buttons->height());
+    }
 
     QList<QAbstractButton*> leading;
     QList<QAbstractButton*> trailing;
@@ -221,17 +228,25 @@ void VaultButtonBar::rebuild()
         m_layout->addWidget(proxy, m_fillWidth ? 1 : 0);
     };
 
+    // The accent goes to the default button when the form has one, as Enter presses it; else to the accepting ones
+    QAbstractButton* defaultButton = nullptr;
+    for (auto* source : m_buttons->buttons()) {
+        auto* push = qobject_cast<QPushButton*>(source);
+        if (push && push->isDefault()) {
+            defaultButton = source;
+        }
+    }
     for (auto* source : leading) {
-        addProxy(source, false);
+        addProxy(source, source == defaultButton);
     }
     if (!m_fillWidth) {
         m_layout->addStretch();
     }
     for (auto* source : trailing) {
-        addProxy(source, false);
+        addProxy(source, source == defaultButton);
     }
     for (auto* source : primary) {
-        addProxy(source, true);
+        addProxy(source, !defaultButton || source == defaultButton);
     }
 }
 

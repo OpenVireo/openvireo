@@ -70,6 +70,10 @@ public:
 
     // Adds a button to the right of the footer, named namePrefix + name
     QPushButton* addFooterButton(const QString& text, bool primary, const QString& name);
+    // Adds a widget to the footer after its buttons, such as a bar of buttons standing in for a dialog's own
+    void addFooterWidget(QWidget* widget, int stretch = 0);
+    // A modal whose content has no buttons to put there shows no footer
+    void setFooterHidden(bool hidden);
     // Widget focused when the modal opens, the content by default
     void setInitialFocus(QWidget* widget);
     // Shrinks the card to the height of its content instead of filling the window
@@ -109,6 +113,8 @@ private:
     QLabel* m_title;
     QPushButton* m_closeButton;
     QHBoxLayout* m_body;
+    QWidget* m_footerDivider;
+    QWidget* m_footerWidget;
     QHBoxLayout* m_footer;
     bool m_fitToContent = false;
     int m_maximumCardWidth = 1000;

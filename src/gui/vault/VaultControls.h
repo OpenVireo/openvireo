@@ -22,13 +22,16 @@
 #include <QDialogButtonBox>
 #include <QPlainTextEdit>
 #include <QPointer>
+#include <QResizeEvent>
 
 #include <components/basicinput/Button.h>
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ComboBox.h>
 #include <components/basicinput/RadioButton.h>
+#include <components/basicinput/SplitButton.h>
 #include <components/foundation/FluentElement.h>
 #include <components/layout/Card.h>
+#include <components/status_info/ProgressBar.h>
 #include <components/menus_toolbars/Menu.h>
 #include <components/textfields/LineEdit.h>
 #include <components/textfields/NumberBox.h>
@@ -61,6 +64,44 @@ private:
 
     // Text last shown without its mnemonic, so a literal "&" left in it isn't stripped again
     QString m_plainText;
+};
+
+// Split button for forms, in place of a QToolButton with a menu: the main part clicks, the chevron opens the menu
+class VaultSplitButton : public fluent::basicinput::SplitButton
+{
+    Q_OBJECT
+
+public:
+    explicit VaultSplitButton(QWidget* parent = nullptr)
+        : fluent::basicinput::SplitButton(QString(), parent)
+    {
+    }
+};
+
+// Progress bar for forms, in place of QProgressBar: a Fluent progress bar that fills the width its layout gives it
+class VaultProgressBar : public fluent::status_info::ProgressBar
+{
+    Q_OBJECT
+
+public:
+    explicit VaultProgressBar(QWidget* parent = nullptr)
+        : fluent::status_info::ProgressBar(parent)
+    {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    }
+
+    QSize sizeHint() const override
+    {
+        return {120, fluent::status_info::ProgressBar::sizeHint().height()};
+    }
+
+protected:
+    void resizeEvent(QResizeEvent* event) override
+    {
+        // The Fluent bar draws no wider than its bar width
+        setBarWidth(qMax(1, width()));
+        fluent::status_info::ProgressBar::resizeEvent(event);
+    }
 };
 
 // Check box with WinUI's stronger outline while unchecked, so it stays visible on light surfaces

@@ -38,13 +38,22 @@ class VaultSurface;
  * The box stays in place, hidden, so the form keeps changing its standard
  * buttons and reacting to them as before; each Fluent button follows one of
  * the box's buttons and clicks it.
+ *
+ * The bar takes the box in by default. With Follow, the box stays where it is,
+ * hidden, as for a bar in a modal card's footer while the box stays in the dialog.
  */
 class VaultButtonBar : public QWidget
 {
     Q_OBJECT
 
 public:
-    VaultButtonBar(QDialogButtonBox* buttons, QWidget* parent = nullptr);
+    enum Mode
+    {
+        Adopt,
+        Follow,
+    };
+
+    VaultButtonBar(QDialogButtonBox* buttons, QWidget* parent = nullptr, Mode mode = Adopt);
 
     // Label a standard button differently from the box, or leave it out of the bar
     void setButtonText(QDialogButtonBox::StandardButton button, const QString& text);
@@ -60,6 +69,7 @@ private:
     bool isHiddenInBar(QAbstractButton* source) const;
 
     QPointer<QDialogButtonBox> m_buttons;
+    Mode m_mode;
     QHash<int, QString> m_texts;
     QSet<int> m_hidden;
     QHBoxLayout* m_layout;

@@ -189,7 +189,9 @@ VaultModal::VaultModal(QWidget* window, QWidget* content, const QString& title, 
     // Content taken from a stacked widget keeps the hidden state of a page that wasn't current
     content->show();
 
-    m_footer = new QHBoxLayout();
+    m_footerWidget = new QWidget(m_card);
+    m_footerWidget->setObjectName(namePrefix + "Footer");
+    m_footer = new QHBoxLayout(m_footerWidget);
     m_footer->setContentsMargins(28, 16, 28, 20);
     m_footer->setSpacing(8);
     m_footer->addStretch();
@@ -200,8 +202,9 @@ VaultModal::VaultModal(QWidget* window, QWidget* content, const QString& title, 
     layout->addLayout(header);
     layout->addWidget(new Divider(m_card));
     layout->addLayout(m_body, 1);
-    layout->addWidget(new Divider(m_card));
-    layout->addLayout(m_footer);
+    m_footerDivider = new Divider(m_card);
+    layout->addWidget(m_footerDivider);
+    layout->addWidget(m_footerWidget);
 
     window->installEventFilter(this);
     m_card->installEventFilter(this);
@@ -269,6 +272,19 @@ QPushButton* VaultModal::addFooterButton(const QString& text, bool primary, cons
     // Tab moves from the last footer button around to the close button
     setTabOrder(button, m_closeButton);
     return button;
+}
+
+void VaultModal::addFooterWidget(QWidget* widget, int stretch)
+{
+    widget->setParent(m_footerWidget);
+    m_footer->addWidget(widget, stretch);
+    widget->show();
+}
+
+void VaultModal::setFooterHidden(bool hidden)
+{
+    m_footerDivider->setHidden(hidden);
+    m_footerWidget->setHidden(hidden);
 }
 
 void VaultModal::setInitialFocus(QWidget* widget)
@@ -419,7 +435,8 @@ void VaultModal::applyColors()
 void VaultModal::layoutCard()
 {
     const QSize available = rect().size() - QSize(CardMinMargin * 2, CardMinMargin * 2);
-    const int width = qBound(qMin(560, rect().width()), available.width(), m_maximumCardWidth);
+    // A card narrower than usual, such as one showing a code, keeps to its own width
+    const int width = qBound(qMin(qMin(560, rect().width()), m_maximumCardWidth), available.width(), m_maximumCardWidth);
     int height = qBound(qMin(420, rect().height()), available.height(), CardMaxHeight);
     if (m_fitToContent) {
         const int needed = m_card->layout()->heightForWidth(width);
