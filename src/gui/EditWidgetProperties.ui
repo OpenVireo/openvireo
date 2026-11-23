@@ -122,7 +122,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="VaultCard" name="groupBox">
      <property name="title">
       <string>Plugin Data</string>
      </property>
@@ -197,6 +197,12 @@
   <extends>QLineEdit</extends>
   <header>gui/vault/VaultControls.h</header>
  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources/>
  <connections/>

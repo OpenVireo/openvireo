@@ -120,7 +120,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QGroupBox" name="windowsBox">
+    <widget class="VaultCard" name="windowsBox">
      <property name="title">
       <string>Window Associations</string>
      </property>
@@ -336,6 +336,12 @@
    <class>WindowSelectComboBox</class>
    <extends>QComboBox</extends>
    <header>autotype/WindowSelectComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

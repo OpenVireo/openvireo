@@ -2160,6 +2160,11 @@ void TestGuiVault::testViewScreenshots()
         QApplication::processEvents();
         autoTypePage->verticalScrollBar()->setValue(autoTypePage->verticalScrollBar()->maximum());
         save("entry-autotype-window", theme);
+        // The remaining pages: Icon, Browser Integration, Properties, History, SSH Agent
+        for (int row = 4; row < entryCategories->count(); ++row) {
+            entryCategories->setCurrentRow(row);
+            save(QString("entry-page-%1").arg(row), theme);
+        }
         entryCategories->setCurrentRow(0);
         m_dbWidget->switchToMainView();
 

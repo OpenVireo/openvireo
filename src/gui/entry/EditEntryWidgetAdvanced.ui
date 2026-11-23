@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QGroupBox" name="attributesBox">
+    <widget class="VaultCard" name="attributesBox">
      <property name="title">
       <string>Additional attributes</string>
      </property>
@@ -54,7 +54,7 @@
           <enum>QListView::Adjust</enum>
          </property>
         </widget>
-        <widget class="QPlainTextEdit" name="attributesEdit">
+        <widget class="VaultPlainTextEdit" name="attributesEdit">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -168,7 +168,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="attachmentsBox">
+    <widget class="VaultCard" name="attachmentsBox">
      <property name="title">
       <string>Attachments</string>
      </property>
@@ -320,6 +320,17 @@
    <class>AttributesListView</class>
    <extends>QListView</extends>
    <header>gui/entry/EditEntryWidget_p.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultPlainTextEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

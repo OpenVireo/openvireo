@@ -65,6 +65,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "gui/tag/TagsEdit.h"
 #include "gui/vault/EntryDetailCard.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEntryEditCard.h"
 #include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
@@ -1068,7 +1069,7 @@ void TestGui::testDicewareEntryEntropy()
 
         auto* comboBoxWordList = dicewareWidget->findChild<QComboBox*>("comboBoxWordList");
         comboBoxWordList->setCurrentText("eff_large.wordlist");
-        auto* spinBoxWordCount = dicewareWidget->findChild<QSpinBox*>("spinBoxWordCount");
+        auto* spinBoxWordCount = dicewareWidget->findChild<VaultSpinBox*>("spinBoxWordCount");
         spinBoxWordCount->setValue(6);
 
         // Confirm a password was generated

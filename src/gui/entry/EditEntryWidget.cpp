@@ -637,6 +637,7 @@ void EditEntryWidget::setupBrowser()
             SIGNAL(dataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&)),
             SLOT(updateCurrentAttribute()));
         // clang-format on
+        setupVaultBrowser();
     }
 }
 
@@ -759,6 +760,52 @@ void EditEntryWidget::updateCurrentURL()
 void EditEntryWidget::entryURLEdited(const QString& url)
 {
     m_additionalURLsDataModel->setEntryUrl(url);
+}
+
+// Settings cards: the switches in one card, the additional URLs below with their buttons
+void EditEntryWidget::setupVaultBrowser()
+{
+    auto ui = m_browserUi.data();
+    // The back row above the page already names it
+    VaultSettingsPage page(m_browserWidget, {});
+    ui->label->setWordWrap(true);
+    Vault::followTheme(ui->label, [label = ui->label] {
+        Vault::styleLabel(label, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
+    });
+    page.addWidget(ui->label);
+    page.addWidget(ui->messageWidget);
+
+    auto general = page.addSection(ui->groupBox_2);
+    for (auto* checkBox :
+         {ui->hideEntryCheckbox, ui->skipAutoSubmitCheckbox, ui->onlyHttpAuthCheckbox, ui->notHttpAuthCheckbox}) {
+        const auto description = checkBox->toolTip();
+        checkBox->setToolTip({});
+        general->addToggle(checkBox, description);
+    }
+
+    auto urls = page.addSection(ui->groupBox_3);
+    auto* block = new QWidget(m_browserWidget);
+    block->setObjectName("vaultAdditionalUrlsBlock");
+    auto* blockLayout = new QVBoxLayout(block);
+    blockLayout->setContentsMargins(0, 0, 0, 0);
+    blockLayout->setSpacing(8);
+    auto* toolbar = new QHBoxLayout();
+    toolbar->setContentsMargins(0, 0, 0, 0);
+    toolbar->setSpacing(6);
+    for (auto* button : {ui->addURLButton, ui->editURLButton, ui->removeURLButton}) {
+        button->setFluentSize(fluent::basicinput::Button::Small);
+        toolbar->addWidget(button);
+    }
+    ui->addURLButton->setIconGlyph(Typography::Icons::Add, Typography::IconSize::Compact);
+    ui->addURLButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    toolbar->addStretch();
+    blockLayout->addLayout(toolbar);
+    ui->additionalURLsView->setMinimumHeight(96);
+    ui->additionalURLsView->setMaximumHeight(200);
+    blockLayout->addWidget(ui->additionalURLsView);
+    urls->addWidget(block);
+
+    page.finish();
 }
 #endif
 
@@ -928,6 +975,56 @@ void EditEntryWidget::setupSSHAgent()
     // clang-format on
 
     addPage(tr("SSH Agent"), icons()->icon("utilities-terminal"), m_sshAgentWidget);
+    setupVaultSSHAgent();
+}
+
+// Settings cards: the agent options as switches, the private key's source and actions, then what the key shows
+void EditEntryWidget::setupVaultSSHAgent()
+{
+    auto ui = m_sshAgentUi.data();
+    // The back row above the page already names it
+    VaultSettingsPage page(m_sshAgentWidget, {});
+
+    auto agent = page.addSection();
+    agent->addToggle(ui->addKeyToAgentCheckBox);
+    agent->addToggle(ui->removeKeyFromAgentCheckBox);
+    agent->addToggle(ui->requireUserConfirmationCheckBox);
+    agent->addToggle(ui->lifetimeCheckBox)->addHeaderControl(ui->lifetimeSpinBox);
+
+    auto row = [this](const QList<QWidget*>& widgets, int stretchAt) {
+        auto* widget = new QWidget(m_sshAgentWidget);
+        auto* layout = new QHBoxLayout(widget);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(8);
+        if (stretchAt < 0) {
+            layout->addStretch();
+        }
+        for (int i = 0; i < widgets.size(); ++i) {
+            layout->addWidget(widgets.at(i), i == stretchAt ? 1 : 0);
+        }
+        return widget;
+    };
+    auto privateKey = page.addSection(ui->privateKeyGroupBox);
+    privateKey->addWidget(row({ui->attachmentRadioButton, ui->attachmentComboBox, ui->generateButton}, 1));
+    privateKey->addWidget(row({ui->externalFileRadioButton, ui->externalFileEdit, ui->browseButton}, 1));
+    privateKey->addWidget(row({ui->addToAgentButton, ui->removeFromAgentButton, ui->clearAgentButton}, -1));
+
+    // The section heading names the public key, so its label isn't needed
+    auto publicKey = page.addSection(ui->publicKeyLabel->text());
+    ui->publicKeyLabel->hide();
+    ui->fingerprintTextLabel->setWordWrap(true);
+    publicKey->addSetting(ui->fingerprintLabel, ui->fingerprintTextLabel);
+    publicKey->addSetting(ui->commentLabel, {ui->commentTextLabel, ui->decryptButton});
+    auto* keyBlock = new QWidget(m_sshAgentWidget);
+    auto* keyLayout = new QVBoxLayout(keyBlock);
+    keyLayout->setContentsMargins(0, 0, 0, 0);
+    keyLayout->setSpacing(8);
+    ui->publicKeyEdit->setMinimumHeight(96);
+    keyLayout->addWidget(ui->publicKeyEdit);
+    keyLayout->addWidget(row({ui->copyToClipboardButton}, -1));
+    publicKey->addWidget(keyBlock);
+
+    page.finish();
 }
 
 void EditEntryWidget::setSSHAgentSettings()

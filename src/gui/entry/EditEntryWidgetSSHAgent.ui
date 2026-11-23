@@ -51,7 +51,7 @@
     </widget>
    </item>
    <item row="15" column="3" colspan="2">
-    <widget class="QPlainTextEdit" name="publicKeyEdit">
+    <widget class="VaultPlainTextEdit" name="publicKeyEdit">
      <property name="font">
       <font>
        <family>Monospace</family>
@@ -113,7 +113,7 @@
     </widget>
    </item>
    <item row="5" column="1" colspan="4">
-    <widget class="QGroupBox" name="privateKeyGroupBox">
+    <widget class="VaultCard" name="privateKeyGroupBox">
      <property name="title">
       <string>Private key</string>
      </property>
@@ -255,7 +255,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="lifetimeSpinBox">
+      <widget class="VaultSpinBox" name="lifetimeSpinBox">
        <property name="accessibleName">
         <string>Remove key from agent after specified seconds</string>
        </property>
@@ -373,6 +373,22 @@
   <extends>QLineEdit</extends>
   <header>gui/vault/VaultControls.h</header>
  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultPlainTextEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
  </customwidgets>
  <resources/>
  <connections/>

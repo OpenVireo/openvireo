@@ -158,10 +158,14 @@ private:
     void setupAutoType();
     void setupVaultAutoType();
 #ifdef KPXC_FEATURE_BROWSER
+    void setupVaultBrowser();
+#endif
+#ifdef KPXC_FEATURE_BROWSER
     void setupBrowser();
 #endif
 #ifdef KPXC_FEATURE_SSHAGENT
     void setupSSHAgent();
+    void setupVaultSSHAgent();
 #endif
     void setupProperties();
     void setupHistory();

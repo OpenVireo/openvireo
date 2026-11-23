@@ -70,19 +70,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="styleSheet">
-      <string notr="true">border:none</string>
-     </property>
-     <property name="title">
-      <string/>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-     <property name="checkable">
-      <bool>false</bool>
-     </property>
+    <widget class="QWidget" name="groupBox">
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <widget class="VaultRadioButton" name="radioDefault">
@@ -121,7 +109,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="customSettingsGroup">
+    <widget class="VaultCard" name="customSettingsGroup">
      <property name="enabled">
       <bool>false</bool>
      </property>
@@ -168,7 +156,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QSpinBox" name="stepSpinBox">
+       <widget class="VaultSpinBox" name="stepSpinBox">
         <property name="accessibleName">
          <string>Time step field</string>
         </property>
@@ -194,7 +182,7 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QSpinBox" name="digitsSpinBox">
+       <widget class="VaultSpinBox" name="digitsSpinBox">
         <property name="suffix">
          <string> digits</string>
         </property>
@@ -213,7 +201,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="VaultDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -242,6 +230,22 @@
   <customwidget>
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultDialogButtonBox</class>
+   <extends>QDialogButtonBox</extends>
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
