@@ -31,6 +31,7 @@
 #include <QDBusReply>
 #include <QDebug>
 #include <QDir>
+#include <QGuiApplication>
 #include <QMimeData>
 #include <QPointer>
 #include <QProcess>
@@ -74,8 +75,8 @@ NixUtils::NixUtils(QObject* parent)
     : OSUtilsBase(parent)
 {
     // The platform theme's palette, before the application replaces it with its own
-    if (qApp) {
-        m_systemPaletteDark = QApplication::palette().color(QPalette::Window).toHsl().lightness() < 110;
+    if (qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        m_systemPaletteDark = QGuiApplication::palette().color(QPalette::Window).toHsl().lightness() < 110;
     }
 #ifdef WITH_X11
     if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
