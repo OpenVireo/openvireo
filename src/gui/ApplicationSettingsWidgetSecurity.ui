@@ -27,13 +27,13 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="VaultCard" name="groupBox">
      <property name="title">
       <string>Timeouts</string>
      </property>
      <layout class="QGridLayout" name="gridLayout" columnstretch="0,0,1">
       <item row="1" column="1">
-       <widget class="QSpinBox" name="lockDatabaseIdleSpinBox">
+       <widget class="VaultSpinBox" name="lockDatabaseIdleSpinBox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -75,7 +75,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QSpinBox" name="clearSearchSpinBox">
+       <widget class="VaultSpinBox" name="clearSearchSpinBox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -97,13 +97,10 @@
         <property name="value">
          <number>5</number>
         </property>
-        <property name="displayIntegerBase">
-         <number>10</number>
-        </property>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QSpinBox" name="clearClipboardSpinBox">
+       <widget class="VaultSpinBox" name="clearClipboardSpinBox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -160,7 +157,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="lockOptionsGroup">
+    <widget class="VaultCard" name="lockOptionsGroup">
      <property name="title">
       <string>Lock Options</string>
      </property>
@@ -207,7 +204,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_2">
+    <widget class="VaultCard" name="groupBox_2">
      <property name="title">
       <string>Convenience</string>
      </property>
@@ -251,7 +248,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="privacy">
+    <widget class="VaultCard" name="privacy">
      <property name="title">
       <string>Privacy</string>
      </property>
@@ -289,6 +286,17 @@
    <class>VaultCheckBox</class>
    <extends>QCheckBox</extends>
    <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

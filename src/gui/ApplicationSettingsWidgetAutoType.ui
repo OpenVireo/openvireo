@@ -135,7 +135,7 @@
           <number>8</number>
          </property>
          <item row="3" column="1">
-          <widget class="QSpinBox" name="autoTypeStartDelaySpinBox">
+          <widget class="VaultSpinBox" name="autoTypeStartDelaySpinBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -147,9 +147,6 @@
            </property>
            <property name="suffix">
             <string comment="Milliseconds"> ms</string>
-           </property>
-           <property name="prefix">
-            <string/>
            </property>
            <property name="minimum">
             <number>100</number>
@@ -202,7 +199,7 @@
           </widget>
          </item>
          <item row="4" column="1">
-          <widget class="QSpinBox" name="autoTypeDelaySpinBox">
+          <widget class="VaultSpinBox" name="autoTypeDelaySpinBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -214,9 +211,6 @@
            </property>
            <property name="suffix">
             <string comment="Milliseconds"> ms</string>
-           </property>
-           <property name="prefix">
-            <string/>
            </property>
            <property name="maximum">
             <number>1000</number>
@@ -342,7 +336,7 @@
           </layout>
          </item>
          <item row="2" column="1">
-          <widget class="QSpinBox" name="autoTypeRetypeTimeSpinBox">
+          <widget class="VaultSpinBox" name="autoTypeRetypeTimeSpinBox">
            <property name="suffix">
             <string comment="Seconds"> sec</string>
            </property>
@@ -420,6 +414,11 @@
    <class>ShortcutWidget</class>
    <extends>QLineEdit</extends>
    <header>gui/widgets/ShortcutWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

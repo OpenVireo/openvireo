@@ -76,7 +76,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QGroupBox" name="browsersGroupBox">
+        <widget class="VaultCard" name="browsersGroupBox">
          <property name="title">
           <string>Enable integration for these browsers:</string>
          </property>
@@ -439,7 +439,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="customBrowserGroupBox">
+        <widget class="VaultCard" name="customBrowserGroupBox">
          <property name="title">
           <string/>
          </property>
@@ -655,6 +655,12 @@
    <class>MessageWidget</class>
    <extends>QWidget</extends>
    <header>gui/MessageWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

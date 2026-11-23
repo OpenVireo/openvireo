@@ -66,7 +66,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QGroupBox" name="startupGroup">
+            <widget class="VaultCard" name="startupGroup">
              <property name="title">
               <string>Startup</string>
              </property>
@@ -115,7 +115,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="rememberLastDatabasesSpinbox">
+                 <widget class="VaultSpinBox" name="rememberLastDatabasesSpinbox">
                   <property name="suffix">
                    <string> recent files</string>
                   </property>
@@ -299,7 +299,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="showExpiredEntriesOnDatabaseUnlockOffsetSpinBox">
+                 <widget class="VaultSpinBox" name="showExpiredEntriesOnDatabaseUnlockOffsetSpinBox">
                   <property name="enabled">
                    <bool>true</bool>
                   </property>
@@ -342,7 +342,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="saveGroup">
+            <widget class="VaultCard" name="saveGroup">
              <property name="title">
               <string>File Management</string>
              </property>
@@ -546,7 +546,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="entryGroup">
+            <widget class="VaultCard" name="entryGroup">
              <property name="title">
               <string>Entry Management</string>
              </property>
@@ -737,7 +737,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="faviconTimeoutSpinBox">
+                 <widget class="VaultSpinBox" name="faviconTimeoutSpinBox">
                   <property name="enabled">
                    <bool>true</bool>
                   </property>
@@ -780,7 +780,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="generalGroup">
+            <widget class="VaultCard" name="generalGroup">
              <property name="title">
               <string>User Interface</string>
              </property>
@@ -1181,6 +1181,17 @@
    <class>VaultComboBox</class>
    <extends>QComboBox</extends>
    <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultSpinBox</class>
+   <extends>QLineEdit</extends>
+   <header>gui/vault/VaultControls.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VaultCard</class>
+   <extends>QFrame</extends>
+   <header>gui/vault/VaultControls.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>
