@@ -96,13 +96,7 @@ SearchWidget::~SearchWidget() = default;
 
 void SearchWidget::useFluentSearchBox()
 {
-    auto* box = new fluent::textfields::AutoSuggestBox(this);
-    box->setObjectName("searchEdit");
-    box->setSizePolicy(m_ui->searchEdit->sizePolicy());
-    box->setMinimumSize(m_ui->searchEdit->minimumSize());
-    delete layout()->replaceWidget(m_ui->searchEdit, box);
-    delete m_ui->searchEdit;
-    m_ui->searchEdit = box;
+    auto* box = m_ui->searchEdit;
 
     // Enter is handled in eventFilter(); this comes from the box's search button
     connect(box, &fluent::textfields::AutoSuggestBox::querySubmitted, this, [this] {
