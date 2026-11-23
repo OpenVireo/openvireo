@@ -25,9 +25,6 @@
 #include "gui/MessageBox.h"
 #include "gui/osutils/OSUtils.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/styles/dark/DarkStyle.h"
-#include "gui/styles/highcontrast/HighContrastStyle.h"
-#include "gui/styles/light/LightStyle.h"
 #include "gui/vault/VaultControls.h"
 
 #include <QFileInfo>
@@ -186,28 +183,14 @@ void Application::applyTheme()
         }
     }
     QPixmapCache::clear();
-    m_highContrast = false;
-    // Fluent-Qt's colours go last: widgets restyle their labels when it notifies them, and re-polishing for
-    // the new style would otherwise restore the palettes they had before
-    if (appTheme == "highcontrast") {
+    // FluentTheme installs the application palette and style (VaultStyle) before it notifies the Fluent widgets
+    m_highContrast = appTheme == "highcontrast";
+    if (m_highContrast) {
         const auto colors = highContrastColors();
         m_darkTheme = colors.isDark();
-        m_highContrast = true;
-        auto* s = new HighContrastStyle(colors);
-        setPalette(s->standardPalette());
-        setStyle(s);
         FluentTheme::applyHighContrast(colors);
-    } else if (appTheme == "light") {
-        m_darkTheme = false;
-        auto* s = new LightStyle;
-        setPalette(s->standardPalette());
-        setStyle(s);
-        FluentTheme::apply(m_darkTheme);
     } else {
-        m_darkTheme = true;
-        auto* s = new DarkStyle;
-        setPalette(s->standardPalette());
-        setStyle(s);
+        m_darkTheme = appTheme == "dark";
         FluentTheme::apply(m_darkTheme);
     }
     applyFontSize();

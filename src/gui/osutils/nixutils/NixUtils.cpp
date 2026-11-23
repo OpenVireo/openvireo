@@ -36,7 +36,7 @@
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QStandardPaths>
-#include <QStyle>
+#include <QPalette>
 #include <QTextStream>
 #ifdef WITH_X11
 #include <QGuiApplication>
@@ -73,6 +73,10 @@ NixUtils* NixUtils::instance()
 NixUtils::NixUtils(QObject* parent)
     : OSUtilsBase(parent)
 {
+    // The platform theme's palette, before the application replaces it with its own
+    if (qApp) {
+        m_systemPaletteDark = QApplication::palette().color(QPalette::Window).toHsl().lightness() < 110;
+    }
 #ifdef WITH_X11
     if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
         dpy = native->display();
@@ -114,10 +118,7 @@ bool NixUtils::isDarkMode() const
         return m_systemColorschemePref == ColorschemePref::PreferDark;
     }
 
-    if (!qApp || !qApp->style()) {
-        return false;
-    }
-    return qApp->style()->standardPalette().color(QPalette::Window).toHsl().lightness() < 110;
+    return m_systemPaletteDark;
 }
 
 bool NixUtils::isHighContrastMode() const

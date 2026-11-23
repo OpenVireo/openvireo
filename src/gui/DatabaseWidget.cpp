@@ -1272,8 +1272,6 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     // Groups and tags sit directly on the navigation pane
     for (QAbstractItemView* view : {static_cast<QAbstractItemView*>(m_groupView.data()),
                                     static_cast<QAbstractItemView*>(m_tagView.data())}) {
-        // Matched by basestyle.qss, which otherwise fills these views with the window color
-        view->setProperty("vaultLayout", true);
         view->setFrameShape(QFrame::NoFrame);
         view->viewport()->setAutoFillBackground(false);
     }

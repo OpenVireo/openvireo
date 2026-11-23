@@ -19,6 +19,7 @@
 #define KEEPASSXC_FLUENTTHEME_H
 
 #include <QColor>
+#include <QPalette>
 
 class QAction;
 class QPainter;
@@ -33,7 +34,8 @@ class QString;
  */
 namespace FluentTheme
 {
-    // Point Fluent-Qt at the light or dark palette and the KeePassXC accent
+    // Point Fluent-Qt at the light or dark palette and the accent, and install the matching application palette
+    // and style (VaultStyle) for the stock widgets
     void apply(bool dark);
 
     /**
@@ -121,6 +123,9 @@ namespace FluentTheme
         bool highContrast = false;
     };
     Palette palette();
+    // The QPalette for the stock Qt widgets the Fusion style draws, derived from palette(). In high contrast it is the
+    // scheme itself, Active and Inactive alike. apply() and applyHighContrast() make it the application palette.
+    QPalette qtPalette();
     // True while Fluent-Qt uses its dark appearance
     bool isDark();
 

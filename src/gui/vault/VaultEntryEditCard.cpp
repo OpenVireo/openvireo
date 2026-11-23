@@ -352,6 +352,8 @@ VaultEntryEditCard::VaultEntryEditCard(EditWidget* editor, QWidget* parent)
     }
 
     clearPageBackgrounds(m_pages);
+    // The editor fills itself with the window colour (DialogyWidget); the card's layer shows through instead
+    m_editor->setAutoFillBackground(false);
     pageChanged(m_pages->currentIndex());
     applyColors();
 }

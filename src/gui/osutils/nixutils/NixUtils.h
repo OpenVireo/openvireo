@@ -100,6 +100,8 @@ private:
     };
     ColorschemePref m_systemColorschemePref = ColorschemePref::PreferNone;
     bool m_systemColorschemePrefExists = false;
+    // Whether the platform theme was dark at startup, for desktops without the colour-scheme setting
+    bool m_systemPaletteDark = false;
 
     void setColorScheme(QDBusVariant value);
 

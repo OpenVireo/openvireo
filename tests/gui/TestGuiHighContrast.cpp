@@ -32,7 +32,6 @@
 #include "gui/MessageBox.h"
 #include "gui/PasswordWidget.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/styles/highcontrast/HighContrastStyle.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultSettingsModal.h"
 
@@ -146,9 +145,6 @@ void TestGuiHighContrast::setTheme(const QString& theme)
 void TestGuiHighContrast::applyHighContrast(bool dark)
 {
     const auto colors = FluentTheme::highContrastColors(dark);
-    auto* style = new HighContrastStyle(colors);
-    QApplication::setPalette(style->standardPalette());
-    QApplication::setStyle(style);
     FluentTheme::applyHighContrast(colors);
     QApplication::processEvents();
 }

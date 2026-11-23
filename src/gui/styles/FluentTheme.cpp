@@ -18,9 +18,11 @@
 #include "FluentTheme.h"
 
 #include "gui/ActionCollection.h"
+#include "gui/styles/VaultStyle.h"
 
 #include <FluentQt/FluentQt.h>
 
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 #include <QtMath>
@@ -166,11 +168,29 @@ namespace
         return c;
     }
 
+    // An opaque colour that looks like the translucent one drawn over the background
+    QColor solid(const QColor& color, const QColor& background)
+    {
+        const auto a = color.alphaF();
+        return QColor::fromRgbF(color.redF() * a + background.redF() * (1 - a),
+                                color.greenF() * a + background.greenF() * (1 - a),
+                                color.blueF() * a + background.blueF() * (1 - a));
+    }
+
+    FluentTheme::Palette paletteFor(fluent::FluentElement::Theme theme);
+    QPalette qtPaletteFor(fluent::FluentElement::Theme theme);
+
     // Switch Fluent-Qt's theme, and repaint even when neither the theme nor its tokens changed: the caller has just
     // installed a new QStyle, and re-polishing restores the palettes widgets had when they were first polished, so
     // they must restyle their labels again in onThemeUpdated()
     void setTheme(fluent::FluentElement::Theme theme, bool tokensChanged)
     {
+        // Stock widgets first: the palette, then a fresh style so every widget is polished again with it, style
+        // sheets included. Fluent widgets restyling themselves below then see the new application palette.
+        if (qobject_cast<QApplication*>(QCoreApplication::instance())) {
+            QApplication::setPalette(qtPaletteFor(theme));
+            QApplication::setStyle(new VaultStyle);
+        }
         if (fluent::FluentElement::currentTheme() != theme) {
             fluent::FluentElement::setTheme(theme);
         } else if (!tokensChanged) {
@@ -308,54 +328,164 @@ bool FluentTheme::isDark()
 
 FluentTheme::Palette FluentTheme::palette()
 {
-    const auto theme = fluent::FluentElement::currentTheme();
-    const auto& c = fluent::ThemeRegistry::instance().colors(theme);
-    const bool dark = fluent::FluentElement::themeUsesDarkAppearance(theme);
-
-    Palette p;
-    p.canvas = c.bgCanvas;
-    p.surface = blend(c.bgCanvas, c.bgLayer, 0.5);
-    p.layer = c.bgLayer;
-    p.inset = blend(c.bgLayer, c.bgCanvas, 0.35);
-    p.stroke = c.strokeCard;
-    p.strokeStrong = c.strokeStrong;
-    p.divider = c.strokeDivider;
-    p.control = c.controlDefault;
-    p.controlHover = c.controlSecondary;
-    p.controlPressed = c.controlTertiary;
-    p.subtleHover = c.subtleSecondary;
-    p.subtlePressed = c.subtleTertiary;
-    p.text = c.textPrimary;
-    p.textSecondary = c.textSecondary;
-    p.textTertiary = c.textTertiary;
-    p.textDisabled = c.textDisabled;
-    p.accent = c.accentDefault;
-    p.accentText = c.textAccentPrimary;
-    // Selected rows get a quiet accent tint rather than a solid fill
-    p.accentSubtle = withAlpha(c.accentDefault, dark ? 46 : 36);
-    p.onAccent = c.textOnAccent;
-    p.critical = c.systemCritical;
-    p.criticalBg = c.systemCriticalBg;
-    p.caution = c.systemCaution;
-    p.cautionBg = c.systemCautionBg;
-    p.success = c.systemSuccess;
-    p.successBg = c.systemSuccessBg;
-    p.infoBg = c.systemInfoBg;
-    p.link = c.textAccentPrimary;
-    p.focus = c.strokeFocusOuter;
-    p.selectionStroke = c.accentDefault;
-    if (g_highContrast) {
-        const auto& hc = g_highContrastColors;
-        p.highContrast = true;
-        p.surface = hc.window;
-        p.inset = hc.window;
-        // A solid tint instead of a translucent one; fall back to no tint if the text would lose contrast
-        const auto tint = blend(hc.window, hc.highlight, 0.2);
-        p.accentSubtle = contrastRatio(tint, hc.windowText) >= 7.0 ? tint : hc.window;
-        p.selectionStroke = firstLegible(hc.window, {hc.highlight, hc.windowText}, 3.0);
-    }
-    return p;
+    return paletteFor(fluent::FluentElement::currentTheme());
 }
+
+QPalette FluentTheme::qtPalette()
+{
+    return qtPaletteFor(fluent::FluentElement::currentTheme());
+}
+
+namespace
+{
+    FluentTheme::Palette paletteFor(fluent::FluentElement::Theme theme)
+    {
+        using FluentTheme::contrastRatio;
+        using FluentTheme::Palette;
+        const auto& c = fluent::ThemeRegistry::instance().colors(theme);
+        const bool dark = fluent::FluentElement::themeUsesDarkAppearance(theme);
+
+        Palette p;
+        p.canvas = c.bgCanvas;
+        p.surface = blend(c.bgCanvas, c.bgLayer, 0.5);
+        p.layer = c.bgLayer;
+        p.inset = blend(c.bgLayer, c.bgCanvas, 0.35);
+        p.stroke = c.strokeCard;
+        p.strokeStrong = c.strokeStrong;
+        p.divider = c.strokeDivider;
+        p.control = c.controlDefault;
+        p.controlHover = c.controlSecondary;
+        p.controlPressed = c.controlTertiary;
+        p.subtleHover = c.subtleSecondary;
+        p.subtlePressed = c.subtleTertiary;
+        p.text = c.textPrimary;
+        p.textSecondary = c.textSecondary;
+        p.textTertiary = c.textTertiary;
+        p.textDisabled = c.textDisabled;
+        p.accent = c.accentDefault;
+        p.accentText = c.textAccentPrimary;
+        // Selected rows get a quiet accent tint rather than a solid fill
+        p.accentSubtle = withAlpha(c.accentDefault, dark ? 46 : 36);
+        p.onAccent = c.textOnAccent;
+        p.critical = c.systemCritical;
+        p.criticalBg = c.systemCriticalBg;
+        p.caution = c.systemCaution;
+        p.cautionBg = c.systemCautionBg;
+        p.success = c.systemSuccess;
+        p.successBg = c.systemSuccessBg;
+        p.infoBg = c.systemInfoBg;
+        p.link = c.textAccentPrimary;
+        p.focus = c.strokeFocusOuter;
+        p.selectionStroke = c.accentDefault;
+        if (g_highContrast) {
+            const auto& hc = g_highContrastColors;
+            p.highContrast = true;
+            p.surface = hc.window;
+            p.inset = hc.window;
+            // A solid tint instead of a translucent one; fall back to no tint if the text would lose contrast
+            const auto tint = blend(hc.window, hc.highlight, 0.2);
+            p.accentSubtle = contrastRatio(tint, hc.windowText) >= 7.0 ? tint : hc.window;
+            p.selectionStroke = firstLegible(hc.window, {hc.highlight, hc.windowText}, 3.0);
+        }
+        return p;
+    }
+
+    QPalette qtPaletteFor(fluent::FluentElement::Theme theme)
+    {
+        QPalette palette;
+        if (g_highContrast) {
+            const auto& c = g_highContrastColors;
+            // High contrast doesn't dim inactive windows
+            for (auto group : {QPalette::Active, QPalette::Inactive}) {
+                palette.setColor(group, QPalette::Window, c.window);
+                palette.setColor(group, QPalette::WindowText, c.windowText);
+                palette.setColor(group, QPalette::Base, c.window);
+                palette.setColor(group, QPalette::AlternateBase, c.window);
+                palette.setColor(group, QPalette::Text, c.windowText);
+                palette.setColor(group, QPalette::PlaceholderText, c.grayText);
+                palette.setColor(group, QPalette::Button, c.buttonFace);
+                palette.setColor(group, QPalette::ButtonText, c.buttonText);
+                palette.setColor(group, QPalette::BrightText, c.highlightText);
+                palette.setColor(group, QPalette::Highlight, c.highlight);
+                palette.setColor(group, QPalette::HighlightedText, c.highlightText);
+                palette.setColor(group, QPalette::Link, c.hotlight);
+                palette.setColor(group, QPalette::LinkVisited, c.hotlight);
+            }
+            palette.setColor(QPalette::Disabled, QPalette::Window, c.window);
+            palette.setColor(QPalette::Disabled, QPalette::Base, c.window);
+            palette.setColor(QPalette::Disabled, QPalette::AlternateBase, c.window);
+            palette.setColor(QPalette::Disabled, QPalette::Button, c.window);
+            palette.setColor(QPalette::Disabled, QPalette::WindowText, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::Text, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::ButtonText, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::PlaceholderText, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::BrightText, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::Highlight, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::HighlightedText, c.window);
+            palette.setColor(QPalette::Disabled, QPalette::Link, c.grayText);
+            palette.setColor(QPalette::Disabled, QPalette::LinkVisited, c.grayText);
+
+            palette.setColor(QPalette::All, QPalette::ToolTipBase, c.window);
+            palette.setColor(QPalette::All, QPalette::ToolTipText, c.windowText);
+            // The 3D roles Fusion derives bevels and frames from: no shading, text-coloured edges
+            palette.setColor(QPalette::All, QPalette::Light, c.window);
+            palette.setColor(QPalette::All, QPalette::Midlight, c.window);
+            palette.setColor(QPalette::All, QPalette::Mid, c.windowText);
+            palette.setColor(QPalette::All, QPalette::Dark, c.windowText);
+            palette.setColor(QPalette::All, QPalette::Shadow, c.windowText);
+            return palette;
+        }
+
+        const auto p = paletteFor(theme);
+        const bool dark = fluent::FluentElement::themeUsesDarkAppearance(theme);
+        const auto window = solid(p.surface, p.canvas);
+        const auto base = solid(p.layer, p.canvas);
+        const auto button = solid(p.control, window);
+        const auto text = solid(p.text, window);
+        const auto disabledText = solid(p.textDisabled, window);
+        const auto stroke = solid(p.strokeStrong, window);
+        // Fluent doesn't dim inactive windows either
+        for (auto group : {QPalette::Active, QPalette::Inactive}) {
+            palette.setColor(group, QPalette::Window, window);
+            palette.setColor(group, QPalette::WindowText, text);
+            palette.setColor(group, QPalette::Base, base);
+            palette.setColor(group, QPalette::AlternateBase, solid(p.inset, window));
+            palette.setColor(group, QPalette::Text, text);
+            palette.setColor(group, QPalette::PlaceholderText, solid(p.textSecondary, base));
+            palette.setColor(group, QPalette::Button, button);
+            palette.setColor(group, QPalette::ButtonText, text);
+            palette.setColor(group, QPalette::BrightText, p.onAccent);
+            palette.setColor(group, QPalette::Highlight, p.accent);
+            palette.setColor(group, QPalette::HighlightedText, p.onAccent);
+            palette.setColor(group, QPalette::Link, p.link);
+            palette.setColor(group, QPalette::LinkVisited, p.link);
+        }
+        palette.setColor(QPalette::Disabled, QPalette::Window, window);
+        palette.setColor(QPalette::Disabled, QPalette::Base, window);
+        palette.setColor(QPalette::Disabled, QPalette::AlternateBase, window);
+        palette.setColor(QPalette::Disabled, QPalette::Button, window);
+        palette.setColor(QPalette::Disabled, QPalette::WindowText, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::Text, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::ButtonText, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::PlaceholderText, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::BrightText, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::Highlight, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::HighlightedText, window);
+        palette.setColor(QPalette::Disabled, QPalette::Link, disabledText);
+        palette.setColor(QPalette::Disabled, QPalette::LinkVisited, disabledText);
+
+        // Fluent tooltips: a solid layer with the text colour
+        palette.setColor(
+            QPalette::All, QPalette::ToolTipBase, dark ? QColor(0x2c, 0x2c, 0x2c) : QColor(0xf9, 0xf9, 0xf9));
+        palette.setColor(QPalette::All, QPalette::ToolTipText, text);
+        palette.setColor(QPalette::All, QPalette::Light, dark ? button.lighter(130) : QColor(Qt::white));
+        palette.setColor(QPalette::All, QPalette::Midlight, button);
+        palette.setColor(QPalette::All, QPalette::Mid, stroke);
+        palette.setColor(QPalette::All, QPalette::Dark, stroke.darker(130));
+        palette.setColor(QPalette::All, QPalette::Shadow, dark ? QColor(Qt::black) : stroke.darker(160));
+        return palette;
+    }
+} // namespace
 
 QAction* FluentTheme::action(const QString& objectName)
 {

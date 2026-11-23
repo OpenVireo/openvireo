@@ -47,7 +47,6 @@
 #include "gui/SearchWidget.h"
 #include "gui/TotpSetupDialog.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/styles/highcontrast/HighContrastStyle.h"
 #include "gui/entry/EntryAttachmentsWidget.h"
 #include "gui/entry/EntryListItemDelegate.h"
 #include "gui/entry/EntryView.h"
@@ -131,9 +130,6 @@ namespace
     {
         if (theme == QLatin1String("highcontrast")) {
             const auto colors = FluentTheme::highContrastColors(true);
-            auto* style = new HighContrastStyle(colors);
-            QApplication::setPalette(style->standardPalette());
-            QApplication::setStyle(style);
             FluentTheme::applyHighContrast(colors);
         } else {
             config()->set(Config::GUI_ApplicationTheme, theme);

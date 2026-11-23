@@ -100,13 +100,8 @@ set(core_SOURCES
         streams/SymmetricCipherStream.cpp)
 
 set(gui_SOURCES
-        gui/styles/styles.qrc
         gui/styles/StateColorPalette.cpp
-        gui/styles/base/phantomcolor.cpp
-        gui/styles/base/BaseStyle.cpp
-        gui/styles/dark/DarkStyle.cpp
-        gui/styles/light/LightStyle.cpp
-        gui/styles/highcontrast/HighContrastStyle.cpp
+        gui/styles/VaultStyle.cpp
         gui/styles/FluentTheme.cpp
         gui/AboutDialog.cpp
         gui/ActionCollection.cpp

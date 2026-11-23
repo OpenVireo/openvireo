@@ -39,7 +39,6 @@
 #include "gui/account/ShareVaultDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/styles/FluentTheme.h"
-#include "gui/styles/highcontrast/HighContrastStyle.h"
 #include "gui/entry/EditEntryAttachmentsDialog.h"
 #include "gui/entry/PreviewEntryAttachmentsDialog.h"
 #include "gui/export/ExportDialog.h"
@@ -174,9 +173,6 @@ namespace
     {
         if (theme == QLatin1String("highcontrast")) {
             const auto colors = FluentTheme::highContrastColors(true);
-            auto* style = new HighContrastStyle(colors);
-            QApplication::setPalette(style->standardPalette());
-            QApplication::setStyle(style);
             FluentTheme::applyHighContrast(colors);
         } else {
             config()->set(Config::GUI_ApplicationTheme, theme);
