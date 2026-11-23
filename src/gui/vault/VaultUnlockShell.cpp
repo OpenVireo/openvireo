@@ -322,14 +322,14 @@ void VaultUnlockShell::applyTheme()
     const auto c = heroColors();
     m_hero->setStyleSheet(QStringLiteral("QFrame#vaultUnlockHero { background-color: %1; }").arg(rgba(c.background)));
 
-    const auto color = [](QLabel* label, const QColor& color) {
+    const auto setColor = [](QLabel* label, const QColor& textColor) {
         auto palette = label->palette();
-        palette.setColor(QPalette::WindowText, color);
-        palette.setColor(QPalette::Text, color);
+        palette.setColor(QPalette::WindowText, textColor);
+        palette.setColor(QPalette::Text, textColor);
         label->setPalette(palette);
     };
     m_brand->setFont(Vault::headingFont(19));
-    color(m_brand, c.text);
+    setColor(m_brand, c.text);
 
     QFont eyebrow(FluentTheme::monoFontFamily().isEmpty() ? QStringLiteral("monospace")
                                                           : FluentTheme::monoFontFamily());
@@ -337,19 +337,19 @@ void VaultUnlockShell::applyTheme()
     eyebrow.setWeight(QFont::Medium);
     eyebrow.setLetterSpacing(QFont::PercentageSpacing, 104);
     m_eyebrow->setFont(eyebrow);
-    color(m_eyebrow, c.eyebrow);
+    setColor(m_eyebrow, c.eyebrow);
 
     auto heading = Vault::headingFont(52);
     heading.setLetterSpacing(QFont::PercentageSpacing, 96.5);
     m_heading->setFont(heading);
-    color(m_heading, c.text);
+    setColor(m_heading, c.text);
 
     auto body = Vault::font(Typography::FontRole::BodyLarge);
     m_heroText->setFont(body);
-    color(m_heroText, c.muted);
+    setColor(m_heroText, c.muted);
 
     m_heroFoot->setFont(Vault::font(Typography::FontRole::Caption));
-    color(m_heroFoot, c.faint);
+    setColor(m_heroFoot, c.faint);
 
     for (auto* label : m_legalLinks) {
         label->setFont(Vault::font(Typography::FontRole::Caption));
