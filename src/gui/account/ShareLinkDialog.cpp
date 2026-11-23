@@ -119,15 +119,15 @@ ShareLinkDialog::ShareLinkDialog(ItemShare* shares, const QString& vaultId, Entr
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_copyLink, &QPushButton::clicked, this, [this] {
         clipboard()->setText(m_link->text());
-        showMessage(tr("Link copied."), MessageWidget::Positive);
+        showMessage(tr("Link copied."), VaultInfoBar::Positive);
     });
     connect(m_copyPasscode, &QPushButton::clicked, this, [this] {
         clipboard()->setText(m_passcode->text());
-        showMessage(tr("Passcode copied."), MessageWidget::Positive);
+        showMessage(tr("Passcode copied."), VaultInfoBar::Positive);
     });
 
     if (!m_blocked.isEmpty()) {
-        showMessage(m_blocked, MessageWidget::Warning, true);
+        showMessage(m_blocked, VaultInfoBar::Warning, true);
     }
     updateState();
 }
@@ -429,17 +429,17 @@ void ShareLinkDialog::presentAsModal()
     modal->open();
 }
 
-void ShareLinkDialog::showMessage(const QString& text, MessageWidget::MessageType type, bool persistent)
+void ShareLinkDialog::showMessage(const QString& text, VaultInfoBar::MessageType type, bool persistent)
 {
     using fluent::status_info::InfoBar;
     switch (type) {
-    case MessageWidget::Positive:
+    case VaultInfoBar::Positive:
         m_infoBar->setSeverity(InfoBar::Success);
         break;
-    case MessageWidget::Warning:
+    case VaultInfoBar::Warning:
         m_infoBar->setSeverity(InfoBar::Warning);
         break;
-    case MessageWidget::Error:
+    case VaultInfoBar::Error:
         m_infoBar->setSeverity(InfoBar::Error);
         break;
     default:
@@ -521,7 +521,7 @@ void ShareLinkDialog::create()
         }
         guard->m_createButton->setText(tr("Make Link"));
         if (!error.isEmpty()) {
-            guard->showMessage(error, MessageWidget::Error, true);
+            guard->showMessage(error, VaultInfoBar::Error, true);
             guard->updateState();
             return;
         }

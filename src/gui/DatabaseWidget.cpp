@@ -93,7 +93,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     , m_mainWidget(new QWidget(this))
     , m_mainSplitter(new QSplitter(m_mainWidget))
     , m_groupSplitter(new QSplitter(this))
-    , m_messageWidget(new MessageWidget(this))
+    , m_messageWidget(new VaultInfoBar(this))
     , m_previewSplitter(new QSplitter(m_mainWidget))
     , m_searchingLabel(new QLabel(this))
     , m_editEntryWidget(new EditEntryWidget(this))
@@ -907,10 +907,10 @@ void DatabaseWidget::addToAgent()
     OpenSSHKey key;
     if (settings.toOpenSSHKey(currentEntry, key, true)) {
         if (!agent->addIdentity(key, settings, database()->uuid())) {
-            m_messageWidget->showMessage(agent->errorString(), MessageWidget::Error);
+            m_messageWidget->showMessage(agent->errorString(), VaultInfoBar::Error);
         }
     } else {
-        m_messageWidget->showMessage(settings.errorString(), MessageWidget::Error);
+        m_messageWidget->showMessage(settings.errorString(), VaultInfoBar::Error);
     }
 }
 
@@ -931,10 +931,10 @@ void DatabaseWidget::removeFromAgent()
     OpenSSHKey key;
     if (settings.toOpenSSHKey(currentEntry, key, false)) {
         if (!agent->removeIdentity(key)) {
-            m_messageWidget->showMessage(agent->errorString(), MessageWidget::Error);
+            m_messageWidget->showMessage(agent->errorString(), VaultInfoBar::Error);
         }
     } else {
-        m_messageWidget->showMessage(settings.errorString(), MessageWidget::Error);
+        m_messageWidget->showMessage(settings.errorString(), VaultInfoBar::Error);
     }
 }
 #endif
@@ -1560,7 +1560,7 @@ void DatabaseWidget::finishSync(const QString& syncName,
     if (result.success) {
         setSyncStatus(SyncStatus::State::Synced);
         emit databaseSyncCompleted(syncName);
-        showMessage(tr("Remote sync '%1' completed successfully!").arg(syncName), MessageWidget::Positive, false);
+        showMessage(tr("Remote sync '%1' completed successfully!").arg(syncName), VaultInfoBar::Positive, false);
     } else {
         setSyncStatus(failureState, result.errorMessage);
         emit databaseSyncFailed(syncName, result.errorMessage);
@@ -1702,7 +1702,7 @@ void DatabaseWidget::updateClockWarning(qint64 offsetMsec)
         amount = tr("%n day(s)", nullptr, int(minutes / (24 * 60)));
     }
     NotificationCenter::Notification notification;
-    notification.type = MessageWidget::Warning;
+    notification.type = VaultInfoBar::Warning;
     notification.title = tr("This computer's clock is off");
     notification.text = (offsetMsec > 0 ? tr("This computer's clock is %1 ahead of the sync server's.")
                                         : tr("This computer's clock is %1 behind the sync server's."))
@@ -1862,7 +1862,7 @@ void DatabaseWidget::showSyncConflicts(const QList<SyncConflict>& conflicts)
                       "you expect.")
                        .arg(join(deleted));
     }
-    showMessage(message.join(' '), MessageWidget::Warning, true, MessageWidget::DisableAutoHide);
+    showMessage(message.join(' '), VaultInfoBar::Warning, true, VaultInfoBar::DisableAutoHide);
 }
 
 void DatabaseWidget::resumeBackgroundSync()
@@ -2146,7 +2146,7 @@ void DatabaseWidget::mergeDatabase(bool accepted)
 {
     if (accepted) {
         if (!m_db) {
-            showMessage(tr("No current database."), MessageWidget::Error);
+            showMessage(tr("No current database."), VaultInfoBar::Error);
             return;
         }
 
@@ -2159,22 +2159,22 @@ void DatabaseWidget::mergeDatabase(bool accepted)
         auto srcDb = senderDialog->database();
 
         if (!srcDb) {
-            showMessage(tr("No source database, nothing to do."), MessageWidget::Error);
+            showMessage(tr("No source database, nothing to do."), VaultInfoBar::Error);
             return;
         }
 
         auto* mergeDialog = new MergeDialog(srcDb, m_db, this);
         connect(mergeDialog, &MergeDialog::databaseMerged, [this](bool changed) {
             if (changed) {
-                showMessage(tr("Successfully merged the selected database."), MessageWidget::Positive);
+                showMessage(tr("Successfully merged the selected database."), VaultInfoBar::Positive);
                 emit databaseMerged(m_db);
             } else {
-                showMessage(tr("No changes were made by the merge operation."), MessageWidget::Information);
+                showMessage(tr("No changes were made by the merge operation."), VaultInfoBar::Information);
             }
         });
         connect(mergeDialog, &MergeDialog::finished, [this](int result) {
             if (result == QDialog::Rejected) {
-                showMessage(tr("Merge canceled, no changes were made."), MessageWidget::Information);
+                showMessage(tr("Merge canceled, no changes were made."), VaultInfoBar::Information);
             }
         });
         mergeDialog->open();
@@ -2185,7 +2185,7 @@ void DatabaseWidget::syncUnlockedDatabase(bool accepted)
 {
     if (accepted) {
         if (!m_db) {
-            showMessage(tr("No current database."), MessageWidget::Error);
+            showMessage(tr("No current database."), VaultInfoBar::Error);
             return;
         }
 
@@ -2198,7 +2198,7 @@ void DatabaseWidget::syncUnlockedDatabase(bool accepted)
         auto destinationDb = senderDialog->database();
 
         if (!destinationDb) {
-            showMessage(tr("No source database, nothing to do."), MessageWidget::Error);
+            showMessage(tr("No source database, nothing to do."), VaultInfoBar::Error);
             return;
         }
 
@@ -3112,8 +3112,8 @@ void DatabaseWidget::reloadDatabaseFile(bool triggeredBySave)
     openDialog->setActiveDatabaseTab(dbWidget);
     openDialog->showMessage(tr("Database file on disk cannot be unlocked with current credentials.<br>"
                                "Enter new credentials and/or present hardware key to continue."),
-                            MessageWidget::Error,
-                            MessageWidget::DisableAutoHide);
+                            VaultInfoBar::Error,
+                            VaultInfoBar::DisableAutoHide);
 
     // ensure the main window is visible for this
     getMainWindow()->bringToFront();
@@ -3322,9 +3322,9 @@ bool DatabaseWidget::save()
     }
 
     showMessage(tr("Writing the database failed: %1").arg(errorMessage),
-                MessageWidget::Error,
+                VaultInfoBar::Error,
                 true,
-                MessageWidget::LongAutoHideTimeout);
+                VaultInfoBar::LongAutoHideTimeout);
 
     return false;
 }
@@ -3379,9 +3379,9 @@ bool DatabaseWidget::saveAs()
         } else {
             m_db->markAsTemporaryDatabase(wasTemporary);
             showMessage(tr("Writing the database failed: %1").arg(errorMessage),
-                        MessageWidget::Error,
+                        VaultInfoBar::Error,
                         true,
-                        MessageWidget::LongAutoHideTimeout);
+                        VaultInfoBar::LongAutoHideTimeout);
         }
     }
 
@@ -3496,7 +3496,7 @@ bool DatabaseWidget::saveBackup()
 }
 
 void DatabaseWidget::showMessage(const QString& text,
-                                 MessageWidget::MessageType type,
+                                 VaultInfoBar::MessageType type,
                                  bool showClosebutton,
                                  int autoHideTimeout)
 {
@@ -3506,7 +3506,7 @@ void DatabaseWidget::showMessage(const QString& text,
 
 void DatabaseWidget::showErrorMessage(const QString& errorMessage)
 {
-    showMessage(errorMessage, MessageWidget::MessageType::Error);
+    showMessage(errorMessage, VaultInfoBar::MessageType::Error);
 }
 
 void DatabaseWidget::hideMessage()

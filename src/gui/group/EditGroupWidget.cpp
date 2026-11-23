@@ -96,8 +96,8 @@ EditGroupWidget::EditGroupWidget(QWidget* parent)
 
     // clang-format off
     connect(m_editGroupWidgetIcons,
-            SIGNAL(messageEditEntry(QString,MessageWidget::MessageType)),
-            SLOT(showMessage(QString,MessageWidget::MessageType)));
+            SIGNAL(messageEditEntry(QString,VaultInfoBar::MessageType)),
+            SLOT(showMessage(QString,VaultInfoBar::MessageType)));
     // clang-format on
 
     connect(m_editGroupWidgetIcons, SIGNAL(messageEditEntryDismiss()), SLOT(hideMessage()));

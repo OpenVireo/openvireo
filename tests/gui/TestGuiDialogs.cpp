@@ -44,6 +44,7 @@
 #include "gui/export/ExportDialog.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultDialog.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "gui/vault/VaultInputDialog.h"
 #include "gui/vault/VaultModal.h"
 #ifdef KPXC_FEATURE_NETWORK
@@ -62,6 +63,7 @@
 #include <components/dialogs_flyouts/ContentDialog.h>
 #include <components/status_info/ProgressRing.h>
 
+#include <QAction>
 #include <QApplication>
 #include <QCalendarWidget>
 #include <QDateTimeEdit>
@@ -776,6 +778,35 @@ void TestGuiDialogs::testStockWidgetScreenshots()
             }
         }
         QToolTip::hideText();
+
+        // Message bars: every severity, a title, a link, an action and text that wraps
+        QWidget bars;
+        bars.resize(640, 420);
+        auto* barsLayout = new QVBoxLayout(&bars);
+        const QList<QPair<VaultInfoBar::MessageType, QString>> barTypes = {
+            {VaultInfoBar::Information, "Select a vault of your account to share."},
+            {VaultInfoBar::Positive, "Remote sync 'Work' completed successfully!"},
+            {VaultInfoBar::Warning,
+             "This build is not signed for AutoFill, so AutoFill stays off. <a href=\"https://example.com\">Learn more</a>"},
+            {VaultInfoBar::Error,
+             "Failed to open Taxes.kdbx. It either does not exist or is not accessible, or another program is holding "
+             "it open. Close the other program and try again."}};
+        for (const auto& [type, text] : barTypes) {
+            auto* bar = new VaultInfoBar(&bars);
+            bar->setAnimate(false);
+            if (type == VaultInfoBar::Error) {
+                bar->setTitle("Couldn't open the database");
+                bar->addAction(new QAction("Retry", bar));
+            }
+            bar->showMessage(text, type, VaultInfoBar::DisableAutoHide);
+            barsLayout->addWidget(bar);
+        }
+        barsLayout->addStretch();
+        bars.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&bars));
+        QTest::qWait(250);
+        QVERIFY(bars.grab().save(path("stock-infobars", theme)));
+        bars.hide();
 
         auto* calendar = dateTime->calendarWidget();
         calendar->resize(calendar->sizeHint());

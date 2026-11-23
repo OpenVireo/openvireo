@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_NOTIFICATIONCENTER_H
 #define KEEPASSXC_NOTIFICATIONCENTER_H
 
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QDateTime>
 #include <QList>
@@ -47,7 +47,7 @@ public:
     struct Notification
     {
         quint64 id = 0;
-        MessageWidget::MessageType type = MessageWidget::Information;
+        VaultInfoBar::MessageType type = VaultInfoBar::Information;
         QString title;
         QString text;
         QDateTime time;
@@ -67,7 +67,7 @@ public:
     explicit NotificationCenter(QObject* parent = nullptr);
 
     // Add a message; the same text and type again within a few seconds bumps the existing entry instead
-    quint64 post(const QString& text, MessageWidget::MessageType type, const QString& source = {});
+    quint64 post(const QString& text, VaultInfoBar::MessageType type, const QString& source = {});
     quint64 add(Notification notification);
     // Remove an entry as the user dismissing it, which runs its onDismiss
     void dismiss(quint64 id);
@@ -81,7 +81,7 @@ public:
     bool isEmpty() const;
     int unreadCount() const;
     // The most serious type among the unread entries: Error, then Warning, then the rest
-    std::optional<MessageWidget::MessageType> highestUnreadType() const;
+    std::optional<VaultInfoBar::MessageType> highestUnreadType() const;
 
 signals:
     void changed();

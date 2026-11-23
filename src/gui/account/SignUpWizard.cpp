@@ -77,7 +77,7 @@ SignUpWizard::SignUpWizard(AccountController* controller, QWidget* parent)
         // Cleared from the clipboard after the time set in Settings › Security
         clipboard()->setText(m_secretKey);
         m_ui->messageWidget->showMessage(tr("Secret Key copied. Paste it into your Emergency Kit."),
-                                         MessageWidget::Positive);
+                                         VaultInfoBar::Positive);
     });
     connect(m_ui->savedCheckBox, &QCheckBox::toggled, this, [this](bool checked) {
         if (m_ui->pages->currentIndex() == 1) {
@@ -119,16 +119,16 @@ void SignUpWizard::createAccount()
     const auto email = m_ui->emailEdit->text().trimmed();
     const auto password = m_ui->passwordEdit->text();
     if (!email.contains('@')) {
-        m_ui->messageWidget->showMessage(tr("Enter your email address."), MessageWidget::Error);
+        m_ui->messageWidget->showMessage(tr("Enter your email address."), VaultInfoBar::Error);
         return;
     }
     if (password.size() < MinPasswordLength) {
         m_ui->messageWidget->showMessage(
-            tr("Choose a master password of at least %1 characters.").arg(MinPasswordLength), MessageWidget::Error);
+            tr("Choose a master password of at least %1 characters.").arg(MinPasswordLength), VaultInfoBar::Error);
         return;
     }
     if (password != m_ui->confirmEdit->text()) {
-        m_ui->messageWidget->showMessage(tr("The passwords don't match."), MessageWidget::Error);
+        m_ui->messageWidget->showMessage(tr("The passwords don't match."), VaultInfoBar::Error);
         return;
     }
     m_ui->messageWidget->hideMessage();
@@ -161,7 +161,7 @@ void SignUpWizard::handleError(const QString& message)
     m_registering = false;
     setBusy({});
     m_ui->pages->setCurrentIndex(0);
-    m_ui->messageWidget->showMessage(message, MessageWidget::Error, MessageWidget::DisableAutoHide);
+    m_ui->messageWidget->showMessage(message, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
 }
 
 void SignUpWizard::handleRegistered(const QString& secretKey)
@@ -191,14 +191,14 @@ void SignUpWizard::saveKit()
     QString error;
     if (!EmergencyKit(email, AccountController::hostedServerUrl(), m_secretKey).saveAs(this, &path, &error)) {
         if (!error.isEmpty()) {
-            m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+            m_ui->messageWidget->showMessage(error, VaultInfoBar::Error);
         }
         return;
     }
     m_kitSaved = true;
     m_ui->savedCheckBox->setChecked(true);
     m_ui->messageWidget->showMessage(tr("Emergency Kit saved to %1.").arg(QDir::toNativeSeparators(path)),
-                                     MessageWidget::Positive);
+                                     VaultInfoBar::Positive);
 }
 
 void SignUpWizard::reject()

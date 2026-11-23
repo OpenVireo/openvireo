@@ -182,7 +182,7 @@ void ImportWizardPageReview::showError(const QString& message)
         m_errorBar->show();
         return;
     }
-    m_ui->messageWidget->showMessage(message, MessageWidget::Error, -1);
+    m_ui->messageWidget->showMessage(message, VaultInfoBar::Error, -1);
 }
 
 void ImportWizardPageReview::setupCsvImport(const QString& filename)

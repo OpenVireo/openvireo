@@ -450,7 +450,7 @@ void TestGuiAccounts::testSignsInOnANewDeviceWithMfa()
     QTRY_VERIFY(m_server->requests.filter("auth/login/mfa").size() == 1);
     QTRY_COMPARE(m_mainWindow->accountController()->account()->state(), AccountManager::State::NeedsMfa);
     QCOMPARE(start->currentPage(), AccountStartWidget::Page::Mfa);
-    QVERIFY(child<MessageWidget>(start, "messageWidget")->text().contains("wrong"));
+    QVERIFY(child<VaultInfoBar>(start, "messageWidget")->text().contains("wrong"));
 
     child<QLineEdit>(start, "mfaCodeEdit")->setText(FakeAccount::Totp);
     QTest::mouseClick(child<QPushButton>(start, "mfaVerifyButton"), Qt::LeftButton);
@@ -488,7 +488,7 @@ void TestGuiAccounts::testOtherMfaErrorsReturnToSignIn()
     child<QLineEdit>(start, "passwordEdit")->setText("wrong");
     child<QLineEdit>(start, "secretKeyEdit")->setText(secretKey);
     QTest::mouseClick(child<QPushButton>(start, "signInButton"), Qt::LeftButton);
-    QTRY_VERIFY(child<MessageWidget>(start, "messageWidget")->text().contains("wrong"));
+    QTRY_VERIFY(child<VaultInfoBar>(start, "messageWidget")->text().contains("wrong"));
     QCOMPARE(start->currentPage(), AccountStartWidget::Page::SignIn);
 }
 
@@ -503,7 +503,7 @@ void TestGuiAccounts::testPairsWithASelfHostedServer()
     child<QLineEdit>(start, "selfHostedUrlEdit")->setText(SelfHostedUrl);
     child<QLineEdit>(start, "pairingCodeEdit")->setText("NOPE1234");
     QTest::mouseClick(child<QPushButton>(start, "pairButton"), Qt::LeftButton);
-    QTRY_VERIFY(child<MessageWidget>(start, "messageWidget")->text().contains("pair"));
+    QTRY_VERIFY(child<VaultInfoBar>(start, "messageWidget")->text().contains("pair"));
     QVERIFY(m_mainWindow->isStartScreenShown());
     QCOMPARE(m_mainWindow->accountController()->mode(), AccountController::Mode::Unset);
 
@@ -547,7 +547,7 @@ void TestGuiAccounts::testSignUpShowsTheSecretKeyOnce()
     child<QLineEdit>(wizard, "confirmEdit")->setText("something else");
     auto* next = child<QPushButton>(wizard, "signUpNext");
     QTest::mouseClick(next, Qt::LeftButton);
-    QVERIFY(child<MessageWidget>(wizard, "messageWidget")->text().contains("match"));
+    QVERIFY(child<VaultInfoBar>(wizard, "messageWidget")->text().contains("match"));
     QVERIFY(m_server->users.isEmpty());
 
     child<QLineEdit>(wizard, "confirmEdit")->setText(Password);
@@ -616,7 +616,7 @@ void TestGuiAccounts::testEmergencyKitShowsTheStoredSecretKey()
     QFile kit(kitPath);
     QVERIFY(kit.open(QIODevice::ReadOnly));
     QVERIFY(kit.read(5) == "%PDF-");
-    QVERIFY(child<MessageWidget>(dialog, "messageWidget")->text().contains("saved"));
+    QVERIFY(child<VaultInfoBar>(dialog, "messageWidget")->text().contains("saved"));
     dialog->close();
 
     // Never while locked
@@ -1107,7 +1107,7 @@ void TestGuiAccounts::testCreatesAnOrgAndOrgVaults()
     QSignalSpy messages(controller, &AccountController::message);
     controller->createVault("Finance", orgId);
     QTRY_VERIFY(!messages.isEmpty());
-    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Error);
+    QCOMPARE(messages.last().at(1).value<VaultInfoBar::MessageType>(), VaultInfoBar::Error);
     QVERIFY2(messages.last().at(0).toString().contains("missing: " + erin),
              qPrintable(messages.last().at(0).toString()));
     QCOMPARE(m_server->vaults.size(), 2);
@@ -1145,7 +1145,7 @@ void TestGuiAccounts::testAcceptsAnInvitation()
     QSignalSpy messages(controller, &AccountController::message);
     controller->acceptInvitation("https://app.openvireo.example/invitations");
     QTRY_COMPARE(messages.size(), 1);
-    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Error);
+    QCOMPARE(messages.last().at(1).value<VaultInfoBar::MessageType>(), VaultInfoBar::Error);
     QVERIFY(m_server->requests.filter("invitations/accept").isEmpty());
 
     // The link from the email, pasted into the Accept Invitation box
@@ -1160,7 +1160,7 @@ void TestGuiAccounts::testAcceptsAnInvitation()
     });
     m_mainWindow->acceptAccountInvitation();
     QTRY_COMPARE(messages.size(), 2);
-    QCOMPARE(messages.last().at(1).value<MessageWidget::MessageType>(), MessageWidget::Positive);
+    QCOMPARE(messages.last().at(1).value<VaultInfoBar::MessageType>(), VaultInfoBar::Positive);
     QCOMPARE(m_server->orgMember(orgId, account->accountId())->status, QString("accepted"));
     // Alice waits for an admin: the org shows, without vaults
     QTRY_COMPARE(pickerVaultRows(m_mainWindow.data()), QStringList({"Acme (waiting for confirmation)"}));
@@ -1538,7 +1538,7 @@ void TestGuiAccounts::testQuickUnlocksTheAccount()
     // Locked, the lock screen offers Quick Unlock first, beside the password
     auto* lockScreen = m_mainWindow->accountLockScreen();
     auto* quickButton = child<QPushButton>(lockScreen, "accountLockQuickUnlock");
-    auto* message = child<MessageWidget>(lockScreen, "accountLockMessage");
+    auto* message = child<VaultInfoBar>(lockScreen, "accountLockMessage");
     controller->lockAccount();
     QCOMPARE(account->state(), AccountManager::State::Locked);
     QTRY_COMPARE(tabs->count(), 0);

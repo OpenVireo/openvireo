@@ -116,8 +116,8 @@ DatabaseOpenWidget::DatabaseOpenWidget(QWidget* parent)
         // Show the press notification if we are in an independent window (e.g., DatabaseOpenDialog)
         if (window() != getMainWindow()) {
             m_ui->messageWidget->showMessage(tr("Please present or touch your YubiKey to continue…"),
-                                             MessageWidget::Information,
-                                             MessageWidget::DisableAutoHide);
+                                             VaultInfoBar::Information,
+                                             VaultInfoBar::DisableAutoHide);
         }
     });
     connect(YubiKey::instance(), &YubiKey::challengeCompleted, this, [this] { m_ui->messageWidget->hide(); });
@@ -310,7 +310,7 @@ void DatabaseOpenWidget::closeDatabase()
     if (!m_triedToQuit && window() == getMainWindow()) {
         m_triedToQuit = true;
         m_ui->messageWidget->showMessage(
-            tr("Press ESC again to close this database"), MessageWidget::Warning, closeWarningInterval);
+            tr("Press ESC again to close this database"), VaultInfoBar::Warning, closeWarningInterval);
 
         QTimer::singleShot(closeWarningInterval, this, [this]() { m_triedToQuit = false; });
         return;
@@ -383,7 +383,7 @@ bool DatabaseOpenWidget::unlockingDatabase()
     return m_unlockingDatabase;
 }
 
-void DatabaseOpenWidget::showMessage(const QString& text, MessageWidget::MessageType type, int autoHideTimeout)
+void DatabaseOpenWidget::showMessage(const QString& text, VaultInfoBar::MessageType type, int autoHideTimeout)
 {
     m_ui->messageWidget->showMessage(text, type, autoHideTimeout);
 }
@@ -520,7 +520,7 @@ void DatabaseOpenWidget::openDatabase()
                 m_db.reset(new Database());
                 m_db->open(m_filename, nullptr, &error);
 
-                m_ui->messageWidget->showMessage(tr("Database unlock canceled."), MessageWidget::MessageType::Error);
+                m_ui->messageWidget->showMessage(tr("Database unlock canceled."), VaultInfoBar::MessageType::Error);
                 setUserInteractionLock(false);
                 return;
             }
@@ -558,7 +558,7 @@ void DatabaseOpenWidget::openDatabase()
         setUserInteractionLock(false);
 
         m_retryUnlockWithEmptyPassword = false;
-        m_ui->messageWidget->showMessage(error, MessageWidget::MessageType::Error);
+        m_ui->messageWidget->showMessage(error, VaultInfoBar::MessageType::Error);
 
         if (!isOnQuickUnlockScreen()) {
             // Focus on the password field and select the input for easy retry
@@ -578,7 +578,7 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
         if (!getQuickUnlock()->getKey(m_db->publicUuid(), keyData)) {
             m_ui->messageWidget->showMessage(
                 tr("Failed to authenticate with Quick Unlock: %1").arg(getQuickUnlock()->errorString()),
-                MessageWidget::Error);
+                VaultInfoBar::Error);
             return {};
         }
         databaseKey->setRawKey(keyData);
@@ -597,7 +597,7 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
     if (!keyFilename.isEmpty()) {
         QString errorMsg;
         if (!key->load(keyFilename, &errorMsg)) {
-            m_ui->messageWidget->showMessage(tr("Failed to open key file: %1").arg(errorMsg), MessageWidget::Error);
+            m_ui->messageWidget->showMessage(tr("Failed to open key file: %1").arg(errorMsg), VaultInfoBar::Error);
             return {};
         }
         if (key->type() != FileKey::KeePass2XMLv2 && key->type() != FileKey::Hashed

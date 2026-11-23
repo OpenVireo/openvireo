@@ -19,7 +19,7 @@
 #define KEEPASSX_UNLOCKDATABASEDIALOG_H
 
 #include "core/Global.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QDialog>
 #include <QList>
@@ -52,7 +52,7 @@ public:
     Intent intent() const;
     QSharedPointer<Database> database() const;
     void clearForms();
-    void showMessage(const QString& text, MessageWidget::MessageType type, int autoHideTimeout);
+    void showMessage(const QString& text, VaultInfoBar::MessageType type, int autoHideTimeout);
 
 signals:
     void dialogFinished(bool accepted, DatabaseWidget* dbWidget);

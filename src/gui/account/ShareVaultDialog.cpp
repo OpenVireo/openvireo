@@ -210,10 +210,10 @@ void ShareVaultDialog::finish(bool ok, const QString& error, const QString& succ
     setBusy({});
     if (ok) {
         if (!success.isEmpty()) {
-            m_ui->messageWidget->showMessage(success, MessageWidget::Positive);
+            m_ui->messageWidget->showMessage(success, VaultInfoBar::Positive);
         }
     } else {
-        m_ui->messageWidget->showMessage(error, MessageWidget::Error, MessageWidget::DisableAutoHide);
+        m_ui->messageWidget->showMessage(error, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
     }
     reload();
 }
@@ -229,7 +229,7 @@ void ShareVaultDialog::reload()
             return;
         }
         if (!error.isEmpty()) {
-            guard->m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+            guard->m_ui->messageWidget->showMessage(error, VaultInfoBar::Error);
         }
         guard->m_members = members;
         const auto selected = guard->selectedPrincipal();
@@ -278,7 +278,7 @@ void ShareVaultDialog::lookup()
         }
         guard->setBusy({});
         if (!error.isEmpty()) {
-            guard->m_ui->messageWidget->showMessage(error, MessageWidget::Error);
+            guard->m_ui->messageWidget->showMessage(error, VaultInfoBar::Error);
             return;
         }
         guard->m_recipient = recipient;

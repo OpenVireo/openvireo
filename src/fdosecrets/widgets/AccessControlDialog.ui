@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="MessageWidget" name="exePathWarn" native="true">
+    <widget class="VaultInfoBar" name="exePathWarn" native="true">
      <property name="text" stdset="0">
       <string>Non-existing/inaccessible executable path. Please double-check the client is legit.</string>
      </property>
@@ -137,9 +137,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>MessageWidget</class>
+   <class>VaultInfoBar</class>
    <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
+   <header>gui/vault/VaultInfoBar.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

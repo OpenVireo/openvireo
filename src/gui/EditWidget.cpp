@@ -215,10 +215,10 @@ void EditWidget::buttonClicked(QAbstractButton* button)
     }
 }
 
-void EditWidget::showMessage(const QString& text, MessageWidget::MessageType type)
+void EditWidget::showMessage(const QString& text, VaultInfoBar::MessageType type)
 {
     // Show error messages for a longer time to make sure the user can read them
-    if (type == MessageWidget::Error) {
+    if (type == VaultInfoBar::Error) {
         m_ui->messageWidget->setCloseButtonVisible(true);
         m_ui->messageWidget->showMessage(text, type, 15000);
     } else {

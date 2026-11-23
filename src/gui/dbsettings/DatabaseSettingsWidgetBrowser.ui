@@ -39,14 +39,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="MessageWidget" name="warningWidget" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-    </widget>
+    <widget class="VaultInfoBar" name="warningWidget" native="true"/>
    </item>
    <item>
     <widget class="VaultCard" name="groupBox">
@@ -172,9 +165,9 @@
   <header>gui/vault/VaultControls.h</header>
  </customwidget>
   <customwidget>
-   <class>MessageWidget</class>
+   <class>VaultInfoBar</class>
    <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
+   <header>gui/vault/VaultInfoBar.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

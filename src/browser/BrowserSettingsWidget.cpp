@@ -71,7 +71,7 @@ BrowserSettingsWidget::BrowserSettingsWidget(QWidget* parent)
     m_ui->messageWidget->setVisible(false);
     m_ui->messageWidget->setCloseButtonVisible(false);
     m_ui->messageWidget->setWordWrap(true);
-    m_ui->messageWidget->setAutoHideTimeout(MessageWidget::DisableAutoHide);
+    m_ui->messageWidget->setAutoHideTimeout(VaultInfoBar::DisableAutoHide);
 
 #ifndef Q_OS_LINUX
     m_ui->snapWarningLabel->setVisible(false);
@@ -311,7 +311,7 @@ void BrowserSettingsWidget::validateProxyLocation()
 
                 m_ui->messageWidget->showMessage(tr("<b>Error:</b> The custom proxy location does not exist. Correct "
                                                     "this in the advanced settings tab."),
-                                                 MessageWidget::Error);
+                                                 VaultInfoBar::Error);
             }
         } else {
             // Otherwise check if the installed proxy exists
@@ -321,7 +321,7 @@ void BrowserSettingsWidget::validateProxyLocation()
                     tr("<b>Error:</b> The installed proxy executable is missing from the expected location: %1<br/>"
                        "Please set a custom proxy location in the advanced settings or reinstall the application.")
                         .arg(expectedProxyLocation),
-                    MessageWidget::Error);
+                    VaultInfoBar::Error);
             }
         }
     }

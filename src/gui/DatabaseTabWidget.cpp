@@ -170,7 +170,7 @@ void DatabaseTabWidget::addDatabaseTab(const QString& filePath,
 
     if (canonicalFilePath.isEmpty()) {
         emit messageGlobal(tr("Failed to open %1. It either does not exist or is not accessible.").arg(cleanFilePath),
-                           MessageWidget::Error);
+                           VaultInfoBar::Error);
         return;
     }
 
@@ -302,7 +302,7 @@ void DatabaseTabWidget::importFile()
                                                     : KdbxImport::mergeInto(db.data(), dbWidget->database().data());
                         setCurrentIndex(i);
                         dbWidget->showMessage(KdbxImport::summaryText(dbWidget->displayName(), copies, summary),
-                                              MessageWidget::Positive);
+                                              VaultInfoBar::Positive);
                         return;
                     }
                     if (group) {
@@ -560,13 +560,13 @@ void DatabaseTabWidget::exportToCsv()
     CsvExporter csvExporter;
     if (!csvExporter.exportDatabase(fileName, db)) {
         emit messageGlobal(tr("Writing the CSV file failed.").append("\n").append(csvExporter.errorString()),
-                           MessageWidget::Error);
+                           VaultInfoBar::Error);
     }
 }
 
 void DatabaseTabWidget::handleExportError(const QString& reason)
 {
-    emit messageGlobal(tr("Writing the HTML file failed.").append("\n").append(reason), MessageWidget::Error);
+    emit messageGlobal(tr("Writing the HTML file failed.").append("\n").append(reason), VaultInfoBar::Error);
 }
 
 void DatabaseTabWidget::exportToHtml()
@@ -605,13 +605,13 @@ void DatabaseTabWidget::exportToXML()
     QByteArray xmlData;
     QString err;
     if (!db->extract(xmlData, &err)) {
-        emit messageGlobal(tr("Writing the XML file failed").append("\n").append(err), MessageWidget::Error);
+        emit messageGlobal(tr("Writing the XML file failed").append("\n").append(err), VaultInfoBar::Error);
     }
 
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         emit messageGlobal(tr("Writing the XML file failed").append("\n").append(file.errorString()),
-                           MessageWidget::Error);
+                           VaultInfoBar::Error);
     }
     file.write(xmlData);
 }

@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_SETTINGSWIDGETFDOSECRETS_H
 #define KEEPASSXC_SETTINGSWIDGETFDOSECRETS_H
 
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QTimer>
 

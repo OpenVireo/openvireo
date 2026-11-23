@@ -46,24 +46,24 @@ namespace
 
     using fluent::status_info::InfoBadge;
 
-    InfoBadge::InfoBadgeStatus badgeStatus(std::optional<MessageWidget::MessageType> type)
+    InfoBadge::InfoBadgeStatus badgeStatus(std::optional<VaultInfoBar::MessageType> type)
     {
-        if (type == MessageWidget::Error) {
+        if (type == VaultInfoBar::Error) {
             return InfoBadge::InfoBadgeStatus::Critical;
         }
-        if (type == MessageWidget::Warning) {
+        if (type == VaultInfoBar::Warning) {
             return InfoBadge::InfoBadgeStatus::Caution;
         }
         return InfoBadge::InfoBadgeStatus::Attention;
     }
 
-    QColor badgeColor(std::optional<MessageWidget::MessageType> type)
+    QColor badgeColor(std::optional<VaultInfoBar::MessageType> type)
     {
         const auto p = FluentTheme::palette();
-        if (type == MessageWidget::Error) {
+        if (type == VaultInfoBar::Error) {
             return p.critical;
         }
-        if (type == MessageWidget::Warning) {
+        if (type == VaultInfoBar::Warning) {
             return p.caution;
         }
         return p.accent;
@@ -74,7 +74,7 @@ namespace
     {
         label->setWordWrap(true);
         label->setTextFormat(Qt::AutoText);
-        QObject::connect(label, &QLabel::linkActivated, &MessageWidget::openHttpUrl);
+        QObject::connect(label, &QLabel::linkActivated, &VaultInfoBar::openHttpUrl);
         return label;
     }
 
@@ -97,7 +97,7 @@ namespace
     class StatusBadge : public QWidget
     {
     public:
-        StatusBadge(MessageWidget::MessageType type, QWidget* parent)
+        StatusBadge(VaultInfoBar::MessageType type, QWidget* parent)
             : QWidget(parent)
             , m_type(type)
         {
@@ -105,7 +105,7 @@ namespace
             Vault::followTheme(this, [this] { update(); });
         }
 
-        void setType(MessageWidget::MessageType type)
+        void setType(VaultInfoBar::MessageType type)
         {
             m_type = type;
             update();
@@ -116,11 +116,11 @@ namespace
         {
             Q_UNUSED(event)
             QPainter painter(this);
-            KMessageWidget::paintStatusBadge(painter, rect(), m_type);
+            VaultInfoBar::paintStatusBadge(painter, rect(), m_type);
         }
 
     private:
-        MessageWidget::MessageType m_type;
+        VaultInfoBar::MessageType m_type;
     };
 
     const QString RowName = QStringLiteral("notificationRow");

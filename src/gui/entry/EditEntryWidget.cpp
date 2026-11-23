@@ -182,8 +182,8 @@ EditEntryWidget::EditEntryWidget(QWidget* parent)
     connect(this, SIGNAL(apply()), SLOT(commitEntry()));
     // clang-format off
     connect(m_iconsWidget,
-            SIGNAL(messageEditEntry(QString,MessageWidget::MessageType)),
-            SLOT(showMessage(QString,MessageWidget::MessageType)));
+            SIGNAL(messageEditEntry(QString,VaultInfoBar::MessageType)),
+            SLOT(showMessage(QString,VaultInfoBar::MessageType)));
     // clang-format on
 
     connect(m_iconsWidget, SIGNAL(messageEditEntryDismiss()), SLOT(hideMessage()));
@@ -314,7 +314,7 @@ void EditEntryWidget::setupAdvanced()
     connect(m_advancedUi->attachmentsWidget,
             &EntryAttachmentsWidget::errorOccurred,
             this,
-            [this](const QString& error) { showMessage(error, MessageWidget::Error); });
+            [this](const QString& error) { showMessage(error, VaultInfoBar::Error); });
 
     m_attributesModel->setEntryAttributes(m_entryAttributes);
     m_advancedUi->attributesView->setModel(m_attributesModel);
@@ -1201,7 +1201,7 @@ bool EditEntryWidget::getOpenSSHKey(OpenSSHKey& key, bool decrypt)
                                m_attachments.data(),
                                key,
                                decrypt)) {
-        showMessage(settings.errorString(), MessageWidget::Error);
+        showMessage(settings.errorString(), VaultInfoBar::Error);
         return false;
     }
 
@@ -1223,7 +1223,7 @@ void EditEntryWidget::addKeyToAgent()
     toKeeAgentSettings(settings);
 
     if (!sshAgent()->addIdentity(key, settings, m_db->uuid())) {
-        showMessage(sshAgent()->errorString(), MessageWidget::Error);
+        showMessage(sshAgent()->errorString(), VaultInfoBar::Error);
         return;
     }
 }
@@ -1237,7 +1237,7 @@ void EditEntryWidget::removeKeyFromAgent()
     }
 
     if (!sshAgent()->removeIdentity(key)) {
-        showMessage(sshAgent()->errorString(), MessageWidget::Error);
+        showMessage(sshAgent()->errorString(), VaultInfoBar::Error);
         return;
     }
 }
@@ -1245,7 +1245,7 @@ void EditEntryWidget::removeKeyFromAgent()
 void EditEntryWidget::clearAgent()
 {
     auto ret = sshAgent()->clearAllAgentIdentities();
-    showMessage(sshAgent()->errorString(), ret ? MessageWidget::Positive : KMessageWidget::Error);
+    showMessage(sshAgent()->errorString(), ret ? VaultInfoBar::Positive : VaultInfoBar::Error);
 }
 
 void EditEntryWidget::decryptPrivateKey()
@@ -1253,7 +1253,7 @@ void EditEntryWidget::decryptPrivateKey()
     OpenSSHKey key;
 
     if (!getOpenSSHKey(key, true)) {
-        showMessage(tr("Failed to decrypt SSH key, ensure password is correct."), MessageWidget::Error);
+        showMessage(tr("Failed to decrypt SSH key, ensure password is correct."), VaultInfoBar::Error);
         return;
     }
 
@@ -1508,7 +1508,7 @@ void EditEntryWidget::setForms(Entry* entry, bool restore)
 
         const auto group = m_entry->group();
         m_browserUi->messageWidget->showMessage(
-            tr("Some Browser Integration settings are overridden by group settings."), MessageWidget::Information);
+            tr("Some Browser Integration settings are overridden by group settings."), VaultInfoBar::Information);
         m_browserUi->messageWidget->setVisible(false);
 
         auto updateCheckBoxValue = [&](QCheckBox* checkBox, const QString& option) {
@@ -1653,7 +1653,7 @@ bool EditEntryWidget::commitEntry()
     setPageHidden(m_historyWidget, m_history || m_entry->historyItems().count() < 1);
     m_advancedUi->attachmentsWidget->linkAttachments(m_entry->attachments());
 
-    showMessage(tr("Entry updated successfully."), MessageWidget::Positive);
+    showMessage(tr("Entry updated successfully."), VaultInfoBar::Positive);
     setModified(false);
     // Prevent a reload due to entry modified signals
     m_entryModifiedTimer.stop();

@@ -94,13 +94,13 @@ public slots:
     bool isHardwareKeySupported();
     bool refreshHardwareKeys();
     void displayGlobalMessage(const QString& text,
-                              MessageWidget::MessageType type,
+                              VaultInfoBar::MessageType type,
                               bool showClosebutton = true,
-                              int autoHideTimeout = MessageWidget::DefaultAutoHideTimeout);
+                              int autoHideTimeout = VaultInfoBar::DefaultAutoHideTimeout);
     void displayTabMessage(const QString& text,
-                           MessageWidget::MessageType type,
+                           VaultInfoBar::MessageType type,
                            bool showClosebutton = true,
-                           int autoHideTimeout = MessageWidget::DefaultAutoHideTimeout);
+                           int autoHideTimeout = VaultInfoBar::DefaultAutoHideTimeout);
     void hideGlobalMessage();
     // Open the notification list, with one entry focused, or the newest when focusId is 0
     void showNotifications(quint64 focusId = 0);
@@ -253,7 +253,7 @@ private:
     QPointer<NotificationButton> m_cornerNotificationButton;
     QPointer<NotificationFlyout> m_notificationFlyout;
     QPointer<NotificationPeek> m_notificationPeek;
-    QPointer<MessageWidget> m_promptBar;
+    QPointer<VaultInfoBar> m_promptBar;
     quint64 m_preReleaseNotice = 0;
     QPointer<AccountController> m_accountController;
     AccountStartWidget* m_startScreen = nullptr;

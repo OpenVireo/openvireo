@@ -22,7 +22,7 @@
 
 #include "account/AccountManager.h"
 #include "gui/Clipboard.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QDialogButtonBox>
 #include <QDir>
@@ -34,7 +34,7 @@
 
 EmergencyKitDialog::EmergencyKitDialog(AccountManager* account, QWidget* parent)
     : QDialog(parent)
-    , m_message(new MessageWidget(this))
+    , m_message(new VaultInfoBar(this))
     , m_secretKeyLabel(new QLabel(this))
     , m_copyButton(nullptr)
     , m_saveButton(nullptr)
@@ -98,8 +98,8 @@ EmergencyKitDialog::EmergencyKitDialog(AccountManager* account, QWidget* parent)
         m_saveButton->setEnabled(false);
         m_message->showMessage(tr("This device doesn't keep the Secret Key. Use the Emergency Kit you saved when you "
                                   "signed up."),
-                               MessageWidget::Warning,
-                               MessageWidget::DisableAutoHide);
+                               VaultInfoBar::Warning,
+                               VaultInfoBar::DisableAutoHide);
     }
 }
 
@@ -113,7 +113,7 @@ void EmergencyKitDialog::copyKey()
 {
     // Cleared from the clipboard after the time set in Settings › Security
     clipboard()->setText(m_secretKey);
-    m_message->showMessage(tr("Secret Key copied. Paste it into your Emergency Kit."), MessageWidget::Positive);
+    m_message->showMessage(tr("Secret Key copied. Paste it into your Emergency Kit."), VaultInfoBar::Positive);
 }
 
 void EmergencyKitDialog::saveKit()
@@ -122,10 +122,10 @@ void EmergencyKitDialog::saveKit()
     QString error;
     if (!EmergencyKit(m_email, m_server, m_secretKey).saveAs(this, &path, &error)) {
         if (!error.isEmpty()) {
-            m_message->showMessage(error, MessageWidget::Error);
+            m_message->showMessage(error, VaultInfoBar::Error);
         }
         return;
     }
     m_message->showMessage(tr("Emergency Kit saved to %1.").arg(QDir::toNativeSeparators(path)),
-                           MessageWidget::Positive);
+                           VaultInfoBar::Positive);
 }

@@ -42,7 +42,7 @@
     </widget>
    </item>
    <item>
-    <widget class="MessageWidget" name="sshAuthSockMessageWidget" native="true"/>
+    <widget class="VaultInfoBar" name="sshAuthSockMessageWidget" native="true"/>
    </item>
    <item>
     <widget class="VaultCheckBox" name="enableSSHAgentCheckBox">
@@ -220,9 +220,9 @@
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
   <customwidget>
-   <class>MessageWidget</class>
+   <class>VaultInfoBar</class>
    <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
+   <header>gui/vault/VaultInfoBar.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

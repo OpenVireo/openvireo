@@ -225,7 +225,7 @@ void DatabaseSettingsWidgetBrowser::settingsWarning()
     }
     if (!enabled) {
         m_ui->warningWidget->showMessage(tr("Enable Browser Integration to access these settings."),
-                                         MessageWidget::Warning);
+                                         VaultInfoBar::Warning);
         m_ui->warningWidget->setCloseButtonVisible(false);
         m_ui->warningWidget->setAutoHideTimeout(-1);
     } else {

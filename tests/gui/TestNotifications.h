@@ -38,7 +38,7 @@ private slots:
     void testPinnedEntries();
     void testCap();
     void testDismissLatestFrom();
-    void testMessageWidgetKeepsApi();
+    void testInfoBarKeepsApi();
 
     // These share one main window of a nightly build, as the app can't create a second one in a process
     void testNightlyNotice();

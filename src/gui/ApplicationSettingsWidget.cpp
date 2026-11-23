@@ -395,7 +395,7 @@ void ApplicationSettingsWidget::addSettingsPage(ISettingsPage* page)
 void ApplicationSettingsWidget::loadSettings()
 {
     if (config()->hasAccessError()) {
-        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), MessageWidget::Error);
+        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), VaultInfoBar::Error);
     }
 
 #ifdef QT_DEBUG
@@ -578,7 +578,7 @@ void ApplicationSettingsWidget::loadSettings()
 void ApplicationSettingsWidget::saveSettings()
 {
     if (config()->hasAccessError()) {
-        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), MessageWidget::Error);
+        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), VaultInfoBar::Error);
         // We prevent closing the settings page if we could not write to
         // the config file.
         return;
@@ -619,7 +619,7 @@ void ApplicationSettingsWidget::saveSettings()
         config()->get(Config::AutoTypePreferDesktopPortals).toBool() != preferDesktopPortals;
     if (preferDesktopPortalsChanged) {
         getMainWindow()->displayGlobalMessage(
-            tr("Restart OpenVireo to apply the Auto-Type desktop portals preference."), MessageWidget::Information);
+            tr("Restart OpenVireo to apply the Auto-Type desktop portals preference."), VaultInfoBar::Information);
     }
     config()->set(Config::AutoTypePreferDesktopPortals, preferDesktopPortals);
     config()->set(Config::AutoTypeDesktopPortalPersistConnection,
@@ -744,7 +744,7 @@ void ApplicationSettingsWidget::resetSettings()
     }
 
     if (config()->hasAccessError()) {
-        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), MessageWidget::Error);
+        showMessage(tr("Access error for config file %1").arg(config()->getFileName()), VaultInfoBar::Error);
         // We prevent closing the settings page if we could not write to
         // the config file.
         return;
@@ -780,7 +780,7 @@ void ApplicationSettingsWidget::importSettings()
 
     if (!config()->importSettings(file)) {
         showMessage(tr("Failed to import settings from %1, not a valid settings file.").arg(file),
-                    MessageWidget::Error);
+                    VaultInfoBar::Error);
         return;
     }
 

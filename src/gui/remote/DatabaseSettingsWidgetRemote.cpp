@@ -248,7 +248,7 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
 {
     QString name = m_ui->nameLineEdit->text();
     if (name.isEmpty()) {
-        m_ui->messageWidget->showMessage(tr("Name cannot be empty."), MessageWidget::Warning);
+        m_ui->messageWidget->showMessage(tr("Name cannot be empty."), VaultInfoBar::Warning);
         return;
     }
 
@@ -257,7 +257,7 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
         QUrl url(params->serverUrl.trimmed());
         if (!url.isValid() || url.host().isEmpty() || (url.scheme() != "https" && url.scheme() != "http")) {
             m_ui->messageWidget->showMessage(tr("Enter a valid server URL starting with https://."),
-                                             MessageWidget::Warning);
+                                             VaultInfoBar::Warning);
             return;
         }
         if (!claimPairingCode()) {
@@ -266,14 +266,14 @@ void DatabaseSettingsWidgetRemote::saveCurrentSettings()
         params->serverToken = m_ui->serverTokenEdit->text().trimmed();
         if (params->serverDatabaseId.trimmed().isEmpty() || params->serverToken.trimmed().isEmpty()) {
             m_ui->messageWidget->showMessage(tr("Database ID and access token cannot be empty."),
-                                             MessageWidget::Warning);
+                                             VaultInfoBar::Warning);
             return;
         }
         if (url.scheme() == "http" && url.host() != "localhost" && url.host() != "127.0.0.1" && url.host() != "::1") {
             m_ui->messageWidget->showMessage(
                 tr("Warning: the access token will be sent unencrypted. Use https:// for servers other than "
                    "localhost."),
-                MessageWidget::Warning);
+                VaultInfoBar::Warning);
         }
     }
 
@@ -425,13 +425,13 @@ bool DatabaseSettingsWidgetRemote::claimPairingCode()
     auto pairing = handler.claimSyncServerPairingCode(params.data(), code);
     if (!pairing.success) {
         m_ui->messageWidget->showMessage(tr("Could not pair this device: %1").arg(pairing.errorMessage),
-                                         MessageWidget::Error);
+                                         VaultInfoBar::Error);
         return false;
     }
     m_ui->serverTokenEdit->setText(pairing.token);
     m_ui->messageWidget->showMessage(tr("Paired this device as \"%1\". Its access token is stored on this device only.")
                                          .arg(RemoteHandler::deviceName()),
-                                     MessageWidget::Positive);
+                                     VaultInfoBar::Positive);
     return true;
 }
 
@@ -443,7 +443,7 @@ void DatabaseSettingsWidgetRemote::pairDevice()
     QScopedPointer<RemoteParams> params(paramsFromFields());
     if (params->serverUrl.isEmpty() || params->serverToken.isEmpty()) {
         m_ui->messageWidget->showMessage(tr("Enter the server URL and this device's access token first."),
-                                         MessageWidget::Warning);
+                                         VaultInfoBar::Warning);
         return;
     }
 
@@ -451,7 +451,7 @@ void DatabaseSettingsWidgetRemote::pairDevice()
     auto pairing = handler.createSyncServerPairingCode(params.data());
     if (!pairing.success) {
         m_ui->messageWidget->showMessage(tr("Could not create a pairing code: %1").arg(pairing.errorMessage),
-                                         MessageWidget::Error);
+                                         VaultInfoBar::Error);
         return;
     }
     const auto until = QLocale().toString(pairing.expiresAt.toLocalTime().time(), QLocale::ShortFormat);
@@ -474,11 +474,11 @@ void DatabaseSettingsWidgetRemote::testDownload()
     bool isServer = params->type == RemoteParams::Type::SyncServer;
 
     if (!isServer && params->downloadCommand.isEmpty()) {
-        m_ui->messageWidget->showMessage(tr("Download command cannot be empty."), MessageWidget::Warning);
+        m_ui->messageWidget->showMessage(tr("Download command cannot be empty."), VaultInfoBar::Warning);
         return;
     }
     if (isServer && (params->serverUrl.isEmpty() || params->serverDatabaseId.isEmpty())) {
-        m_ui->messageWidget->showMessage(tr("Server URL and database ID cannot be empty."), MessageWidget::Warning);
+        m_ui->messageWidget->showMessage(tr("Server URL and database ID cannot be empty."), VaultInfoBar::Warning);
         return;
     }
 
@@ -486,7 +486,7 @@ void DatabaseSettingsWidgetRemote::testDownload()
     RemoteHandler::RemoteResult result = remoteHandler->download(params.data());
     if (!result.success) {
         m_ui->messageWidget->showMessage(tr("Download failed with error: %1").arg(result.errorMessage),
-                                         MessageWidget::Error);
+                                         VaultInfoBar::Error);
         return;
     }
 
@@ -494,17 +494,17 @@ void DatabaseSettingsWidgetRemote::testDownload()
         m_ui->messageWidget->showMessage(
             tr("Connected to the sync server. The database does not exist there yet and will be uploaded on the "
                "first sync."),
-            MessageWidget::Positive);
+            VaultInfoBar::Positive);
         return;
     }
 
     if (!QFile::exists(result.filePath)) {
         m_ui->messageWidget->showMessage(tr("Download finished, but file %1 could not be found.").arg(result.filePath),
-                                         MessageWidget::Error);
+                                         VaultInfoBar::Error);
         return;
     }
 
     // The test download is not used for anything, don't leave a copy of the database behind
     QFile::remove(result.filePath);
-    m_ui->messageWidget->showMessage(tr("Download successful."), MessageWidget::Positive);
+    m_ui->messageWidget->showMessage(tr("Download successful."), VaultInfoBar::Positive);
 }

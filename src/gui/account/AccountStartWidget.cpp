@@ -647,7 +647,7 @@ void AccountStartWidget::setBusy(const QString& message)
 void AccountStartWidget::showError(const QString& message)
 {
     setBusy({});
-    m_ui->messageWidget->showMessage(message, MessageWidget::Error, MessageWidget::DisableAutoHide);
+    m_ui->messageWidget->showMessage(message, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
 }
 
 void AccountStartWidget::updateSecretKeyField()

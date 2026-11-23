@@ -20,7 +20,7 @@
 
 #include "DatabaseOpenDialog.h"
 #include "config-keepassx.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "wizard/ImportWizard.h"
 
 #include <QSet>
@@ -105,7 +105,7 @@ signals:
     void databaseLocked(DatabaseWidget* dbWidget);
     void activeDatabaseChanged(DatabaseWidget* dbWidget);
     void tabNameChanged();
-    void messageGlobal(const QString&, MessageWidget::MessageType type);
+    void messageGlobal(const QString&, VaultInfoBar::MessageType type);
     void messageDismissGlobal();
     void databaseUnlockDialogFinished(bool accepted, DatabaseWidget* dbWidget);
 

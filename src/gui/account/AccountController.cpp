@@ -99,7 +99,7 @@ AccountController::AccountController(DatabaseTabWidget* tabs, AccountManager* ac
     connect(m_account, &AccountManager::signedOut, this, [this](const QString& reason) {
         closeVaultTabs();
         if (!reason.isEmpty()) {
-            emit message(reason, MessageWidget::Warning);
+            emit message(reason, VaultInfoBar::Warning);
         }
         if (m_mode == Mode::Account) {
             emit startScreenRequested();
@@ -418,7 +418,7 @@ void AccountController::handleVaultsChanged()
         }
         if (!keyring.contains(vaultId)) {
             emit message(tr("You no longer have access to \"%1\".").arg(widget->database()->rootGroup()->name()),
-                         MessageWidget::Warning);
+                         VaultInfoBar::Warning);
             m_vaultWidgets.remove(vaultId);
             m_vaultVersions.remove(vaultId);
             m_tabs->closeDatabaseTab(widget);
@@ -488,7 +488,7 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
         return;
     }
     if (m_account->state() != AccountManager::State::Unlocked) {
-        emit message(tr("Unlock your account first."), MessageWidget::Warning);
+        emit message(tr("Unlock your account first."), VaultInfoBar::Warning);
         return;
     }
     const auto& keyring = m_account->keyring();
@@ -516,7 +516,7 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
             emit message(tr("The local copy of \"%1\" is under an older key of the vault. It opens once OpenVireo is "
                             "back online.")
                              .arg(keyring.vault(vaultId).name),
-                         MessageWidget::Information);
+                         VaultInfoBar::Information);
         }
         return;
     }
@@ -528,7 +528,7 @@ void AccountController::openVault(const QString& vaultId, bool inBackground)
         }
         emit message(tr("\"%1\" hasn't been downloaded to this device yet. It opens once OpenVireo is back online.")
                          .arg(keyring.vault(vaultId).name),
-                     MessageWidget::Information);
+                     VaultInfoBar::Information);
         return;
     }
     downloadVault(vaultId, inBackground);
@@ -557,26 +557,26 @@ void AccountController::downloadVault(const QString& vaultId, bool inBackground)
             if (errorCode == "not_found") {
                 if (vault.role == "read") {
                     emit guard->message(tr("Nothing was uploaded to \"%1\" yet.").arg(vault.name),
-                                        MessageWidget::Information);
+                                        VaultInfoBar::Information);
                     return;
                 }
                 // A vault created elsewhere whose first upload never happened: this device makes it
                 const auto key = keyring.vaultKey(vaultId);
                 if (key.empty()) {
                     emit guard->message(tr("This account holds no key for \"%1\".").arg(vault.name),
-                                        MessageWidget::Error);
+                                        VaultInfoBar::Error);
                     return;
                 }
                 db = VaultKeyring::createVaultDatabase(vault.name, key);
             } else if (!db) {
-                emit guard->message(tr("Could not download \"%1\": %2").arg(vault.name, error), MessageWidget::Error);
+                emit guard->message(tr("Could not download \"%1\": %2").arg(vault.name, error), VaultInfoBar::Error);
                 return;
             }
             guard->ensureAccountRemote(db, vaultId);
             QString saveError;
             if (!db->saveAs(path, Database::Atomic, {}, &saveError)) {
                 emit guard->message(tr("Could not save a local copy of \"%1\": %2").arg(vault.name, saveError),
-                                    MessageWidget::Error);
+                                    VaultInfoBar::Error);
                 return;
             }
             guard->addVaultTab(vaultId, db, vault.currentKeyVersion, inBackground);
@@ -590,7 +590,7 @@ void AccountController::rekeyLocalCopy(const QString& vaultId, bool inBackground
     if (!file.open(QIODevice::ReadOnly)) {
         emit message(tr("Could not read the local copy of \"%1\": %2")
                          .arg(m_account->keyring().vault(vaultId).name, file.errorString()),
-                     MessageWidget::Error);
+                     VaultInfoBar::Error);
         return;
     }
     AccountVaultSync::Request request;
@@ -620,23 +620,23 @@ void AccountController::rekeyLocalCopy(const QString& vaultId, bool inBackground
                 emit guard->message(tr("The local copy of \"%1\" is under an older key and was kept as %2. The vault "
                                        "is downloaded again.")
                                         .arg(vault.name, QDir::toNativeSeparators(aside)),
-                                    MessageWidget::Warning);
+                                    VaultInfoBar::Warning);
                 guard->downloadVault(vaultId, inBackground);
                 return;
             }
-            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, result.error), MessageWidget::Error);
+            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, result.error), VaultInfoBar::Error);
             return;
         }
         QSaveFile out(path);
         if (!out.open(QIODevice::WriteOnly) || out.write(result.kdbx) != result.kdbx.size() || !out.commit()) {
             emit guard->message(tr("Could not save a local copy of \"%1\": %2").arg(vault.name, out.errorString()),
-                                MessageWidget::Error);
+                                VaultInfoBar::Error);
             return;
         }
         auto db = QSharedPointer<Database>::create();
         QString error;
         if (!db->open(path, AccountManager::vaultCompositeKey(result.keyFile), &error)) {
-            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, error), MessageWidget::Error);
+            emit guard->message(tr("Could not open \"%1\": %2").arg(vault.name, error), VaultInfoBar::Error);
             return;
         }
         guard->addVaultTab(vaultId, db, vault.currentKeyVersion, inBackground);
@@ -756,12 +756,12 @@ void AccountController::acceptInvitation(const QString& linkOrToken)
             return;
         }
         if (!ok) {
-            emit guard->message(error, MessageWidget::Error);
+            emit guard->message(error, VaultInfoBar::Error);
             return;
         }
         emit guard->message(tr("Invitation accepted. An owner or admin of the organization has to confirm you "
                                "before you can open its vaults."),
-                            MessageWidget::Positive);
+                            VaultInfoBar::Positive);
     });
 }
 
@@ -776,14 +776,14 @@ void AccountController::createVault(const QString& name, const QString& orgId)
                                }
                                emit guard->busyChanged({});
                                if (!error.isEmpty()) {
-                                   emit guard->message(error, MessageWidget::Error);
+                                   emit guard->message(error, VaultInfoBar::Error);
                                    return;
                                }
                                const auto path = guard->vaultFilePath(vaultId);
                                QDir().mkpath(QFileInfo(path).absolutePath());
                                QString saveError;
                                if (!db->saveAs(path, Database::Atomic, {}, &saveError)) {
-                                   emit guard->message(saveError, MessageWidget::Error);
+                                   emit guard->message(saveError, VaultInfoBar::Error);
                                    return;
                                }
                                guard->addVaultTab(vaultId, db, 1, false);
@@ -800,19 +800,19 @@ void AccountController::importAsVault(const QSharedPointer<Database>& db, const 
             }
             emit guard->busyChanged({});
             if (!error.isEmpty()) {
-                emit guard->message(error, MessageWidget::Error);
+                emit guard->message(error, VaultInfoBar::Error);
                 return;
             }
             const auto path = guard->vaultFilePath(vaultId);
             QDir().mkpath(QFileInfo(path).absolutePath());
             QString saveError;
             if (!vaultDb->saveAs(path, Database::Atomic, {}, &saveError)) {
-                emit guard->message(saveError, MessageWidget::Error);
+                emit guard->message(saveError, VaultInfoBar::Error);
                 return;
             }
             guard->addVaultTab(vaultId, vaultDb, 1, false);
             emit guard->message(tr("Imported as the vault \"%1\".").arg(vaultDb->rootGroup()->name()),
-                                MessageWidget::Positive);
+                                VaultInfoBar::Positive);
         });
 }
 
@@ -859,6 +859,6 @@ void AccountController::moveToAccount(DatabaseWidget* dbWidget, const QString& n
                                      tr("\"%1\" is now a vault of your account. The original file %2 wasn't changed; "
                                         "you can delete it.")
                                          .arg(db->rootGroup()->name(), QDir::toNativeSeparators(sourcePath)),
-                                     MessageWidget::Positive);
+                                     VaultInfoBar::Positive);
                              });
 }

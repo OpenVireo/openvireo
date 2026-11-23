@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_ACCOUNTCONTROLLER_H
 #define KEEPASSXC_ACCOUNTCONTROLLER_H
 
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QHash>
 #include <QObject>
@@ -143,7 +143,7 @@ signals:
     void unlockScreenRequested();
     void vaultOpened(const QString& vaultId, DatabaseWidget* dbWidget);
     void moveFinished(bool ok, const QString& error);
-    void message(const QString& text, MessageWidget::MessageType type);
+    void message(const QString& text, VaultInfoBar::MessageType type);
     void busyChanged(const QString& message);
 
 private slots:

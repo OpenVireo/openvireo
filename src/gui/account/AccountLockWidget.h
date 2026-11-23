@@ -22,7 +22,7 @@
 #include <QWidget>
 
 class AccountController;
-class MessageWidget;
+class VaultInfoBar;
 class QAction;
 class QFrame;
 class QLabel;
@@ -85,7 +85,7 @@ private:
     QLabel* m_passwordLabel;
     VaultLineEdit* m_passwordEdit;
     QAction* m_revealAction;
-    MessageWidget* m_messageWidget;
+    VaultInfoBar* m_messageWidget;
     QLabel* m_busyLabel;
     VaultButton* m_unlockButton;
     QLabel* m_recoverLink;

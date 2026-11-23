@@ -23,7 +23,7 @@
 #include <QPointer>
 
 class AccountManager;
-class MessageWidget;
+class VaultInfoBar;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -54,7 +54,7 @@ private:
 
     QPointer<AccountManager> m_account;
     QJsonObject m_preview;
-    MessageWidget* m_message;
+    VaultInfoBar* m_message;
     QLabel* m_intro;
     QLabel* m_summary;
     QWidget* m_actions;
@@ -75,7 +75,7 @@ public:
 
 private:
     QPointer<AccountManager> m_account;
-    MessageWidget* m_message;
+    VaultInfoBar* m_message;
     QLineEdit* m_password;
     QPushButton* m_restore;
 };

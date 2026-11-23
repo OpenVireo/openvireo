@@ -76,7 +76,7 @@ AccessControlDialog::AccessControlDialog(QWindow* parent,
     m_ui->itemsTable->resizeColumnsToContents();
 
     // the info widget
-    m_ui->exePathWarn->setMessageType(MessageWidget::Warning);
+    m_ui->exePathWarn->setMessageType(VaultInfoBar::Warning);
     m_ui->exePathWarn->hide();
 
     setupDetails(info);

@@ -306,7 +306,7 @@ void SettingsWidgetFdoSecrets::checkDBusName()
 
     if (m_plugin->dbus()->serviceOccupied()) {
         m_ui->warningMsg->showMessage(
-            tr("<b>Warning:</b> ") + m_plugin->dbus()->reportExistingService(), MessageWidget::Warning, -1);
+            tr("<b>Warning:</b> ") + m_plugin->dbus()->reportExistingService(), VaultInfoBar::Warning, -1);
         m_ui->enableFdoSecretService->setChecked(false);
         m_ui->enableFdoSecretService->setEnabled(false);
         return;

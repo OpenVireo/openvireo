@@ -25,7 +25,7 @@
 #include "core/Tools.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/MainWindow.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
 
@@ -36,7 +36,7 @@
 
 AutofillSettingsWidget::AutofillSettingsWidget(QWidget* parent)
     : QWidget(parent)
-    , m_statusMessage(new MessageWidget(this))
+    , m_statusMessage(new VaultInfoBar(this))
     , m_enableCheckBox(
           new VaultCheckBox(tr("Fill passwords, passkeys and one-time codes in Safari and other apps"), this))
     , m_keepIdentitiesCheckBox(new VaultCheckBox(tr("Keep suggesting usernames while a database is locked"), this))
@@ -116,10 +116,10 @@ void AutofillSettingsWidget::loadSettings()
     }
 
     if (!available) {
-        m_statusMessage->showMessage(tr("AutoFill needs macOS 11 or later."), MessageWidget::Warning);
+        m_statusMessage->showMessage(tr("AutoFill needs macOS 11 or later."), VaultInfoBar::Warning);
     } else if (!AutofillService::isSignedForAutofill()) {
         m_statusMessage->showMessage(tr("This build of OpenVireo is not signed for AutoFill, so AutoFill stays off."),
-                                     MessageWidget::Warning);
+                                     VaultInfoBar::Warning);
     } else {
         updateProviderStatus();
     }
@@ -160,12 +160,12 @@ void AutofillSettingsWidget::updateProviderStatus()
     AutofillPlatform::queryProviderEnabled(this, [this](bool enabled) {
         if (enabled) {
             m_statusMessage->showMessage(tr("OpenVireo is turned on as an AutoFill provider in System Settings."),
-                                         MessageWidget::Positive);
+                                         VaultInfoBar::Positive);
         } else {
             m_statusMessage->showMessage(
                 tr("OpenVireo is not turned on in System Settings yet. Open AutoFill Settings and turn it on "
                    "under AutoFill From."),
-                MessageWidget::Information);
+                VaultInfoBar::Information);
         }
     });
 }

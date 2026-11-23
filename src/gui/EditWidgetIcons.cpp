@@ -223,12 +223,12 @@ void EditWidgetIcons::iconReceived(const QString& url, const QImage& icon)
             message.append("\n").append(
                 tr("You can enable the DuckDuckGo website icon service under Application Settings -> Security"));
         }
-        emit messageEditEntry(message, MessageWidget::Error);
+        emit messageEditEntry(message, VaultInfoBar::Error);
         return;
     }
 
     if (!addCustomIcon(icon)) {
-        emit messageEditEntry(tr("Existing icon selected."), MessageWidget::Information);
+        emit messageEditEntry(tr("Existing icon selected."), VaultInfoBar::Information);
     }
 #else
     Q_UNUSED(url);
@@ -290,11 +290,11 @@ void EditWidgetIcons::addCustomIconFromFile()
             errornames = errornames.mid(0, 8);
             emit messageEditEntry(msg + "\n" + tr("The following icon(s) failed:", "", errornames.size()) + "\n"
                                       + errornames.join("\n"),
-                                  MessageWidget::Error);
+                                  VaultInfoBar::Error);
         } else if (numloaded > 0) {
-            emit messageEditEntry(msg, MessageWidget::Positive);
+            emit messageEditEntry(msg, VaultInfoBar::Positive);
         } else {
-            emit messageEditEntry(msg, MessageWidget::Information);
+            emit messageEditEntry(msg, VaultInfoBar::Information);
         }
     }
 }

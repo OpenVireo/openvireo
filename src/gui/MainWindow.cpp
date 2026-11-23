@@ -621,8 +621,8 @@ MainWindow::MainWindow()
 #endif
 
     // clang-format off
-    connect(m_ui->tabWidget, SIGNAL(messageGlobal(QString,MessageWidget::MessageType)),
-        SLOT(displayGlobalMessage(QString,MessageWidget::MessageType)));
+    connect(m_ui->tabWidget, SIGNAL(messageGlobal(QString,VaultInfoBar::MessageType)),
+        SLOT(displayGlobalMessage(QString,VaultInfoBar::MessageType)));
     // clang-format on
 
     connect(m_ui->tabWidget, SIGNAL(messageDismissGlobal()), this, SLOT(hideGlobalMessage()));
@@ -639,7 +639,7 @@ MainWindow::MainWindow()
     connect(&m_trayIconTriggerTimer, SIGNAL(timeout()), SLOT(processTrayIconTrigger()));
 
     if (config()->hasAccessError()) {
-        displayGlobalMessage(tr("Access error for config file %1").arg(config()->getFileName()), MessageWidget::Error);
+        displayGlobalMessage(tr("Access error for config file %1").arg(config()->getFileName()), VaultInfoBar::Error);
     }
 
     // Properly shutdown on logoff, restart, and shutdown
@@ -778,7 +778,7 @@ void MainWindow::setupAccounts()
     connect(account, &AccountManager::error, this, [this](const QString& message) {
         // The lock screen shows unlock errors on its card
         if (m_accountController->account()->state() == AccountManager::State::Locked && !isAccountLockScreenShown()) {
-            displayGlobalMessage(message, MessageWidget::Error);
+            displayGlobalMessage(message, VaultInfoBar::Error);
         }
     });
     connect(account, &AccountManager::stateChanged, this, &MainWindow::updateAccountActions);
@@ -792,7 +792,7 @@ void MainWindow::setupAccounts()
         }
         if (offline) {
             NotificationCenter::Notification notice;
-            notice.type = MessageWidget::Warning;
+            notice.type = VaultInfoBar::Warning;
             notice.title = tr("Working offline");
             notice.text = tr("OpenVireo can't reach %1, so your account works from this device's copy. Changes "
                              "are saved here and sync once it can reach the server again.")
@@ -820,10 +820,10 @@ void MainWindow::setupAccounts()
     connect(m_accountController,
             &AccountController::message,
             this,
-            [this](const QString& text, MessageWidget::MessageType type) { displayGlobalMessage(text, type); });
+            [this](const QString& text, VaultInfoBar::MessageType type) { displayGlobalMessage(text, type); });
     connect(m_accountController, &AccountController::moveFinished, this, [this](bool ok, const QString& error) {
         if (!ok) {
-            displayGlobalMessage(error, MessageWidget::Error);
+            displayGlobalMessage(error, VaultInfoBar::Error);
         }
     });
     connect(m_accountController, &AccountController::busyChanged, this, [this](const QString& message) {
@@ -979,7 +979,7 @@ void MainWindow::showShareVaultDialog(const QString& vaultId)
         id = m_accountController->vaultIdOf(m_ui->tabWidget->currentDatabaseWidget());
     }
     if (id.isEmpty()) {
-        displayGlobalMessage(tr("Select a vault of your account to share."), MessageWidget::Information);
+        displayGlobalMessage(tr("Select a vault of your account to share."), VaultInfoBar::Information);
         return;
     }
     auto* dialog = new ShareVaultDialog(m_accountController->sharing(), id, this);
@@ -994,7 +994,7 @@ void MainWindow::showShareLinkDialog()
     const auto vaultId = m_accountController->vaultIdOf(dbWidget);
     if (!entry || vaultId.isEmpty()) {
         displayGlobalMessage(tr("Share links are made from entries of your account's vaults."),
-                             MessageWidget::Information);
+                             VaultInfoBar::Information);
         return;
     }
     ShareLinkDialog::present(m_accountController->itemShare(), vaultId, entry, this);
@@ -1113,11 +1113,11 @@ void MainWindow::moveDatabaseToAccount()
 {
     auto* dbWidget = m_ui->tabWidget->currentDatabaseWidget();
     if (!dbWidget || dbWidget->isLocked()) {
-        displayGlobalMessage(tr("Open and unlock the database to move first."), MessageWidget::Information);
+        displayGlobalMessage(tr("Open and unlock the database to move first."), VaultInfoBar::Information);
         return;
     }
     if (m_accountController->account()->state() != AccountManager::State::Unlocked) {
-        displayGlobalMessage(tr("Sign in to your OpenVireo account and unlock it first."), MessageWidget::Information);
+        displayGlobalMessage(tr("Sign in to your OpenVireo account and unlock it first."), VaultInfoBar::Information);
         return;
     }
     auto name = dbWidget->database()->metadata()->name();
@@ -1233,7 +1233,7 @@ QList<DatabaseWidget*> MainWindow::getOpenDatabases()
 
 void MainWindow::showErrorMessage(const QString& message)
 {
-    displayGlobalMessage(message, MessageWidget::Error);
+    displayGlobalMessage(message, VaultInfoBar::Error);
 }
 
 void MainWindow::appExit()
@@ -2081,7 +2081,7 @@ void MainWindow::clearSSHAgent()
 #ifdef KPXC_FEATURE_SSHAGENT
     auto agent = SSHAgent::instance();
     auto ret = agent->clearAllAgentIdentities();
-    displayGlobalMessage(agent->errorString(), ret ? MessageWidget::Positive : KMessageWidget::Error, false);
+    displayGlobalMessage(agent->errorString(), ret ? VaultInfoBar::Positive : VaultInfoBar::Error, false);
 #endif
 }
 
@@ -2276,7 +2276,7 @@ void MainWindow::focusWindowChanged(QWindow* window)
 
     if (!osUtils->setPreventScreenCapture(window, !m_allowScreenCapture) && !m_allowScreenCapture) {
         displayGlobalMessage(QObject::tr("Warning: Failed to block screenshot capture on a top-level window."),
-                             MessageWidget::Error);
+                             VaultInfoBar::Error);
     }
 }
 
@@ -2404,7 +2404,7 @@ bool MainWindow::isTrayIconEnabled() const
 }
 
 void MainWindow::displayGlobalMessage(const QString& text,
-                                      MessageWidget::MessageType type,
+                                      VaultInfoBar::MessageType type,
                                       bool showClosebutton,
                                       int autoHideTimeout)
 {
@@ -2415,7 +2415,7 @@ void MainWindow::displayGlobalMessage(const QString& text,
 }
 
 void MainWindow::displayTabMessage(const QString& text,
-                                   MessageWidget::MessageType type,
+                                   VaultInfoBar::MessageType type,
                                    bool showClosebutton,
                                    int autoHideTimeout)
 {
@@ -2468,7 +2468,7 @@ void MainWindow::setupNotifications()
     auto* promptHost = new QWidget(m_ui->centralwidget);
     auto* promptLayout = new QVBoxLayout(promptHost);
     promptLayout->setContentsMargins(12, 4, 12, 4);
-    m_promptBar = new MessageWidget(promptHost);
+    m_promptBar = new VaultInfoBar(promptHost);
     m_promptBar->setObjectName("promptBar");
     m_promptBar->setCloseButtonVisible(false);
     m_promptBar->hideMessage();
@@ -2489,13 +2489,13 @@ void MainWindow::setupNotifications()
                               ? QTextDocumentFragment::fromHtml(notification->text).toPlainText()
                               : notification->text;
         QAccessibleAnnouncementEvent announcement(this, text);
-        announcement.setPoliteness(notification->type == MessageWidget::Error
+        announcement.setPoliteness(notification->type == VaultInfoBar::Error
                                        ? QAccessible::AnnouncementPoliteness::Assertive
                                        : QAccessible::AnnouncementPoliteness::Polite);
         QAccessible::updateAccessibility(&announcement);
 #endif
         // An error also peeks out from the bell for a moment, so it isn't missed behind it
-        if (notification->type == MessageWidget::Error && !m_notificationFlyout->isOpen()) {
+        if (notification->type == VaultInfoBar::Error && !m_notificationFlyout->isOpen()) {
             if (auto* anchor = notificationAnchor()) {
                 m_notificationPeek->peek(anchor, *notification);
             }
@@ -2514,7 +2514,7 @@ void MainWindow::postPreReleaseNotice()
     }
 
     NotificationCenter::Notification notice;
-    notice.type = MessageWidget::Warning;
+    notice.type = VaultInfoBar::Warning;
     notice.title = BuildInfo::noticeTitle();
     notice.text = BuildInfo::noticeMessage();
     notice.pinned = true;
@@ -2568,8 +2568,8 @@ void MainWindow::showYubiKeyPopup()
 {
     m_promptBar->parentWidget()->setVisible(true);
     m_promptBar->showMessage(tr("Please present or touch your YubiKey to continue…"),
-                             MessageWidget::Information,
-                             MessageWidget::DisableAutoHide);
+                             VaultInfoBar::Information,
+                             VaultInfoBar::DisableAutoHide);
     setEnabled(false);
 }
 

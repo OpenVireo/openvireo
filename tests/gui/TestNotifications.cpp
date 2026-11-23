@@ -114,8 +114,8 @@ void TestNotifications::testPostAndRead()
     QSignalSpy posted(&center, &NotificationCenter::posted);
     QVERIFY(center.isEmpty());
 
-    center.post("first", MessageWidget::Information);
-    center.post("second", MessageWidget::Positive);
+    center.post("first", VaultInfoBar::Information);
+    center.post("second", VaultInfoBar::Positive);
     QCOMPARE(posted.count(), 2);
     QCOMPARE(center.unreadCount(), 2);
     // Newest first
@@ -129,18 +129,18 @@ void TestNotifications::testPostAndRead()
 void TestNotifications::testDuplicateBumpsEntry()
 {
     NotificationCenter center;
-    const auto id = center.post("Sync failed", MessageWidget::Error);
-    center.post("Other", MessageWidget::Information);
+    const auto id = center.post("Sync failed", VaultInfoBar::Error);
+    center.post("Other", VaultInfoBar::Information);
     center.markAllRead();
 
     // The same message again refreshes the first entry: unread again and back on top
-    QCOMPARE(center.post("Sync failed", MessageWidget::Error), id);
+    QCOMPARE(center.post("Sync failed", VaultInfoBar::Error), id);
     QCOMPARE(center.notifications().size(), 2);
     QCOMPARE(center.notifications().first().id, id);
     QCOMPARE(center.unreadCount(), 1);
 
     // The same text with another type is a different message
-    center.post("Sync failed", MessageWidget::Warning);
+    center.post("Sync failed", VaultInfoBar::Warning);
     QCOMPARE(center.notifications().size(), 3);
 }
 
@@ -148,11 +148,11 @@ void TestNotifications::testHighestUnreadType()
 {
     NotificationCenter center;
     QVERIFY(!center.highestUnreadType());
-    center.post("a", MessageWidget::Information);
-    QCOMPARE(*center.highestUnreadType(), MessageWidget::Information);
-    center.post("b", MessageWidget::Error);
-    center.post("c", MessageWidget::Warning);
-    QCOMPARE(*center.highestUnreadType(), MessageWidget::Error);
+    center.post("a", VaultInfoBar::Information);
+    QCOMPARE(*center.highestUnreadType(), VaultInfoBar::Information);
+    center.post("b", VaultInfoBar::Error);
+    center.post("c", VaultInfoBar::Warning);
+    QCOMPARE(*center.highestUnreadType(), VaultInfoBar::Error);
     center.markAllRead();
     QVERIFY(!center.highestUnreadType());
 }
@@ -163,11 +163,11 @@ void TestNotifications::testPinnedEntries()
     int dismissed = 0;
     NotificationCenter::Notification pinned;
     pinned.text = "pinned";
-    pinned.type = MessageWidget::Warning;
+    pinned.type = VaultInfoBar::Warning;
     pinned.pinned = true;
     pinned.onDismiss = [&dismissed] { ++dismissed; };
     const auto pinnedId = center.add(pinned);
-    center.post("newer", MessageWidget::Information);
+    center.post("newer", VaultInfoBar::Information);
 
     // Pinned entries stay on top, however new the others are
     QCOMPARE(center.notifications().first().id, pinnedId);
@@ -190,7 +190,7 @@ void TestNotifications::testCap()
     pinned.pinned = true;
     center.add(pinned);
     for (int i = 0; i < NotificationCenter::MaxEntries + 10; ++i) {
-        center.post(QString("message %1").arg(i), MessageWidget::Information);
+        center.post(QString("message %1").arg(i), VaultInfoBar::Information);
     }
     const auto notifications = center.notifications();
     QCOMPARE(notifications.size(), NotificationCenter::MaxEntries);
@@ -202,9 +202,9 @@ void TestNotifications::testCap()
 void TestNotifications::testDismissLatestFrom()
 {
     NotificationCenter center;
-    center.post("from a, older", MessageWidget::Error, "a");
-    center.post("from b", MessageWidget::Error, "b");
-    center.post("from a, newer", MessageWidget::Error, "a");
+    center.post("from a, older", VaultInfoBar::Error, "a");
+    center.post("from b", VaultInfoBar::Error, "b");
+    center.post("from a, newer", VaultInfoBar::Error, "a");
 
     center.dismissLatestFrom("a");
     QStringList texts;
@@ -220,7 +220,7 @@ void TestNotifications::testNightlyNotice()
     const auto notifications = center->notifications();
     QCOMPARE(notifications.size(), 1);
     QVERIFY(notifications.first().pinned);
-    QCOMPARE(notifications.first().type, MessageWidget::Warning);
+    QCOMPARE(notifications.first().type, VaultInfoBar::Warning);
     QCOMPARE(notifications.first().title, QString("You're using a nightly build"));
     QVERIFY(notifications.first().text.contains(KEEPASSXC_VERSION));
     QCOMPARE(center->unreadCount(), 1);
@@ -243,8 +243,8 @@ void TestNotifications::testGlobalMessagesGoToBell()
 {
     auto* center = window()->notificationCenter();
     center->markAllRead();
-    window()->displayGlobalMessage("First message", MessageWidget::Information);
-    window()->displayGlobalMessage("Second message", MessageWidget::Positive);
+    window()->displayGlobalMessage("First message", VaultInfoBar::Information);
+    window()->displayGlobalMessage("Second message", VaultInfoBar::Positive);
     // A second message no longer replaces the first; both sit under the pinned notice
     const auto notifications = center->notifications();
     QCOMPARE(notifications.size(), 3);
@@ -257,18 +257,18 @@ void TestNotifications::testGlobalMessagesGoToBell()
     QCOMPARE(bell->accessibleName(), QString("Notifications, 2 unread"));
 
     // The old shared bar is gone
-    QVERIFY(!window()->findChild<MessageWidget*>("globalMessageWidget"));
+    QVERIFY(!window()->findChild<VaultInfoBar*>("globalMessageWidget"));
 }
 
 void TestNotifications::testErrorPeeks()
 {
     auto* peek = window()->findChild<NotificationPeek*>("notificationPeek");
     QVERIFY(peek);
-    window()->displayGlobalMessage("Just so you know", MessageWidget::Information);
+    window()->displayGlobalMessage("Just so you know", VaultInfoBar::Information);
     QApplication::processEvents();
     QVERIFY(!peek->isOpen());
 
-    window()->displayGlobalMessage("Something broke", MessageWidget::Error);
+    window()->displayGlobalMessage("Something broke", VaultInfoBar::Error);
     QTRY_VERIFY(peek->isOpen());
     saveScreenshot(window(), "notifications-peek.png");
     // It doesn't take focus from what the user is doing
@@ -280,7 +280,7 @@ void TestNotifications::testErrorPeeks()
 void TestNotifications::testFlyoutMarksRead()
 {
     auto* center = window()->notificationCenter();
-    window()->displayGlobalMessage("Read me", MessageWidget::Information);
+    window()->displayGlobalMessage("Read me", VaultInfoBar::Information);
     QCOMPARE(center->unreadCount(), 1);
 
     auto* flyout = window()->findChild<NotificationFlyout*>("notificationFlyout");
@@ -300,7 +300,7 @@ void TestNotifications::testYubiKeyPromptStaysInline()
 {
     auto* center = window()->notificationCenter();
     const int before = center->notifications().size();
-    auto* prompt = window()->findChild<MessageWidget*>("promptBar");
+    auto* prompt = window()->findChild<VaultInfoBar*>("promptBar");
     QVERIFY(prompt);
     QVERIFY(!prompt->isVisibleTo(window()));
 
@@ -355,7 +355,7 @@ void TestNotifications::testStableBuild()
     auto* cornerBar = window()->findChild<QWidget*>("notificationCornerBar");
     QTRY_VERIFY(!cornerBar->isVisible());
     // A message brings the bell back
-    window()->displayGlobalMessage("Hello", MessageWidget::Information);
+    window()->displayGlobalMessage("Hello", VaultInfoBar::Information);
     QTRY_VERIFY(cornerBar->isVisible());
 
     BuildInfo::setKindForTests(BuildInfo::Kind::Nightly);
@@ -374,15 +374,15 @@ void TestNotifications::testBetaBuild()
     BuildInfo::setKindForTests(BuildInfo::Kind::Nightly);
 }
 
-void TestNotifications::testMessageWidgetKeepsApi()
+void TestNotifications::testInfoBarKeepsApi()
 {
     // Restyled with Fluent colors, but callers use it as before
-    MessageWidget widget;
+    VaultInfoBar widget;
     widget.setAnimate(false);
     widget.resize(400, 60);
-    widget.showMessage("Hello", MessageWidget::Error, MessageWidget::DisableAutoHide);
+    widget.showMessage("Hello", VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
     QCOMPARE(widget.text(), QString("Hello"));
-    QCOMPARE(widget.messageType(), MessageWidget::Error);
+    QCOMPARE(widget.messageType(), VaultInfoBar::Error);
     QVERIFY(widget.isVisible());
     widget.setCloseButtonVisible(false);
     QVERIFY(!widget.isCloseButtonVisible());
@@ -392,15 +392,15 @@ void TestNotifications::testMessageWidgetKeepsApi()
     // Every type, for a look at the colors
     QWidget sheet;
     auto* layout = new QVBoxLayout(&sheet);
-    const QList<QPair<MessageWidget::MessageType, QString>> types = {
-        {MessageWidget::Information, "Select a vault of your account to share."},
-        {MessageWidget::Positive, "Remote sync 'Work' completed successfully!"},
-        {MessageWidget::Warning, "This build of OpenVireo is not signed for AutoFill, so AutoFill stays off."},
-        {MessageWidget::Error, "Failed to open Taxes.kdbx. It either does not exist or is not accessible."}};
+    const QList<QPair<VaultInfoBar::MessageType, QString>> types = {
+        {VaultInfoBar::Information, "Select a vault of your account to share."},
+        {VaultInfoBar::Positive, "Remote sync 'Work' completed successfully!"},
+        {VaultInfoBar::Warning, "This build of OpenVireo is not signed for AutoFill, so AutoFill stays off."},
+        {VaultInfoBar::Error, "Failed to open Taxes.kdbx. It either does not exist or is not accessible."}};
     for (const auto& [type, text] : types) {
-        auto* message = new MessageWidget(&sheet);
+        auto* message = new VaultInfoBar(&sheet);
         message->setAnimate(false);
-        message->showMessage(text, type, MessageWidget::DisableAutoHide);
+        message->showMessage(text, type, VaultInfoBar::DisableAutoHide);
         layout->addWidget(message);
     }
     sheet.resize(640, 260);

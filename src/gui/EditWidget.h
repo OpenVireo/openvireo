@@ -24,7 +24,7 @@
 #include <QtWidgets/QStyledItemDelegate>
 
 #include "gui/DialogyWidget.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 class CategoryListWidget;
 class QDialogButtonBox;
@@ -69,7 +69,7 @@ signals:
     void rejected();
 
 protected slots:
-    void showMessage(const QString& text, MessageWidget::MessageType type);
+    void showMessage(const QString& text, VaultInfoBar::MessageType type);
     void hideMessage();
     void setModified(bool state = true);
     void buttonClicked(QAbstractButton* button);

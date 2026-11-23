@@ -23,7 +23,7 @@
 #include <QDialog>
 #include <QPointer>
 
-class MessageWidget;
+class VaultInfoBar;
 class QCheckBox;
 class QPushButton;
 class QTreeWidget;
@@ -49,7 +49,7 @@ private:
 
     QPointer<ItemShare> m_shares;
     QList<ItemShare::Listing> m_list;
-    MessageWidget* m_message;
+    VaultInfoBar* m_message;
     QTreeWidget* m_tree;
     QCheckBox* m_showEnded;
     QPushButton* m_revoke;

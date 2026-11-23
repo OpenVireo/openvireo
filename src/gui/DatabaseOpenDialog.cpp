@@ -196,7 +196,7 @@ void DatabaseOpenDialog::clearForms()
     m_tabBar->blockSignals(false);
 }
 
-void DatabaseOpenDialog::showMessage(const QString& text, MessageWidget::MessageType type, int autoHideTimeout)
+void DatabaseOpenDialog::showMessage(const QString& text, VaultInfoBar::MessageType type, int autoHideTimeout)
 {
     m_view->showMessage(text, type, autoHideTimeout);
 }

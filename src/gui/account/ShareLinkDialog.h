@@ -18,7 +18,7 @@
 #ifndef KEEPASSXC_SHARELINKDIALOG_H
 #define KEEPASSXC_SHARELINKDIALOG_H
 
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QDialog>
 #include <QPointer>
@@ -61,7 +61,7 @@ private:
     void addFieldChoices(QWidget* parent, QLayout* layout);
     void addTextFields(QWidget* parent, QLayout* layout);
     void addOptions(QWidget* parent);
-    void showMessage(const QString& text, MessageWidget::MessageType type, bool persistent = false);
+    void showMessage(const QString& text, VaultInfoBar::MessageType type, bool persistent = false);
     void hideMessage();
     void showLink(const QString& url, const QString& expires);
     bool showAsModal() const;

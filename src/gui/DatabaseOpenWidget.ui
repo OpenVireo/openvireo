@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
    <item>
-    <widget class="MessageWidget" name="messageWidget" native="true"/>
+    <widget class="VaultInfoBar" name="messageWidget" native="true"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0,1">
@@ -651,9 +651,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>MessageWidget</class>
+   <class>VaultInfoBar</class>
    <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
+   <header>gui/vault/VaultInfoBar.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

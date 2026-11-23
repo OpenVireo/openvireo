@@ -133,7 +133,7 @@ private:
     QLabel* m_text;
     QWidget* m_badge;
     QTimer* m_timer;
-    MessageWidget::MessageType m_type = MessageWidget::Error;
+    VaultInfoBar::MessageType m_type = VaultInfoBar::Error;
 };
 
 // "Just now", "5 min ago", or the time or date for older entries

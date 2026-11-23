@@ -123,11 +123,9 @@ set(gui_SOURCES
         gui/GuiTools.cpp
         gui/HtmlGuiExporter.cpp
         gui/IconModels.cpp
-        gui/KMessageWidget.cpp
         gui/MainWindow.cpp
         gui/MergeDialog.cpp
         gui/MessageBox.cpp
-        gui/MessageWidget.cpp
         gui/notifications/NotificationCenter.cpp
         gui/notifications/NotificationWidgets.cpp
         gui/PasswordWidget.cpp
@@ -181,6 +179,7 @@ set(gui_SOURCES
         gui/vault/EntryDetailCard.cpp
         gui/vault/VaultControls.cpp
         gui/vault/VaultDialog.cpp
+        gui/vault/VaultInfoBar.cpp
         gui/vault/VaultInputDialog.cpp
         gui/vault/VaultEditShell.cpp
         gui/vault/VaultEntryEditCard.cpp

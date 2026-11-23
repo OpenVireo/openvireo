@@ -62,7 +62,7 @@ public:
 
 signals:
     void editFinished(bool accepted);
-    void messageEditEntry(QString, MessageWidget::MessageType);
+    void messageEditEntry(QString, VaultInfoBar::MessageType);
     void messageEditEntryDismiss();
 
 private slots:

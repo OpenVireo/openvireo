@@ -105,16 +105,16 @@ void AgentSettingsWidget::loadSettings()
             m_ui->sshAuthSockMessageWidget->showMessage(
                 tr("No SSH Agent socket available. Either make sure SSH_AUTH_SOCK environment variable exists or set "
                    "an override."),
-                MessageWidget::Warning);
+                VaultInfoBar::Warning);
             return;
         }
 #endif
         QList<QSharedPointer<OpenSSHKey>> keys;
         if (sshAgent()->listIdentities(keys)) {
             m_ui->sshAuthSockMessageWidget->showMessage(tr("SSH Agent connection is working!"),
-                                                        MessageWidget::Positive);
+                                                        VaultInfoBar::Positive);
         } else {
-            m_ui->sshAuthSockMessageWidget->showMessage(sshAgent()->errorString(), MessageWidget::Error);
+            m_ui->sshAuthSockMessageWidget->showMessage(sshAgent()->errorString(), VaultInfoBar::Error);
         }
     }
 

@@ -21,7 +21,7 @@
 #include "account/AccountPlan.h"
 #include "account/ServiceAccountAdmin.h"
 #include "gui/MessageBox.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QComboBox>
 #include <QDateTime>
@@ -63,7 +63,7 @@ namespace
 DeleteAccountDialog::DeleteAccountDialog(AccountManager* account, QWidget* parent)
     : QDialog(parent)
     , m_account(account)
-    , m_message(new MessageWidget(this))
+    , m_message(new VaultInfoBar(this))
     , m_intro(new QLabel(this))
     , m_summary(new QLabel(this))
     , m_actions(new QWidget(this))
@@ -174,7 +174,7 @@ void DeleteAccountDialog::reload()
         }
         guard->setBusy(false);
         if (!error.isEmpty()) {
-            guard->m_message->showMessage(error, MessageWidget::Error, MessageWidget::DisableAutoHide);
+            guard->m_message->showMessage(error, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
             return;
         }
         guard->m_preview = preview;
@@ -258,7 +258,7 @@ void DeleteAccountDialog::fill()
                 }
                 guard->setBusy(false);
                 if (!ok) {
-                    guard->m_message->showMessage(error, MessageWidget::Error);
+                    guard->m_message->showMessage(error, VaultInfoBar::Error);
                     return;
                 }
                 guard->reload();
@@ -299,7 +299,7 @@ void DeleteAccountDialog::fill()
                     if (!error.ok()) {
                         guard->m_message->showMessage(
                             guard->m_account ? guard->m_account->errorMessage(error) : error.message,
-                            MessageWidget::Error);
+                            VaultInfoBar::Error);
                         return;
                     }
                     guard->reload();
@@ -350,7 +350,7 @@ void DeleteAccountDialog::fill()
                 }
                 guard->setBusy(false);
                 if (!error.isEmpty()) {
-                    guard->m_message->showMessage(error, MessageWidget::Error);
+                    guard->m_message->showMessage(error, VaultInfoBar::Error);
                     return;
                 }
                 guard->reload();
@@ -392,7 +392,7 @@ void DeleteAccountDialog::deleteAccount()
             }
             if (!error.isEmpty()) {
                 guard->setBusy(false);
-                guard->m_message->showMessage(error, MessageWidget::Error, MessageWidget::DisableAutoHide);
+                guard->m_message->showMessage(error, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
                 return;
             }
             Q_UNUSED(scheduledFor)
@@ -404,7 +404,7 @@ void DeleteAccountDialog::deleteAccount()
 PendingDeletionDialog::PendingDeletionDialog(AccountManager* account, QWidget* parent)
     : QDialog(parent)
     , m_account(account)
-    , m_message(new MessageWidget(this))
+    , m_message(new VaultInfoBar(this))
     , m_password(new QLineEdit(this))
     , m_restore(nullptr)
 {
@@ -448,7 +448,7 @@ PendingDeletionDialog::PendingDeletionDialog(AccountManager* account, QWidget* p
             }
             if (!error.isEmpty()) {
                 guard->m_restore->setEnabled(true);
-                guard->m_message->showMessage(error, MessageWidget::Error, MessageWidget::DisableAutoHide);
+                guard->m_message->showMessage(error, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
                 return;
             }
             guard->m_password->clear();

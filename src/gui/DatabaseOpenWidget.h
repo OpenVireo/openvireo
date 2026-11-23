@@ -24,7 +24,7 @@
 #include <QTimer>
 
 #include "gui/DialogyWidget.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "osutils/DeviceListener.h"
 
 class CompositeKey;
@@ -50,7 +50,7 @@ public:
     void enterKey(const QString& pw, const QString& keyFile);
     QSharedPointer<Database> database();
     bool unlockingDatabase();
-    void showMessage(const QString& text, MessageWidget::MessageType type, int autoHideTimeout);
+    void showMessage(const QString& text, VaultInfoBar::MessageType type, int autoHideTimeout);
 
     // Quick Unlock helper functions
     bool canPerformQuickUnlock() const;

@@ -27,15 +27,15 @@ const int NotificationCenter::DuplicateWindowMs = 10000;
 
 namespace
 {
-    int severityRank(MessageWidget::MessageType type)
+    int severityRank(VaultInfoBar::MessageType type)
     {
         switch (type) {
-        case MessageWidget::Error:
+        case VaultInfoBar::Error:
             return 2;
-        case MessageWidget::Warning:
+        case VaultInfoBar::Warning:
             return 1;
-        case MessageWidget::Positive:
-        case MessageWidget::Information:
+        case VaultInfoBar::Positive:
+        case VaultInfoBar::Information:
             break;
         }
         return 0;
@@ -47,7 +47,7 @@ NotificationCenter::NotificationCenter(QObject* parent)
 {
 }
 
-quint64 NotificationCenter::post(const QString& text, MessageWidget::MessageType type, const QString& source)
+quint64 NotificationCenter::post(const QString& text, VaultInfoBar::MessageType type, const QString& source)
 {
     // A repeat of a recent message, such as the same sync error, refreshes it instead of stacking up
     const auto now = Clock::currentDateTime();
@@ -162,9 +162,9 @@ int NotificationCenter::unreadCount() const
     return std::count_if(m_entries.cbegin(), m_entries.cend(), [](const Notification& entry) { return !entry.read; });
 }
 
-std::optional<MessageWidget::MessageType> NotificationCenter::highestUnreadType() const
+std::optional<VaultInfoBar::MessageType> NotificationCenter::highestUnreadType() const
 {
-    std::optional<MessageWidget::MessageType> highest;
+    std::optional<VaultInfoBar::MessageType> highest;
     for (const auto& entry : m_entries) {
         if (!entry.read && (!highest || severityRank(entry.type) > severityRank(*highest))) {
             highest = entry.type;

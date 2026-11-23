@@ -21,7 +21,7 @@
 #include <QDialog>
 
 class AccountManager;
-class MessageWidget;
+class VaultInfoBar;
 class QLabel;
 class QPushButton;
 
@@ -43,7 +43,7 @@ private:
     QString m_email;
     QString m_server;
     QString m_secretKey;
-    MessageWidget* m_message;
+    VaultInfoBar* m_message;
     QLabel* m_secretKeyLabel;
     QPushButton* m_copyButton;
     QPushButton* m_saveButton;

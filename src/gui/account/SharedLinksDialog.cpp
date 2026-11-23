@@ -20,7 +20,7 @@
 #include "ShareLinkDialog.h"
 #include "core/Clock.h"
 #include "gui/MessageBox.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -56,7 +56,7 @@ namespace
 SharedLinksDialog::SharedLinksDialog(ItemShare* shares, QWidget* parent)
     : QDialog(parent)
     , m_shares(shares)
-    , m_message(new MessageWidget(this))
+    , m_message(new VaultInfoBar(this))
     , m_tree(new QTreeWidget(this))
     , m_showEnded(new QCheckBox(tr("Show links that ended"), this))
 {
@@ -126,7 +126,7 @@ void SharedLinksDialog::reload()
             return;
         }
         if (!error.isEmpty()) {
-            guard->m_message->showMessage(error, MessageWidget::Error, MessageWidget::DisableAutoHide);
+            guard->m_message->showMessage(error, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
             return;
         }
         guard->m_list = shares;
@@ -183,10 +183,10 @@ void SharedLinksDialog::revokeSelected()
             return;
         }
         if (!ok) {
-            guard->m_message->showMessage(error, MessageWidget::Error);
+            guard->m_message->showMessage(error, VaultInfoBar::Error);
             return;
         }
-        guard->m_message->showMessage(tr("The link was revoked."), MessageWidget::Positive);
+        guard->m_message->showMessage(tr("The link was revoked."), VaultInfoBar::Positive);
         guard->reload();
     });
 }

@@ -20,7 +20,7 @@
 
 #include <QWidget>
 
-class MessageWidget;
+class VaultInfoBar;
 class QAbstractButton;
 class QLabel;
 class QListWidget;
@@ -45,7 +45,7 @@ private slots:
 private:
     void buildVaultPage();
 
-    MessageWidget* m_statusMessage;
+    VaultInfoBar* m_statusMessage;
     VaultCheckBox* m_enableCheckBox;
     VaultCheckBox* m_keepIdentitiesCheckBox;
     VaultButton* m_openSettingsButton;

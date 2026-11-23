@@ -27,7 +27,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="MessageWidget" name="messageWidget" native="true"/>
+    <widget class="VaultInfoBar" name="messageWidget" native="true"/>
    </item>
    <item>
     <widget class="VaultCheckBox" name="enableBrowserSupport">
@@ -267,7 +267,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <item>
-        <widget class="MessageWidget" name="advancedMessageWidget" native="true">
+        <widget class="VaultInfoBar" name="advancedMessageWidget" native="true">
          <property name="text" stdset="0">
           <string>&lt;b&gt;Warning:&lt;/b&gt; Only adjust these settings if necessary.</string>
          </property>
@@ -652,9 +652,9 @@
    <header>gui/vault/VaultControls.h</header>
   </customwidget>
   <customwidget>
-   <class>MessageWidget</class>
+   <class>VaultInfoBar</class>
    <extends>QWidget</extends>
-   <header>gui/MessageWidget.h</header>
+   <header>gui/vault/VaultInfoBar.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

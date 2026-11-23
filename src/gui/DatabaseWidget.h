@@ -25,7 +25,7 @@
 #include "core/Database.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "gui/entry/EntryModel.h"
 #include "remote/RemoteHandler.h"
 #include "remote/SyncEngine.h"
@@ -293,9 +293,9 @@ public slots:
     void endSearch();
 
     void showMessage(const QString& text,
-                     MessageWidget::MessageType type,
+                     VaultInfoBar::MessageType type,
                      bool showClosebutton = true,
-                     int autoHideTimeout = MessageWidget::DefaultAutoHideTimeout);
+                     int autoHideTimeout = VaultInfoBar::DefaultAutoHideTimeout);
     void showErrorMessage(const QString& errorMessage);
     void hideMessage();
     void triggerAutosaveTimer();
@@ -375,7 +375,7 @@ private:
     QPointer<QWidget> m_mainWidget;
     QPointer<QSplitter> m_mainSplitter;
     QPointer<QSplitter> m_groupSplitter;
-    QPointer<MessageWidget> m_messageWidget;
+    QPointer<VaultInfoBar> m_messageWidget;
     QPointer<QSplitter> m_previewSplitter;
     QPointer<QLabel> m_searchingLabel;
     QPointer<EditEntryWidget> m_editEntryWidget;

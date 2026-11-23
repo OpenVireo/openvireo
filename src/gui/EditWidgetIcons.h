@@ -23,7 +23,7 @@
 #include <QUuid>
 
 #include "config-keepassx.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 
 class Database;
 class DefaultIconModel;
@@ -80,7 +80,7 @@ public slots:
     void abortRequests();
 
 signals:
-    void messageEditEntry(QString, MessageWidget::MessageType);
+    void messageEditEntry(QString, VaultInfoBar::MessageType);
     void messageEditEntryDismiss();
     void widgetUpdated();
 

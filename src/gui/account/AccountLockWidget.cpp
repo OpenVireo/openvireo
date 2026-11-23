@@ -21,7 +21,7 @@
 #include "account/AccountManager.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
-#include "gui/MessageWidget.h"
+#include "gui/vault/VaultInfoBar.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
@@ -78,7 +78,7 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
     , m_orLabel(new QLabel(tr("or use your master password"), m_card))
     , m_passwordLabel(new QLabel(tr("Master password"), m_card))
     , m_passwordEdit(new VaultLineEdit(m_card))
-    , m_messageWidget(new MessageWidget(m_card))
+    , m_messageWidget(new VaultInfoBar(m_card))
     , m_busyLabel(new QLabel(tr("Unlocking…"), m_card))
     , m_unlockButton(new VaultButton(tr("Unlock"), m_card))
     , m_recoverLink(new QLabel(m_card))
@@ -368,7 +368,7 @@ void AccountLockWidget::handleError(const QString& message)
     }
     setBusy(false);
     m_passwordEdit->clear();
-    m_messageWidget->showMessage(message, MessageWidget::Error, MessageWidget::DisableAutoHide);
+    m_messageWidget->showMessage(message, VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
     updateState();
 }
 
