@@ -1,4 +1,0 @@
-# Forms that may still use stock controls, checked by check-fluent-ui.sh.
-#
-# Empty since Phase 4 of the Fluent-only UI plan (openvireo-dev-guide plans/fluent-only-ui.md) redesigned the last
-# dialogs. Don't add forms to it: use the Vault* drop-ins from gui/vault/VaultControls.h.
