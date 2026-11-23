@@ -32,29 +32,17 @@ public:
     ~TagModel() override;
 
     void setDatabase(QSharedPointer<Database> db);
-    // Whether the default and saved searches are listed before the tags
-    void setSearchesVisible(bool visible);
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-
-    enum TagType
-    {
-        DEFAULT_SEARCH,
-        SAVED_SEARCH,
-        TAG
-    };
-    TagType itemType(const QModelIndex& index);
 
 private slots:
     void updateTagList();
 
 private:
     QSharedPointer<Database> m_db;
-    QList<QPair<QString, QString>> m_defaultSearches;
+    // Each tag with the search that finds its entries
     QList<QPair<QString, QString>> m_tagList;
-    int m_tagListStart = 0;
-    bool m_searchesVisible = true;
 };
 
 #endif // KEEPASSX_TAGMODEL_H

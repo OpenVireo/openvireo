@@ -132,7 +132,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
 
     // Setup the tags view and place it under the groups; searching is done from the header
     m_tagView->setObjectName("tagView");
-    m_tagView->setSearchesVisible(false);
     m_tagView->setDatabase(m_db);
     connect(m_tagView, SIGNAL(activated(QModelIndex)), this, SLOT(filterByTag()));
     connect(m_tagView, SIGNAL(clicked(QModelIndex)), this, SLOT(filterByTag()));
@@ -440,7 +439,7 @@ void DatabaseWidget::setSplitterSizes(const QHash<Config::ConfigKey, QList<int>>
 
 void DatabaseWidget::fitVaultTagList()
 {
-    // Without the searches the tag list is empty until the database has tags, and only needs room for a
+    // The tag list is empty until the database has tags, and only needs room for a
     // few of them; the rest scroll and the groups get the remaining height
     auto tagsWidget = m_groupSplitter->widget(1);
     const int rows = m_tagView->model()->rowCount();
