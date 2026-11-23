@@ -142,7 +142,7 @@ private:
                              Action action = MessageBox::None,
                              QCheckBox* checkbox = nullptr);
 
-    // Shows the message as a Fluent content dialog in the Vault Index layout. Returns false, without showing
+    // Shows the message as a Fluent content dialog. Returns false, without showing
     // anything, when the message needs a native message box instead.
     static bool fluentMessageBox(QWidget* parent,
                                  const QString& title,

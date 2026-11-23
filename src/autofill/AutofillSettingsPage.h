@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLSETTINGSPAGE_H
-#define KEEPASSXC_AUTOFILLSETTINGSPAGE_H
+#ifndef OPENVIREO_AUTOFILLSETTINGSPAGE_H
+#define OPENVIREO_AUTOFILLSETTINGSPAGE_H
 
 #include "gui/ApplicationSettingsWidget.h"
 
@@ -33,4 +33,4 @@ public:
     void saveSettings(QWidget* widget) override;
 };
 
-#endif // KEEPASSXC_AUTOFILLSETTINGSPAGE_H
+#endif // OPENVIREO_AUTOFILLSETTINGSPAGE_H

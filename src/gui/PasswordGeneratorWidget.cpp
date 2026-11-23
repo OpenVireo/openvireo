@@ -220,7 +220,7 @@ PasswordGeneratorWidget::PasswordGeneratorWidget(QWidget* parent)
     loadSettings();
 }
 
-// In the Vault Index layout, the password is the main content of the generator: a card with the password in a large
+// The password is the main content of the generator: a card with the password in a large
 // field, the buttons to regenerate and copy it, and its strength below as a meter and a line of figures.
 void PasswordGeneratorWidget::setupVaultHero()
 {
@@ -291,7 +291,7 @@ void PasswordGeneratorWidget::setupVaultHero()
     delete oldLayout;
 }
 
-// In the Vault Index layout, the password and passphrase tabs read as a Fluent pivot: plain labels with an accent
+// The password and passphrase tabs read as a Fluent pivot: plain labels with an accent
 // line under the current one. The style draws a tab widget's own bar on a filled base, so a separate tab bar switches
 // the tab widget, which keeps the current page for the generator's logic.
 void PasswordGeneratorWidget::setupVaultPivot()
@@ -315,7 +315,7 @@ void PasswordGeneratorWidget::setupVaultPivot()
     m_ui->verticalLayout_2->insertWidget(m_ui->verticalLayout_2->indexOf(tabs), pivot, 0, Qt::AlignLeft);
 }
 
-// In the Vault Index layout, the options of each generator read as Fluent settings cards. The advanced options are a
+// The options of each generator read as Fluent settings cards. The advanced options are a
 // card of their own that a switch opens, in place of the Advanced button.
 void PasswordGeneratorWidget::setupVaultPages()
 {
@@ -762,7 +762,7 @@ void PasswordGeneratorWidget::setAdvancedMode(bool advanced)
     }
 
     m_ui->advancedContainer->setVisible(advanced);
-    // The Vault Index layout shows these on cards of their own, outside of the advanced container
+    // The layout shows these on cards of their own, outside of the advanced container
     m_ui->editAdditionalChars->setVisible(advanced);
     m_ui->editExcludedChars->setVisible(advanced);
     m_ui->buttonAddHex->setVisible(advanced);

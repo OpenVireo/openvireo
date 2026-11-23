@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTGUIAUTOSYNC_H
-#define KEEPASSXC_TESTGUIAUTOSYNC_H
+#ifndef OPENVIREO_TESTGUIAUTOSYNC_H
+#define OPENVIREO_TESTGUIAUTOSYNC_H
 
 #include <QObject>
 
@@ -42,4 +42,4 @@ private slots:
     void testSharedVaultSyncsWithThisDevicesAccount();
 };
 
-#endif // KEEPASSXC_TESTGUIAUTOSYNC_H
+#endif // OPENVIREO_TESTGUIAUTOSYNC_H

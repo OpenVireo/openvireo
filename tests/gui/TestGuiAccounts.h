@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTGUIACCOUNTS_H
-#define KEEPASSXC_TESTGUIACCOUNTS_H
+#ifndef OPENVIREO_TESTGUIACCOUNTS_H
+#define OPENVIREO_TESTGUIACCOUNTS_H
 
 #include <QObject>
 #include <QScopedPointer>
@@ -81,4 +81,4 @@ private:
     QList<QUrl> m_openedUrls;
 };
 
-#endif // KEEPASSXC_TESTGUIACCOUNTS_H
+#endif // OPENVIREO_TESTGUIACCOUNTS_H

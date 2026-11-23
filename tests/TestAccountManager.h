@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTACCOUNTMANAGER_H
-#define KEEPASSXC_TESTACCOUNTMANAGER_H
+#ifndef OPENVIREO_TESTACCOUNTMANAGER_H
+#define OPENVIREO_TESTACCOUNTMANAGER_H
 
 #include <QObject>
 
@@ -58,4 +58,4 @@ private slots:
     void testOfflineUnlockCanBeTurnedOff();
 };
 
-#endif // KEEPASSXC_TESTACCOUNTMANAGER_H
+#endif // OPENVIREO_TESTACCOUNTMANAGER_H

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTREMOTESYNCSERVER_H
-#define KEEPASSXC_TESTREMOTESYNCSERVER_H
+#ifndef OPENVIREO_TESTREMOTESYNCSERVER_H
+#define OPENVIREO_TESTREMOTESYNCSERVER_H
 
 #include <QObject>
 
@@ -44,4 +44,4 @@ private slots:
     void testPairsAnotherDevice();
 };
 
-#endif // KEEPASSXC_TESTREMOTESYNCSERVER_H
+#endif // OPENVIREO_TESTREMOTESYNCSERVER_H

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTSTARTWIDGET_H
-#define KEEPASSXC_ACCOUNTSTARTWIDGET_H
+#ifndef OPENVIREO_ACCOUNTSTARTWIDGET_H
+#define OPENVIREO_ACCOUNTSTARTWIDGET_H
 
 #include <QLabel>
 #include <QPointer>
@@ -151,4 +151,4 @@ private:
     QString m_signInIntroText;
 };
 
-#endif // KEEPASSXC_ACCOUNTSTARTWIDGET_H
+#endif // OPENVIREO_ACCOUNTSTARTWIDGET_H

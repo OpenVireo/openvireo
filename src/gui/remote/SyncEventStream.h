@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCEVENTSTREAM_H
-#define KEEPASSXC_SYNCEVENTSTREAM_H
+#ifndef OPENVIREO_SYNCEVENTSTREAM_H
+#define OPENVIREO_SYNCEVENTSTREAM_H
 
 #include "config-keepassx.h"
 
@@ -112,4 +112,4 @@ private:
     Q_DISABLE_COPY(SyncEventStream)
 };
 
-#endif // KEEPASSXC_SYNCEVENTSTREAM_H
+#endif // OPENVIREO_SYNCEVENTSTREAM_H

@@ -49,7 +49,7 @@ public:
     bool validatePage() override;
     bool isComplete() const override;
 
-    // In the Vault Index layout, the modal shows the choice of source and the rest of the page as separate steps
+    // The modal shows the choice of source and the rest of the page as separate steps
     void setSourceStep(bool sourceStep);
     QString sourceName() const;
 
@@ -83,7 +83,7 @@ private:
     int m_importType = 0;
     int m_importIntoType = 0;
     QVariant m_importInto;
-    // The cards below the choice of source in the Vault Index layout
+    // The cards below the choice of source
     QWidget* m_details = nullptr;
     QWidget* m_newVaultRow = nullptr;
     VaultRadioButton* m_newVaultRadio = nullptr;

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTCRYPTO_H
-#define KEEPASSXC_ACCOUNTCRYPTO_H
+#ifndef OPENVIREO_ACCOUNTCRYPTO_H
+#define OPENVIREO_ACCOUNTCRYPTO_H
 
 #include <QByteArray>
 #include <QJsonObject>
@@ -232,4 +232,4 @@ namespace AccountCrypto
     bool parseJwtClaims(const QString& token, JwtClaims* claims);
 } // namespace AccountCrypto
 
-#endif // KEEPASSXC_ACCOUNTCRYPTO_H
+#endif // OPENVIREO_ACCOUNTCRYPTO_H

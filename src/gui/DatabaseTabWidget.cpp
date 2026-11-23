@@ -271,7 +271,7 @@ void DatabaseTabWidget::importFile()
 
     // Show the import wizard
     m_importWizard = new ImportWizard(this);
-    // In the Vault Index layout, the wizard shows in a modal over the window. It closes when the wizard finishes,
+    // The wizard shows in a modal over the window. It closes when the wizard finishes,
     // before the import below runs, so made first.
     QPointer<VaultImportModal> modal;
     modal = new VaultImportModal(window(), m_importWizard);

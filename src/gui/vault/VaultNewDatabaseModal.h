@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTNEWDATABASEMODAL_H
-#define KEEPASSXC_VAULTNEWDATABASEMODAL_H
+#ifndef OPENVIREO_VAULTNEWDATABASEMODAL_H
+#define OPENVIREO_VAULTNEWDATABASEMODAL_H
 
 #include "VaultModal.h"
 
@@ -29,7 +29,7 @@ class VaultStepList;
 
 /**
  * Creates a new database in a modal card over the main window, standing in for
- * the New Database wizard in the Vault Index layout. The wizard's pages are
+ * the New Database wizard. The wizard's pages are
  * steps listed in a sidebar, with Back and Continue in the footer; the last
  * step's Continue creates the database.
  */
@@ -81,4 +81,4 @@ private:
     QPushButton* m_nextButton;
 };
 
-#endif // KEEPASSXC_VAULTNEWDATABASEMODAL_H
+#endif // OPENVIREO_VAULTNEWDATABASEMODAL_H

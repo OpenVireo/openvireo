@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOUPDATER_H
-#define KEEPASSXC_AUTOUPDATER_H
+#ifndef OPENVIREO_AUTOUPDATER_H
+#define OPENVIREO_AUTOUPDATER_H
 
 #include <QObject>
 #include <QUrl>
@@ -51,4 +51,4 @@ private:
     bool m_started = false;
 };
 
-#endif // KEEPASSXC_AUTOUPDATER_H
+#endif // OPENVIREO_AUTOUPDATER_H

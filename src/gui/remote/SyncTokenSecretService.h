@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCTOKENSECRETSERVICE_H
-#define KEEPASSXC_SYNCTOKENSECRETSERVICE_H
+#ifndef OPENVIREO_SYNCTOKENSECRETSERVICE_H
+#define OPENVIREO_SYNCTOKENSECRETSERVICE_H
 
 #include "SyncTokenStore.h"
 
@@ -30,4 +30,4 @@
  */
 std::unique_ptr<SyncTokenStore::Backend> createSecretServiceBackend();
 
-#endif // KEEPASSXC_SYNCTOKENSECRETSERVICE_H
+#endif // OPENVIREO_SYNCTOKENSECRETSERVICE_H

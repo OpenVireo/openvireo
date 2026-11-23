@@ -201,7 +201,7 @@ void ShareLinkDialog::addOptions(QWidget* parent)
     m_regenerate = regenerate;
 }
 
-// In the Vault Index layout, the choices read as Fluent settings cards: the fields to include as check boxes on a
+// The choices read as Fluent settings cards: the fields to include as check boxes on a
 // card, then the link's settings, with the passcode showing below its switch while it's on. The made link has a card
 // with the link and its copy button, the passcode, and the QR code. Over the main window the dialog is the content
 // of a modal card, which provides the title and the buttons; over another dialog it is a Fluent window of its own,

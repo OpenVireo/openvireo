@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLHOST_H
-#define KEEPASSXC_AUTOFILLHOST_H
+#ifndef OPENVIREO_AUTOFILLHOST_H
+#define OPENVIREO_AUTOFILLHOST_H
 
 #include "AutofillProtocol.h"
 
@@ -68,4 +68,4 @@ private:
     PeerValidator m_validator;
 };
 
-#endif // KEEPASSXC_AUTOFILLHOST_H
+#endif // OPENVIREO_AUTOFILLHOST_H

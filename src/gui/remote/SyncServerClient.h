@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCSERVERCLIENT_H
-#define KEEPASSXC_SYNCSERVERCLIENT_H
+#ifndef OPENVIREO_SYNCSERVERCLIENT_H
+#define OPENVIREO_SYNCSERVERCLIENT_H
 
 #include "config-keepassx.h"
 
@@ -250,4 +250,4 @@ private:
     Q_DISABLE_COPY(SyncServerClient)
 };
 
-#endif // KEEPASSXC_SYNCSERVERCLIENT_H
+#endif // OPENVIREO_SYNCSERVERCLIENT_H

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTLOCKWIDGET_H
-#define KEEPASSXC_ACCOUNTLOCKWIDGET_H
+#ifndef OPENVIREO_ACCOUNTLOCKWIDGET_H
+#define OPENVIREO_ACCOUNTLOCKWIDGET_H
 
 #include <QPointer>
 #include <QWidget>
@@ -95,4 +95,4 @@ private:
     bool m_databasesOpen = false;
 };
 
-#endif // KEEPASSXC_ACCOUNTLOCKWIDGET_H
+#endif // OPENVIREO_ACCOUNTLOCKWIDGET_H

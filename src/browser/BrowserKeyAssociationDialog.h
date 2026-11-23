@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_BROWSERKEYASSOCIATIONDIALOG_H
-#define KEEPASSXC_BROWSERKEYASSOCIATIONDIALOG_H
+#ifndef OPENVIREO_BROWSERKEYASSOCIATIONDIALOG_H
+#define OPENVIREO_BROWSERKEYASSOCIATIONDIALOG_H
 
 #include <components/dialogs_flyouts/ContentDialog.h>
 
@@ -27,7 +27,7 @@ class QAbstractButton;
 class VaultLineEdit;
 
 /**
- * A browser's request to connect to the database, in the Vault Index layout.
+ * A browser's request to connect to the database.
  *
  * Shows as a Fluent content dialog over the window, asking for a name for the
  * connection in a Fluent text field. Save and allow access leads as the accent
@@ -69,4 +69,4 @@ private:
     QString m_defaultHint;
 };
 
-#endif // KEEPASSXC_BROWSERKEYASSOCIATIONDIALOG_H
+#endif // OPENVIREO_BROWSERKEYASSOCIATIONDIALOG_H

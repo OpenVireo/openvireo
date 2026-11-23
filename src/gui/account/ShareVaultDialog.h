@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SHAREVAULTDIALOG_H
-#define KEEPASSXC_SHAREVAULTDIALOG_H
+#ifndef OPENVIREO_SHAREVAULTDIALOG_H
+#define OPENVIREO_SHAREVAULTDIALOG_H
 
 #include "account/VaultSharing.h"
 
@@ -72,4 +72,4 @@ private:
     bool m_busy = false;
 };
 
-#endif // KEEPASSXC_SHAREVAULTDIALOG_H
+#endif // OPENVIREO_SHAREVAULTDIALOG_H

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCSCHEDULER_H
-#define KEEPASSXC_SYNCSCHEDULER_H
+#ifndef OPENVIREO_SYNCSCHEDULER_H
+#define OPENVIREO_SYNCSCHEDULER_H
 
 #include <QElapsedTimer>
 #include <QObject>
@@ -70,4 +70,4 @@ private:
     QElapsedTimer m_sinceLastRequest;
 };
 
-#endif // KEEPASSXC_SYNCSCHEDULER_H
+#endif // OPENVIREO_SYNCSCHEDULER_H

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTVAULTS_H
-#define KEEPASSXC_ACCOUNTVAULTS_H
+#ifndef OPENVIREO_ACCOUNTVAULTS_H
+#define OPENVIREO_ACCOUNTVAULTS_H
 
 #include "account/VaultKeyring.h"
 
@@ -49,4 +49,4 @@ public:
     static QString vaultToolTip(const VaultKeyring::Vault& vault);
 };
 
-#endif // KEEPASSXC_ACCOUNTVAULTS_H
+#endif // OPENVIREO_ACCOUNTVAULTS_H

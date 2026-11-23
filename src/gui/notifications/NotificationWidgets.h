@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_NOTIFICATIONWIDGETS_H
-#define KEEPASSXC_NOTIFICATIONWIDGETS_H
+#ifndef OPENVIREO_NOTIFICATIONWIDGETS_H
+#define OPENVIREO_NOTIFICATIONWIDGETS_H
 
 #include "gui/notifications/NotificationCenter.h"
 
@@ -139,4 +139,4 @@ private:
 // "Just now", "5 min ago", or the time or date for older entries
 QString notificationRelativeTime(const QDateTime& time);
 
-#endif // KEEPASSXC_NOTIFICATIONWIDGETS_H
+#endif // OPENVIREO_NOTIFICATIONWIDGETS_H

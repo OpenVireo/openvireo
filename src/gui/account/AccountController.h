@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTCONTROLLER_H
-#define KEEPASSXC_ACCOUNTCONTROLLER_H
+#ifndef OPENVIREO_ACCOUNTCONTROLLER_H
+#define OPENVIREO_ACCOUNTCONTROLLER_H
 
 #include "gui/vault/VaultInfoBar.h"
 
@@ -177,4 +177,4 @@ private:
     QSet<QString> m_opening;
 };
 
-#endif // KEEPASSXC_ACCOUNTCONTROLLER_H
+#endif // OPENVIREO_ACCOUNTCONTROLLER_H

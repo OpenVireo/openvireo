@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTMODAL_H
-#define KEEPASSXC_VAULTMODAL_H
+#ifndef OPENVIREO_VAULTMODAL_H
+#define OPENVIREO_VAULTMODAL_H
 
 #include <QColor>
 #include <QFont>
@@ -145,4 +145,4 @@ private:
     int m_current = 0;
 };
 
-#endif // KEEPASSXC_VAULTMODAL_H
+#endif // OPENVIREO_VAULTMODAL_H

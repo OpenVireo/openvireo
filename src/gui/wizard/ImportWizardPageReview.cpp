@@ -143,7 +143,7 @@ QSharedPointer<Database> ImportWizardPageReview::database()
     return m_db;
 }
 
-// In the Vault Index layout, the page is the content of a modal, which names the step. The source heads a flat
+// The page is the content of a modal, which names the step. The source heads a flat
 // preview, and errors show in a Fluent info bar.
 void ImportWizardPageReview::setupVaultLayout()
 {

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTSHARING_H
-#define KEEPASSXC_VAULTSHARING_H
+#ifndef OPENVIREO_VAULTSHARING_H
+#define OPENVIREO_VAULTSHARING_H
 
 #include "AccountCrypto.h"
 #include "AccountManager.h"
@@ -138,4 +138,4 @@ private:
     QPointer<AccountManager> m_account;
 };
 
-#endif // KEEPASSXC_VAULTSHARING_H
+#endif // OPENVIREO_VAULTSHARING_H

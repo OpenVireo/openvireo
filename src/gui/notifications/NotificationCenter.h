@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_NOTIFICATIONCENTER_H
-#define KEEPASSXC_NOTIFICATIONCENTER_H
+#ifndef OPENVIREO_NOTIFICATIONCENTER_H
+#define OPENVIREO_NOTIFICATIONCENTER_H
 
 #include "gui/vault/VaultInfoBar.h"
 
@@ -96,4 +96,4 @@ private:
     quint64 m_nextId = 1;
 };
 
-#endif // KEEPASSXC_NOTIFICATIONCENTER_H
+#endif // OPENVIREO_NOTIFICATIONCENTER_H

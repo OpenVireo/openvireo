@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTACCOUNTPLAN_H
-#define KEEPASSXC_TESTACCOUNTPLAN_H
+#ifndef OPENVIREO_TESTACCOUNTPLAN_H
+#define OPENVIREO_TESTACCOUNTPLAN_H
 
 #include <QObject>
 
@@ -34,4 +34,4 @@ private slots:
     void testDeletionNote();
 };
 
-#endif // KEEPASSXC_TESTACCOUNTPLAN_H
+#endif // OPENVIREO_TESTACCOUNTPLAN_H

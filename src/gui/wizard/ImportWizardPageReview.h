@@ -82,7 +82,7 @@ private:
     QSharedPointer<Database> m_db;
     QPointer<CsvImportWidget> m_csvWidget;
     QPointer<RemoteHandler> m_remoteHandler;
-    // In the Vault Index layout, import errors show here instead of in the message widget
+    // Import errors show here instead of in the message widget
     QPointer<fluent::status_info::InfoBar> m_errorBar;
 };
 

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_CORETESTSERVERS_H
-#define KEEPASSXC_CORETESTSERVERS_H
+#ifndef OPENVIREO_CORETESTSERVERS_H
+#define OPENVIREO_CORETESTSERVERS_H
 
 #include <ovcore.h>
 
@@ -50,4 +50,4 @@ namespace CoreTestServers
     };
 } // namespace CoreTestServers
 
-#endif // KEEPASSXC_CORETESTSERVERS_H
+#endif // OPENVIREO_CORETESTSERVERS_H

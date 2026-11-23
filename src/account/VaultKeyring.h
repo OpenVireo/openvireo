@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTKEYRING_H
-#define KEEPASSXC_VAULTKEYRING_H
+#ifndef OPENVIREO_VAULTKEYRING_H
+#define OPENVIREO_VAULTKEYRING_H
 
 #include "AccountCrypto.h"
 
@@ -100,4 +100,4 @@ private:
     QHash<QString, QMap<int, SecureBytes>> m_keys;
 };
 
-#endif // KEEPASSXC_VAULTKEYRING_H
+#endif // OPENVIREO_VAULTKEYRING_H

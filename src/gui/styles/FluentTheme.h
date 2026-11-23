@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_FLUENTTHEME_H
-#define KEEPASSXC_FLUENTTHEME_H
+#ifndef OPENVIREO_FLUENTTHEME_H
+#define OPENVIREO_FLUENTTHEME_H
 
 #include <QColor>
 #include <QPalette>
@@ -29,7 +29,7 @@ class QString;
 /**
  * Bridge between KeePassXC's theme and Fluent-Qt.
  *
- * All brand colors used by the Vault Index layout live here so the Fluent-Qt
+ * All brand colors used by the main window live here so the Fluent-Qt
  * components and the KeePassXC widgets drawn next to them stay consistent.
  */
 namespace FluentTheme
@@ -137,4 +137,4 @@ namespace FluentTheme
     QAction* action(const QString& objectName);
 } // namespace FluentTheme
 
-#endif // KEEPASSXC_FLUENTTHEME_H
+#endif // OPENVIREO_FLUENTTHEME_H

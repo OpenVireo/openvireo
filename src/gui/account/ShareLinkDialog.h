@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SHARELINKDIALOG_H
-#define KEEPASSXC_SHARELINKDIALOG_H
+#ifndef OPENVIREO_SHARELINKDIALOG_H
+#define OPENVIREO_SHARELINKDIALOG_H
 
 #include "gui/vault/VaultInfoBar.h"
 
@@ -48,7 +48,7 @@ class ShareLinkDialog : public QDialog
 public:
     ShareLinkDialog(ItemShare* shares, const QString& vaultId, Entry* entry, QWidget* parent = nullptr);
 
-    // Opens the dialog, deleted once closed. In the Vault Index layout it is a modal card over the main window,
+    // Opens the dialog, deleted once closed. It is a modal card over the main window,
     // or a Fluent window of its own over another dialog.
     static ShareLinkDialog* present(ItemShare* shares, const QString& vaultId, Entry* entry, QWidget* parent);
 
@@ -101,4 +101,4 @@ private:
     QWidget* m_vaultCommands = nullptr;
 };
 
-#endif // KEEPASSXC_SHARELINKDIALOG_H
+#endif // OPENVIREO_SHARELINKDIALOG_H

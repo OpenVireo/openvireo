@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCSTATESTORE_H
-#define KEEPASSXC_SYNCSTATESTORE_H
+#ifndef OPENVIREO_SYNCSTATESTORE_H
+#define OPENVIREO_SYNCSTATESTORE_H
 
 #include <QDateTime>
 #include <QHash>
@@ -75,4 +75,4 @@ private:
     QString m_filePath;
 };
 
-#endif // KEEPASSXC_SYNCSTATESTORE_H
+#endif // OPENVIREO_SYNCSTATESTORE_H

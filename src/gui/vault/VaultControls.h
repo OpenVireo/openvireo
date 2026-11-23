@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTCONTROLS_H
-#define KEEPASSXC_VAULTCONTROLS_H
+#ifndef OPENVIREO_VAULTCONTROLS_H
+#define OPENVIREO_VAULTCONTROLS_H
 
 #include <QDateTimeEdit>
 #include <QDialogButtonBox>
@@ -361,4 +361,4 @@ private:
     QPointer<QAction> m_pressedAction;
 };
 
-#endif // KEEPASSXC_VAULTCONTROLS_H
+#endif // OPENVIREO_VAULTCONTROLS_H

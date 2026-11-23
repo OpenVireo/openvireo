@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_BUILDINFO_H
-#define KEEPASSXC_BUILDINFO_H
+#ifndef OPENVIREO_BUILDINFO_H
+#define OPENVIREO_BUILDINFO_H
 
 #include <QCoreApplication>
 #include <QString>
@@ -60,4 +60,4 @@ public:
     static void setKindForTests(std::optional<Kind> kind);
 };
 
-#endif // KEEPASSXC_BUILDINFO_H
+#endif // OPENVIREO_BUILDINFO_H

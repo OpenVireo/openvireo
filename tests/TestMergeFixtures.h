@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTMERGEFIXTURES_H
-#define KEEPASSXC_TESTMERGEFIXTURES_H
+#ifndef OPENVIREO_TESTMERGEFIXTURES_H
+#define OPENVIREO_TESTMERGEFIXTURES_H
 
 #include <QObject>
 
@@ -31,4 +31,4 @@ private slots:
     void testFixtures();
 };
 
-#endif // KEEPASSXC_TESTMERGEFIXTURES_H
+#endif // OPENVIREO_TESTMERGEFIXTURES_H

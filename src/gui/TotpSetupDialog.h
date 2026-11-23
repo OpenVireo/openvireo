@@ -56,7 +56,7 @@ private:
 
     QScopedPointer<Ui::TotpSetupDialog> m_ui;
     Entry* m_entry;
-    // In the Vault Index layout, problems with the key show here instead of in a message box
+    // Problems with the key show here instead of in a message box
     fluent::status_info::InfoBar* m_errorBar = nullptr;
 };
 

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTSETTINGSPAGE_H
-#define KEEPASSXC_VAULTSETTINGSPAGE_H
+#ifndef OPENVIREO_VAULTSETTINGSPAGE_H
+#define OPENVIREO_VAULTSETTINGSPAGE_H
 
 #include <QPointer>
 #include <QWidget>
@@ -204,4 +204,4 @@ private:
     bool m_expanded = true;
 };
 
-#endif // KEEPASSXC_VAULTSETTINGSPAGE_H
+#endif // OPENVIREO_VAULTSETTINGSPAGE_H

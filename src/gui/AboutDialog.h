@@ -48,7 +48,7 @@ private:
     void setupVaultDebugPage();
 
     QScopedPointer<Ui::AboutDialog> m_ui;
-    // In the Vault Index layout, copies the debug info and confirms it for a moment
+    // Copies the debug info and confirms it for a moment
     VaultButton* m_vaultCopyButton = nullptr;
 };
 

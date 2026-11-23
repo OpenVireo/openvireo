@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTSEARCHHELP_H
-#define KEEPASSXC_VAULTSEARCHHELP_H
+#ifndef OPENVIREO_VAULTSEARCHHELP_H
+#define OPENVIREO_VAULTSEARCHHELP_H
 
 #include <components/dialogs_flyouts/Flyout.h>
 
@@ -24,7 +24,7 @@ class QGridLayout;
 class QVBoxLayout;
 
 /**
- * Search help in the Vault Index layout: a flyout below the search box that
+ * Search help: a flyout below the search box that
  * lists the fields, modifiers and wildcards, with examples to try.
  *
  * Clicking a field inserts it into the search, clicking an example runs it.
@@ -45,4 +45,4 @@ private:
     void addSyntaxRow(QGridLayout* grid, int row, int column, const QString& token, const QString& meaning);
 };
 
-#endif // KEEPASSXC_VAULTSEARCHHELP_H
+#endif // OPENVIREO_VAULTSEARCHHELP_H

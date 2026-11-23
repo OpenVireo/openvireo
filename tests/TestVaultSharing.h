@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTVAULTSHARING_H
-#define KEEPASSXC_TESTVAULTSHARING_H
+#ifndef OPENVIREO_TESTVAULTSHARING_H
+#define OPENVIREO_TESTVAULTSHARING_H
 
 #include <QObject>
 
@@ -50,4 +50,4 @@ private slots:
     void testShareLinksFollowTheOrgPolicy();
 };
 
-#endif // KEEPASSXC_TESTVAULTSHARING_H
+#endif // OPENVIREO_TESTVAULTSHARING_H

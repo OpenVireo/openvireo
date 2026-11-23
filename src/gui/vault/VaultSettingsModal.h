@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTSETTINGSMODAL_H
-#define KEEPASSXC_VAULTSETTINGSMODAL_H
+#ifndef OPENVIREO_VAULTSETTINGSMODAL_H
+#define OPENVIREO_VAULTSETTINGSMODAL_H
 
 #include "VaultModal.h"
 
@@ -59,4 +59,4 @@ private:
     QListView* m_navigation;
 };
 
-#endif // KEEPASSXC_VAULTSETTINGSMODAL_H
+#endif // OPENVIREO_VAULTSETTINGSMODAL_H

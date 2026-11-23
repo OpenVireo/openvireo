@@ -118,7 +118,7 @@ void AboutDialog::copyToClipboard()
     }
 }
 
-// In the Vault Index layout, the dialog is the content of a modal over the window, which provides the title and the
+// The dialog is the content of a modal over the window, which provides the title and the
 // Close button. The app reads as a hero at the top, with its pages below it as a Fluent pivot of settings cards.
 void AboutDialog::setupVaultLayout()
 {

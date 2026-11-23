@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTSYNCSCHEDULER_H
-#define KEEPASSXC_TESTSYNCSCHEDULER_H
+#ifndef OPENVIREO_TESTSYNCSCHEDULER_H
+#define OPENVIREO_TESTSYNCSCHEDULER_H
 
 #include <QObject>
 
@@ -33,4 +33,4 @@ private slots:
     void testParsesServerEvents();
 };
 
-#endif // KEEPASSXC_TESTSYNCSCHEDULER_H
+#endif // OPENVIREO_TESTSYNCSCHEDULER_H

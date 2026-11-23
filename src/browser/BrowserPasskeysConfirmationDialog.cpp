@@ -80,7 +80,7 @@ BrowserPasskeysConfirmationDialog::~BrowserPasskeysConfirmationDialog()
 {
 }
 
-// In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, which provides the title
+// The dialog shows as a Fluent content dialog over the window, which provides the title
 // and the commands. The site and the user read as Fluent settings cards, the passkeys to choose from as radio buttons
 // on a card of their own, and the time left as a Fluent progress bar.
 void BrowserPasskeysConfirmationDialog::setupVaultLayout()

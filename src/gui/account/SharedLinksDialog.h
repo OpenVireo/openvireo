@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SHAREDLINKSDIALOG_H
-#define KEEPASSXC_SHAREDLINKSDIALOG_H
+#ifndef OPENVIREO_SHAREDLINKSDIALOG_H
+#define OPENVIREO_SHAREDLINKSDIALOG_H
 
 #include "account/ItemShare.h"
 
@@ -55,4 +55,4 @@ private:
     QPushButton* m_revoke;
 };
 
-#endif // KEEPASSXC_SHAREDLINKSDIALOG_H
+#endif // OPENVIREO_SHAREDLINKSDIALOG_H

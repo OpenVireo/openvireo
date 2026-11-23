@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTNOTIFICATIONS_H
-#define KEEPASSXC_TESTNOTIFICATIONS_H
+#ifndef OPENVIREO_TESTNOTIFICATIONS_H
+#define OPENVIREO_TESTNOTIFICATIONS_H
 
 #include "gui/MainWindow.h"
 
@@ -56,4 +56,4 @@ private:
     QScopedPointer<MainWindow> m_mainWindow;
 };
 
-#endif // KEEPASSXC_TESTNOTIFICATIONS_H
+#endif // OPENVIREO_TESTNOTIFICATIONS_H

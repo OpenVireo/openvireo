@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_EMERGENCYKITDIALOG_H
-#define KEEPASSXC_EMERGENCYKITDIALOG_H
+#ifndef OPENVIREO_EMERGENCYKITDIALOG_H
+#define OPENVIREO_EMERGENCYKITDIALOG_H
 
 #include <QDialog>
 
@@ -49,4 +49,4 @@ private:
     QPushButton* m_saveButton;
 };
 
-#endif // KEEPASSXC_EMERGENCYKITDIALOG_H
+#endif // OPENVIREO_EMERGENCYKITDIALOG_H

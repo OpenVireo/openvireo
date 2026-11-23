@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTACCOUNTCORE_H
-#define KEEPASSXC_TESTACCOUNTCORE_H
+#ifndef OPENVIREO_TESTACCOUNTCORE_H
+#define OPENVIREO_TESTACCOUNTCORE_H
 
 #include <QObject>
 
@@ -49,4 +49,4 @@ private:
     QString m_base;
 };
 
-#endif // KEEPASSXC_TESTACCOUNTCORE_H
+#endif // OPENVIREO_TESTACCOUNTCORE_H

@@ -609,7 +609,7 @@ void DatabaseWidget::setupTotp()
     }
     connect(this, &DatabaseWidget::databaseLockRequested, setupTotpDialog, &TotpSetupDialog::close);
 
-    // Vault Index layout: the dialog opens as a modal card over the window, like the other editors
+    // The dialog opens as a modal card over the window, like the other editors
     setupTotpDialog->setWindowFlags(Qt::Widget);
     auto* modal =
         new VaultModal(window(), setupTotpDialog, setupTotpDialog->windowTitle(), QStringLiteral("vaultTotpSetup"));
@@ -1206,7 +1206,7 @@ void DatabaseWidget::deleteGroup()
 }
 
 /**
- * Vault Index layout: navigation pane | command bar over entry list | detail card.
+ * Navigation pane | command bar over entry list | detail card.
  */
 void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
 {
@@ -1949,7 +1949,7 @@ void DatabaseWidget::showServerHistory(const RemoteParams* params)
     });
     connect(this, &DatabaseWidget::databaseLockRequested, dialog, &QDialog::reject);
 
-    // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
+    // The dialog opens as a modal card over the window, like the other dialogs
     dialog->setWindowFlags(Qt::Widget);
     dialog->buttonBox()->hide();
     auto* modal = new VaultModal(window(), dialog, dialog->windowTitle(), QStringLiteral("vaultSyncHistory"));

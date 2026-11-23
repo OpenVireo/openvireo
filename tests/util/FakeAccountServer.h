@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_FAKEACCOUNTSERVER_H
-#define KEEPASSXC_FAKEACCOUNTSERVER_H
+#ifndef OPENVIREO_FAKEACCOUNTSERVER_H
+#define OPENVIREO_FAKEACCOUNTSERVER_H
 
 #include "account/AccountManager.h"
 #include "account/CoreHost.h"
@@ -293,4 +293,4 @@ namespace FakeAccount
     void restoreSyncFactory();
 } // namespace FakeAccount
 
-#endif // KEEPASSXC_FAKEACCOUNTSERVER_H
+#endif // OPENVIREO_FAKEACCOUNTSERVER_H

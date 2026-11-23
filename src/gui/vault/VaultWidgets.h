@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTWIDGETS_H
-#define KEEPASSXC_VAULTWIDGETS_H
+#ifndef OPENVIREO_VAULTWIDGETS_H
+#define OPENVIREO_VAULTWIDGETS_H
 
 #include <QWidget>
 
@@ -102,4 +102,4 @@ private:
     int fittedHeight() const;
 };
 
-#endif // KEEPASSXC_VAULTWIDGETS_H
+#endif // OPENVIREO_VAULTWIDGETS_H

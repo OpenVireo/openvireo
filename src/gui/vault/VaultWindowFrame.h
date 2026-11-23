@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTWINDOWFRAME_H
-#define KEEPASSXC_VAULTWINDOWFRAME_H
+#ifndef OPENVIREO_VAULTWINDOWFRAME_H
+#define OPENVIREO_VAULTWINDOWFRAME_H
 
 #include <QObject>
 #include <QPointer>
@@ -34,7 +34,7 @@ namespace fluent::windowing
 }
 
 /**
- * Fluent window frame for the Vault Index layout: the header becomes the
+ * Fluent window frame: the header becomes the
  * window's title bar, drawn into the title bar area next to the native window
  * controls, using Fluent-Qt's window chrome.
  *
@@ -70,4 +70,4 @@ private:
     bool m_syncPending = false;
 };
 
-#endif // KEEPASSXC_VAULTWINDOWFRAME_H
+#endif // OPENVIREO_VAULTWINDOWFRAME_H

@@ -63,7 +63,7 @@ public:
 
 signals:
     void disableAccess(QTableWidgetItem* item);
-    // A choice in the Vault Index layout changed, so whether there is anything to allow may have too
+    // A choice changed, so whether there is anything to allow may have too
     void vaultChoicesChanged();
 
 protected:
@@ -88,7 +88,7 @@ private:
     QScopedPointer<Ui::BrowserAccessControlDialog> m_ui;
     QList<Entry*> m_entriesToConfirm;
 
-    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these
+    // The dialog shows as a Fluent content dialog over the window, holding these
     // cards. Without a window to show over, the dialog shows them in a Fluent window of its own.
     struct VaultEntryRow
     {

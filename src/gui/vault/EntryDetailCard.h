@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ENTRYDETAILCARD_H
-#define KEEPASSXC_ENTRYDETAILCARD_H
+#ifndef OPENVIREO_ENTRYDETAILCARD_H
+#define OPENVIREO_ENTRYDETAILCARD_H
 
 #include <QList>
 #include <QPointer>
@@ -38,7 +38,7 @@ namespace fluent::basicinput
 }
 
 /**
- * Vault Index detail pane: the selected entry with one row per field and a
+ * Detail pane: the selected entry with one row per field and a
  * copy, reveal or open button on each row. Shows an empty state for groups.
  */
 class EntryDetailCard : public fluent::layout::Card
@@ -98,4 +98,4 @@ private:
     QTimer* m_totpTimer;
 };
 
-#endif // KEEPASSXC_ENTRYDETAILCARD_H
+#endif // OPENVIREO_ENTRYDETAILCARD_H

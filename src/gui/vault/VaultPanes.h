@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTPANES_H
-#define KEEPASSXC_VAULTPANES_H
+#ifndef OPENVIREO_VAULTPANES_H
+#define OPENVIREO_VAULTPANES_H
 
 #include <QAbstractButton>
 #include <QDateTime>
@@ -100,7 +100,7 @@ protected:
 };
 
 /**
- * Vault Index navigation pane: the database's group tree and tags, and links to the password generator, reports and settings.
+ * Navigation pane: the database's group tree and tags, and links to the password generator, reports and settings.
  */
 class VaultNavPane : public QWidget, public fluent::FluentElement
 {
@@ -116,7 +116,7 @@ private:
 };
 
 /**
- * Vault Index command bar above the entry list: the current group or search,
+ * Command bar above the entry list: the current group or search,
  * its entry count, and the main entry commands.
  */
 class VaultCommandBar : public QWidget, public fluent::FluentElement
@@ -266,7 +266,7 @@ private:
 };
 
 /**
- * Header above the database view in the Vault Index layout: the database
+ * Header above the database view: the database
  * picker, search, sync status and the account button.
  */
 class VaultHeaderBar : public QWidget
@@ -293,4 +293,4 @@ private:
     VaultAccountButton* m_accountButton;
 };
 
-#endif // KEEPASSXC_VAULTPANES_H
+#endif // OPENVIREO_VAULTPANES_H

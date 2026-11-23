@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SERVICEACCOUNTADMIN_H
-#define KEEPASSXC_SERVICEACCOUNTADMIN_H
+#ifndef OPENVIREO_SERVICEACCOUNTADMIN_H
+#define OPENVIREO_SERVICEACCOUNTADMIN_H
 
 #include "AccountCrypto.h"
 #include "AccountManager.h"
@@ -204,4 +204,4 @@ private:
     QPointer<AccountManager> m_account;
 };
 
-#endif // KEEPASSXC_SERVICEACCOUNTADMIN_H
+#endif // OPENVIREO_SERVICEACCOUNTADMIN_H

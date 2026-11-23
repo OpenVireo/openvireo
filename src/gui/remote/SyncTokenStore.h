@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCTOKENSTORE_H
-#define KEEPASSXC_SYNCTOKENSTORE_H
+#ifndef OPENVIREO_SYNCTOKENSTORE_H
+#define OPENVIREO_SYNCTOKENSTORE_H
 
 #include <QString>
 #include <QUuid>
@@ -86,4 +86,4 @@ private:
     static Backend& backend();
 };
 
-#endif // KEEPASSXC_SYNCTOKENSTORE_H
+#endif // OPENVIREO_SYNCTOKENSTORE_H

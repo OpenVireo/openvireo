@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLCREDENTIALS_H
-#define KEEPASSXC_AUTOFILLCREDENTIALS_H
+#ifndef OPENVIREO_AUTOFILLCREDENTIALS_H
+#define OPENVIREO_AUTOFILLCREDENTIALS_H
 
 #include <QByteArray>
 #include <QList>
@@ -87,4 +87,4 @@ namespace AutofillCredentials
     QByteArray passkeyUserHandle(const Entry* entry);
 } // namespace AutofillCredentials
 
-#endif // KEEPASSXC_AUTOFILLCREDENTIALS_H
+#endif // OPENVIREO_AUTOFILLCREDENTIALS_H

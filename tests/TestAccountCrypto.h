@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTACCOUNTCRYPTO_H
-#define KEEPASSXC_TESTACCOUNTCRYPTO_H
+#ifndef OPENVIREO_TESTACCOUNTCRYPTO_H
+#define OPENVIREO_TESTACCOUNTCRYPTO_H
 
 #include <QJsonObject>
 #include <QObject>
@@ -47,4 +47,4 @@ private:
     QJsonObject m_vectors;
 };
 
-#endif // KEEPASSXC_TESTACCOUNTCRYPTO_H
+#endif // OPENVIREO_TESTACCOUNTCRYPTO_H

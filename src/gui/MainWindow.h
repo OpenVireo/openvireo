@@ -240,7 +240,7 @@ private:
     QPointer<QSystemTrayIcon> m_trayIcon;
     QPointer<ScreenLockListener> m_screenLockListener;
     QPointer<SearchWidget> m_searchWidget;
-    // Vault Index layout: search and sync status above the database view instead of in the toolbar
+    // Search and sync status above the database view
     QPointer<VaultHeaderBar> m_vaultHeader;
     QPointer<VaultWindowFrame> m_vaultFrame;
     QPointer<VaultSettingsModal> m_settingsModal;

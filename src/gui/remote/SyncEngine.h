@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCENGINE_H
-#define KEEPASSXC_SYNCENGINE_H
+#ifndef OPENVIREO_SYNCENGINE_H
+#define OPENVIREO_SYNCENGINE_H
 
 #include "SyncServerClient.h"
 #include "SyncStateStore.h"
@@ -293,4 +293,4 @@ private:
     Q_DISABLE_COPY(SyncEngine)
 };
 
-#endif // KEEPASSXC_SYNCENGINE_H
+#endif // OPENVIREO_SYNCENGINE_H

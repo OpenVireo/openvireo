@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_COREHOST_H
-#define KEEPASSXC_COREHOST_H
+#ifndef OPENVIREO_COREHOST_H
+#define OPENVIREO_COREHOST_H
 
 #include <QString>
 
@@ -123,4 +123,4 @@ namespace CoreHost
     QString toQString(const rust::String& text);
 } // namespace CoreHost
 
-#endif // KEEPASSXC_COREHOST_H
+#endif // OPENVIREO_COREHOST_H

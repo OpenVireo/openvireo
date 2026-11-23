@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTPLAN_H
-#define KEEPASSXC_ACCOUNTPLAN_H
+#ifndef OPENVIREO_ACCOUNTPLAN_H
+#define OPENVIREO_ACCOUNTPLAN_H
 
 #include <QDateTime>
 #include <QJsonObject>
@@ -88,4 +88,4 @@ namespace AccountPlan
     QString deletionNote(const QJsonObject& subscription);
 } // namespace AccountPlan
 
-#endif // KEEPASSXC_ACCOUNTPLAN_H
+#endif // OPENVIREO_ACCOUNTPLAN_H

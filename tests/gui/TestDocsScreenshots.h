@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTDOCSSCREENSHOTS_H
-#define KEEPASSXC_TESTDOCSSCREENSHOTS_H
+#ifndef OPENVIREO_TESTDOCSSCREENSHOTS_H
+#define OPENVIREO_TESTDOCSSCREENSHOTS_H
 
 #include "gui/MainWindow.h"
 
@@ -113,4 +113,4 @@ private:
     QPointer<Entry> m_github;
 };
 
-#endif // KEEPASSXC_TESTDOCSSCREENSHOTS_H
+#endif // OPENVIREO_TESTDOCSSCREENSHOTS_H

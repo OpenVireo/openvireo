@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTOFFLINECACHE_H
-#define KEEPASSXC_ACCOUNTOFFLINECACHE_H
+#ifndef OPENVIREO_ACCOUNTOFFLINECACHE_H
+#define OPENVIREO_ACCOUNTOFFLINECACHE_H
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -57,4 +57,4 @@ private:
     static void update(const QString& accountId, const QJsonObject& fields);
 };
 
-#endif // KEEPASSXC_ACCOUNTOFFLINECACHE_H
+#endif // OPENVIREO_ACCOUNTOFFLINECACHE_H

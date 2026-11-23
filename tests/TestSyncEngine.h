@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTSYNCENGINE_H
-#define KEEPASSXC_TESTSYNCENGINE_H
+#ifndef OPENVIREO_TESTSYNCENGINE_H
+#define OPENVIREO_TESTSYNCENGINE_H
 
 #include <QObject>
 
@@ -68,4 +68,4 @@ private slots:
     void testAccountVaultReportsALostVault();
 };
 
-#endif // KEEPASSXC_TESTSYNCENGINE_H
+#endif // OPENVIREO_TESTSYNCENGINE_H

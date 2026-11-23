@@ -353,7 +353,7 @@ void EditEntryWidget::setupAdvanced()
     setupVaultAdvanced();
 }
 
-// In the Vault Index layout, the Advanced page fits the narrow detail pane as Fluent settings cards. The attributes
+// The Advanced page fits the narrow detail pane as Fluent settings cards. The attributes
 // stack their list over the value under a row of buttons, the attachments take their buttons above them, and the
 // options are switches.
 void EditEntryWidget::setupVaultAdvanced()
@@ -503,7 +503,7 @@ void EditEntryWidget::setupAutoType()
     setupVaultAutoType();
 }
 
-// In the Vault Index layout, the Auto-Type page fits the narrow detail pane as Fluent settings cards: a switch for
+// The Auto-Type page fits the narrow detail pane as Fluent settings cards: a switch for
 // Auto-Type, a card for the sequence, and the window associations as a list with the selected one's fields beneath
 // it rather than beside it.
 void EditEntryWidget::setupVaultAutoType()
@@ -1461,7 +1461,7 @@ void EditEntryWidget::setForms(Entry* entry, bool restore)
         m_advancedUi->attributesEdit->setEnabled(false);
     }
 
-    // The Vault Index layout stacks the list and the value outside of the splitter
+    // The layout stacks the list and the value outside of the splitter
     if (m_advancedUi->attributesSplitter->count() == 2) {
         QList<int> sizes = m_advancedUi->attributesSplitter->sizes();
         sizes.replace(0, m_advancedUi->attributesSplitter->width() * 0.3);

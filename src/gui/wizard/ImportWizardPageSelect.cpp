@@ -401,7 +401,7 @@ QString ImportWizardPageSelect::vaultOrgId() const
     return m_vaultOrgChoice ? m_vaultOrgChoice->currentData().toString() : QString();
 }
 
-// In the Vault Index layout, the page is the content of a modal, which names its steps. The sources show as tiles,
+// The page is the content of a modal, which names its steps. The sources show as tiles,
 // and the file, the credentials and where to import into read as Fluent settings cards, shown as a step of their own.
 void ImportWizardPageSelect::setupVaultLayout()
 {

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_EMERGENCYKIT_H
-#define KEEPASSXC_EMERGENCYKIT_H
+#ifndef OPENVIREO_EMERGENCYKIT_H
+#define OPENVIREO_EMERGENCYKIT_H
 
 #include <QCoreApplication>
 #include <QString>
@@ -47,4 +47,4 @@ private:
     QString m_secretKey;
 };
 
-#endif // KEEPASSXC_EMERGENCYKIT_H
+#endif // OPENVIREO_EMERGENCYKIT_H

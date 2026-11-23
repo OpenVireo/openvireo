@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLPROTOCOL_H
-#define KEEPASSXC_AUTOFILLPROTOCOL_H
+#ifndef OPENVIREO_AUTOFILLPROTOCOL_H
+#define OPENVIREO_AUTOFILLPROTOCOL_H
 
 #include <QByteArray>
 #include <QJsonObject>
@@ -82,4 +82,4 @@ namespace AutofillProtocol
     };
 } // namespace AutofillProtocol
 
-#endif // KEEPASSXC_AUTOFILLPROTOCOL_H
+#endif // OPENVIREO_AUTOFILLPROTOCOL_H

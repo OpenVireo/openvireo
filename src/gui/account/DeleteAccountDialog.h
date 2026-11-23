@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_DELETEACCOUNTDIALOG_H
-#define KEEPASSXC_DELETEACCOUNTDIALOG_H
+#ifndef OPENVIREO_DELETEACCOUNTDIALOG_H
+#define OPENVIREO_DELETEACCOUNTDIALOG_H
 
 #include <QDialog>
 #include <QJsonObject>
@@ -80,4 +80,4 @@ private:
     QPushButton* m_restore;
 };
 
-#endif // KEEPASSXC_DELETEACCOUNTDIALOG_H
+#endif // OPENVIREO_DELETEACCOUNTDIALOG_H

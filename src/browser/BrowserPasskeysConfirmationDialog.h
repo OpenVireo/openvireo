@@ -81,7 +81,7 @@ private:
     int m_counter;
     bool m_passkeyUpdated;
 
-    // In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, holding these cards
+    // The dialog shows as a Fluent content dialog over the window, holding these cards
     QWidget* m_vaultCards = nullptr;
     QString m_vaultTitle;
     fluent::textfields::Label* m_vaultMessage = nullptr;

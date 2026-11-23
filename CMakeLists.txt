@@ -515,7 +515,7 @@ else()
     endif()
 endif()
 
-# Fluent-Qt provides the Fluent Design widgets used by the Vault Index main window layout.
+# Fluent-Qt provides the Fluent Design widgets used by the main window.
 # Offline builds can point FETCHCONTENT_SOURCE_DIR_FLUENTQT at a local checkout.
 include(FetchContent)
 set(FLUENT_QT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTKDBXIMPORT_H
-#define KEEPASSXC_TESTKDBXIMPORT_H
+#ifndef OPENVIREO_TESTKDBXIMPORT_H
+#define OPENVIREO_TESTKDBXIMPORT_H
 
 #include <QObject>
 #include <QTemporaryDir>
@@ -41,4 +41,4 @@ private:
     QString m_keyFile;
 };
 
-#endif // KEEPASSXC_TESTKDBXIMPORT_H
+#endif // OPENVIREO_TESTKDBXIMPORT_H

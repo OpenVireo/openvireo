@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTENTRYEDITCARD_H
-#define KEEPASSXC_VAULTENTRYEDITCARD_H
+#ifndef OPENVIREO_VAULTENTRYEDITCARD_H
+#define OPENVIREO_VAULTENTRYEDITCARD_H
 
 #include <QPointer>
 #include <QSet>
@@ -41,7 +41,7 @@ namespace fluent::basicinput
 }
 
 /**
- * Presents an entry editor in the Vault Index detail pane, in place of the entry's detail card, so the
+ * Presents an entry editor in the detail pane, in place of the entry's detail card, so the
  * groups and the entry list stay in view while editing.
  *
  * The card reads as the detail card made editable: the entry's icon and its title as a large field at the
@@ -141,4 +141,4 @@ private:
     std::function<QColor()> m_color;
 };
 
-#endif // KEEPASSXC_VAULTENTRYEDITCARD_H
+#endif // OPENVIREO_VAULTENTRYEDITCARD_H

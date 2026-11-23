@@ -46,7 +46,7 @@ KeyComponentWidget::KeyComponentWidget(QWidget* parent)
     m_ui->stackedWidget->setCurrentIndex(Page::AddNew);
     m_ui->stackedWidget->blockSignals(prev);
 
-    // In the Vault Index layout the component is a settings card: its title and state on the left, the buttons for
+    // The component is a settings card: its title and state on the left, the buttons for
     // the state on the right, and the fields below while editing. The pages keep the logic.
     m_vaultTitle = new QLabel(this);
     m_vaultDescription = new QLabel(this);

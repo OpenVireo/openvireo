@@ -15,15 +15,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ENTRYLISTITEMDELEGATE_H
-#define KEEPASSXC_ENTRYLISTITEMDELEGATE_H
+#ifndef OPENVIREO_ENTRYLISTITEMDELEGATE_H
+#define OPENVIREO_ENTRYLISTITEMDELEGATE_H
 
 #include <QStyledItemDelegate>
 
 class EntryView;
 
 /**
- * Paints an entry as a two-line Fluent list row for the Vault Index layout:
+ * Paints an entry as a two-line Fluent list row:
  * icon tile, title, "username · URL" and a badge for expired or weak entries.
  */
 class EntryListItemDelegate : public QStyledItemDelegate
@@ -42,4 +42,4 @@ private:
     EntryView* m_view;
 };
 
-#endif // KEEPASSXC_ENTRYLISTITEMDELEGATE_H
+#endif // OPENVIREO_ENTRYLISTITEMDELEGATE_H

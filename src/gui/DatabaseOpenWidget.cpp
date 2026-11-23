@@ -43,7 +43,7 @@
 namespace
 {
     constexpr int clearFormsDelay = 30000;
-    // Vault Index layout: width of the unlock card and of the database tile at its top
+    // Width of the unlock card and of the database tile at its top
     constexpr int CardWidth = 440;
     constexpr int TileSize = 56;
 

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTGUIVAULT_H
-#define KEEPASSXC_TESTGUIVAULT_H
+#ifndef OPENVIREO_TESTGUIVAULT_H
+#define OPENVIREO_TESTGUIVAULT_H
 
 #include "gui/MainWindow.h"
 #include "util/TemporaryFile.h"
@@ -88,4 +88,4 @@ private:
     QPointer<Entry> m_github;
 };
 
-#endif // KEEPASSXC_TESTGUIVAULT_H
+#endif // OPENVIREO_TESTGUIVAULT_H

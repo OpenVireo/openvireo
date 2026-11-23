@@ -62,7 +62,7 @@ DatabaseSettingsWidgetDatabaseKey::DatabaseSettingsWidgetDatabaseKey(QWidget* pa
 
     connect(m_additionalKeyOptionsToggle, SIGNAL(clicked()), SLOT(showAdditionalKeyOptions()));
 
-    // The credentials are settings cards in the Vault Index layout, which sit closer together
+    // The credentials are settings cards, which sit closer together
     vbox->setSpacing(8);
     // The same margins as the pages of settings cards, so the cards line up with the encryption settings
     vbox->setContentsMargins(4, 24, 12, 16);

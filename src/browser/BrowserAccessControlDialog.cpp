@@ -119,7 +119,7 @@ BrowserAccessControlDialog::~BrowserAccessControlDialog()
 {
 }
 
-// In the Vault Index layout, the dialog shows as a Fluent content dialog over the window, which provides the title
+// The dialog shows as a Fluent content dialog over the window, which provides the title
 // and the commands. Each entry is a card with a check box, the entry's icon, title and username, and a button that
 // disables it for the site; remembering the decision is a toggle card. When there is no window to show over, the
 // dialog shows the same cards in a window of its own, with a title and commands laid out like a content dialog's.

@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLPLATFORM_H
-#define KEEPASSXC_AUTOFILLPLATFORM_H
+#ifndef OPENVIREO_AUTOFILLPLATFORM_H
+#define OPENVIREO_AUTOFILLPLATFORM_H
 
 #include "AutofillCredentials.h"
 
@@ -53,4 +53,4 @@ namespace AutofillPlatform
     void openProviderSettings();
 } // namespace AutofillPlatform
 
-#endif // KEEPASSXC_AUTOFILLPLATFORM_H
+#endif // OPENVIREO_AUTOFILLPLATFORM_H

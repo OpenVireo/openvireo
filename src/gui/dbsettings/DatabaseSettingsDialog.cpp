@@ -78,7 +78,7 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
 
     m_securityTabWidget->setCurrentIndex(0);
 
-    // Both security pages are settings cards in the Vault Index layout, so their tabs read as a Fluent pivot: plain
+    // Both security pages are settings cards, so their tabs read as a Fluent pivot: plain
     // labels with an accent line under the current one. The style draws a tab widget's own bar on a filled base, so a
     // separate tab bar switches the tab widget, which keeps the current page for the dialog's code.
     auto security = new QWidget(this);

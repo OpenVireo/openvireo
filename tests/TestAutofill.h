@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_TESTAUTOFILL_H
-#define KEEPASSXC_TESTAUTOFILL_H
+#ifndef OPENVIREO_TESTAUTOFILL_H
+#define OPENVIREO_TESTAUTOFILL_H
 
 #include <QObject>
 
@@ -48,4 +48,4 @@ private slots:
     void testPasskeyRegistrationWithClientDataHash();
 };
 
-#endif // KEEPASSXC_TESTAUTOFILL_H
+#endif // OPENVIREO_TESTAUTOFILL_H

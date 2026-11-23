@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SERVICEACCOUNTSDIALOG_H
-#define KEEPASSXC_SERVICEACCOUNTSDIALOG_H
+#ifndef OPENVIREO_SERVICEACCOUNTSDIALOG_H
+#define OPENVIREO_SERVICEACCOUNTSDIALOG_H
 
 #include "account/ServiceAccountAdmin.h"
 
@@ -54,7 +54,7 @@ namespace fluent::status_info
  * remove), invitations, service accounts (create, disable, expire, delete) with their secrets (issue,
  * revoke) and vault access (grant, remove), who can make share links, and the org's audit log.
  *
- * A sidebar picks the org and one of its sections. In the Vault Index layout the window sits in a card
+ * A sidebar picks the org and one of its sections. The window sits in a card
  * over the main window (OrgAdminModal) and its prompts are Fluent content dialogs.
  *
  * A new service account's keys and every secret are made on this device. The token `ov_sa_…` is shown
@@ -264,4 +264,4 @@ private:
     VaultButton* m_loadMoreButton;
 };
 
-#endif // KEEPASSXC_SERVICEACCOUNTSDIALOG_H
+#endif // OPENVIREO_SERVICEACCOUNTSDIALOG_H

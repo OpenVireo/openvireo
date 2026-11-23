@@ -107,7 +107,7 @@ TotpSetupDialog::TotpSetupDialog(QWidget* parent, Entry* entry)
 
 TotpSetupDialog::~TotpSetupDialog() = default;
 
-// In the Vault Index layout, the dialog is the content of a modal over the window, which provides the title and the
+// The dialog is the content of a modal over the window, which provides the title and the
 // buttons. The key, the kind of code and the custom settings read as Fluent settings cards, and the custom settings
 // only show while they apply.
 void TotpSetupDialog::setupVaultLayout()

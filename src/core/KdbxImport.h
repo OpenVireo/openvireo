@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_KDBXIMPORT_H
-#define KEEPASSXC_KDBXIMPORT_H
+#ifndef OPENVIREO_KDBXIMPORT_H
+#define OPENVIREO_KDBXIMPORT_H
 
 #include <QSharedPointer>
 #include <QString>
@@ -57,4 +57,4 @@ namespace KdbxImport
     QString summaryText(const QString& into, bool copies, const Summary& summary);
 } // namespace KdbxImport
 
-#endif // KEEPASSXC_KDBXIMPORT_H
+#endif // OPENVIREO_KDBXIMPORT_H

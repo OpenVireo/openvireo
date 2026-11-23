@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTEDITSHELL_H
-#define KEEPASSXC_VAULTEDITSHELL_H
+#ifndef OPENVIREO_VAULTEDITSHELL_H
+#define OPENVIREO_VAULTEDITSHELL_H
 
 #include <QDialogButtonBox>
 #include <QHash>
@@ -80,7 +80,7 @@ private:
 /**
  * Presents an editor made of a category list, a page stack and a button box
  * (the entry, group and database settings editors and the reports) in the
- * Vault Index style: categories as a navigation pane on the window canvas,
+ * Fluent style: categories as a navigation pane on the window canvas,
  * and the headline, pages and buttons on a rounded surface beside it.
  *
  * Only the presentation changes; the form's widgets and logic are untouched.
@@ -114,4 +114,4 @@ private:
     VaultSurface* m_surface = nullptr;
 };
 
-#endif // KEEPASSXC_VAULTEDITSHELL_H
+#endif // OPENVIREO_VAULTEDITSHELL_H

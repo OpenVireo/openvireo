@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SYNCHISTORYDIALOG_H
-#define KEEPASSXC_SYNCHISTORYDIALOG_H
+#ifndef OPENVIREO_SYNCHISTORYDIALOG_H
+#define OPENVIREO_SYNCHISTORYDIALOG_H
 
 #include "RemoteSettings.h"
 #include "SyncServerClient.h"
@@ -44,7 +44,7 @@ class SyncHistoryDialog : public QDialog
 public:
     explicit SyncHistoryDialog(const RemoteParams& params, QWidget* parent = nullptr);
 
-    // The buttons at the bottom, for hosts that show their own (the Vault Index layout's modal card)
+    // The buttons at the bottom, for hosts that show their own (a modal card)
     QDialogButtonBox* buttonBox() const;
     QTreeWidget* versionList() const;
 
@@ -76,4 +76,4 @@ private:
     QDialogButtonBox* m_buttons;
 };
 
-#endif // KEEPASSXC_SYNCHISTORYDIALOG_H
+#endif // OPENVIREO_SYNCHISTORYDIALOG_H

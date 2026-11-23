@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ORGADMINWIDGETS_H
-#define KEEPASSXC_ORGADMINWIDGETS_H
+#ifndef OPENVIREO_ORGADMINWIDGETS_H
+#define OPENVIREO_ORGADMINWIDGETS_H
 
 #include "gui/vault/VaultModal.h"
 
@@ -33,7 +33,7 @@ class ServiceAccountsDialog;
 
 /**
  * Pieces of the Organization window (ServiceAccountsDialog): list rows, the sidebar, prompts and the modal
- * card it sits in within the Vault Index layout.
+ * card it sits in.
  */
 namespace OrgAdmin
 {
@@ -93,7 +93,7 @@ namespace OrgAdmin
 
     /**
      * A small form with a title, an accept button and Cancel. It is a Fluent content dialog over the window
-     * in the Vault Index layout, and a plain dialog otherwise, as MessageBox does.
+     * while it shows, and a plain dialog otherwise.
      */
     class Prompt
     {
@@ -123,7 +123,7 @@ namespace OrgAdmin
 } // namespace OrgAdmin
 
 /**
- * The Organization window as a card over the main window in the Vault Index layout, like Settings: the window's
+ * The Organization window as a card over the main window, like Settings: the window's
  * own sidebar and pages in the middle, the title and close button above them and Done below.
  */
 class OrgAdminModal : public VaultModal
@@ -144,4 +144,4 @@ private:
     QPointer<ServiceAccountsDialog> m_dialog;
 };
 
-#endif // KEEPASSXC_ORGADMINWIDGETS_H
+#endif // OPENVIREO_ORGADMINWIDGETS_H

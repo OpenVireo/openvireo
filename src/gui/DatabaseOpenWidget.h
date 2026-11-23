@@ -90,7 +90,7 @@ private:
     void updateVaultHeader();
 
     QPointer<DeviceListener> m_deviceListener;
-    // Vault Index layout: the unlock form is a Fluent card on the window canvas
+    // The unlock form is a Fluent card on the window canvas
     bool m_vaultStyle = false;
     QFrame* m_card = nullptr;
     bool m_pollingHardwareKey = false;

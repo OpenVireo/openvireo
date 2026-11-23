@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_SIGNUPWIZARD_H
-#define KEEPASSXC_SIGNUPWIZARD_H
+#ifndef OPENVIREO_SIGNUPWIZARD_H
+#define OPENVIREO_SIGNUPWIZARD_H
 
 #include "gui/vault/VaultDialog.h"
 #include <QPointer>
@@ -70,4 +70,4 @@ private:
     bool m_kitSaved = false;
 };
 
-#endif // KEEPASSXC_SIGNUPWIZARD_H
+#endif // OPENVIREO_SIGNUPWIZARD_H

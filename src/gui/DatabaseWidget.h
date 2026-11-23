@@ -354,7 +354,7 @@ private:
     int addChildWidget(QWidget* w);
     void setupVaultLayout(QHBoxLayout* hbox);
     void updateVaultCommandBar();
-    // The view in use: the inline entry editor while the Vault Index layout shows one, else the current page
+    // The view in use: the inline entry editor while one shows, else the current page
     QWidget* activeView() const;
     void showVaultEditor(VaultEntryEditCard* card);
     void hideVaultEditor();
@@ -388,7 +388,7 @@ private:
     QPointer<TagView> m_tagView;
     QPointer<EntryView> m_entryView;
 
-    // Vault Index layout (Fluent-Qt)
+    // Fluent-Qt layout
     QPointer<VaultCommandBar> m_vaultCommandBar;
     QPointer<EntryDetailCard> m_detailCard;
     // Entry editors shown in place of the detail card, the one showing (null when not editing),

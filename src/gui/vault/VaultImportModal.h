@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_VAULTIMPORTMODAL_H
-#define KEEPASSXC_VAULTIMPORTMODAL_H
+#ifndef OPENVIREO_VAULTIMPORTMODAL_H
+#define OPENVIREO_VAULTIMPORTMODAL_H
 
 #include "VaultModal.h"
 
@@ -73,4 +73,4 @@ private:
     QPushButton* m_nextButton;
 };
 
-#endif // KEEPASSXC_VAULTIMPORTMODAL_H
+#endif // OPENVIREO_VAULTIMPORTMODAL_H

@@ -705,7 +705,7 @@ void MainWindow::setupAccounts()
     connect(m_startScreen, &AccountStartWidget::createAccountRequested, this, &MainWindow::showSignUpWizard);
     connect(m_ui->welcomeWidget, &WelcomeWidget::signInRequested, this, &MainWindow::showStartScreen);
 
-    // The account's vaults beside the databases; the Vault Index layout lists them in the header's database picker
+    // The account's vaults beside the databases; the header's database picker lists them
 
     m_accountMenu = new VaultMenu(tr("&Account"), this);
     m_accountMenu->setObjectName("menuAccount");
@@ -1043,7 +1043,7 @@ void MainWindow::showEmergencyKit()
 
 void MainWindow::showServiceAccounts()
 {
-    // In the Vault Index layout the window is a card over this one, like Settings
+    // The window is a card over this one, like Settings
     auto* modal = findChild<OrgAdminModal*>();
     if (!modal) {
         modal = new OrgAdminModal(this, new ServiceAccountsDialog(m_accountController->account(), this));
@@ -1614,7 +1614,7 @@ void MainWindow::showAboutDialog()
                 &AboutDialog::close);
     }
 
-    // Vault Index layout: the dialog opens as a modal card over the window, like the other dialogs
+    // The dialog opens as a modal card over the window, like the other dialogs
     auto* modal = new VaultModal(this, aboutDialog, aboutDialog->windowTitle(), QStringLiteral("vaultAbout"));
     modal->setMaximumCardWidth(640);
     auto* closeButton = modal->addFooterButton(tr("Close"), true, QStringLiteral("Close"));
@@ -1725,7 +1725,7 @@ void MainWindow::openKeyboardShortcuts()
     customOpenUrl(QString("file:///%1").arg(resources()->dataPath("docs/KeePassXC_KeyboardShortcuts.html")));
 }
 
-// Vault Index layout: the standalone generator opens in a modal over the window, like the settings
+// The standalone generator opens in a modal over the window, like the settings
 void MainWindow::setupVaultPasswordGenerator()
 {
     auto* generator = m_ui->passwordGeneratorWidget;

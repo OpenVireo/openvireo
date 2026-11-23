@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_UPDATEFEED_H
-#define KEEPASSXC_UPDATEFEED_H
+#ifndef OPENVIREO_UPDATEFEED_H
+#define OPENVIREO_UPDATEFEED_H
 
 #include <QString>
 #include <QUrl>
@@ -62,4 +62,4 @@ namespace UpdateFeed
     Release latestRelease(const QByteArray& appcast);
 } // namespace UpdateFeed
 
-#endif // KEEPASSXC_UPDATEFEED_H
+#endif // OPENVIREO_UPDATEFEED_H

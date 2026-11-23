@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_ACCOUNTMANAGER_H
-#define KEEPASSXC_ACCOUNTMANAGER_H
+#ifndef OPENVIREO_ACCOUNTMANAGER_H
+#define OPENVIREO_ACCOUNTMANAGER_H
 
 #include "AccountCrypto.h"
 #include "AccountPlan.h"
@@ -463,4 +463,4 @@ private:
     int m_reconnectDelaySec = 0;
 };
 
-#endif // KEEPASSXC_ACCOUNTMANAGER_H
+#endif // OPENVIREO_ACCOUNTMANAGER_H

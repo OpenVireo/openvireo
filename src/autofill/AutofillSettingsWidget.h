@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLSETTINGSWIDGET_H
-#define KEEPASSXC_AUTOFILLSETTINGSWIDGET_H
+#ifndef OPENVIREO_AUTOFILLSETTINGSWIDGET_H
+#define OPENVIREO_AUTOFILLSETTINGSWIDGET_H
 
 #include <QWidget>
 
@@ -53,4 +53,4 @@ private:
     QListWidget* m_databasesList;
 };
 
-#endif // KEEPASSXC_AUTOFILLSETTINGSWIDGET_H
+#endif // OPENVIREO_AUTOFILLSETTINGSWIDGET_H

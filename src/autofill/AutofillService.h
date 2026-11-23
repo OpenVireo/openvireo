@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSXC_AUTOFILLSERVICE_H
-#define KEEPASSXC_AUTOFILLSERVICE_H
+#ifndef OPENVIREO_AUTOFILLSERVICE_H
+#define OPENVIREO_AUTOFILLSERVICE_H
 
 #include "AutofillCredentials.h"
 
@@ -116,4 +116,4 @@ static inline AutofillService* autofillService()
     return AutofillService::instance();
 }
 
-#endif // KEEPASSXC_AUTOFILLSERVICE_H
+#endif // OPENVIREO_AUTOFILLSERVICE_H

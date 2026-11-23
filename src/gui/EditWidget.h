@@ -55,7 +55,7 @@ public:
     CategoryListWidget* categoryList() const;
     QDialogButtonBox* buttonBox() const;
     QStackedWidget* pageStack() const;
-    // Present the editor in the Vault Index style
+    // Present the editor in the Fluent style
     void applyVaultShell();
     void setReadOnly(bool readOnly);
     bool readOnly() const;
