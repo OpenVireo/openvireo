@@ -1,0 +1,13 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <!-- The site's fonts (dev guide 06-reference/app-design-tokens.md), static instances of the OFL variable fonts.
+         FluentTheme loads them at startup. -->
+    <qresource prefix="/fonts">
+        <file>Inter-Regular.ttf</file>
+        <file>Inter-Medium.ttf</file>
+        <file>Inter-SemiBold.ttf</file>
+        <file>InterTight-Bold.ttf</file>
+        <file>JetBrainsMono-Regular.ttf</file>
+        <file>JetBrainsMono-Medium.ttf</file>
+    </qresource>
+</RCC>

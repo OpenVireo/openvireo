@@ -135,6 +135,11 @@ namespace FluentTheme
 
     // Look up one of the main window actions registered with the ActionCollection
     QAction* action(const QString& objectName);
+
+    // The bundled heading and code faces (share/fonts), or an empty string if they could not be loaded,
+    // in which case callers keep Fluent-Qt's default family
+    QString displayFontFamily();
+    QString monoFontFamily();
 } // namespace FluentTheme
 
 #endif // OPENVIREO_FLUENTTHEME_H

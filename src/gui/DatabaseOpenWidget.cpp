@@ -26,6 +26,8 @@
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
+#include "gui/vault/VaultMetrics.h"
+#include "gui/vault/VaultUnlockShell.h"
 #include "gui/vault/VaultWidgets.h"
 #include "keys/ChallengeResponseKey.h"
 #include "keys/FileKey.h"
@@ -44,8 +46,7 @@ namespace
 {
     constexpr int clearFormsDelay = 30000;
     // Width of the unlock card and of the database tile at its top
-    constexpr int CardWidth = 440;
-    constexpr int TileSize = 56;
+    constexpr int TileSize = 40;
 
     bool isQuickUnlockAvailable()
     {
@@ -157,26 +158,67 @@ void DatabaseOpenWidget::setupVaultStyle()
 
     m_card = new QFrame(m_ui->formContainer);
     m_card->setObjectName("unlockCard");
-    m_card->setFixedWidth(CardWidth);
     auto* cardLayout = new QVBoxLayout(m_card);
     cardLayout->setContentsMargins(32, 32, 32, 28);
     cardLayout->setSpacing(0);
     formLayout->insertWidget(stackIndex, m_card);
 
+    cardLayout->setContentsMargins(0, 0, 0, 0);
+
+    // "Unlock" over the database's own card (tile, name, path), as on the web app
+    m_title = new QLabel(tr("Unlock"), m_card);
+    m_title->setObjectName("unlockTitle");
+    cardLayout->addWidget(m_title);
+    cardLayout->addSpacing(10);
+    m_subtitle = new QLabel(tr("Enter the password for this database."), m_card);
+    m_subtitle->setWordWrap(true);
+    cardLayout->addWidget(m_subtitle);
+    cardLayout->addSpacing(24);
+
+    m_fileCard = new QFrame(m_card);
+    m_fileCard->setObjectName("unlockFileCard");
+    auto* fileLayout = new QHBoxLayout(m_fileCard);
+    fileLayout->setContentsMargins(14, 12, 16, 12);
+    fileLayout->setSpacing(12);
+    m_ui->dbIconLabel->setParent(m_fileCard);
     m_ui->dbIconLabel->setFixedSize(TileSize, TileSize);
     m_ui->dbIconLabel->setScaledContents(false);
     m_ui->dbIconLabel->setAlignment(Qt::AlignCenter);
-    cardLayout->addWidget(m_ui->dbIconLabel, 0, Qt::AlignHCenter);
-    cardLayout->addSpacing(16);
-    m_ui->labelHeadline->setAlignment(Qt::AlignCenter);
+    fileLayout->addWidget(m_ui->dbIconLabel);
+    auto* fileText = new QVBoxLayout();
+    fileText->setSpacing(0);
+    m_ui->labelHeadline->setParent(m_fileCard);
     m_ui->labelHeadline->setWordWrap(true);
-    cardLayout->addWidget(m_ui->labelHeadline);
-    cardLayout->addSpacing(4);
-    m_ui->fileNameLabel->setAlignment(Qt::AlignCenter);
+    fileText->addWidget(m_ui->labelHeadline);
+    m_ui->fileNameLabel->setParent(m_fileCard);
     m_ui->fileNameLabel->setElideMode(Qt::ElideMiddle);
-    cardLayout->addWidget(m_ui->fileNameLabel);
-    cardLayout->addSpacing(24);
+    fileText->addWidget(m_ui->fileNameLabel);
+    fileLayout->addLayout(fileText, 1);
+    cardLayout->addWidget(m_fileCard);
+    cardLayout->addSpacing(16);
+
+    // Messages (wrong password, key file errors) sit with the form instead of across the window
+    m_ui->verticalLayout->removeWidget(m_ui->messageWidget);
+    m_ui->messageWidget->setParent(m_card);
+    cardLayout->addWidget(m_ui->messageWidget);
+    cardLayout->addSpacing(4);
     cardLayout->addWidget(m_ui->centralStack);
+
+    // The card becomes the form in the split unlock layout's column
+    formLayout->removeWidget(m_card);
+    m_shell = new VaultUnlockShell(this);
+    m_shell->setHero(tr("Local database"),
+                     tr("This database\nis locked."),
+                     tr("It opens with its own password, here on this device. Nothing is uploaded."));
+    m_shell->steps()->setSteps(
+        {{tr("Enter your password."), tr("It stays on this device.")},
+         {tr("Make your key."), tr("Your password is stretched into the database key, here on this device.")},
+         {tr("Open the database."), tr("Decrypted in memory; nothing is uploaded.")}});
+    m_shell->setContent(m_card);
+    m_ui->verticalLayout->removeItem(m_ui->horizontalLayout_3);
+    m_ui->formContainer->hide();
+    m_ui->verticalLayout->setContentsMargins(0, 0, 0, 0);
+    m_ui->verticalLayout->addWidget(m_shell, 1);
 
     // The form fills the card instead of being boxed inside it
     m_ui->centralStack->setMinimumWidth(0);
@@ -221,7 +263,9 @@ void DatabaseOpenWidget::setupVaultStyle()
 
     Vault::followTheme(this, [this] {
         const auto p = FluentTheme::palette();
-        Vault::styleLabel(m_ui->labelHeadline, Typography::FontRole::Subtitle, p.text);
+        Vault::styleHeading(m_title, 40, p.text);
+        Vault::styleLabel(m_subtitle, Typography::FontRole::BodyLarge, p.textSecondary);
+        Vault::styleLabel(m_ui->labelHeadline, Typography::FontRole::BodyStrong, p.text);
         Vault::styleLabel(m_ui->fileNameLabel, Typography::FontRole::Caption, p.textSecondary);
         Vault::styleLabel(m_ui->passwordLabel, Typography::FontRole::Body, p.text);
         Vault::styleLabel(m_ui->selectKeyFileLabel, Typography::FontRole::Body, p.text);
@@ -241,16 +285,16 @@ void DatabaseOpenWidget::applyCardStyle()
     const auto p = FluentTheme::palette();
     // A database's public color outlines its card
     const auto color = m_db ? m_db->publicColor() : QString();
-    // Without one, the outline sits between the card stroke and the strong stroke, so the card reads on the canvas
-    auto stroke = p.strokeStrong;
-    if (!p.highContrast) {
-        stroke.setAlphaF(stroke.alphaF() * 0.3);
-    }
+    // Without one, the card stroke, as on the account card of the account lock screen
+    const auto stroke = p.highContrast ? p.text : p.stroke;
     const auto border = color.isEmpty() ? QStringLiteral("1px solid %1").arg(stroke.name(QColor::HexArgb))
                                         : QStringLiteral("3px solid %1").arg(color);
-    m_card->setStyleSheet(QStringLiteral("QFrame#unlockCard { background-color: %1; border: %2; border-radius: 8px; }"
+    m_card->setStyleSheet(QStringLiteral("QFrame#unlockCard { background: transparent; border: none; }"
+                                         "QFrame#unlockFileCard { background-color: %1; border: %2;"
+                                         " border-radius: %3px; }"
                                          "QStackedWidget#centralStack { background: transparent; border: none; }")
-                              .arg(p.layer.name(QColor::HexArgb), border));
+                              .arg(p.layer.name(QColor::HexArgb), border)
+                              .arg(VaultMetrics::PanelRadius));
 }
 
 void DatabaseOpenWidget::updateVaultHeader()
@@ -750,6 +794,10 @@ void DatabaseOpenWidget::hardwareKeyResponse(bool found)
 
 void DatabaseOpenWidget::setUserInteractionLock(bool state)
 {
+    // Opening a database is one call, so the steps stay on "Make your key" for the whole wait
+    if (m_shell) {
+        m_shell->steps()->setProgress(state ? 1 : 0, state);
+    }
     if (state) {
         QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         m_ui->centralStack->setEnabled(false);

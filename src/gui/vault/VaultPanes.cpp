@@ -16,6 +16,7 @@
  */
 
 #include "VaultPanes.h"
+#include "VaultMetrics.h"
 
 #include "account/AccountManager.h"
 #include "core/Database.h"
@@ -63,19 +64,34 @@ void VaultCanvas::paintEvent(QPaintEvent* event)
     painter.fillRect(rect(), FluentTheme::palette().canvas);
 }
 
+VaultSurface::VaultSurface(QWidget* parent)
+    : QWidget(parent)
+{
+    // Room on the right and below for the canvas to show around the rounded surface
+    setContentsMargins(0, 0, Gutter, Gutter);
+}
+
 void VaultSurface::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event)
     const auto p = FluentTheme::palette();
-    constexpr qreal radius = 8;
+    constexpr qreal radius = VaultMetrics::SurfaceRadius;
 
-    // Rounded top-left corner; the other edges run off the window
-    QRectF r = QRectF(rect()).adjusted(0.5, 0.5, radius, radius);
+    // A rounded card on the canvas, as in the web app
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -Gutter - 0.5, -Gutter - 0.5);
     QPainterPath path;
     path.addRoundedRect(r, radius, radius);
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+    if (!p.highContrast && !FluentTheme::isDark()) {
+        // A soft drop shadow, like the web's 0 8px 24px at 5%
+        for (int i = 1; i <= 6; ++i) {
+            QPainterPath shadow;
+            shadow.addRoundedRect(r.adjusted(-i / 2.0, i, i / 2.0, i), radius + i, radius + i);
+            painter.fillPath(shadow, QColor(14, 25, 10, 4));
+        }
+    }
     painter.fillPath(path, p.surface);
     painter.setPen(QPen(p.stroke, 1));
     painter.drawPath(path);
@@ -273,6 +289,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     newEntry->setFluentStyle(fluent::basicinput::Button::Accent);
     newEntry->setFluentLayout(fluent::basicinput::Button::IconBefore);
     newEntry->setIconGlyph(Typography::Icons::Add);
+    Vault::makePill(newEntry);
     Vault::bindAction(newEntry, "actionEntryNew");
     commandsLayout->addWidget(newEntry);
     commandsLayout->addSpacing(4);
@@ -330,6 +347,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     m_cancelButton->setObjectName("vaultEditCancelButton");
     m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
     m_cancelButton->setIconGlyph(Typography::Icons::Cancel);
+    Vault::makePill(m_cancelButton);
     connect(m_cancelButton, &QAbstractButton::clicked, this, [this] {
         if (auto* button = editorButton({QDialogButtonBox::Cancel, QDialogButtonBox::Close})) {
             button->click();
@@ -343,6 +361,7 @@ VaultCommandBar::VaultCommandBar(QWidget* parent)
     m_saveButton->setFluentStyle(fluent::basicinput::Button::Accent);
     m_saveButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
     m_saveButton->setIconGlyph(Typography::Icons::Save);
+    Vault::makePill(m_saveButton);
     connect(m_saveButton, &QAbstractButton::clicked, this, [this] {
         if (auto* button = editorButton({QDialogButtonBox::Ok})) {
             button->click();
@@ -390,8 +409,8 @@ QAbstractButton* VaultCommandBar::editorButton(std::initializer_list<QDialogButt
 void VaultCommandBar::onThemeUpdated()
 {
     const auto p = FluentTheme::palette();
-    Vault::styleLabel(m_title, Typography::FontRole::Subtitle, p.text);
-    Vault::styleLabel(m_count, Typography::FontRole::Caption, p.textSecondary);
+    Vault::styleHeading(m_title, 30, p.text);
+    Vault::styleLabel(m_count, Typography::FontRole::Caption, p.textTertiary);
     const int baselineOffset = QFontMetrics(m_title->font()).ascent() - QFontMetrics(m_count->font()).ascent();
     m_count->setContentsMargins(0, qMax(0, baselineOffset), 0, 0);
 }

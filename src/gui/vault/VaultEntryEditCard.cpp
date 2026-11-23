@@ -28,6 +28,7 @@
 #include "gui/tag/TagsEdit.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultEditShell.h"
+#include "gui/vault/VaultMetrics.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <components/textfields/LineEdit.h>
@@ -636,8 +637,9 @@ bool VaultEntryEditCard::isInModal() const
 void VaultEntryEditCard::paintEvent(QPaintEvent* event)
 {
     // The modal's card is the surface
+    Q_UNUSED(event)
     if (!m_inModal) {
-        fluent::layout::Card::paintEvent(event);
+        Vault::paintCardSurface(this, VaultMetrics::CardRadius, isBorderVisible());
     }
 }
 

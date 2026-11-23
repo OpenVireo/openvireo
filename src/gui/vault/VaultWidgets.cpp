@@ -82,21 +82,44 @@ void Vault::paintCanvas(QWidget* widget)
     followTheme(widget, [widget] { widget->update(); });
 }
 
+void Vault::paintCardSurface(QWidget* card, int radius, bool border)
+{
+    const auto p = FluentTheme::palette();
+    // Fluent-Qt's Card publishes the fill for its appearance (layer, alt or canvas) as this property
+    const auto published = card->property("fluentSurfaceColor").value<QColor>();
+    const QColor fill = published.isValid() ? published : p.layer;
+    QPainter painter(card);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPainterPath path;
+    path.addRoundedRect(QRectF(card->rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+    painter.fillPath(path, fill);
+    if (border) {
+        painter.setPen(QPen(p.highContrast ? p.text : p.stroke, 1));
+        painter.drawPath(path);
+    }
+}
+
+void Vault::makePill(fluent::basicinput::Button* button)
+{
+    // Fluent-Qt clamps each corner to half the button's height, so this always draws a pill (or a circle)
+    button->setCornerRadii(QMargins(999, 999, 999, 999));
+}
+
 QString Vault::formStyleSheet()
 {
     const auto p = FluentTheme::palette();
     const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
-    return QStringLiteral("QGroupBox { background-color: %1; border: 1px solid %2; border-radius: 8px;"
+    return QStringLiteral("QGroupBox { background-color: %1; border: 1px solid %2; border-radius: 16px;"
                           " margin-top: 30px; padding: 10px 8px 8px 8px; }"
                           "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left;"
                           " margin: 0; left: 2px; top: 4px; color: %3; }"
                           "QPlainTextEdit, QTextEdit { background-color: %4; border: 1px solid %2;"
-                          " border-radius: 4px; padding: 4px 6px; }"
-                          "QToolButton { background-color: %4; border: 1px solid %2; border-radius: 4px;"
+                          " border-radius: 6px; padding: 4px 6px; }"
+                          "QToolButton { background-color: %4; border: 1px solid %2; border-radius: 6px;"
                           " padding: 4px; }"
                           "QToolButton:hover { background-color: %5; }"
                           "QToolButton:pressed, QToolButton:checked { background-color: %6; }"
-                          "QAbstractSpinBox { background-color: %4; border: 1px solid %2; border-radius: 4px;"
+                          "QAbstractSpinBox { background-color: %4; border: 1px solid %2; border-radius: 6px;"
                           " padding: 4px 6px; }"
                           "QTabWidget::pane { border: none; border-top: 1px solid %7; }")
                .arg(argb(p.layer),
@@ -121,9 +144,50 @@ QString Vault::pivotStyleSheet()
         .arg(argb(p.textSecondary), argb(p.text), argb(p.accent));
 }
 
+namespace
+{
+    void makeHeading(QFont& font)
+    {
+        const auto family = FluentTheme::displayFontFamily();
+        if (family.isEmpty()) {
+            return;
+        }
+        font.setFamilies({family});
+        font.setWeight(QFont::Bold);
+        font.setLetterSpacing(QFont::PercentageSpacing, 97.5);
+    }
+
+    bool isHeadingRole(Typography::FontRole role)
+    {
+        using Typography::FontRole;
+        return role == FontRole::Subtitle || role == FontRole::Title || role == FontRole::TitleLarge
+               || role == FontRole::Display;
+    }
+} // namespace
+
 QFont Vault::font(Typography::FontRole role)
 {
-    return fluent::ThemeRegistry::instance().resolvedFontStyle(role).toQFont();
+    auto font = fluent::ThemeRegistry::instance().resolvedFontStyle(role).toQFont();
+    if (isHeadingRole(role)) {
+        makeHeading(font);
+    }
+    return font;
+}
+
+QFont Vault::headingFont(int pixelSize)
+{
+    auto font = Vault::font(Typography::FontRole::Subtitle);
+    font.setPixelSize(pixelSize);
+    return font;
+}
+
+void Vault::styleHeading(QLabel* label, int pixelSize, const QColor& color)
+{
+    label->setFont(headingFont(pixelSize));
+    auto palette = label->palette();
+    palette.setColor(QPalette::WindowText, color);
+    palette.setColor(QPalette::Text, color);
+    label->setPalette(palette);
 }
 
 void Vault::styleLabel(QLabel* label, Typography::FontRole role, const QColor& color)
@@ -140,6 +204,7 @@ fluent::basicinput::Button* Vault::iconButton(const QString& glyph, const QStrin
     auto* button = new fluent::basicinput::Button(parent);
     button->setFluentStyle(fluent::basicinput::Button::Subtle);
     button->setFluentLayout(fluent::basicinput::Button::IconOnly);
+    makePill(button);
     button->setIconGlyph(glyph);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
@@ -240,7 +305,8 @@ void VaultFieldRow::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
-    path.addRoundedRect(QRectF(rect()).adjusted(2, 2, -2, -2), 4, 4);
+    // Inside the 16px field panel: rounder than a control, tighter than the panel
+    path.addRoundedRect(QRectF(rect()).adjusted(2, 2, -2, -2), 12, 12);
     painter.fillPath(path, FluentTheme::palette().subtleHover);
 }
 

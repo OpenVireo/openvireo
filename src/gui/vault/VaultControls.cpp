@@ -19,6 +19,7 @@
 
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultEditShell.h"
+#include "gui/vault/VaultMetrics.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAbstractSpinBox>
@@ -105,14 +106,17 @@ namespace
     };
 } // namespace
 
+// Buttons are pills (icon-only ones round), as on the site and the web app
 VaultButton::VaultButton(QWidget* parent)
     : fluent::basicinput::Button(parent)
 {
+    Vault::makePill(this);
 }
 
 VaultButton::VaultButton(const QString& text, QWidget* parent)
     : fluent::basicinput::Button(text, parent)
 {
+    Vault::makePill(this);
 }
 
 QString VaultButton::withoutMnemonic(const QString& text)
@@ -839,7 +843,8 @@ void VaultCard::updateTitleMargin()
 
 void VaultCard::paintEvent(QPaintEvent* event)
 {
-    fluent::layout::Card::paintEvent(event);
+    Q_UNUSED(event)
+    Vault::paintCardSurface(this, VaultMetrics::PanelRadius, isBorderVisible());
     if (m_title.isEmpty()) {
         return;
     }

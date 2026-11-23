@@ -16,6 +16,7 @@
  */
 
 #include "VaultSettingsPage.h"
+#include "VaultMetrics.h"
 
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
@@ -41,7 +42,7 @@
 
 namespace
 {
-    constexpr int CardRadius = 4;
+    constexpr int CardRadius = VaultMetrics::PanelRadius;
     constexpr int CardPadding = 16;
     constexpr int CardMinimumHeight = 48;
     constexpr int CardSpacing = 4;
@@ -282,7 +283,7 @@ void VaultSettingsPage::finish()
         const auto p = FluentTheme::palette();
         // Shortcut fields are stock line edits; give them the shape and fill of a Fluent text field
         const auto shortcutFields = QStringLiteral("ShortcutWidget { background-color: %1; border: 1px solid %2;"
-                                                   " border-bottom-color: %3; border-radius: 4px; padding: 5px 8px;"
+                                                   " border-bottom-color: %3; border-radius: 6px; padding: 5px 8px;"
                                                    " min-width: 160px; }")
                                         .arg(p.control.name(QColor::HexArgb),
                                              p.stroke.name(QColor::HexArgb),

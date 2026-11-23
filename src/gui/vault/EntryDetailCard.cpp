@@ -28,6 +28,7 @@
 #include "gui/Font.h"
 #include "gui/Icons.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultMetrics.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QHBoxLayout>
@@ -59,7 +60,8 @@ namespace
             QPainter painter(this);
             painter.setRenderHint(QPainter::Antialiasing);
             QPainterPath path;
-            path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6);
+            path.addRoundedRect(
+                QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), VaultMetrics::PanelRadius, VaultMetrics::PanelRadius);
             painter.fillPath(path, p.inset);
             painter.setPen(QPen(p.stroke, 1));
             painter.drawPath(path);
@@ -303,16 +305,22 @@ void EntryDetailCard::onThemeUpdated()
     applyColors();
 }
 
+void EntryDetailCard::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    Vault::paintCardSurface(this, VaultMetrics::CardRadius, isBorderVisible());
+}
+
 void EntryDetailCard::applyColors()
 {
     const auto p = FluentTheme::palette();
     Vault::styleLabel(m_emptyTitle, Typography::FontRole::Subtitle, p.text);
     Vault::styleLabel(m_emptyText, Typography::FontRole::Body, p.textSecondary);
-    Vault::styleLabel(m_title, Typography::FontRole::Subtitle, p.text);
+    Vault::styleHeading(m_title, 28, p.text);
     Vault::styleLabel(m_subtitle, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_meta, Typography::FontRole::Caption, p.textSecondary);
-    Vault::styleLabel(m_notesLabel, Typography::FontRole::BodyStrong, p.text);
-    Vault::styleLabel(m_attributesLabel, Typography::FontRole::BodyStrong, p.text);
+    Vault::styleHeading(m_notesLabel, 17, p.text);
+    Vault::styleHeading(m_attributesLabel, 17, p.text);
     Vault::styleLabel(m_notes, Typography::FontRole::Body, p.textSecondary);
     for (auto* row : {m_usernameRow, m_passwordRow, m_totpRow, m_urlRow}) {
         row->applyColors();
@@ -339,7 +347,8 @@ void EntryDetailCard::updateHeader()
         QPainter painter(&tile);
         painter.setRenderHint(QPainter::Antialiasing);
         QPainterPath path;
-        path.addRoundedRect(QRectF(0.5, 0.5, TileSize - 1, TileSize - 1), 8, 8);
+        path.addRoundedRect(
+            QRectF(0.5, 0.5, TileSize - 1, TileSize - 1), VaultMetrics::PanelRadius, VaultMetrics::PanelRadius);
         painter.fillPath(path, p.inset);
         painter.setPen(QPen(p.stroke, 1));
         painter.drawPath(path);

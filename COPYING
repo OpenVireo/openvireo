@@ -255,6 +255,21 @@ Copyright: 2023 Pictogrammers <https://pictogrammers.com/docs/general/about/>
 License: Apache-2.0
 Comment: Some icons are modified to fit KeePassXC design (https://pictogrammers.com/library/mdi/)
 
+Files: share/fonts/Inter-*.ttf
+Copyright: 2020 The Inter Project Authors (https://github.com/rsms/inter)
+License: OFL-1.1
+Comment: Static instances cut from the variable font; licence in share/fonts/Inter-OFL.txt
+
+Files: share/fonts/InterTight-*.ttf
+Copyright: 2022 The Inter Project Authors (https://github.com/rsms/inter-tight)
+License: OFL-1.1
+Comment: Static instance cut from the variable font; licence in share/fonts/InterTight-OFL.txt
+
+Files: share/fonts/JetBrainsMono-*.ttf
+Copyright: 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+License: OFL-1.1
+Comment: Static instances cut from the variable font; licence in share/fonts/JetBrainsMono-OFL.txt
+
 Files: src/streams/qtiocompressor.*
        src/streams/QtIOCompressor
        tests/modeltest.*

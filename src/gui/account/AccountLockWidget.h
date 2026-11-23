@@ -28,6 +28,7 @@ class QFrame;
 class QLabel;
 class VaultButton;
 class VaultLineEdit;
+class VaultUnlockShell;
 
 /**
  * The lock screen of a signed-in account, shown in the welcome screen's place while the account is
@@ -75,7 +76,11 @@ private:
     bool needsSignIn() const;
 
     QPointer<AccountController> m_controller;
+    VaultUnlockShell* m_shell;
     QFrame* m_card;
+    QFrame* m_accountCard;
+    QLabel* m_avatar;
+    QLabel* m_subtitle;
     QLabel* m_tile;
     QLabel* m_headline;
     QLabel* m_accountLabel;

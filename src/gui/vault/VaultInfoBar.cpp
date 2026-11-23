@@ -16,6 +16,7 @@
  */
 
 #include "VaultInfoBar.h"
+#include "VaultMetrics.h"
 
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
@@ -47,7 +48,7 @@ const int VaultInfoBar::DisableAutoHide = -1;
 namespace
 {
     constexpr int IconSize = 16;
-    constexpr int Radius = 4;
+    constexpr int Radius = VaultMetrics::RowRadius;
     // WinUI's InfoBar animates over the standard "fast" duration
     constexpr int AnimationMs = 167;
 } // namespace

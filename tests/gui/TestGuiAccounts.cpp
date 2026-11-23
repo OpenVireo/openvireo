@@ -1810,6 +1810,11 @@ void TestGuiAccounts::testLockScreenUnlocksTheAccount()
     clickUnlock(m_mainWindow.data());
     auto* message = child<QWidget>(lockScreen, "accountLockMessage");
     QTRY_VERIFY_WITH_TIMEOUT(message->isVisible(), 10000);
+    // Set OPENVIREO_LOCK_SCREENSHOT to a .png path to save the lock screen with the error, for reviewing its layout
+    const auto screenshot = qEnvironmentVariable("OPENVIREO_LOCK_SCREENSHOT");
+    if (!screenshot.isEmpty()) {
+        m_mainWindow->grab().save(screenshot);
+    }
     QCOMPARE(account->state(), AccountManager::State::Locked);
     QVERIFY(lockPassword(m_mainWindow.data())->text().isEmpty());
     QCOMPARE(m_mainWindow->notificationCenter()->notifications().size(), notifications);

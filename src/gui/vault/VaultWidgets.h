@@ -31,7 +31,12 @@ class QLabel;
 
 namespace Vault
 {
+    // A Fluent type role's font. Title roles (Subtitle and larger) use the bundled heading face, Inter Tight 700,
+    // as the site and the web app do.
     QFont font(Typography::FontRole role);
+    // The heading face at a size the type ramp doesn't have (view title 30, entry title 28, sections 17)
+    QFont headingFont(int pixelSize);
+    void styleHeading(QLabel* label, int pixelSize, const QColor& color);
 
     // Set a label's font and text color from Fluent tokens
     void styleLabel(QLabel* label, Typography::FontRole role, const QColor& color);
@@ -53,6 +58,10 @@ namespace Vault
     QString pivotStyleSheet();
     // Fill a widget's background with the window canvas, as behind the main window's panes
     void paintCanvas(QWidget* widget);
+    // Paint a card's rounded surface at one of the VaultMetrics radii (Fluent-Qt's Card uses the 6px control radius)
+    void paintCardSurface(QWidget* card, int radius, bool border = true);
+    // Labelled buttons are pills and icon-only buttons are round, as on the site and the web app
+    void makePill(fluent::basicinput::Button* button);
 } // namespace Vault
 
 /**

@@ -191,6 +191,7 @@ set(gui_SOURCES
         gui/vault/VaultSettingsModal.cpp
         gui/vault/VaultSettingsPage.cpp
         gui/vault/VaultTable.cpp
+        gui/vault/VaultUnlockShell.cpp
         gui/vault/VaultWidgets.cpp
         gui/vault/VaultWindowFrame.cpp
         gui/export/ExportDialog.cpp
@@ -249,7 +250,8 @@ set(gui_SOURCES
         gui/wizard/ImportWizardPageReview.cpp
         gui/wizard/ImportWizardPageSelect.cpp
         quickunlock/QuickUnlockInterface.cpp
-        ../share/icons/icons.qrc)
+        ../share/icons/icons.qrc
+        ../share/fonts/fonts.qrc)
 
 if(APPLE)
     list(APPEND gui_SOURCES

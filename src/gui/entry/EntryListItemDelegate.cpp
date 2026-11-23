@@ -16,6 +16,7 @@
  */
 
 #include "EntryListItemDelegate.h"
+#include "gui/vault/VaultMetrics.h"
 
 #include "core/Entry.h"
 #include "core/PasswordHealth.h"
@@ -73,12 +74,12 @@ void EntryListItemDelegate::paint(QPainter* painter,
     QRectF row = QRectF(option.rect).adjusted(RowInset, 2, -RowInset, -2);
     if (selected || hovered) {
         QPainterPath path;
-        path.addRoundedRect(row, 4, 4);
+        path.addRoundedRect(row, VaultMetrics::RowRadius + 2, VaultMetrics::RowRadius + 2);
         painter->fillPath(path, selected ? p.accentSubtle : p.subtleHover);
         FluentTheme::paintRowStateOutline(painter, path, selected, hovered);
     }
     if (selected) {
-        QRectF pill(row.left(), row.center().y() - 8, 3, 16);
+        QRectF pill(row.left(), row.center().y() - 10, 3, 20);
         QPainterPath path;
         path.addRoundedRect(pill, 1.5, 1.5);
         painter->fillPath(path, p.accent);
@@ -87,8 +88,8 @@ void EntryListItemDelegate::paint(QPainter* painter,
     // Icon tile
     QRectF tile(row.left() + 10, row.center().y() - TileSize / 2.0, TileSize, TileSize);
     QPainterPath tilePath;
-    tilePath.addRoundedRect(tile, 6, 6);
-    painter->fillPath(tilePath, p.inset);
+    tilePath.addRoundedRect(tile, VaultMetrics::RowRadius, VaultMetrics::RowRadius);
+    painter->fillPath(tilePath, p.layer);
     painter->setPen(QPen(p.stroke, 1));
     painter->drawPath(tilePath);
     const auto icon = index.data(Qt::DecorationRole);

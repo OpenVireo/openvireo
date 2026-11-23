@@ -32,6 +32,9 @@ class Database;
 class QFile;
 class QFrame;
 
+class QLabel;
+class VaultUnlockShell;
+
 namespace Ui
 {
     class DatabaseOpenWidget;
@@ -93,6 +96,11 @@ private:
     // The unlock form is a Fluent card on the window canvas
     bool m_vaultStyle = false;
     QFrame* m_card = nullptr;
+    // The split unlock layout around the form, and the database's own card inside it
+    VaultUnlockShell* m_shell = nullptr;
+    QFrame* m_fileCard = nullptr;
+    QLabel* m_title = nullptr;
+    QLabel* m_subtitle = nullptr;
     bool m_pollingHardwareKey = false;
     bool m_manualHardwareKeyRefresh = false;
     bool m_blockQuickUnlock = false;

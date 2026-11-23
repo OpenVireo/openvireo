@@ -53,6 +53,9 @@ public:
     void refresh();
     void onThemeUpdated() override;
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private:
     void updateHeader();
     void updateFields();

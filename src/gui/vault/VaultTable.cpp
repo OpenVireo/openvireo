@@ -16,6 +16,7 @@
  */
 
 #include "VaultTable.h"
+#include "VaultMetrics.h"
 
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultWidgets.h"
@@ -42,7 +43,8 @@ namespace
     // Room around cell content; the first cell leaves more for the selection pill
     constexpr int CellPadding = 6;
     constexpr int FirstCellPadding = 12;
-    constexpr int RowRadius = 4;
+    // Table rows are shorter than list rows, so their corners are a little tighter
+    constexpr int RowRadius = 8;
     const char* const TrackerName = "vaultTableTracker";
 
     QHeaderView* horizontalHeaderOf(const QAbstractItemView* view)
@@ -280,7 +282,7 @@ namespace
         const auto argb = [](const QColor& color) { return color.name(QColor::HexArgb); };
         // Matched by a property so editors and combo box pop-ups inside the view keep their own look
         return QStringLiteral("*[vaultTable=\"true\"] { background-color: %1; border: 1px solid %2;"
-                              " border-radius: 8px; outline: none; color: %3;"
+                              " border-radius: 16px; outline: none; color: %3;"
                               " selection-background-color: transparent; selection-color: %3;"
                               // The rows paint their own selection; without this the style fills the cell first
                               " show-decoration-selected: 0; }"
@@ -386,15 +388,16 @@ void Vault::paintNavigationRow(QPainter* painter, const QRectF& row, bool select
     painter->setRenderHint(QPainter::Antialiasing);
     if (selected || hovered) {
         QPainterPath path;
-        path.addRoundedRect(row, RowRadius, RowRadius);
-        painter->fillPath(path, selected && hovered ? p.subtlePressed : p.subtleHover);
+        path.addRoundedRect(row, VaultMetrics::RowRadius, VaultMetrics::RowRadius);
+        // The selected group is tinted green, like the selected entry
+        painter->fillPath(path, selected ? p.accentSubtle : p.subtleHover);
         QPainterPath outline;
-        outline.addRoundedRect(row.adjusted(1, 1, -1, -1), RowRadius, RowRadius);
+        outline.addRoundedRect(row.adjusted(1, 1, -1, -1), VaultMetrics::RowRadius, VaultMetrics::RowRadius);
         FluentTheme::paintRowStateOutline(painter, outline, selected, hovered);
     }
     if (selected && pill) {
         QPainterPath indicator;
-        indicator.addRoundedRect(QRectF(row.left(), row.center().y() - 8, 3, 16), 1.5, 1.5);
+        indicator.addRoundedRect(QRectF(row.left(), row.center().y() - 10, 3, 20), 1.5, 1.5);
         painter->fillPath(indicator, p.accent);
     }
     painter->restore();

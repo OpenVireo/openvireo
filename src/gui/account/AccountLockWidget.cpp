@@ -24,6 +24,8 @@
 #include "gui/vault/VaultInfoBar.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultMetrics.h"
+#include "gui/vault/VaultUnlockShell.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QAction>
@@ -31,22 +33,21 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QRegularExpression>
 #include <QUrl>
 #include <QVBoxLayout>
 
 namespace
 {
-    // The width of the card and of the tile at its top, as on a database's unlock card
-    constexpr int CardWidth = 440;
     constexpr int TileSize = 56;
+    constexpr int AvatarSize = 40;
 
-    QColor outlineColor(const FluentTheme::Palette& p)
+    QString initialsOf(const QString& email)
     {
-        auto stroke = p.strokeStrong;
-        if (!p.highContrast) {
-            stroke.setAlphaF(stroke.alphaF() * 0.3);
-        }
-        return stroke;
+        const auto name = email.section(QLatin1Char('@'), 0, 0);
+        const auto parts = name.split(QRegularExpression(QStringLiteral("[._-]+")), Qt::SkipEmptyParts);
+        const auto initials = parts.size() > 1 ? parts.at(0).left(1) + parts.at(1).left(1) : name.left(2);
+        return initials.isEmpty() ? QStringLiteral("?") : initials.toUpper();
     }
 
     QString linkHtml(const QString& text, const QColor& color)
@@ -69,11 +70,15 @@ namespace
 
 AccountLockWidget::AccountLockWidget(QWidget* parent)
     : QWidget(parent)
+    , m_shell(new VaultUnlockShell(this))
     , m_card(new QFrame(this))
+    , m_accountCard(new QFrame(m_card))
+    , m_avatar(new QLabel(m_accountCard))
+    , m_subtitle(new QLabel(tr("Enter your master password to open your vaults."), m_card))
     , m_tile(new QLabel(m_card))
-    , m_headline(new QLabel(tr("Your account is locked"), m_card))
-    , m_accountLabel(new QLabel(m_card))
-    , m_serverLabel(new QLabel(m_card))
+    , m_headline(new QLabel(tr("Unlock"), m_card))
+    , m_accountLabel(new QLabel(m_accountCard))
+    , m_serverLabel(new QLabel(m_accountCard))
     , m_quickUnlockButton(new VaultButton(quickUnlockText(), m_card))
     , m_orLabel(new QLabel(tr("or use your master password"), m_card))
     , m_passwordLabel(new QLabel(tr("Master password"), m_card))
@@ -88,32 +93,46 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
 {
     Vault::paintCanvas(this);
 
+    // The form in the split unlock layout's column (VaultUnlockShell), as on the web app and the account site
     m_card->setObjectName("accountLockCard");
-    m_card->setFixedWidth(CardWidth);
     auto* cardLayout = new QVBoxLayout(m_card);
-    cardLayout->setContentsMargins(32, 32, 32, 28);
+    cardLayout->setContentsMargins(0, 0, 0, 0);
     cardLayout->setSpacing(0);
 
+    // The lock tile of the old centred card; the dark panel carries the lock now
     m_tile->setFixedSize(TileSize, TileSize);
-    m_tile->setAlignment(Qt::AlignCenter);
-    cardLayout->addWidget(m_tile, 0, Qt::AlignHCenter);
-    cardLayout->addSpacing(16);
+    m_tile->hide();
     m_headline->setObjectName("accountLockHeadline");
-    m_headline->setAlignment(Qt::AlignCenter);
     m_headline->setWordWrap(true);
     cardLayout->addWidget(m_headline);
-    cardLayout->addSpacing(4);
+    cardLayout->addSpacing(10);
+    m_subtitle->setWordWrap(true);
+    cardLayout->addWidget(m_subtitle);
+    cardLayout->addSpacing(24);
+
+    // Who is signed in, in the style of the link cards
+    m_accountCard->setObjectName("accountLockAccountCard");
+    auto* accountLayout = new QHBoxLayout(m_accountCard);
+    accountLayout->setContentsMargins(16, 14, 16, 14);
+    accountLayout->setSpacing(14);
+    m_avatar->setFixedSize(AvatarSize, AvatarSize);
+    m_avatar->setAlignment(Qt::AlignCenter);
+    accountLayout->addWidget(m_avatar);
+    auto* accountText = new QVBoxLayout();
+    accountText->setSpacing(0);
     for (auto* label : {m_accountLabel, m_serverLabel}) {
-        label->setAlignment(Qt::AlignCenter);
         label->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        cardLayout->addWidget(label);
+        accountText->addWidget(label);
     }
+    accountLayout->addLayout(accountText, 1);
     m_accountLabel->setObjectName("accountLockEmail");
     m_serverLabel->setObjectName("accountLockServer");
-    cardLayout->addSpacing(24);
+    cardLayout->addWidget(m_accountCard);
+    cardLayout->addSpacing(20);
 
     m_quickUnlockButton->setObjectName("accountLockQuickUnlock");
     m_quickUnlockButton->setMinimumHeight(48);
+    Vault::makePill(m_quickUnlockButton);
     m_quickUnlockButton->setToolTip(tr("Unlock with Touch ID, Windows Hello or your system password"));
     cardLayout->addWidget(m_quickUnlockButton);
     m_orLabel->setAlignment(Qt::AlignCenter);
@@ -150,15 +169,16 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
 
     m_unlockButton->setObjectName("accountLockUnlock");
     m_unlockButton->setDefault(true);
-    m_unlockButton->setMinimumHeight(36);
-    cardLayout->addSpacing(16);
+    m_unlockButton->setMinimumHeight(48);
+    Vault::makePill(m_unlockButton);
+    cardLayout->addSpacing(20);
     cardLayout->addWidget(m_unlockButton);
     cardLayout->addSpacing(16);
     m_recoverLink->setObjectName("accountLockRecover");
     m_recoverLink->setAlignment(Qt::AlignCenter);
     cardLayout->addWidget(m_recoverLink);
 
-    // Ways out beneath the card: the account stays locked
+    // Ways out beneath the form: the account stays locked. Switching account is the column's top-right link.
     auto* links = new QHBoxLayout();
     links->setSpacing(24);
     links->addStretch();
@@ -166,18 +186,25 @@ AccountLockWidget::AccountLockWidget(QWidget* parent)
     m_switchLink->setObjectName("accountLockSwitch");
     m_signOutLink->setObjectName("accountLockSignOut");
     links->addWidget(m_dismissLink);
-    links->addWidget(m_switchLink);
     links->addWidget(m_signOutLink);
     links->addStretch();
+    cardLayout->addSpacing(24);
+    cardLayout->addLayout(links);
+
+    m_shell->setHero(tr("Locked"),
+                     tr("Your vault is\nlocked."),
+                     tr("Your vaults are encrypted with a key only your password can make. It's made here, on this "
+                        "device, and never sent anywhere."));
+    m_shell->steps()->setSteps(
+        {{tr("Enter your password."), tr("Only on this device.")},
+         {tr("Make your key."), tr("Your password is stretched into the key that opens your vaults.")},
+         {tr("Open your vaults."), tr("Decrypted here; the server only ever holds ciphertext.")}});
+    m_shell->setContent(m_card);
+    m_shell->setTopLink(m_switchLink);
 
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(0);
-    layout->addStretch(2);
-    layout->addWidget(m_card, 0, Qt::AlignHCenter);
-    layout->addSpacing(16);
-    layout->addLayout(links);
-    layout->addStretch(3);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(m_shell);
 
     Vault::followTheme(this, [this] { applyTheme(); });
 
@@ -220,9 +247,11 @@ void AccountLockWidget::reset()
     if (m_controller) {
         auto* account = m_controller->account();
         m_accountLabel->setText(account->email());
+        m_avatar->setText(initialsOf(account->email()));
         const auto server = account->server();
         m_serverLabel->setText(QUrl(server.issuer.isEmpty() ? server.api : server.issuer).host());
     }
+    updateLinks();
     updateState();
 }
 
@@ -251,8 +280,9 @@ void AccountLockWidget::hideEvent(QHideEvent* event)
 void AccountLockWidget::applyTheme()
 {
     const auto p = FluentTheme::palette();
-    Vault::styleLabel(m_headline, Typography::FontRole::Subtitle, p.text);
-    Vault::styleLabel(m_accountLabel, Typography::FontRole::Body, p.text);
+    Vault::styleHeading(m_headline, 40, p.text);
+    Vault::styleLabel(m_subtitle, Typography::FontRole::BodyLarge, p.textSecondary);
+    Vault::styleLabel(m_accountLabel, Typography::FontRole::BodyStrong, p.text);
     Vault::styleLabel(m_serverLabel, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_orLabel, Typography::FontRole::Caption, p.textSecondary);
     Vault::styleLabel(m_passwordLabel, Typography::FontRole::BodyStrong, p.text);
@@ -268,9 +298,15 @@ void AccountLockWidget::applyTheme()
     m_tile->setFont(glyphFont);
     m_tile->setText(Typography::Icons::Lock);
 
-    m_card->setStyleSheet(QStringLiteral("QFrame#accountLockCard { background-color: %1; border: 1px solid %2;"
-                                         " border-radius: 8px; }")
-                              .arg(p.layer.name(QColor::HexArgb), outlineColor(p).name(QColor::HexArgb)));
+    m_accountCard->setStyleSheet(
+        QStringLiteral("QFrame#accountLockAccountCard { background-color: %1;"
+                       " border: 1px solid %2; border-radius: %3px; }")
+            .arg(p.layer.name(QColor::HexArgb), (p.highContrast ? p.text : p.stroke).name(QColor::HexArgb))
+            .arg(VaultMetrics::PanelRadius));
+    m_avatar->setStyleSheet(QStringLiteral("QLabel { background-color: %1; color: %2; border-radius: %3px; }")
+                                .arg(p.accent.name(QColor::HexArgb), p.onAccent.name(QColor::HexArgb))
+                                .arg(AvatarSize / 2));
+    m_avatar->setFont(Vault::font(Typography::FontRole::BodyStrong));
     updateLinks();
 }
 
@@ -282,8 +318,12 @@ void AccountLockWidget::updateLinks()
     Vault::styleLabel(m_dismissLink, Typography::FontRole::Caption, p.accentText);
     m_dismissLink->setText(
         linkHtml(m_databasesOpen ? tr("Go to open databases") : tr("Open a local database"), p.accentText));
-    Vault::styleLabel(m_switchLink, Typography::FontRole::Caption, p.accentText);
-    m_switchLink->setText(linkHtml(tr("Switch account"), p.accentText));
+    Vault::styleLabel(m_switchLink, Typography::FontRole::Body, p.textSecondary);
+    const auto first = m_controller ? m_controller->account()->email().section(QLatin1Char('@'), 0, 0) : QString();
+    m_switchLink->setText(first.isEmpty()
+                              ? linkHtml(tr("Switch account"), p.accentText)
+                              : tr("Not %1?").arg(first.toHtmlEscaped()) + QStringLiteral(" <b>")
+                                    + linkHtml(tr("Switch account"), p.accentText) + QStringLiteral("</b>"));
     Vault::styleLabel(m_signOutLink, Typography::FontRole::Caption, p.accentText);
     m_signOutLink->setText(linkHtml(tr("Sign out"), p.accentText));
 }
@@ -326,6 +366,8 @@ void AccountLockWidget::updateState()
 
 void AccountLockWidget::setBusy(bool busy)
 {
+    // The account unlocks in one step here, so the steps stay on "Make your key" for the whole wait
+    m_shell->steps()->setProgress(busy ? 1 : 0, busy);
     m_busyLabel->setVisible(busy);
     m_quickUnlockButton->setEnabled(!busy);
     m_passwordEdit->setEnabled(!busy);

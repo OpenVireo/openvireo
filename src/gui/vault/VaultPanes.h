@@ -55,13 +55,15 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 };
 
-// Content area beside the navigation pane, with a rounded top-left corner
+// Content area beside the navigation pane: a rounded card on the canvas, with a gutter on the right and below
 class VaultSurface : public QWidget
 {
     Q_OBJECT
 
 public:
-    using QWidget::QWidget;
+    explicit VaultSurface(QWidget* parent = nullptr);
+
+    static constexpr int Gutter = 16;
 
 protected:
     void paintEvent(QPaintEvent* event) override;

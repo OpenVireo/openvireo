@@ -23,18 +23,41 @@
 #include <FluentQt/FluentQt.h>
 
 #include <QApplication>
+#include <QFontDatabase>
 #include <QPainter>
 #include <QPainterPath>
 #include <QtMath>
 
+// Outside any namespace, as Q_INIT_RESOURCE requires: the fonts are compiled into the static GUI library
+static bool loadBundledFonts()
+{
+    Q_INIT_RESOURCE(fonts);
+    bool ok = true;
+    for (const auto* file : {"Inter-Regular",
+                             "Inter-Medium",
+                             "Inter-SemiBold",
+                             "InterTight-Bold",
+                             "JetBrainsMono-Regular",
+                             "JetBrainsMono-Medium"}) {
+        ok &= QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/%1.ttf").arg(QLatin1String(file))) >= 0;
+    }
+    return ok;
+}
+
 namespace
 {
-    // Accent taken from the green key in the KeePassXC logo, tuned per mode for contrast
-    const QColor LightAccent(0x3d, 0x7a, 0x28);
-    const QColor LightAccentText(0x2f, 0x64, 0x20);
-    const QColor DarkAccent(0x8f, 0xcd, 0x6e);
-    const QColor DarkAccentText(0xa8, 0xdc, 0x8d);
-    const QColor DarkOnAccent(0x0f, 0x1a, 0x0b);
+    // Colours from the site's tokens; the source of truth is the dev guide's 06-reference/app-design-tokens.md
+    // (the web app's src/theme/fluentTheme.ts has the same values). Every text/background pair passes WCAG AA.
+    const QColor LightAccent(0x3c, 0x7d, 0x20);
+    const QColor LightAccentText(0x2f, 0x6a, 0x18);
+    const QColor DarkAccent(0x8f, 0xd1, 0x6f);
+    const QColor DarkAccentText(0x8f, 0xd1, 0x6f);
+    const QColor DarkOnAccent(0x07, 0x10, 0x0a);
+
+    const QString BodyFamily = QStringLiteral("Inter");
+    const QString DisplayFamily = QStringLiteral("Inter Tight");
+    const QString MonoFamily = QStringLiteral("JetBrains Mono");
+    bool g_fontsLoaded = false;
 
     bool g_initialized = false;
     bool g_highContrast = false;
@@ -67,14 +90,61 @@ namespace
         colors.textOnAccent = onAccent;
     }
 
+    // The green-grey neutrals of the site, in place of Fluent's plain greys (fills and strokes that are
+    // translucent in Fluent keep their alpha over the new backgrounds)
+    void setNeutrals(fluent::FluentElement::Colors& c, bool dark)
+    {
+        if (dark) {
+            c.bgCanvas = QColor(0x12, 0x18, 0x13);
+            c.bgLayer = QColor(0x16, 0x1c, 0x18);
+            c.bgLayerAlt = QColor(0x14, 0x1a, 0x16);
+            c.bgSolid = QColor(0x12, 0x18, 0x13);
+            c.strokeCard = QColor(0x2a, 0x33, 0x2d);
+            c.strokeDivider = QColor(0x2a, 0x33, 0x2d);
+            c.strokeStrong = QColor(0x8a, 0x95, 0x8d);
+            c.textPrimary = QColor(0xee, 0xf2, 0xef);
+            c.textSecondary = QColor(0xa9, 0xb3, 0xab);
+            c.textTertiary = QColor(0x86, 0x91, 0x8a);
+            c.textDisabled = QColor(0x69, 0x73, 0x6c);
+            c.subtleSecondary = QColor(220, 240, 220, 15);
+            c.subtleTertiary = QColor(220, 240, 220, 10);
+            c.systemCaution = QColor(0xf0, 0xc3, 0x6d);
+            c.systemCautionBg = QColor(0x33, 0x2a, 0x17);
+        } else {
+            c.bgCanvas = QColor(0xf3, 0xf6, 0xf2);
+            c.bgLayer = QColor(0xff, 0xff, 0xff);
+            c.bgLayerAlt = QColor(0xfb, 0xfc, 0xfb);
+            c.bgSolid = QColor(0xf3, 0xf6, 0xf2);
+            c.strokeCard = QColor(0xe0, 0xe6, 0xdf);
+            c.strokeDivider = QColor(0xe6, 0xeb, 0xe5);
+            c.strokeStrong = QColor(0x7d, 0x87, 0x7f);
+            c.textPrimary = QColor(0x0b, 0x0f, 0x0c);
+            c.textSecondary = QColor(0x4c, 0x57, 0x4f);
+            c.textTertiary = QColor(0x63, 0x6e, 0x66);
+            c.textDisabled = QColor(0x9a, 0xa3, 0x9b);
+            c.subtleSecondary = QColor(20, 48, 16, 11);
+            c.subtleTertiary = QColor(20, 48, 16, 18);
+            c.systemCaution = QColor(0x8a, 0x53, 0x00);
+            c.systemCautionBg = QColor(0xfb, 0xef, 0xd9);
+        }
+    }
+
     void initialize()
     {
         fluent::initializeResources();
+        g_fontsLoaded = loadBundledFonts();
 
         auto& registry = fluent::ThemeRegistry::instance();
         auto snapshot = registry.snapshot();
+        setNeutrals(snapshot.lightColors, false);
+        setNeutrals(snapshot.darkColors, true);
         setAccent(snapshot.lightColors, LightAccent, LightAccentText, Qt::white);
         setAccent(snapshot.darkColors, DarkAccent, DarkAccentText, DarkOnAccent);
+        // Controls 6px, flyouts and dialogs 12px; larger surfaces use VaultMetrics.h
+        snapshot.radius = {0, 6, 12};
+        if (g_fontsLoaded) {
+            snapshot.fontFamilyOverride = BodyFamily;
+        }
         registry.applySnapshot(snapshot);
         g_lightColors = snapshot.lightColors;
 
@@ -364,8 +434,8 @@ namespace
         p.textDisabled = c.textDisabled;
         p.accent = c.accentDefault;
         p.accentText = c.textAccentPrimary;
-        // Selected rows get a quiet accent tint rather than a solid fill
-        p.accentSubtle = withAlpha(c.accentDefault, dark ? 46 : 36);
+        // Selected rows get a quiet, solid green tint (text on it keeps AA, as on the web)
+        p.accentSubtle = dark ? QColor(0x1a, 0x26, 0x1c) : QColor(0xe7, 0xf1, 0xe1);
         p.onAccent = c.textOnAccent;
         p.critical = c.systemCritical;
         p.criticalBg = c.systemCriticalBg;
@@ -495,4 +565,20 @@ QAction* FluentTheme::action(const QString& objectName)
         }
     }
     return nullptr;
+}
+
+QString FluentTheme::displayFontFamily()
+{
+    if (!g_initialized) {
+        initialize();
+    }
+    return g_fontsLoaded ? DisplayFamily : QString();
+}
+
+QString FluentTheme::monoFontFamily()
+{
+    if (!g_initialized) {
+        initialize();
+    }
+    return g_fontsLoaded ? MonoFamily : QString();
 }

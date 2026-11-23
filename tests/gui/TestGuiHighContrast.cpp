@@ -372,7 +372,9 @@ void TestGuiHighContrast::testLeavingHighContrastRestoresColors()
     QCOMPARE(restored.accent, light.accent);
     QCOMPARE(restored.canvas, light.canvas);
     QCOMPARE(restored.stroke, light.stroke);
-    QVERIFY(restored.accentSubtle.alpha() < 255);
+    // The normal green selection tint is back, not the high-contrast one
+    QCOMPARE(restored.accentSubtle, light.accentSubtle);
+    QCOMPARE(restored.accentSubtle, QColor(0xe7, 0xf1, 0xe1));
     QCOMPARE(fluent::MotionPolicy::instance().mode(), fluent::MotionPolicy::Mode::Full);
 }
 
