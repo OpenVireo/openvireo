@@ -1729,10 +1729,6 @@
 <context>
     <name>AutoTypeSelectDialog</name>
     <message>
-        <source>Auto-Type - OpenVireo</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Double click a row to perform Auto-Type or find an entry using the search:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1805,6 +1801,10 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
     </message>
     <message>
         <source>You can use advanced search queries to find any entry in your open databases.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-Type</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1957,6 +1957,14 @@ Ctrl+Shift+4 - Copy URL&lt;br/&gt;
     </message>
     <message>
         <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select Database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2547,6 +2555,22 @@ Do you want to overwrite the passkey in %1 - %2?</source>
         <source>Copy history</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Clone</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>So the copy is easy to tell apart from the original</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The copy follows the original&apos;s username and password when they change</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The copy keeps the original&apos;s earlier versions</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>CsvImportWidget</name>
@@ -3114,6 +3138,10 @@ Permissions to access entries will be revoked.</source>
     </message>
     <message>
         <source>Abort</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forget site-specific settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
@@ -6089,9 +6117,11 @@ Would you like to overwrite the existing attachment?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>You are about to export your database to an unencrypted file.
-This will leave your passwords and sensitive information vulnerable!
-</source>
+        <source>Export</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Anyone with the file can read your passwords</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8840,6 +8870,14 @@ Name of the vault:</source>
         <source>Comment</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Generate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Usually who the key is for and where</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>OrgAdminModal</name>
@@ -8850,10 +8888,6 @@ Name of the vault:</source>
 </context>
 <context>
     <name>PasskeyExportDialog</name>
-    <message>
-        <source>OpenVireo - Passkey Export</source>
-        <translation type="unfinished"></translation>
-    </message>
     <message>
         <source>Filenames will be generated with title and .passkey file extension.</source>
         <translation type="unfinished"></translation>
@@ -8876,6 +8910,10 @@ Name of the vault:</source>
     </message>
     <message>
         <source>Export the following passkey entries.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Export Passkeys</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -8906,10 +8944,6 @@ Do you want to overwrite it?
 </context>
 <context>
     <name>PasskeyImportDialog</name>
-    <message>
-        <source>OpenVireo - Passkey Import</source>
-        <translation type="unfinished"></translation>
-    </message>
     <message>
         <source>Username: %1</source>
         <translation type="unfinished"></translation>
@@ -9437,15 +9471,15 @@ Do you want to overwrite it?</source>
 <context>
     <name>PickcharsDialog</name>
     <message>
-        <source>OpenVireo - Pick Characters</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Select characters to type, navigate with arrow keys, Ctrl + S submits.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Press &amp;Tab between characters</source>
+        <source>Pick Characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press Tab between characters</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -13565,6 +13599,26 @@ This option is deprecated, use --set-key-file instead.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>For the member selected above</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Email</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Look the person up, then check their fingerprint with them</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Recipient</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 (service account)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -13835,6 +13889,14 @@ Check that %1 sees the same fingerprint before you share.</source>
     </message>
     <message>
         <source>Emergency Kit saved to %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Account</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Secret Key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -14574,6 +14636,17 @@ Example: JBSWY3DPEHPK3PXP</source>
     </message>
     <message>
         <source>Check the entries before they are imported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VaultInputDialog</name>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
