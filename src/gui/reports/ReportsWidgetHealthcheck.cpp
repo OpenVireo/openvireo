@@ -28,6 +28,7 @@
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultTable.h"
 
+#include <QHeaderView>
 #include <QMenu>
 #include <QPointer>
 #include <QShortcut>
@@ -152,6 +153,8 @@ ReportsWidgetHealthcheck::ReportsWidgetHealthcheck(QWidget* parent)
     m_ui->healthcheckTableView->setModel(m_modelProxy.data());
     m_ui->healthcheckTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_ui->healthcheckTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    // One line per entry; long paths elide instead of wrapping
+    m_ui->healthcheckTableView->setWordWrap(false);
     Vault::styleTable(m_ui->healthcheckTableView, tr("Congratulations, everything is healthy!"));
 
     connect(m_ui->healthcheckTableView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(customMenuRequested(QPoint)));
@@ -294,8 +297,17 @@ void ReportsWidgetHealthcheck::calculateHealth()
     // Restore sorting options that was stored before the model was cleared
     m_ui->healthcheckTableView->sortByColumn(sortColumn, sortOrder);
 
-    m_ui->healthcheckTableView->resizeColumnsToContents();
-    m_ui->healthcheckTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+    // Every column fits the table: the path takes what's left and elides in the middle, so the reason at the end
+    // is never cut off
+    auto* view = m_ui->healthcheckTableView;
+    view->resizeColumnsToContents();
+    auto* header = view->horizontalHeader();
+    header->setStretchLastSection(false);
+    header->setSectionResizeMode(0, QHeaderView::Fixed);
+    header->setSectionResizeMode(1, QHeaderView::Interactive);
+    header->setSectionResizeMode(2, QHeaderView::Stretch);
+    header->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(4, QHeaderView::ResizeToContents);
 
     // Only show the "show excluded" checkbox if there are any excluded entries in the database
     m_ui->showExcluded->setVisible(health->anyExcludedEntries());
