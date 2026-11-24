@@ -919,11 +919,11 @@ void VaultEntryEditCard::buildEntryPage()
         return editRow;
     };
     auto heading = [this, body](const QString& text, const char* name) {
-        auto* label = new QLabel(text, body);
-        label->setObjectName(QString::fromLatin1(name));
-        label->setContentsMargins(2, HeadingGap, 0, 0);
-        m_headings << label;
-        return label;
+        auto* headingLabel = new QLabel(text, body);
+        headingLabel->setObjectName(QString::fromLatin1(name));
+        headingLabel->setContentsMargins(2, HeadingGap, 0, 0);
+        m_headings << headingLabel;
+        return headingLabel;
     };
 
     // A new entry starts from a type, which picks the fields it starts with
