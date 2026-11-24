@@ -708,8 +708,8 @@ dependencies = [
 
 [[package]]
 name = "ov-core"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "async-trait",
  "futures",
@@ -732,8 +732,8 @@ dependencies = [
 
 [[package]]
 name = "ov-crypto"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "argon2",
  "base64",
@@ -761,13 +761,13 @@ dependencies = [
 
 [[package]]
 name = "ov-error"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 
 [[package]]
 name = "ov-ffi-cpp"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "async-trait",
  "cxx",
@@ -779,6 +779,7 @@ dependencies = [
  "ov-kdbx",
  "ov-merge",
  "ov-opaque",
+ "ov-share",
  "ov-testkit",
  "rand_chacha",
  "rand_core",
@@ -788,8 +789,8 @@ dependencies = [
 
 [[package]]
 name = "ov-host"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "async-trait",
  "ov-error",
@@ -799,13 +800,13 @@ dependencies = [
 
 [[package]]
 name = "ov-http"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 
 [[package]]
 name = "ov-kdbx"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "aes",
  "argon2",
@@ -827,8 +828,8 @@ dependencies = [
 
 [[package]]
 name = "ov-merge"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "ov-error",
  "ov-kdbx",
@@ -838,7 +839,7 @@ dependencies = [
 [[package]]
 name = "ov-opaque"
 version = "0.1.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "argon2",
  "opaque-ke",
@@ -851,8 +852,8 @@ dependencies = [
 
 [[package]]
 name = "ov-protocol"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "hex",
  "ov-error",
@@ -864,8 +865,8 @@ dependencies = [
 
 [[package]]
 name = "ov-share"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "base64",
  "hmac",
@@ -880,8 +881,8 @@ dependencies = [
 
 [[package]]
 name = "ov-sync"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "async-trait",
  "base64",
@@ -897,8 +898,8 @@ dependencies = [
 
 [[package]]
 name = "ov-testkit"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "async-trait",
  "base64",
@@ -919,8 +920,8 @@ dependencies = [
 
 [[package]]
 name = "ov-vault"
-version = "0.0.0"
-source = "git+https://github.com/openvireo/openvireo-core?rev=bd1f656053ce540b69b819426d7c0800ad83f845#bd1f656053ce540b69b819426d7c0800ad83f845"
+version = "1.1.0"
+source = "git+https://github.com/openvireo/openvireo-core?rev=dc703171e205930cd45cd816951d1b459d44c716#dc703171e205930cd45cd816951d1b459d44c716"
 dependencies = [
  "ov-crypto",
  "ov-error",
