@@ -46,6 +46,7 @@
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
 #include "gui/account/ShareVaultDialog.h"
+#include "gui/account/SharedLinksDialog.h"
 #include "gui/account/SignUpWizard.h"
 #include "gui/notifications/NotificationCenter.h"
 #include "gui/remote/DatabaseSettingsWidgetRemote.h"
@@ -63,6 +64,7 @@
 
 #include "quickunlock/QuickUnlockInterface.h"
 #include <components/dialogs_flyouts/ContentDialog.h>
+#include <components/navigation/SelectorBar.h>
 
 #include <QAction>
 #include <QCheckBox>
@@ -607,15 +609,23 @@ void TestGuiAccounts::testEmergencyKitShowsTheStoredSecretKey()
     action->trigger();
     EmergencyKitDialog* dialog = nullptr;
     QTRY_VERIFY(dialog = m_mainWindow->findChild<EmergencyKitDialog*>());
-    QCOMPARE(child<QLabel>(dialog, "secretKeyLabel")->text(), secretKey);
+    // A card over the main window, its buttons in the card's footer
+    QVERIFY(m_mainWindow->findChild<VaultModal*>("vaultEmergencyKitModal"));
+    // Masked until Show, but for the version prefix
+    auto* keyLabel = child<QLabel>(dialog, "secretKeyLabel");
+    QVERIFY(keyLabel->text() != secretKey);
+    QVERIFY(keyLabel->text().startsWith(secretKey.section('-', 0, 0) + "-"));
+    QCOMPARE(keyLabel->text().size(), secretKey.size());
+    QTest::mouseClick(child<QPushButton>(dialog, "revealKeyButton"), Qt::LeftButton);
+    QCOMPARE(keyLabel->text(), secretKey);
 
-    QTest::mouseClick(child<QPushButton>(dialog, "copyKeyButton"), Qt::LeftButton);
+    QTest::mouseClick(child<QPushButton>(m_mainWindow.data(), "copyKeyButton"), Qt::LeftButton);
     QCOMPARE(QApplication::clipboard()->text(), secretKey);
 
     QTemporaryDir dir;
     const auto kitPath = dir.filePath("kit.pdf");
     fileDialog()->setNextFileName(kitPath);
-    QTest::mouseClick(child<QPushButton>(dialog, "saveKitButton"), Qt::LeftButton);
+    QTest::mouseClick(child<QPushButton>(m_mainWindow.data(), "saveKitButton"), Qt::LeftButton);
     QFile kit(kitPath);
     QVERIFY(kit.open(QIODevice::ReadOnly));
     QVERIFY(kit.read(5) == "%PDF-");
@@ -2037,4 +2047,89 @@ void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
     QVERIFY(child<QWidget>(text, "shareLinkCommands")->isVisibleTo(text));
     text->reject();
     QTRY_VERIFY(!text);
+}
+
+void TestGuiAccounts::testSharedLinksDialogInTheVaultLayout()
+{
+    QWidget host;
+    host.resize(1100, 800);
+    host.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&host));
+    QPointer<SharedLinksDialog> dialog = SharedLinksDialog::present(nullptr, &host);
+    QVERIFY(host.findChild<VaultModal*>("vaultSharedLinksModal"));
+    QVERIFY(!child<QPushButton>(&host, "sharedLinksClose")->isVisible());
+
+    const auto now = QDateTime::currentDateTimeUtc();
+    ItemShare::Listing entryLink;
+    entryLink.id = "a";
+    entryLink.title = "GitHub";
+    entryLink.entryId = "entry";
+    entryLink.status = "active";
+    entryLink.maxOpens = 3;
+    entryLink.opens = 1;
+    entryLink.passcode = true;
+    entryLink.expiresAt = now.addDays(6);
+    ItemShare::Listing textLink;
+    textLink.id = "b";
+    textLink.title = "Deploy notes";
+    textLink.status = "active";
+    textLink.expiresAt = now.addSecs(600);
+    ItemShare::Listing ended;
+    ended.id = "c";
+    ended.title = "Bank PIN";
+    ended.status = "ended";
+    ended.endReason = "revoked";
+    ended.expiresAt = now.addDays(-1);
+    dialog->setListing({entryLink, textLink, ended});
+
+    // The active ones, each with its own Revoke
+    auto rows = [&] {
+        QList<QWidget*> visible;
+        for (auto* row : dialog->findChildren<QWidget*>("sharedLinkRow")) {
+            if (row->isVisibleTo(dialog)) {
+                visible << row;
+            }
+        }
+        return visible;
+    };
+    QCOMPARE(rows().size(), 2);
+    QVERIFY(!child<QWidget>(dialog, "sharedLinksEmpty")->isVisibleTo(dialog));
+    auto* first = rows().first();
+    QCOMPARE(child<QLabel>(first, "sharedLinkStatus")->text(), SharedLinksDialog::tr("Active"));
+    QVERIFY(child<QLabel>(first, "sharedLinkMeta")->text().contains("passcode"));
+
+    // Revoke asks in the row; Keep puts it back
+    QTest::mouseClick(child<QPushButton>(first, "sharedLinkRevoke"), Qt::LeftButton);
+    QTRY_VERIFY(rows().first()->findChild<QPushButton*>("sharedLinkConfirmRevoke"));
+    QTest::mouseClick(child<QPushButton>(rows().first(), "sharedLinkKeep"), Qt::LeftButton);
+    QTRY_VERIFY(rows().first()->findChild<QPushButton*>("sharedLinkRevoke"));
+
+    // The Ended tab lists why each ended
+    auto* tabs = dialog->findChild<fluent::navigation::SelectorBar*>("sharedLinksTabs");
+    QVERIFY(tabs);
+    tabs->setSelectedIndex(1);
+    QTRY_COMPARE(rows().size(), 1);
+    QCOMPARE(child<QLabel>(rows().first(), "sharedLinkStatus")->text(), SharedLinksDialog::tr("Revoked"));
+    QVERIFY(!rows().first()->findChild<QPushButton*>("sharedLinkRevoke"));
+
+    // With none active, the list says so and offers the ended ones
+    tabs->setSelectedIndex(0);
+    dialog->setListing({ended});
+    QTRY_VERIFY(child<QWidget>(dialog, "sharedLinksEmpty")->isVisibleTo(dialog));
+    auto* seeEnded = child<QPushButton>(dialog, "sharedLinksSeeEnded");
+    QVERIFY(seeEnded->isVisibleTo(dialog));
+    QTest::mouseClick(seeEnded, Qt::LeftButton);
+    QCOMPARE(tabs->selectedIndex(), 1);
+    QTRY_COMPARE(rows().size(), 1);
+
+    // Share Text… opens its card on top of this one
+    QTest::mouseClick(child<QPushButton>(&host, "sharedLinksShareText"), Qt::LeftButton);
+    QTRY_VERIFY(host.findChild<VaultModal*>("vaultShareLinkModal"));
+    child<ShareLinkDialog>(&host, QString())->reject();
+    QTRY_VERIFY(!host.findChild<VaultModal*>("vaultShareLinkModal"));
+
+    // Closing the dialog closes its card
+    dialog->reject();
+    QTRY_VERIFY(!dialog);
+    QTRY_VERIFY(!host.findChild<VaultModal*>("vaultSharedLinksModal"));
 }

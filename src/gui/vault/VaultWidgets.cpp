@@ -17,6 +17,7 @@
 
 #include "VaultWidgets.h"
 
+#include "VaultMetrics.h"
 #include "gui/styles/FluentTheme.h"
 
 #include <components/foundation/FluentElement.h>
@@ -382,4 +383,95 @@ int VaultFittedContent::fittedHeight() const
     const int width = this->width() > 0 ? this->width() : QWidget::sizeHint().width();
     const int height = heightForWidth(width);
     return height > 0 ? height : QWidget::sizeHint().height();
+}
+
+VaultPanel::VaultPanel(Fill fill, QWidget* parent)
+    : QWidget(parent)
+    , m_fill(fill)
+{
+    Vault::followTheme(this, [this] { update(); });
+}
+
+void VaultPanel::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPainterPath path;
+    const qreal radius = VaultMetrics::PanelRadius;
+    path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+    painter.fillPath(path, m_fill == Inset ? p.inset : p.layer);
+    painter.setPen(QPen(p.highContrast ? p.text : p.stroke, 1));
+    painter.drawPath(path);
+}
+
+namespace
+{
+    constexpr int PillPaddingX = 10;
+    constexpr int PillPaddingY = 2;
+} // namespace
+
+VaultPill::VaultPill(const QString& text, QWidget* parent)
+    : QLabel(text, parent)
+{
+    setAlignment(Qt::AlignCenter);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    setFont(Vault::font(Typography::FontRole::Caption));
+}
+
+void VaultPill::setColors(const QColor& fill, const QColor& text)
+{
+    m_fill = fill;
+    m_textColor = text;
+    update();
+}
+
+void VaultPill::setRadius(int radius)
+{
+    m_radius = radius;
+    update();
+}
+
+QSize VaultPill::sizeHint() const
+{
+    // The padding is part of the size rather than contents margins, which a style sheet's QLabel padding would reset
+    const auto metrics = fontMetrics();
+    return {metrics.horizontalAdvance(text()) + 2 * PillPaddingX, metrics.height() + 2 * PillPaddingY};
+}
+
+QSize VaultPill::minimumSizeHint() const
+{
+    return sizeHint();
+}
+
+void VaultPill::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    // Drawn here rather than by QLabel, whose colors a style sheet on a parent would override
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPainterPath path;
+    const qreal radius = m_radius >= 0 ? m_radius : height() / 2.0;
+    path.addRoundedRect(QRectF(rect()), radius, radius);
+    painter.fillPath(path, m_fill);
+    painter.setFont(font());
+    painter.setPen(m_textColor);
+    painter.drawText(rect(), Qt::AlignCenter, text());
+}
+
+VaultDivider::VaultDivider(QWidget* parent)
+    : QWidget(parent)
+{
+    setFixedHeight(1);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    Vault::followTheme(this, [this] { update(); });
+}
+
+void VaultDivider::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.fillRect(rect(), p.highContrast ? p.text : p.divider);
 }

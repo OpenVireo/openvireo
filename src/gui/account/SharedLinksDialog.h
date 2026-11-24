@@ -23,13 +23,20 @@
 #include <QDialog>
 #include <QPointer>
 
+class VaultButton;
 class VaultInfoBar;
-class QCheckBox;
+class QLabel;
 class QPushButton;
-class QTreeWidget;
+class QVBoxLayout;
+
+namespace fluent::navigation
+{
+    class SelectorBar;
+}
 
 // The share links this account made (SPEC §22): what each came from, how often it was opened, Revoke,
-// and making a link for some text. Links that ended stay listed for 30 days.
+// and making a link for some text. Links that ended stay listed for 30 days. Over the main window it is a card
+// (VaultModal) with Active and Ended tabs; each active link has its own Revoke, confirmed in its row.
 class SharedLinksDialog : public QDialog
 {
     Q_OBJECT
@@ -37,22 +44,47 @@ class SharedLinksDialog : public QDialog
 public:
     explicit SharedLinksDialog(ItemShare* shares, QWidget* parent = nullptr);
 
+    // Opens the dialog as a card over the parent's window, or as a window when it can't be one
+    static SharedLinksDialog* present(ItemShare* shares, QWidget* parent);
+
+    // An active link's line under its title: when it expires, how often it was opened, and whether it has a passcode
     static QString describe(const ItemShare::Listing& share, const QDateTime& now);
+    // Why a link ended, for its status
+    static QString endReasonText(const QString& reason);
+
+    // For tests: the links as the server listed them
+    void setListing(const QList<ItemShare::Listing>& shares);
 
 private slots:
     void reload();
-    void revokeSelected();
     void shareText();
 
 private:
     void fill();
+    void revoke(const QString& id);
+    QWidget* makeRow(const ItemShare::Listing& share, const QDateTime& now);
+    void applyColors();
 
     QPointer<ItemShare> m_shares;
     QList<ItemShare::Listing> m_list;
+    bool m_loaded = false;
+    bool m_showEnded = false;
+    QString m_confirming;
     VaultInfoBar* m_message;
-    QTreeWidget* m_tree;
-    QCheckBox* m_showEnded;
-    QPushButton* m_revoke;
+    QLabel* m_intro;
+    fluent::navigation::SelectorBar* m_tabs;
+    QWidget* m_listPanel;
+    QWidget* m_scroll;
+    QWidget* m_rows;
+    QVBoxLayout* m_rowsLayout;
+    QWidget* m_empty;
+    QLabel* m_emptyTitle;
+    QLabel* m_emptyText;
+    QPushButton* m_emptyAction;
+    QWidget* m_buttonRow;
+    QLabel* m_hint;
+    VaultButton* m_shareText;
+    QPushButton* m_closeButton;
 };
 
 #endif // OPENVIREO_SHAREDLINKSDIALOG_H

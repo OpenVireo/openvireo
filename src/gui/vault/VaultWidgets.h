@@ -18,6 +18,7 @@
 #ifndef OPENVIREO_VAULTWIDGETS_H
 #define OPENVIREO_VAULTWIDGETS_H
 
+#include <QLabel>
 #include <QWidget>
 
 #include <functional>
@@ -96,6 +97,69 @@ private:
     QGridLayout* m_grid;
     bool m_stacked = false;
     bool m_hovered = false;
+};
+
+/**
+ * A rounded panel inside a card, at the panel radius with a hairline stroke: the inset fill for something that
+ * stands out from the card, such as the Secret Key, or the card's own layer fill for a group of rows.
+ */
+class VaultPanel : public QWidget
+{
+    Q_OBJECT
+
+public:
+    enum Fill
+    {
+        Inset,
+        Layer
+    };
+
+    explicit VaultPanel(Fill fill, QWidget* parent = nullptr);
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    Fill m_fill;
+};
+
+/**
+ * A short label on a rounded pill, such as a link's status: its own fill and text colors, at its text's height.
+ * Painted by itself, so style sheets on its parents don't change it.
+ */
+class VaultPill : public QLabel
+{
+    Q_OBJECT
+
+public:
+    explicit VaultPill(const QString& text, QWidget* parent = nullptr);
+
+    void setColors(const QColor& fill, const QColor& text);
+    // A corner radius instead of half the height, for a tile rather than a pill
+    void setRadius(int radius);
+
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    QColor m_fill;
+    QColor m_textColor;
+    int m_radius = -1;
+};
+
+// A 1px line between rows, in the divider color
+class VaultDivider : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit VaultDivider(QWidget* parent = nullptr);
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
 };
 
 /**

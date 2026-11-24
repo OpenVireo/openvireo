@@ -23,6 +23,7 @@
 
 #include <components/navigation/Stepper.h>
 
+#include <QDialog>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -208,6 +209,32 @@ VaultModal::VaultModal(QWidget* window, QWidget* content, const QString& title, 
 
     window->installEventFilter(this);
     m_card->installEventFilter(this);
+}
+
+VaultModal* VaultModal::forDialog(QDialog* dialog, const QString& namePrefix, int maximumCardWidth)
+{
+    auto* parent = dialog->parentWidget();
+    if (!parent) {
+        return nullptr;
+    }
+    auto* window = parent->window();
+    if (qobject_cast<QDialog*>(window) || !window->isVisible() || window->isMinimized()) {
+        return nullptr;
+    }
+    dialog->setAutoFillBackground(false);
+    dialog->setMinimumSize(0, 0);
+    dialog->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+    dialog->setWindowFlags(Qt::Widget);
+
+    auto* modal = new VaultModal(window, dialog, dialog->windowTitle(), namePrefix);
+    modal->setMaximumCardWidth(maximumCardWidth);
+    modal->setFitToContent(true);
+    connect(modal, &VaultModal::rejected, dialog, &QDialog::reject);
+    connect(dialog, &QDialog::finished, modal, [modal] {
+        modal->close();
+        modal->deleteLater();
+    });
+    return modal;
 }
 
 void VaultModal::open()

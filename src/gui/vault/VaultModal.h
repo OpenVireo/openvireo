@@ -25,6 +25,7 @@
 
 #include <functional>
 
+class QDialog;
 class QHBoxLayout;
 class QLabel;
 class QPushButton;
@@ -63,6 +64,11 @@ public:
     static QFont pixelFont(const QFont& base, int pixelSize, QFont::Weight weight = QFont::Normal);
 
     VaultModal(QWidget* window, QWidget* content, const QString& title, const QString& namePrefix);
+
+    // Makes a dialog the content of a card over its parent's window, sized to the content, and closes the card with
+    // the dialog. Returns nullptr when the dialog should open as a window instead: the parent's window is hidden,
+    // minimized or itself a dialog, where a card would sit inside that dialog. The caller adds any footer and opens it.
+    static VaultModal* forDialog(QDialog* dialog, const QString& namePrefix, int maximumCardWidth);
 
     void open();
     void close();

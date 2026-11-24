@@ -382,7 +382,8 @@ bool ShareLinkDialog::showAsModal() const
     if (!parent) {
         return false;
     }
-    // Over another dialog, such as Shared Links, a card would sit inside that dialog, so it is a window instead
+    // Over another dialog, such as Shared Links opened as a window, a card would sit inside that dialog, so it is a
+    // window instead
     auto* window = parent->window();
     return !qobject_cast<QDialog*>(window) && window->isVisible() && !window->isMinimized();
 }

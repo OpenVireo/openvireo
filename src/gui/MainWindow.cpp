@@ -1042,9 +1042,7 @@ void MainWindow::showShareLinkDialog()
 
 void MainWindow::showSharedLinks()
 {
-    auto* dialog = new SharedLinksDialog(m_accountController->itemShare(), this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->open();
+    SharedLinksDialog::present(m_accountController->itemShare(), this);
 }
 
 void MainWindow::showDeleteAccount()
@@ -1076,9 +1074,7 @@ void MainWindow::showAccountPlan()
 
 void MainWindow::showEmergencyKit()
 {
-    auto* dialog = new EmergencyKitDialog(m_accountController->account(), this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->open();
+    EmergencyKitDialog::present(m_accountController->account(), this);
 }
 
 void MainWindow::showServiceAccounts()
