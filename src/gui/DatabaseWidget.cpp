@@ -1240,6 +1240,8 @@ void DatabaseWidget::setupVaultLayout(QHBoxLayout* hbox)
     listLayout->setContentsMargins(6, 0, 0, 14);
     listLayout->setSpacing(2);
     listLayout->addWidget(m_entryView);
+    // The list sits straight on the surface, as in the web app; only the details get a card
+    m_entryView->viewport()->setAutoFillBackground(false);
     auto cardHost = new QWidget(m_previewSplitter);
     auto cardLayout = new QVBoxLayout(cardHost);
     cardLayout->setContentsMargins(4, 0, 14, 14);
