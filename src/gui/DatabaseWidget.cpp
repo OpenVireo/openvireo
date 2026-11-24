@@ -271,12 +271,7 @@ DatabaseWidget::DatabaseWidget(const QString& filePath, QWidget* parent)
 
 DatabaseWidget::~DatabaseWidget()
 {
-    // The modals belong to the window, but their pages are this database's. The entry editor goes back to
-    // its own pane first, since it is deleted with the widget.
-    if (m_vaultEntryEditor && m_vaultEntryEditor->isInModal()) {
-        m_vaultCardStack->addWidget(m_vaultEntryEditor);
-    }
-    delete m_vaultNewEntryModal.data();
+    // The modals belong to the window, but their pages are this database's
     delete m_vaultGroupModal.data();
     delete m_vaultDatabaseSettingsModal.data();
     delete m_vaultReportsModal.data();
@@ -1381,11 +1376,6 @@ void DatabaseWidget::hideVaultEditor()
     m_vaultActiveEditor = nullptr;
     m_vaultEntryEditor->finish();
     m_vaultHistoryEditor->finish();
-    if (m_vaultEntryEditor->isInModal()) {
-        m_vaultNewEntryModal->close();
-        m_vaultEntryEditor->setInModal(false);
-        m_vaultCardStack->addWidget(m_vaultEntryEditor);
-    }
     m_vaultCardStack->setCurrentWidget(m_detailCard);
     m_vaultNavPane->setEnabled(true);
     m_vaultCommandBar->setEditorButtons(nullptr);
@@ -1395,38 +1385,6 @@ void DatabaseWidget::hideVaultEditor()
         delete dimmer.data();
     }
     m_vaultDimmers.clear();
-    emitCurrentModeChanged();
-}
-
-void DatabaseWidget::showVaultNewEntryModal()
-{
-    if (!m_vaultNewEntryModal) {
-        auto* host = new QWidget();
-        auto* hostLayout = new QVBoxLayout(host);
-        hostLayout->setContentsMargins(0, 0, 0, 0);
-        m_vaultNewEntryModal = new VaultModal(window(), host, tr("New Entry"), QStringLiteral("vaultNewEntry"));
-        m_vaultNewEntryModal->setMaximumCardWidth(720);
-
-        // The footer, Escape and Enter go through the editor's own buttons, so its checks still apply
-        auto save = [this] { m_editEntryWidget->buttonBox()->button(QDialogButtonBox::Ok)->click(); };
-        auto cancel = [this] { m_editEntryWidget->buttonBox()->button(QDialogButtonBox::Cancel)->click(); };
-        auto* cancelButton = m_vaultNewEntryModal->addFooterButton(tr("Cancel"), false, QStringLiteral("Cancel"));
-        connect(cancelButton, &QPushButton::clicked, this, cancel);
-        auto* saveButton = m_vaultNewEntryModal->addFooterButton(tr("Save"), true, QStringLiteral("Save"));
-        connect(saveButton, &QPushButton::clicked, this, save);
-        connect(m_vaultNewEntryModal, &VaultModal::accepted, this, save);
-        connect(m_vaultNewEntryModal, &VaultModal::rejected, this, cancel);
-    }
-
-    closeVaultModals();
-    m_vaultEntryEditor->setInModal(true);
-    m_vaultNewEntryModal->content()->layout()->addWidget(m_vaultEntryEditor);
-    m_vaultEntryEditor->show();
-    m_vaultNewEntryModal->setInitialFocus(m_editEntryWidget->findChild<QLineEdit*>("titleEdit"));
-    m_vaultActiveEditor = m_vaultEntryEditor;
-    m_vaultNewEntryModal->open();
-    // The modal gives its content the card's palette, so give the form back its own colors
-    m_vaultEntryEditor->onThemeUpdated();
     emitCurrentModeChanged();
 }
 
@@ -2098,11 +2056,8 @@ void DatabaseWidget::switchToEntryEdit(Entry* entry, bool create)
     // Setup the entry edit widget and display
     m_editEntryWidget->loadEntry(entry, create, false, group->name(), m_db);
     m_vaultEntryEditor->prepare(create);
-    if (create) {
-        showVaultNewEntryModal();
-    } else {
-        showVaultEditor(m_vaultEntryEditor);
-    }
+    // New entries are edited in place too, where their details will show
+    showVaultEditor(m_vaultEntryEditor);
 }
 
 void DatabaseWidget::switchToGroupEdit(Group* group, bool create)
@@ -2779,10 +2734,6 @@ void DatabaseWidget::closeEvent(QCloseEvent* event)
 
 void DatabaseWidget::showEvent(QShowEvent* event)
 {
-    // A new entry set aside while another tab was shown comes back with its database
-    if (m_vaultEntryEditor && m_vaultEntryEditor->isInModal() && !m_vaultNewEntryModal->isOpen()) {
-        m_vaultNewEntryModal->open();
-    }
     if (m_vaultGroupEditing && !m_vaultGroupModal->isOpen()) {
         m_vaultGroupModal->open();
     }
@@ -2796,15 +2747,12 @@ void DatabaseWidget::showEvent(QShowEvent* event)
 void DatabaseWidget::hideEvent(QHideEvent* event)
 {
     if (!event->spontaneous()) {
-        // A new entry or a group stays open in its editor, but its modal steps aside until the database is
-        // shown again. Another tab or screen took this database's place, so the other modals go.
+        // A group stays open in its editor, but its modal steps aside until the database is shown again.
+        // Another tab or screen took this database's place, so the other modals go.
         if (m_vaultGroupEditing) {
             m_vaultGroupModal->close();
         } else if (closeVaultModals()) {
             emitCurrentModeChanged();
-        }
-        if (m_vaultNewEntryModal) {
-            m_vaultNewEntryModal->close();
         }
     }
     QStackedWidget::hideEvent(event);

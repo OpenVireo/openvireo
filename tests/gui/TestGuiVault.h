@@ -44,7 +44,8 @@ private slots:
     void testDetailCardAttributes();
     void testCommandBar();
     void testEditEntryInPlace();
-    void testNewEntryModal();
+    void testNewEntryInPlace();
+    void testEditorFields();
     void testEditorSections();
     void testAdvancedPage();
     void testAutoTypePage();

@@ -75,6 +75,14 @@ public:
     loadEntry(Entry* entry, bool create, bool history, const QString& parentName, QSharedPointer<Database> database);
 
     Entry* currentEntry() const;
+    // The entry's attributes and attachments as they are being edited; saving the entry copies them to it
+    EntryAttributes* editedAttributes() const;
+    EntryAttachments* editedAttachments() const;
+    QSharedPointer<Database> database() const;
+    // For hosts that edit the attributes or attachments above directly
+    void markModified();
+    // Asks for files and attaches them, as the Advanced page's Add button does
+    void addAttachments();
     void clear();
 
     enum class Page

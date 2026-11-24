@@ -360,7 +360,6 @@ private:
     void showVaultEditor(VaultEntryEditCard* card);
     void hideVaultEditor();
     // New entries are created in a modal over the window, holding the same editor card
-    void showVaultNewEntryModal();
     // Database settings and reports open in modals over the window, made once the widget is in one
     void showVaultModal(QPointer<VaultSettingsModal>& modal);
     // Groups are created and edited in a modal too, which steps aside while another tab is shown
@@ -400,7 +399,6 @@ private:
     QPointer<VaultEntryEditCard> m_vaultActiveEditor;
     QPointer<VaultSettingsModal> m_vaultDatabaseSettingsModal;
     QPointer<VaultSettingsModal> m_vaultReportsModal;
-    QPointer<VaultModal> m_vaultNewEntryModal;
     QPointer<VaultSettingsModal> m_vaultGroupModal;
     bool m_vaultGroupEditing = false;
     QPointer<QWidget> m_vaultNavPane;

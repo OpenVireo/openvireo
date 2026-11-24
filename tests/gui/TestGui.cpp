@@ -829,7 +829,7 @@ void TestGui::testSearchEditEntry()
     m_dbWidget->groupView()->setCurrentGroup(goodGroup);
     clickNewEntry();
     QTest::keyClicks(titleEdit, "Doggy");
-    QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
+    QTest::mouseClick(m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton"), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
     // Select "Bad" group in groupView
     Group* badGroup = m_db->rootGroup()->findChildByName(QString("Bad"));
@@ -849,7 +849,7 @@ void TestGui::testSearchEditEntry()
     // Check the editor names the entry's own group, not the selected one
     QCOMPARE(titleEdit->text(), QString("Doggy"));
     auto* card = m_mainWindow->findChild<VaultEntryEditCard*>("vaultEntryEditCard");
-    QTRY_COMPARE(card->findChild<QLabel*>("vaultEditSubtitle")->text(), QStringLiteral("Good \u00b7 Editing"));
+    QTRY_COMPARE(card->findChild<QLabel*>("vaultEditSubtitle")->text(), QStringLiteral("Editing in Good"));
 }
 
 void TestGui::testAddEntry()
@@ -865,8 +865,8 @@ void TestGui::testAddEntry()
 
     // Click the new entry button in the command bar and check that we enter edit mode
     clickNewEntry();
-    auto* saveButton = m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave");
-    auto* cancelButton = m_mainWindow->findChild<QPushButton*>("vaultNewEntryCancel");
+    auto* saveButton = m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton");
+    auto* cancelButton = m_mainWindow->findChild<QAbstractButton*>("vaultEditCancelButton");
     QVERIFY(saveButton);
     QVERIFY(cancelButton);
 
@@ -1567,7 +1567,7 @@ void TestGui::testEntryPlaceholders()
     QTest::keyClicks(titleEdit, "test");
     QComboBox* usernameComboBox = editEntryWidget->findChild<QComboBox*>("usernameComboBox");
     QTest::keyClicks(usernameComboBox, "john");
-    QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
+    QTest::mouseClick(m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton"), Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 
     QCOMPARE(entryView->model()->rowCount(), 2);
@@ -1941,7 +1941,7 @@ void TestGui::testDatabaseSettings()
 
     // 2.b) Save changes
     editEntryWidget->switchToPage(EditEntryWidget::Page::Main);
-    auto* newEntrySave = m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave");
+    auto* newEntrySave = m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton");
     QTest::mouseClick(newEntrySave, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 
@@ -2293,7 +2293,7 @@ void TestGui::testAutoType()
 
     // 1.c) Save changes
     editEntryWidget->switchToPage(EditEntryWidget::Page::Main);
-    auto* newEntrySave = m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave");
+    auto* newEntrySave = m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton");
     QTest::mouseClick(newEntrySave, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
 
@@ -2613,7 +2613,7 @@ void TestGui::addCannedEntries()
     auto* passwordEdit =
         editEntryWidget->findChild<PasswordWidget*>("passwordEdit")->findChild<QLineEdit*>("passwordEdit");
     auto save = [this] {
-        QTest::mouseClick(m_mainWindow->findChild<QPushButton*>("vaultNewEntrySave"), Qt::LeftButton);
+        QTest::mouseClick(m_mainWindow->findChild<QAbstractButton*>("vaultEditSaveButton"), Qt::LeftButton);
         QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::ViewMode);
     };
 
@@ -2724,9 +2724,8 @@ void TestGui::clickNewEntry()
     QVERIFY(button->isEnabled());
     QTest::mouseClick(button, Qt::LeftButton);
     QTRY_COMPARE(m_dbWidget->currentMode(), DatabaseWidget::Mode::EditEntryMode);
-    auto* modal = m_mainWindow->findChild<VaultModal*>("vaultNewEntryModal");
-    QVERIFY(modal);
-    QTRY_VERIFY(modal->isOpen());
+    // New entries are edited in place, where the entry's details go
+    QTRY_VERIFY(editEntryWidget()->isVisible());
 }
 
 // Click Edit in the command bar and wait for the editor to take the detail card's place

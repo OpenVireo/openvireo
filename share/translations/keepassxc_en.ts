@@ -4242,10 +4242,6 @@ This is definitely a bug, please report it to the developers.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>New Entry</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Database Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14775,10 +14771,6 @@ Example: JBSWY3DPEHPK3PXP</source>
 <context>
     <name>VaultEntryEditCard</name>
     <message>
-        <source>Attributes, attachments and colors</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Choose an icon or use the site&apos;s</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14787,7 +14779,19 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Site access and extra URLs</source>
+        <source>Add field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>One-time code, URL, attribute, file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Colors, and every attribute and attachment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Which sites can fill this entry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -14815,35 +14819,155 @@ Example: JBSWY3DPEHPK3PXP</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Notes</source>
+        <source>Additional attributes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Tags</source>
+        <source>Details</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Expiry</source>
+        <source>Never</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Add</source>
+        <source>In 3 months</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>More</source>
+        <source>In 1 year</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pick a date…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>More options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto-Type, browser, SSH agent, history</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>One-time code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Secret or otpauth:// link</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>One-time code secret</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove one-time code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>URL %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Attribute name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hidden: stored protected. Click to show it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide this value and store it protected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove attribute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Attachment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paste the secret the site shows when you turn on two-step sign-in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not a valid secret yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Code now %1 · %2 s left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Another URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Text attribute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hidden attribute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Attachment…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New attribute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This entry never expires</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expired %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expires %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New in %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Editing in %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>%1 · Earlier version, read-only</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>New entry in %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>%1 · Editing</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

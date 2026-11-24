@@ -1328,6 +1328,32 @@ Entry* EditEntryWidget::currentEntry() const
     return m_entry;
 }
 
+EntryAttributes* EditEntryWidget::editedAttributes() const
+{
+    return m_entryAttributes;
+}
+
+EntryAttachments* EditEntryWidget::editedAttachments() const
+{
+    return m_attachments.data();
+}
+
+QSharedPointer<Database> EditEntryWidget::database() const
+{
+    return m_db;
+}
+
+void EditEntryWidget::markModified()
+{
+    setModified(true);
+}
+
+void EditEntryWidget::addAttachments()
+{
+    // The widget's own slot asks for the files and reports what it couldn't attach
+    QMetaObject::invokeMethod(m_advancedUi->attachmentsWidget, "insertAttachments");
+}
+
 void EditEntryWidget::loadEntry(Entry* entry,
                                 bool create,
                                 bool history,

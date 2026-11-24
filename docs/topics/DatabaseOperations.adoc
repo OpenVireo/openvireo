@@ -92,32 +92,42 @@ All the details such as usernames, passwords, URLs, attachments, notes, and so o
 
 To add an entry, perform the following step:
 
-1. Click _New Entry_ in the command bar, navigate to Entries > New Entry, or press kbd:[Ctrl+N]. The entry opens in a window over the database:
+1. Click _New Entry_ in the command bar, navigate to Entries > New Entry, or press kbd:[Ctrl+N]. The new entry opens in place of the entry details, so the groups and the entry list stay in view:
 +
 .Adding a new entry
 image::edit_entry.png[]
 
-2. Enter a desired title for the entry, username, password, URL, and notes on this screen.
+2. _(Optional)_ Pick what kind of entry it is: _Login_, _Secure note_, _Card_, _Wi-Fi_, _SSH key_ or _API key_. The type only decides which fields the entry starts with. A card, for example, starts with Cardholder, Number, Expires and Security code attributes and no username or password. The entry stays an ordinary KeePass entry, and you can add or remove any field later.
+
+3. Enter a title, username, password and URL. Each field has its name on the left, and the name moves above the field when the window is narrow.
    a. Your most frequently used usernames will automatically be available in the username drop-down menu. They will also auto-complete for you when typing.
 
    b. You can generate a secure random password by clicking the dice icon in the password field to launch the password generator. Reveal the password by clicking the eye icon.
 
-   c. After you add a URL to an entry you can press the download button to automatically download the website's icon for this entry.
+   c. When you type a URL into a new entry, the title follows the site's name until you type a title of your own. After you add a URL you can press the download button to download the website's icon for this entry.
 
-3. _(Optional)_ Add tags to the entry to quickly find it using the tags in the sidebar. You can easily add new tags or select existing ones from the drop-down list.
+4. _(Optional)_ Add tags to the entry to quickly find it using the tags in the sidebar. You can easily add new tags or select existing ones from the drop-down list.
 
-4. _(Optional)_ Select the _Expires_ check-box to set the expiry date for the password. You can manually enter the date and time or click the _Presets_ button to select an expiry date and time for your password.
+5. _(Optional)_ Choose when the entry expires: _Never_, _In 3 months_, _In 1 year_, or _Pick a date…_ to enter a date and time of your own.
 
-5. Click *Save* to add the entry to your database.
+6. _(Optional)_ Click _Add field_ to add more to the entry:
+   * _One-time code_: paste the secret or the `otpauth://` link the website shows when you turn on two-step sign-in. The current code appears under the field, so you can check it before saving. See <<Adding TOTP to an Entry>>.
+   * _Another URL_: another address the entry works on, for example a second sign-in page. The browser extension offers the entry on these sites too.
+   * _Text attribute_ and _Hidden attribute_: a field of your own, such as an account number or a PIN. Type its name in place of the caption. The lock button hides a value and stores it protected; a hidden attribute starts out that way.
+   * _Attachment…_: attach a file.
+
+7. Click *Save* in the command bar to add the entry to your database, or *Cancel* to set it aside.
+
+Auto-Type, browser integration, the SSH agent, colours, the entry's properties and its history are under _More options_ at the bottom of the entry. Each opens in place of the entry; the back button returns to it.
 
 ==== Editing an Entry
 To edit the details in an entry, perform the following steps:
 
 1. Select the entry you want to edit.
 
-2. Press kbd:[Enter], click the _Edit Entry_ (pencil) button in the command bar, or right-click and select Edit Entry from the menu. The entry details become editable in place.
+2. Press kbd:[Enter], click the _Edit Entry_ (pencil) button in the command bar, or right-click and select Edit Entry from the menu. The entry details become editable in place, in the same groups as the details: sign-in, additional attributes, details and notes.
 
-3. Make the desired changes.
+3. Make the desired changes. The remove button beside a one-time code, an extra URL, an attribute or an attachment takes it off the entry.
 
 4. Click *Save* in the command bar, or *Cancel* to discard the changes.
 
@@ -133,7 +143,9 @@ To add TOTP to a database entry, you must first retrieve the secret string from 
 .Example TOTP Secret
 image::totp_code_example.png[,40%]
 
-Once obtained, right-click the desired entry *(1)*, choose _TOTP_ -> _Set up TOTP..._ *(2)*, and the setup dialog will appear. In that dialog, paste the secret code from the website *(3)*, setup any custom settings (rare) *(4)*, then press OK to save the settings.
+Once obtained, edit the entry, click _Add field_, choose _One-time code_, and paste the secret. OpenVireo stores it as an `otpauth://` link and shows the current code under the field.
+
+You can also right-click the desired entry *(1)*, choose _TOTP_ -> _Set up TOTP..._ *(2)*, and the setup dialog will appear. In that dialog, paste the secret code from the website *(3)*, setup any custom settings (rare) *(4)*, then press OK to save the settings.
 
 .TOTP Setup Process
 image::totp_setup.png[]
@@ -212,13 +224,15 @@ OpenVireo offers several advanced options for managing your database entries. Ad
 ==== Additional Attributes
 A lot of applications and web sites now require providing additional information when you create accounts. The additional information is used to block hackers if any suspicious activity is detected. In addition, the additional information you provide can be used to reset passwords if you forget them. You can also store arbitrary information here that can be copied to the clipboard or Auto-Typed using the `{S:<ATTR_NAME>}` action code.
 
-To protect an attribute from being displayed by default, activate the _Protect_ checkbox *(A)*. To show the contents of the attribute while keeping it protected, press the _Reveal_ button *(B)*.
+Attributes show on the entry itself while you edit it, under _Additional attributes_, one row each: edit the name in place of the caption and the value beside it, and use the lock button to hide a value and store it protected. Add one with _Add field_ > _Text attribute_ or _Hidden attribute_.
+
+The _Advanced_ page under _More options_ lists every attribute too. To protect an attribute from being displayed by default, activate the _Protect_ checkbox *(A)*. To show the contents of the attribute while keeping it protected, press the _Reveal_ button *(B)*.
 
 .Additional attributes example
 image::edit_entry_attributes.png[]
 
 ==== Attachments
-You can attach files to any entry in your database by pressing the _Add_ button *(A)*. These files are added to the database and stored as encrypted binaries. You can open, save, or delete attachments from this interface *(B)*.
+You can attach files to any entry in your database with _Add field_ > _Attachment…_ while editing it; attachments are listed under _Details_, each with a button to remove it. To open or save one, use the _Advanced_ page under _More options_, where the _Add_ button *(A)* attaches files too. These files are added to the database and stored as encrypted binaries. You can open, save, or delete attachments from this interface *(B)*.
 
 NOTE: When you try to open the attached file, OpenVireo extracts the attachment to a temporary file and opens it using the default application associated with the file type. After finishing viewing or editing the file, you can choose between importing or discarding the changes that you made to the temporary file. OpenVireo securely deletes the temporary file by overwriting it.
 
