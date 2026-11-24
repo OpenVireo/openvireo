@@ -339,7 +339,8 @@ replaced by `<concealed by openvireo>` in the child's stdout and stderr, includi
 across writes.
 
 **`ov connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
-sync API and lives in `openvireo-sdk/packages/connect`.
+sync API. It is part of the native `ov` (openvireo-core `bins/ov/src/connect/`, from core 1.2.0) and
+runs as the image `ghcr.io/openvireo/openvireo-connect`; the TypeScript `@openvireo/connect` is deprecated.
 
 - Its bearer tokens are `ov_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
   token) is configured, as `{name, sha256, vaults, access}`: `vaults` lists vault ids or names, or
