@@ -22,7 +22,6 @@
 #include <QActionGroup>
 #include <QLabel>
 #include <QMainWindow>
-#include <QProgressBar>
 #include <QSystemTrayIcon>
 #include <QTimer>
 
@@ -41,6 +40,7 @@ class AccountStartWidget;
 class InactivityTimer;
 class SearchWidget;
 class VaultHeaderBar;
+class ActivityChip;
 class VaultModal;
 class VaultSettingsModal;
 class VaultWindowFrame;
@@ -189,6 +189,7 @@ private slots:
     void agentEnabled(bool enabled);
     void updateTrayIcon();
     void updateProgressBar(int percentage, QString message);
+    void updateActivity();
     void focusSearchWidget();
     void enableMenu();
     void disableMenu();
@@ -285,8 +286,14 @@ private:
     QPointer<QAction> m_actionAccountMove;
     QPointer<QAction> m_actionAccountServiceAccounts;
     QPointer<QAction> m_actionAccountAcceptInvitation;
-    QPointer<QProgressBar> m_progressBar;
-    QPointer<QLabel> m_progressBarLabel;
+    // Progress next to the bell, in the header and in the corner bar; the latest from each source
+    QPointer<ActivityChip> m_activityChip;
+    QPointer<ActivityChip> m_cornerActivityChip;
+    QString m_busyActivity;
+    QString m_syncActivity;
+    int m_syncPercentage = -1;
+    QString m_clipboardActivity;
+    int m_clipboardPercentage = -1;
 
     Q_DISABLE_COPY(MainWindow)
 

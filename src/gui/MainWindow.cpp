@@ -31,7 +31,6 @@
 #include <QList>
 #include <QMimeData>
 #include <QShortcut>
-#include <QStatusBar>
 #include <QTimer>
 #include <QWindow>
 
@@ -658,21 +657,13 @@ MainWindow::MainWindow()
     connect(qApp, SIGNAL(openFile(QString)), this, SLOT(openDatabase(QString)));
     connect(qApp, SIGNAL(quitSignalReceived()), this, SLOT(appExit()), Qt::DirectConnection);
 
-    // Setup the status bar
-    // The status bar only shows progress, so keep it hidden until there is some
-    statusBar()->setFixedHeight(24);
-    statusBar()->setVisible(false);
-    m_progressBarLabel = new QLabel(statusBar());
-    m_progressBarLabel->setVisible(false);
-    statusBar()->addPermanentWidget(m_progressBarLabel);
-    m_progressBar = new QProgressBar(statusBar());
-    m_progressBar->setVisible(false);
-    m_progressBar->setTextVisible(false);
-    m_progressBar->setMaximumWidth(100);
-    m_progressBar->setFixedHeight(15);
-    m_progressBar->setMaximum(100);
-    statusBar()->addPermanentWidget(m_progressBar);
-    connect(clipboard(), &Clipboard::updateCountdown, this, &MainWindow::updateProgressBar);
+    // Progress shows on the activity chip next to the bell, not in a status bar
+    setStatusBar(nullptr);
+    connect(clipboard(), &Clipboard::updateCountdown, this, [this](int percentage, const QString& message) {
+        m_clipboardActivity = percentage < 0 ? QString() : message;
+        m_clipboardPercentage = percentage;
+        updateActivity();
+    });
     m_actionMultiplexer.connect(SIGNAL(updateSyncProgress(int, QString)), this, SLOT(updateProgressBar(int, QString)));
     m_actionMultiplexer.connect(SIGNAL(databaseSyncInProgress()), this, SLOT(disableMenu()));
     m_actionMultiplexer.connect(SIGNAL(databaseSyncCompleted(QString)), this, SLOT(enableMenu()));
@@ -864,12 +855,8 @@ void MainWindow::setupAccounts()
         }
     });
     connect(m_accountController, &AccountController::busyChanged, this, [this](const QString& message) {
-        statusBar()->setVisible(!message.isEmpty());
-        if (message.isEmpty()) {
-            statusBar()->clearMessage();
-        } else {
-            statusBar()->showMessage(message);
-        }
+        m_busyActivity = message;
+        updateActivity();
     });
 
     // An account session from the last run comes back locked; nothing goes out on the network before unlocking
@@ -962,7 +949,6 @@ void MainWindow::showAccountLockScreen()
     }
     closeVaultModals();
     m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
-    statusBar()->setAutoFillBackground(false);
     updateHomeScreen();
     m_lockScreen->reset();
     updateAccountActions();
@@ -1006,7 +992,6 @@ void MainWindow::showStartScreen()
     m_startScreen->setVisible(true);
     updateHomeScreen();
     m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
-    statusBar()->setAutoFillBackground(false);
     updateAccountActions();
 }
 
@@ -1819,10 +1804,8 @@ void MainWindow::switchToDatabases()
     closeVaultModals();
     if (m_ui->tabWidget->currentIndex() == -1) {
         m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
-        statusBar()->setAutoFillBackground(false);
     } else {
         m_ui->stackedWidget->setCurrentIndex(DatabaseTabScreen);
-        statusBar()->setAutoFillBackground(true);
     }
 }
 
@@ -1837,7 +1820,6 @@ void MainWindow::switchToSettings(bool enabled)
     } else if (enabled) {
         m_ui->settingsWidget->loadSettings();
         m_ui->stackedWidget->setCurrentIndex(SettingsScreen);
-        statusBar()->setAutoFillBackground(true);
     } else {
         switchToDatabases();
     }
@@ -1856,7 +1838,6 @@ void MainWindow::togglePasswordGenerator(bool enabled)
         m_ui->passwordGeneratorWidget->loadSettings();
         m_ui->passwordGeneratorWidget->regeneratePassword();
         m_ui->stackedWidget->setCurrentIndex(PasswordGeneratorScreen);
-        statusBar()->setAutoFillBackground(false);
     } else {
         m_ui->passwordGeneratorWidget->saveSettings();
         switchToDatabases();
@@ -1961,10 +1942,8 @@ void MainWindow::databaseTabChanged(int tabIndex)
 {
     if (tabIndex != -1 && m_ui->stackedWidget->currentIndex() == WelcomeScreen) {
         m_ui->stackedWidget->setCurrentIndex(DatabaseTabScreen);
-        statusBar()->setAutoFillBackground(true);
     } else if (tabIndex == -1 && m_ui->stackedWidget->currentIndex() == DatabaseTabScreen) {
         m_ui->stackedWidget->setCurrentIndex(WelcomeScreen);
-        statusBar()->setAutoFillBackground(false);
     }
 
     m_actionMultiplexer.setCurrentObject(m_ui->tabWidget->currentDatabaseWidget());
@@ -2237,16 +2216,31 @@ void MainWindow::updateTrayIcon()
 
 void MainWindow::updateProgressBar(int percentage, QString message)
 {
-    statusBar()->setVisible(percentage >= 0);
-    if (percentage < 0) {
-        m_progressBar->setVisible(false);
-        m_progressBarLabel->setVisible(false);
-    } else {
-        m_progressBar->setValue(percentage);
-        m_progressBar->setVisible(true);
-        m_progressBarLabel->setText(message);
-        m_progressBarLabel->setVisible(true);
+    m_syncActivity = percentage < 0 ? QString() : message;
+    m_syncPercentage = percentage;
+    updateActivity();
+}
+
+void MainWindow::updateActivity()
+{
+    // One thing at a time: account work, then syncing, then the clipboard countdown
+    QString message;
+    int percentage = -1;
+    if (!m_busyActivity.isEmpty()) {
+        message = m_busyActivity;
+    } else if (!m_syncActivity.isEmpty()) {
+        message = m_syncActivity;
+        percentage = m_syncPercentage;
+    } else if (!m_clipboardActivity.isEmpty()) {
+        message = m_clipboardActivity;
+        percentage = m_clipboardPercentage;
     }
+    for (auto* chip : {m_activityChip.data(), m_cornerActivityChip.data()}) {
+        if (chip) {
+            chip->setActivity(message, percentage);
+        }
+    }
+    updateTopChrome();
 }
 
 void MainWindow::obtainContextFocusLock()
@@ -2499,6 +2493,8 @@ void MainWindow::setupNotifications()
     auto* buildBadge = new BuildBadge();
     connect(buildBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
     m_vaultHeader->insertStatusWidget(buildBadge, m_vaultHeader->syncChip());
+    m_activityChip = new ActivityChip();
+    m_vaultHeader->insertStatusWidget(m_activityChip, buildBadge);
     m_notificationButton = new NotificationButton(m_notifications);
     connect(m_notificationButton, &QAbstractButton::clicked, this, [this] { showNotifications(); });
     m_vaultHeader->insertStatusWidget(m_notificationButton, m_vaultHeader->accountButton());
@@ -2509,6 +2505,8 @@ void MainWindow::setupNotifications()
     cornerLayout->setContentsMargins(12, 8, 12, 0);
     cornerLayout->setSpacing(8);
     cornerLayout->addStretch();
+    m_cornerActivityChip = new ActivityChip(m_cornerBar);
+    cornerLayout->addWidget(m_cornerActivityChip);
     auto* cornerBadge = new BuildBadge(m_cornerBar);
     connect(cornerBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
     cornerLayout->addWidget(cornerBadge);
@@ -2616,9 +2614,17 @@ void MainWindow::updateTopChrome()
     // controls floating over the panel. The notifications wait for the welcome screen or a database.
     const bool fullBleed = m_ui->stackedWidget->currentIndex() == WelcomeScreen && isFullBleedHomeShown();
     if (m_cornerBar) {
-        // Only where the header is hidden, and only with something to show
-        m_cornerBar->setVisible(!headerShown && !fullBleed
-                                && (!BuildInfo::isStable() || !m_notifications->isEmpty()));
+        // Only where the header is hidden, and only with something to show. Progress also shows on the start and
+        // lock screens, such as signing in; the build pill and bell stay off those.
+        const bool active = m_cornerActivityChip && m_cornerActivityChip->isActive();
+        m_cornerBar->setVisible(!headerShown
+                                && (active || (!fullBleed && (!BuildInfo::isStable() || !m_notifications->isEmpty()))));
+        if (auto* badge = m_cornerBar->findChild<BuildBadge*>()) {
+            badge->setVisible(!fullBleed && !BuildInfo::isStable());
+        }
+        if (m_cornerNotificationButton) {
+            m_cornerNotificationButton->setVisible(!fullBleed);
+        }
     }
     if (m_vaultFrame) {
         m_vaultFrame->setTitleBarShown(headerShown || !fullBleed);

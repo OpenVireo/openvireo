@@ -435,6 +435,88 @@ void BuildBadge::paintEvent(QPaintEvent* event)
     painter.drawText(r.adjusted(24, 0, -8, 0), Qt::AlignLeft | Qt::AlignVCenter, text());
 }
 
+ActivityChip::ActivityChip(QWidget* parent)
+    : QWidget(parent)
+    , m_spinTimer(new QTimer(this))
+{
+    setObjectName("activityChip");
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    setVisible(false);
+    m_spinTimer->setInterval(30);
+    connect(m_spinTimer, &QTimer::timeout, this, [this] {
+        m_spinAngle = (m_spinAngle + 12) % 360;
+        update();
+    });
+}
+
+void ActivityChip::setActivity(const QString& message, int percentage)
+{
+    m_message = message;
+    m_percentage = qBound(-1, percentage, 100);
+    const bool active = !message.isEmpty();
+    if (active && m_percentage < 0) {
+        m_spinTimer->start();
+    } else {
+        m_spinTimer->stop();
+    }
+    setToolTip(message);
+    setAccessibleName(message);
+    setVisible(active);
+    updateGeometry();
+    update();
+}
+
+bool ActivityChip::isActive() const
+{
+    return !m_message.isEmpty();
+}
+
+QSize ActivityChip::sizeHint() const
+{
+    const QFontMetrics metrics(Vault::font(Typography::FontRole::Caption));
+    return {qMin(metrics.horizontalAdvance(m_message), 280) + 38, 28};
+}
+
+void ActivityChip::onThemeUpdated()
+{
+    update();
+}
+
+void ActivityChip::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // The same pill as the sync chip beside it
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    QPainterPath path;
+    path.addRoundedRect(r, r.height() / 2, r.height() / 2);
+    painter.fillPath(path, p.surface);
+    painter.setPen(QPen(p.stroke, 1));
+    painter.drawPath(path);
+
+    // Progress ring where the sync chip has its status dot: a track with the remaining part in accent
+    const QRectF ring(r.left() + 9, r.center().y() - 6, 12, 12);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(p.stroke, 2));
+    painter.drawEllipse(ring);
+    painter.setPen(QPen(p.accent, 2, Qt::SolidLine, Qt::RoundCap));
+    if (m_percentage < 0) {
+        painter.drawArc(ring, -m_spinAngle * 16, 100 * 16);
+    } else if (m_percentage > 0) {
+        painter.drawArc(ring, 90 * 16, -m_percentage * 360 * 16 / 100);
+    }
+
+    painter.setFont(Vault::font(Typography::FontRole::Caption));
+    painter.setPen(p.textSecondary);
+    const QRectF textRect = r.adjusted(28, 0, -10, 0);
+    painter.drawText(textRect,
+                     Qt::AlignLeft | Qt::AlignVCenter,
+                     painter.fontMetrics().elidedText(m_message, Qt::ElideRight, int(textRect.width())));
+}
+
 NotificationFlyout::NotificationFlyout(NotificationCenter* center, QWidget* parent)
     : Flyout(parent)
     , m_center(center)

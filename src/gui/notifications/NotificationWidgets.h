@@ -86,6 +86,34 @@ protected:
 };
 
 /**
+ * What the app is busy with, such as clearing the clipboard or syncing, next to the bell. A pill like the sync chip
+ * with a progress ring, or a spinning arc when there's no percentage. Hidden while idle.
+ */
+class ActivityChip : public QWidget, public fluent::FluentElement
+{
+    Q_OBJECT
+
+public:
+    explicit ActivityChip(QWidget* parent = nullptr);
+
+    // A percentage from 0 to 100, or -1 for busy without one; an empty message hides the chip
+    void setActivity(const QString& message, int percentage);
+    bool isActive() const;
+
+    QSize sizeHint() const override;
+    void onThemeUpdated() override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    QString m_message;
+    int m_percentage = -1;
+    int m_spinAngle = 0;
+    QTimer* m_spinTimer;
+};
+
+/**
  * The list behind the bell: the pinned pre-release notice first, then messages newest first.
  * Opening it and closing it again marks everything read.
  */
