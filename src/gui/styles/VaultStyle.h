@@ -22,7 +22,8 @@
 
 /**
  * The application style: Qt's Fusion for the stock widgets that aren't Fluent-Qt components, coloured by
- * FluentTheme::qtPalette(), with a few Fluent touches on top: overlay scroll bars, a small chevron as the
+ * FluentTheme::qtPalette(), with a few Fluent touches on top: slim overlay scroll bars (a thin rounded thumb with
+ * no arrows or track, wider while hovered, like the Fluent ScrollBar), a small chevron as the
  * header sort indicator and outlined tooltips. In high contrast every control gets a solid outline in
  * the text colour, since Fusion derives its outlines from the window colour and they vanish on black.
  */
@@ -46,6 +47,17 @@ public:
                             QPainter* painter,
                             const QWidget* widget = nullptr) const override;
     QRect subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget) const override;
+    QRect subControlRect(ComplexControl control,
+                         const QStyleOptionComplex* option,
+                         SubControl subControl,
+                         const QWidget* widget = nullptr) const override;
+    SubControl hitTestComplexControl(ComplexControl control,
+                                     const QStyleOptionComplex* option,
+                                     const QPoint& position,
+                                     const QWidget* widget = nullptr) const override;
+    int pixelMetric(PixelMetric metric,
+                    const QStyleOption* option = nullptr,
+                    const QWidget* widget = nullptr) const override;
     int styleHint(StyleHint hint,
                   const QStyleOption* option = nullptr,
                   const QWidget* widget = nullptr,
