@@ -21,8 +21,13 @@
 #include "gui/ActionCollection.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultDialog.h"
+#include "gui/vault/VaultWidgets.h"
 #include "gui/widgets/ShortcutWidget.h"
+
+#include <functional>
 
 #include <QDebug>
 #include <QDialog>
@@ -36,29 +41,118 @@
 #include <QTableView>
 #include <QVBoxLayout>
 
-class KeySequenceDialog final : public QDialog
+// Settings › Shortcuts › an action: a card with the keys pressed in a large field, a note while another action uses
+// them already, and the action's default with Restore default on the left
+class KeySequenceDialog final : public VaultDialog
 {
 public:
-    explicit KeySequenceDialog(QWidget* parent = nullptr)
-        : QDialog(parent)
+    using ConflictName = std::function<QString(const QKeySequence&)>;
+
+    KeySequenceDialog(const QString& actionName,
+                      const QKeySequence& current,
+                      const QKeySequence& defaultSequence,
+                      ConflictName conflictName,
+                      QWidget* parent = nullptr)
+        : VaultDialog(parent)
         , m_keySeqEdit(new ShortcutWidget(this))
         , m_btnBox(new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel
                                             | QDialogButtonBox::RestoreDefaults,
                                         this))
+        , m_intro(new QLabel(QObject::tr("Press the keys you want to use."), this))
+        , m_conflict(new VaultPanel(VaultPanel::Caution, this))
+        , m_conflictText(new QLabel(m_conflict))
+        , m_defaultCaption(new QLabel(QObject::tr("Default"), this))
+        , m_defaultKeys(new VaultPill(defaultSequence.isEmpty() ? QObject::tr("None")
+                                                                : defaultSequence.toString(QKeySequence::NativeText),
+                                      this))
+        , m_conflictName(std::move(conflictName))
     {
+        setObjectName("keySequenceDialog");
+        setWindowTitle(actionName);
+        setNamePrefix(QStringLiteral("vaultShortcut"));
+        setMaximumDialogWidth(460);
+
         auto* l = new QVBoxLayout(this);
+        l->setSpacing(14);
         connect(m_btnBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(m_btnBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
         connect(m_btnBox, &QDialogButtonBox::clicked, this, &KeySequenceDialog::restoreDefault);
+        m_btnBox->button(QDialogButtonBox::Save)->setDefault(true);
+        m_btnBox->button(QDialogButtonBox::RestoreDefaults)->setText(QObject::tr("Restore default"));
 
-        auto hLayout = new QHBoxLayout();
-        l->addLayout(hLayout);
-        hLayout->addWidget(new QLabel(QObject::tr("Enter Shortcut")));
-        hLayout->addWidget(m_keySeqEdit);
+        m_intro->setWordWrap(true);
+        l->addWidget(m_intro);
 
-        l->addStretch();
+        // The keys, large and centred in a Fluent field
+        m_keySeqEdit->setObjectName("keySequenceEdit");
+        m_keySeqEdit->setAccessibleName(QObject::tr("Shortcut for %1").arg(actionName));
+        m_keySeqEdit->setAlignment(Qt::AlignCenter);
+        m_keySeqEdit->setFixedHeight(72);
+        m_keySeqEdit->setPlaceholderText(QObject::tr("Hold a modifier and press a key"));
+        // Starts on the keys the action has, so Save without pressing any keeps them
+        if (!current.isEmpty()) {
+            m_keySeqEdit->setShortcut(current[0].key(), current[0].keyboardModifiers());
+        }
+        l->addWidget(m_keySeqEdit);
+
+        // Another action uses these keys
+        m_conflict->setObjectName("keySequenceConflict");
+        auto* conflictLayout = new QHBoxLayout(m_conflict);
+        conflictLayout->setContentsMargins(14, 10, 14, 10);
+        conflictLayout->setSpacing(10);
+        auto* warning = new QLabel(Typography::Icons::Warning, m_conflict);
+        warning->setObjectName("keySequenceConflictIcon");
+        m_conflictText->setWordWrap(true);
+        m_conflictText->setTextFormat(Qt::PlainText);
+        conflictLayout->addWidget(warning, 0, Qt::AlignTop);
+        conflictLayout->addWidget(m_conflictText, 1);
+        m_conflict->hide();
+        l->addWidget(m_conflict);
+
+        auto* defaults = new QHBoxLayout();
+        defaults->addWidget(m_defaultCaption);
+        defaults->addStretch();
+        defaults->addWidget(m_defaultKeys);
+        l->addLayout(defaults);
         l->addWidget(m_btnBox);
 
+        connect(m_keySeqEdit, &ShortcutWidget::shortcutChanged, this, [this] { updateConflict(); });
+        connect(m_keySeqEdit, &ShortcutWidget::shortcutReset, this, [this] { updateConflict(); });
+
+        Vault::followTheme(this, [this, warning] {
+            const auto p = FluentTheme::palette();
+            Vault::styleLabel(m_intro, Typography::FontRole::Body, p.textSecondary);
+            Vault::styleLabel(m_defaultCaption, Typography::FontRole::Body, p.textSecondary);
+            Vault::styleLabel(m_conflictText, Typography::FontRole::Body, p.text);
+            QFont mono(FluentTheme::monoFontFamily());
+            mono.setPixelSize(22);
+            mono.setWeight(QFont::DemiBold);
+            m_keySeqEdit->setFont(mono);
+            // A large inset well, outlined in the accent while it listens for keys
+            m_keySeqEdit->setStyleSheet(
+                QStringLiteral(
+                    "QLineEdit { background-color: %1; color: %2; border: 1px solid %3; border-radius: 16px; "
+                    "padding: 0 12px; } QLineEdit:focus { border: 2px solid %4; }")
+                    .arg(p.inset.name(QColor::HexArgb),
+                         p.text.name(QColor::HexArgb),
+                         p.strokeStrong.name(QColor::HexArgb),
+                         p.accent.name(QColor::HexArgb)));
+            auto fieldPalette = m_keySeqEdit->palette();
+            fieldPalette.setColor(QPalette::PlaceholderText, p.textTertiary);
+            m_keySeqEdit->setPalette(fieldPalette);
+            QFont small(FluentTheme::monoFontFamily());
+            small.setPixelSize(12);
+            small.setWeight(QFont::DemiBold);
+            m_defaultKeys->setFont(small);
+            m_defaultKeys->setColors(p.stroke, p.text);
+            QFont glyph(Typography::FontFamily::FluentIcons);
+            glyph.setPixelSize(16);
+            warning->setFont(glyph);
+            auto palette = warning->palette();
+            palette.setColor(QPalette::WindowText, p.caution);
+            warning->setPalette(palette);
+        });
+        setInitialFocus(m_keySeqEdit);
         setFocusProxy(m_keySeqEdit);
     }
 
@@ -72,7 +166,20 @@ public:
         return m_restoreDefault;
     }
 
+    // Whether the note about another action using the keys was shown when the user saved
+    bool sawConflict() const
+    {
+        return !m_conflict->isHidden();
+    }
+
 private:
+    void updateConflict()
+    {
+        const auto name = m_conflictName ? m_conflictName(keySequence()) : QString();
+        m_conflictText->setText(QObject::tr("%1 uses this already. Saving takes it from there.").arg(name));
+        m_conflict->setVisible(!name.isEmpty());
+    }
+
     void restoreDefault(QAbstractButton* btn)
     {
         if (m_btnBox->standardButton(btn) == QDialogButtonBox::RestoreDefaults) {
@@ -84,6 +191,12 @@ private:
     bool m_restoreDefault = false;
     ShortcutWidget* const m_keySeqEdit;
     QDialogButtonBox* const m_btnBox;
+    QLabel* const m_intro;
+    VaultPanel* const m_conflict;
+    QLabel* const m_conflictText;
+    QLabel* const m_defaultCaption;
+    VaultPill* const m_defaultKeys;
+    ConflictName m_conflictName;
 };
 
 class ShortcutSettingsWidget final : public QWidget
@@ -176,6 +289,36 @@ private:
         return text;
     }
 
+    QString actionLabel(QAction* action) const
+    {
+        return action->toolTip().isEmpty() ? acceleratorsStrippedText(action->text()) : action->toolTip();
+    }
+
+    // The action already using `change`, counting the changes made here but not saved yet
+    QAction* findConflict(QAction* action, const QKeySequence& change, bool* hasConflict) const
+    {
+        *hasConflict = false;
+        auto conflict = ActionCollection::instance()->isConflictingShortcut(action, change);
+        if (conflict) {
+            // we conflicted with an action inside action collection
+            // check if the conflicted action is updated here
+            if (!m_changedActions.contains(conflict) || m_changedActions.value(conflict) == change) {
+                *hasConflict = true;
+            }
+        } else if (!change.isEmpty()) {
+            // we did not conflict with any shortcut inside action collection
+            // check if we conflict with any locally modified action
+            for (auto chAction : m_changedActions.keys()) {
+                if (chAction != action && m_changedActions.value(chAction) == change) {
+                    *hasConflict = true;
+                    conflict = chAction;
+                    break;
+                }
+            }
+        }
+        return conflict;
+    }
+
     void onDoubleClicked(QModelIndex index)
     {
         if (index.column() != 0) {
@@ -184,7 +327,19 @@ private:
         index = m_proxy.mapToSource(index);
         auto action = index.data(Qt::UserRole).value<QAction*>();
 
-        KeySequenceDialog dialog(this);
+        const auto actionName =
+            action->toolTip().isEmpty() ? acceleratorsStrippedText(action->text()) : action->toolTip();
+        const auto current = m_changedActions.contains(action) ? m_changedActions.value(action) : action->shortcut();
+        KeySequenceDialog dialog(
+            actionName,
+            current,
+            ActionCollection::instance()->defaultShortcut(action),
+            [this, action](const QKeySequence& sequence) {
+                bool conflicting = false;
+                auto* other = findConflict(action, sequence, &conflicting);
+                return conflicting ? actionLabel(other) : QString();
+            },
+            this);
         int ret = dialog.exec();
 
         QKeySequence change;
@@ -197,33 +352,20 @@ private:
             return;
         }
 
-        auto conflict = ActionCollection::instance()->isConflictingShortcut(action, change);
         bool hasConflict = false;
-        if (conflict) {
-            // we conflicted with an action inside action collection
-            // check if the conflicted action is updated here
-            if (!m_changedActions.contains(conflict)) {
-                hasConflict = true;
-            } else {
-                if (m_changedActions.value(conflict) == change) {
-                    hasConflict = true;
-                }
+        auto* conflict = findConflict(action, change, &hasConflict);
+
+        // Saving over the note the dialog showed takes the keys without asking again
+        if (hasConflict && ret == QDialog::Accepted && dialog.sawConflict()) {
+            m_changedActions[conflict] = {};
+            for (auto item : m_model.findItems(change.toString(), Qt::MatchExactly, 1)) {
+                item->setText("");
             }
-        } else if (!change.isEmpty()) {
-            // we did not conflict with any shortcut inside action collection
-            // check if we conflict with any locally modified action
-            for (auto chAction : m_changedActions.keys()) {
-                if (m_changedActions.value(chAction) == change) {
-                    hasConflict = true;
-                    conflict = chAction;
-                    break;
-                }
-            }
+            hasConflict = false;
         }
 
         if (hasConflict) {
-            auto conflictName =
-                conflict->toolTip().isEmpty() ? acceleratorsStrippedText(conflict->text()) : conflict->toolTip();
+            auto conflictName = actionLabel(conflict);
             auto conflictSeq = change.toString();
 
             auto ans = MessageBox::question(

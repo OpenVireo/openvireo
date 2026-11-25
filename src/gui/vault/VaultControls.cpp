@@ -29,18 +29,18 @@
 #include <QEvent>
 #include <QFontMetrics>
 #include <QGridLayout>
-#include <QLayout>
-#include <QLocale>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QLayout>
 #include <QLineEdit>
-#include <QPlainTextEdit>
-#include <QScrollBar>
-#include <QTextEdit>
+#include <QLocale>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPlainTextEdit>
+#include <QScrollBar>
 #include <QShowEvent>
 #include <QStyle>
+#include <QTextEdit>
 
 #include <cmath>
 
@@ -145,7 +145,60 @@ void VaultButton::paintEvent(QPaintEvent* event)
 {
     // Icons can also change later, such as a show/hide toggle
     syncAppearance();
+    if (m_destructive) {
+        paintDestructive();
+        return;
+    }
     fluent::basicinput::Button::paintEvent(event);
+}
+
+void VaultButton::setDestructive(bool destructive)
+{
+    if (m_destructive == destructive) {
+        return;
+    }
+    m_destructive = destructive;
+    setAttribute(Qt::WA_Hover, true);
+    update();
+}
+
+bool VaultButton::isDestructive() const
+{
+    return m_destructive;
+}
+
+void VaultButton::paintDestructive()
+{
+    const auto p = FluentTheme::palette();
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const qreal radius = r.height() / 2;
+
+    QColor fill = p.critical;
+    QColor text = p.onAccent;
+    if (!isEnabled()) {
+        fill = p.control;
+        text = p.textDisabled;
+    } else if (isDown()) {
+        fill = fill.darker(125);
+    } else if (underMouse()) {
+        fill = fill.darker(112);
+    }
+    painter.setPen(isEnabled() ? Qt::NoPen : QPen(p.stroke, 1));
+    painter.setBrush(fill);
+    painter.drawRoundedRect(r, radius, radius);
+
+    if (hasFocus() && isEnabled()) {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(p.focus, 2));
+        painter.drawRoundedRect(r.adjusted(-1, -1, 1, 1), radius + 1, radius + 1);
+    }
+
+    auto font = Vault::font(Typography::FontRole::BodyStrong);
+    painter.setFont(font);
+    painter.setPen(text);
+    painter.drawText(rect(), Qt::AlignCenter, withoutMnemonic(this->text()));
 }
 
 void VaultButton::syncAppearance()
@@ -553,11 +606,12 @@ void VaultDateTimeEdit::setContentMargins(const QMargins& margins)
 void VaultDateTimeEdit::applyStyleSheet()
 {
     // The drop-down keeps its room and click target, but its arrow is painted as a Fluent chevron instead
-    setStyleSheet(QStringLiteral("QDateTimeEdit { background: transparent; border: 1px solid transparent; %1 }"
-                                 "QDateTimeEdit::drop-down { subcontrol-origin: border; subcontrol-position: center right;"
-                                 " width: 32px; border: none; background: transparent; }"
-                                 "QDateTimeEdit::down-arrow { image: none; width: 0; height: 0; }")
-                      .arg(fieldPadding(m_contentMargins)));
+    setStyleSheet(
+        QStringLiteral("QDateTimeEdit { background: transparent; border: 1px solid transparent; %1 }"
+                       "QDateTimeEdit::drop-down { subcontrol-origin: border; subcontrol-position: center right;"
+                       " width: 32px; border: none; background: transparent; }"
+                       "QDateTimeEdit::down-arrow { image: none; width: 0; height: 0; }")
+            .arg(fieldPadding(m_contentMargins)));
 }
 
 void VaultDateTimeEdit::paintEvent(QPaintEvent* event)
@@ -575,9 +629,8 @@ void VaultDateTimeEdit::paintEvent(QPaintEvent* event)
     painter.setFont(iconFont);
     painter.setPen(isEnabled() && !isReadOnly() ? p.textSecondary : p.textDisabled);
     const QRect logical(width() - 32, 0, 32, height());
-    painter.drawText(QStyle::visualRect(layoutDirection(), rect(), logical),
-                     Qt::AlignCenter,
-                     Typography::Icons::ChevronDownMed);
+    painter.drawText(
+        QStyle::visualRect(layoutDirection(), rect(), logical), Qt::AlignCenter, Typography::Icons::ChevronDownMed);
 }
 
 namespace
@@ -834,7 +887,8 @@ QRect VaultCard::titleRect() const
 void VaultCard::updateTitleMargin()
 {
     // The card's layout starts below the title
-    const int top = m_title.isEmpty() ? 0 : CardTitlePadding + QFontMetrics(Vault::font(Typography::FontRole::BodyStrong)).height();
+    const int top =
+        m_title.isEmpty() ? 0 : CardTitlePadding + QFontMetrics(Vault::font(Typography::FontRole::BodyStrong)).height();
     const QMargins margins = contentsMargins();
     if (margins.top() != top) {
         setContentsMargins(margins.left(), top, margins.right(), margins.bottom());
@@ -955,8 +1009,8 @@ void VaultMenu::mouseReleaseEvent(QMouseEvent* event)
     // and release, such as when Fluent raises the menu on press, so a click that doesn't move would only close it.
     // Highlight the item that was pressed again so the click still goes through.
     auto* action = actionAt(event->position().toPoint());
-    if (action && action == m_pressedAction && action != activeAction() && action->isEnabled()
-        && !action->isSeparator() && !action->menu()) {
+    if (action && action == m_pressedAction && action != activeAction() && action->isEnabled() && !action->isSeparator()
+        && !action->menu()) {
         setActiveAction(action);
     }
     m_pressedAction.clear();

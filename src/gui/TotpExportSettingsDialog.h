@@ -18,17 +18,19 @@
 #ifndef KEEPASSX_TotpExportSettingsDialog_H
 #define KEEPASSX_TotpExportSettingsDialog_H
 
-#include <QDialog>
-
 #include "core/Database.h"
 #include "gui/DatabaseWidget.h"
+#include "gui/vault/VaultDialog.h"
 
 class QVBoxLayout;
 class SquareSvgWidget;
 class QLabel;
 class QDialogButtonBox;
+class VaultInfoBar;
 
-class TotpExportSettingsDialog : public QDialog
+// Entry › TOTP › QR code: the entry's TOTP setup as a QR code to scan into another authenticator, closing by itself
+// after a while. Over the main window it is a card, with the QR code on white so it scans in the dark theme too.
+class TotpExportSettingsDialog : public VaultDialog
 {
     Q_OBJECT
 
@@ -41,6 +43,8 @@ private slots:
     void autoClose();
 
 private:
+    void applyColors();
+
     int m_secTillClose;
     QString m_totpUri;
     QTimer* m_timer;
@@ -48,8 +52,9 @@ private:
     QVBoxLayout* m_verticalLayout;
     QStackedWidget* m_totpSvgContainerWidget;
     SquareSvgWidget* m_totpSvgWidget;
+    QLabel* m_intro;
     QLabel* m_countDown;
-    QLabel* m_warningLabel;
+    VaultInfoBar* m_warning;
     QDialogButtonBox* m_buttonBox;
 };
 

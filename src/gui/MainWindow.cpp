@@ -1051,9 +1051,7 @@ void MainWindow::showSharedLinks()
 
 void MainWindow::showDeleteAccount()
 {
-    auto* dialog = new DeleteAccountDialog(m_accountController->account(), this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->open();
+    DeleteAccountDialog::present(m_accountController->account(), this);
 }
 
 void MainWindow::showAccountPlan()

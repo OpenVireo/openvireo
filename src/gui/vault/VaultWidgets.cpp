@@ -401,6 +401,14 @@ void VaultPanel::paintEvent(QPaintEvent* event)
     QPainterPath path;
     const qreal radius = VaultMetrics::PanelRadius;
     path.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+    if (m_fill == Caution) {
+        painter.fillPath(path, p.cautionBg);
+        if (p.highContrast) {
+            painter.setPen(QPen(p.text, 1));
+            painter.drawPath(path);
+        }
+        return;
+    }
     painter.fillPath(path, m_fill == Inset ? p.inset : p.layer);
     painter.setPen(QPen(p.highContrast ? p.text : p.stroke, 1));
     painter.drawPath(path);

@@ -122,7 +122,10 @@ public:
         if (m_tint == 0) {
             m_tile->setColors(p.accentSubtle, p.accentText);
         } else if (m_tint % 2 == 1) {
-            m_tile->setColors(p.infoBg, p.link);
+            // The link blue over the card, as infoBg is too close to the card's white to show a tile
+            auto fill = p.link;
+            fill.setAlphaF(0.14);
+            m_tile->setColors(fill, p.link);
         } else {
             m_tile->setColors(p.cautionBg, p.caution);
         }
@@ -131,7 +134,7 @@ public:
         Vault::styleLabel(m_name, Typography::FontRole::BodyStrong, p.text);
         Vault::styleLabel(m_meta, Typography::FontRole::Caption, p.textSecondary);
         if (m_role) {
-            m_role->setColors(p.control, p.textSecondary);
+            m_role->setColors(p.stroke, p.textSecondary);
             auto roleFont = Vault::font(Typography::FontRole::Caption);
             roleFont.setWeight(QFont::DemiBold);
             m_role->setFont(roleFont);

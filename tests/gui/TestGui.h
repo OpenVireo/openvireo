@@ -40,6 +40,8 @@ private slots:
     void cleanupTestCase();
 
     void testSettingsDefaultTabOrder();
+    void testDatabaseIconPickerCard();
+    void testShortcutDialogCard();
     void testCreateDatabase();
     void testMergeDatabase();
     void testRemoteSyncDatabaseSameKey();

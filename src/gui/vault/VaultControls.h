@@ -31,8 +31,8 @@
 #include <components/basicinput/SplitButton.h>
 #include <components/foundation/FluentElement.h>
 #include <components/layout/Card.h>
-#include <components/status_info/ProgressBar.h>
 #include <components/menus_toolbars/Menu.h>
+#include <components/status_info/ProgressBar.h>
 #include <components/textfields/LineEdit.h>
 #include <components/textfields/NumberBox.h>
 
@@ -55,12 +55,19 @@ public:
     explicit VaultButton(QWidget* parent = nullptr);
     explicit VaultButton(const QString& text, QWidget* parent = nullptr);
 
+    // Filled with the critical color, for an action that can't be undone such as deleting the account
+    void setDestructive(bool destructive);
+    bool isDestructive() const;
+
 protected:
     bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
     void syncAppearance();
+    void paintDestructive();
+
+    bool m_destructive = false;
 
     // Text last shown without its mnemonic, so a literal "&" left in it isn't stripped again
     QString m_plainText;

@@ -69,6 +69,7 @@ private slots:
     void testUnlocksOfflineFromTheLockScreen();
     void testShareLinkDialogInTheVaultLayout();
     void testSharedLinksDialogInTheVaultLayout();
+    void testDeletionDialogsInTheVaultLayout();
 
 private:
     void createWindow(const QString& mode);

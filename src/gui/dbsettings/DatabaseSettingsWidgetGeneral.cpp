@@ -29,11 +29,19 @@
 #include "gui/IconModels.h"
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultDialog.h"
+#include "gui/vault/VaultMetrics.h"
 #include "gui/vault/VaultSettingsPage.h"
+#include "gui/vault/VaultWidgets.h"
 
 #include <components/status_info/InfoBar.h>
 
+#include <QLabel>
 #include <QPainter>
+#include <QPainterPath>
+#include <QPushButton>
+#include <QStyledItemDelegate>
+#include <QVBoxLayout>
 
 namespace
 {
@@ -55,6 +63,45 @@ namespace
         painter.drawRoundedRect(QRectF(0.5, 0.5, SwatchSize - 1, SwatchSize - 1), 4, 4);
         return QIcon(pixmap);
     }
+
+    constexpr int IconCell = 52;
+    constexpr int IconColumns = 8;
+
+    // An icon centred in a rounded cell, tinted and outlined in the accent while picked, as the mockup's grid
+    class IconCellDelegate : public QStyledItemDelegate
+    {
+    public:
+        using QStyledItemDelegate::QStyledItemDelegate;
+
+        QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
+        {
+            return {IconCell, IconCell};
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            const auto p = FluentTheme::palette();
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+            const QRectF cell = QRectF(option.rect).adjusted(3, 3, -3, -3);
+            QPainterPath path;
+            path.addRoundedRect(cell, VaultMetrics::RowRadius, VaultMetrics::RowRadius);
+            if (option.state & QStyle::State_Selected) {
+                painter->fillPath(path, p.accentSubtle);
+                painter->setPen(QPen(p.accent, 2));
+                painter->drawPath(path);
+            } else if (option.state & QStyle::State_MouseOver) {
+                painter->fillPath(path, p.subtleHover);
+            }
+            // The default icons come as pixmaps
+            const auto data = index.data(Qt::DecorationRole);
+            const auto icon = data.typeId() == QMetaType::QPixmap ? QIcon(data.value<QPixmap>()) : data.value<QIcon>();
+            const QSize size(24, 24);
+            const QRect target(option.rect.center() - QPoint(size.width() / 2 - 1, size.height() / 2 - 1), size);
+            icon.paint(painter, target);
+            painter->restore();
+        }
+    };
 } // namespace
 
 DatabaseSettingsWidgetGeneral::DatabaseSettingsWidgetGeneral(QWidget* parent)
@@ -303,42 +350,73 @@ void DatabaseSettingsWidgetGeneral::setupPublicColorButton(const QColor& color)
 
 void DatabaseSettingsWidgetGeneral::pickPublicIcon()
 {
-    QDialog dialog(this);
-    dialog.setSizeGripEnabled(false);
-    dialog.setWindowTitle(tr("Select Database Icon"));
+    // A card over the main window: the default icons in a grid on an inset panel, Use no icon on the left
+    auto* dialog = new VaultDialog(this);
+    dialog->setObjectName("databaseIconDialog");
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(tr("Database icon"));
+    dialog->setNamePrefix(QStringLiteral("vaultDatabaseIcon"));
+    dialog->setMaximumDialogWidth(560);
 
-    auto iconList = new QListView;
+    auto* intro =
+        new QLabel(tr("Shown on the unlock screen and the database tab, even while the database is locked."), dialog);
+    intro->setWordWrap(true);
+    Vault::followTheme(
+        intro, [intro] { Vault::styleLabel(intro, Typography::FontRole::Body, FluentTheme::palette().textSecondary); });
+
+    auto* panel = new VaultPanel(VaultPanel::Inset, dialog);
+    auto* panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(8, 8, 8, 8);
+    auto* iconList = new QListView(panel);
+    iconList->setObjectName("databaseIconList");
+    iconList->setAccessibleName(tr("Icons"));
+    iconList->setViewMode(QListView::IconMode);
     iconList->setFlow(QListView::LeftToRight);
     iconList->setMovement(QListView::Static);
     iconList->setResizeMode(QListView::Adjust);
     iconList->setWrapping(true);
-    iconList->setSpacing(4);
-
-    auto iconModel = new DefaultIconModel;
+    iconList->setUniformItemSizes(true);
+    iconList->setGridSize({IconCell, IconCell});
+    iconList->setFrameShape(QFrame::NoFrame);
+    iconList->setMouseTracking(true);
+    iconList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    iconList->viewport()->setAutoFillBackground(false);
+    iconList->setStyleSheet(QStringLiteral("QListView { background: transparent; }"));
+    iconList->setItemDelegate(new IconCellDelegate(iconList));
+    auto* iconModel = new DefaultIconModel(iconList);
     iconList->setModel(iconModel);
-    if (m_ui->dbPublicIconButton->property("iconIndex").toInt() >= 0) {
-        iconList->setCurrentIndex(iconModel->index(m_ui->dbPublicIconButton->property("iconIndex").toInt(), 0));
-    } else {
-        iconList->setCurrentIndex(iconModel->index(0, 0));
-    }
+    const int rows = (iconModel->rowCount() + IconColumns - 1) / IconColumns;
+    // Eight columns, and up to six rows before it scrolls
+    const int scrollBar = rows > 6 ? iconList->style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, iconList) : 0;
+    iconList->setFixedSize(IconCell * IconColumns + scrollBar + 4, IconCell * qMin(rows, 6) + 4);
+    const int current = m_ui->dbPublicIconButton->property("iconIndex").toInt();
+    iconList->setCurrentIndex(iconModel->index(current >= 0 ? current : 0, 0));
+    panelLayout->addWidget(iconList, 0, Qt::AlignHCenter);
 
-    auto buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    auto layout = new QVBoxLayout(&dialog);
-    layout->addWidget(iconList);
+    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel, dialog);
+    auto* use = buttonBox->addButton(tr("Use icon"), QDialogButtonBox::AcceptRole);
+    use->setObjectName("databaseIconUse");
+    use->setDefault(true);
+    auto* none = buttonBox->addButton(tr("Use no icon"), QDialogButtonBox::ResetRole);
+    none->setObjectName("databaseIconNone");
+
+    auto* layout = new QVBoxLayout(dialog);
+    layout->setSpacing(14);
+    layout->addWidget(intro);
+    layout->addWidget(panel);
     layout->addWidget(buttonBox);
+    dialog->setInitialFocus(iconList);
 
-    // Resize the dialog to fit the default icon list
-    auto cellSize = iconList->sizeHintForIndex(iconModel->index(0, 0));
-    auto spacing = iconList->spacing() * 2;
-    dialog.resize((cellSize.width() + spacing) * 15, (cellSize.height() + spacing) * 6 + 16);
-
-    connect(iconList, &QListView::doubleClicked, &dialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(iconList, &QListView::doubleClicked, dialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    connect(none, &QPushButton::clicked, dialog, [this, dialog] {
+        setupPublicIconButton(-1);
+        dialog->reject();
+    });
     connect(
-        &dialog, &QDialog::accepted, this, [this, iconList] { setupPublicIconButton(iconList->currentIndex().row()); });
-
-    dialog.exec();
+        dialog, &QDialog::accepted, this, [this, iconList] { setupPublicIconButton(iconList->currentIndex().row()); });
+    dialog->open();
 }
 
 void DatabaseSettingsWidgetGeneral::setupPublicIconButton(int iconIndex)

@@ -41,6 +41,7 @@
 #include "gui/account/AccountLockWidget.h"
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKit.h"
+#include "gui/account/DeleteAccountDialog.h"
 #include "gui/account/EmergencyKitDialog.h"
 #include "gui/account/NewVaultDialog.h"
 #include "gui/account/OrgAdminWidgets.h"
@@ -2065,6 +2066,35 @@ void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
     QVERIFY(child<QWidget>(text, "shareLinkCommands")->isVisibleTo(text));
     text->reject();
     QTRY_VERIFY(!text);
+}
+
+void TestGuiAccounts::testDeletionDialogsInTheVaultLayout()
+{
+    QWidget host;
+    host.resize(1100, 820);
+    host.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&host));
+
+    // Delete account: a card with its buttons in the footer, Delete off and red until it's confirmed
+    QPointer<DeleteAccountDialog> remove = DeleteAccountDialog::present(nullptr, &host);
+    QVERIFY(host.findChild<VaultModal*>("vaultDeleteAccountModal"));
+    auto* deleteButton = child<VaultButton>(&host, "deleteAccountButton");
+    QVERIFY(deleteButton->isVisible());
+    QVERIFY(deleteButton->isDestructive());
+    QVERIFY(!deleteButton->isEnabled());
+    child<QPushButton>(&host, "deleteAccountCancel")->click();
+    QTRY_VERIFY(!remove);
+
+    // Scheduled for deletion: Restore waits for the master password
+    QPointer<PendingDeletionDialog> pending = PendingDeletionDialog::present(nullptr, &host);
+    QVERIFY(host.findChild<VaultModal*>("vaultPendingDeletionModal"));
+    auto* restore = child<QPushButton>(&host, "pendingDeletionRestore");
+    QVERIFY(restore->isVisible());
+    QVERIFY(!restore->isEnabled());
+    child<QLineEdit>(&host, "pendingDeletionPassword")->setText("secret");
+    QVERIFY(restore->isEnabled());
+    child<QPushButton>(&host, "pendingDeletionSignOut")->click();
+    QTRY_VERIFY(!pending);
 }
 
 void TestGuiAccounts::testSharedLinksDialogInTheVaultLayout()

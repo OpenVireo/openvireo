@@ -89,9 +89,7 @@ AccountController::AccountController(DatabaseTabWidget* tabs, AccountManager* ac
             return;
         }
         closeVaultTabs();
-        auto* dialog = new PendingDeletionDialog(m_account, m_tabs ? m_tabs->window() : nullptr);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->open();
+        PendingDeletionDialog::present(m_account, m_tabs ? m_tabs->window() : nullptr);
     });
     // Accounts a day past their erase date are gone from the server, and leave this device too
     QTimer::singleShot(0, m_account, &AccountManager::removeErasedAccounts);

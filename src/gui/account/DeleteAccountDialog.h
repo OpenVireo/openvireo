@@ -23,16 +23,18 @@
 #include <QPointer>
 
 class AccountManager;
+class VaultButton;
 class VaultInfoBar;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QScrollArea;
 class QVBoxLayout;
 
 // Account › Delete Account… (SPEC §23): what happens to each vault, organization, the plan and share
 // links; organizations you are the only owner of to hand over or delete first, and shared vaults to give
 // away; then the typed email and master password. The account is locked at once and erased after the
-// grace period.
+// grace period. Over the main window it is a card (VaultModal).
 class DeleteAccountDialog : public QDialog
 {
     Q_OBJECT
@@ -40,8 +42,19 @@ class DeleteAccountDialog : public QDialog
 public:
     explicit DeleteAccountDialog(AccountManager* account, QWidget* parent = nullptr);
 
-    // One line per thing that changes, for the summary
-    static QStringList summary(const QJsonObject& preview);
+    // Opens the dialog as a card over the parent's window, or as a window when it can't be one
+    static DeleteAccountDialog* present(AccountManager* account, QWidget* parent);
+
+    // One thing that changes: a glyph (or a letter for a vault), a title and a line under it
+    struct SummaryRow
+    {
+        QString glyph;
+        QString letter;
+        QString title;
+        QString detail;
+        bool shared = false;
+    };
+    static QList<SummaryRow> summary(const QJsonObject& preview);
 
 private slots:
     void reload();
@@ -51,21 +64,34 @@ private:
     void fill();
     void setBusy(bool busy);
     void updateDeleteButton();
+    void applyColors();
+    QWidget* summaryRow(const SummaryRow& row, bool first, QWidget* parent);
 
     QPointer<AccountManager> m_account;
     QJsonObject m_preview;
     VaultInfoBar* m_message;
     QLabel* m_intro;
-    QLabel* m_summary;
+    QLabel* m_summaryCaption;
+    QWidget* m_summary;
+    QVBoxLayout* m_summaryLayout;
+    QLabel* m_billing;
     QWidget* m_actions;
     QVBoxLayout* m_actionsLayout;
+    QLabel* m_confirmCaption;
+    QLabel* m_confirmLabel;
+    QLabel* m_passwordLabel;
     QLineEdit* m_confirm;
     QLineEdit* m_password;
-    QPushButton* m_delete;
+    QScrollArea* m_scroll;
+    QWidget* m_buttonRow;
+    QLabel* m_footHint;
+    QPushButton* m_cancel;
+    VaultButton* m_delete;
     bool m_busy = false;
 };
 
-// Signed in to an account scheduled for deletion: Restore Account (with the master password) or Sign Out.
+// Signed in to an account scheduled for deletion: Restore Account (with the master password) or Sign Out. Over the
+// main window it is a card (VaultModal), with the deletion date on a calendar tile.
 class PendingDeletionDialog : public QDialog
 {
     Q_OBJECT
@@ -73,10 +99,26 @@ class PendingDeletionDialog : public QDialog
 public:
     explicit PendingDeletionDialog(AccountManager* account, QWidget* parent = nullptr);
 
+    // Opens the dialog as a card over the parent's window, or as a window when it can't be one
+    static PendingDeletionDialog* present(AccountManager* account, QWidget* parent);
+
 private:
+    void applyColors();
+
     QPointer<AccountManager> m_account;
     VaultInfoBar* m_message;
+    QLabel* m_intro;
+    QLabel* m_month;
+    QLabel* m_day;
+    QWidget* m_calendar;
+    QLabel* m_dateTitle;
+    QLabel* m_dateDetail;
+    QList<QLabel*> m_points;
+    QList<QLabel*> m_pointIcons;
+    QLabel* m_passwordLabel;
     QLineEdit* m_password;
+    QWidget* m_buttonRow;
+    QPushButton* m_signOut;
     QPushButton* m_restore;
 };
 

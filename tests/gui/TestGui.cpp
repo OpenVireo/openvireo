@@ -17,6 +17,8 @@
  */
 
 #include "TestGui.h"
+#include <QTableView>
+#include <QListView>
 #include "gui/Application.h"
 
 #include <QCheckBox>
@@ -51,6 +53,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/TotpDialog.h"
+#include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/TotpSetupDialog.h"
 #include "gui/databasekey/KeyFileEditWidget.h"
@@ -223,6 +226,65 @@ void TestGui::testSettingsDefaultTabOrder()
         }
     }
     QTest::keyClick(dbSettingsWidget, Qt::Key::Key_Escape);
+}
+
+void TestGui::testDatabaseIconPickerCard()
+{
+    // Database settings › General › icon: a card with the icons in a grid
+    triggerAction("actionDatabaseSettings");
+    auto* dbSettings = m_mainWindow->findChild<DatabaseSettingsDialog*>();
+    QVERIFY(dbSettings->isVisible());
+    auto* iconButton = dbSettings->findChild<QPushButton*>("dbPublicIconButton");
+    QVERIFY(iconButton);
+    iconButton->click();
+    auto* picker = m_mainWindow->findChild<VaultDialog*>("databaseIconDialog");
+    QVERIFY(picker);
+    QTRY_VERIFY(picker->isVisible());
+    QVERIFY(picker->isCard());
+    auto* list = picker->findChild<QListView*>("databaseIconList");
+    QVERIFY(list);
+    list->setCurrentIndex(list->model()->index(3, 0));
+    // Use icon takes the picked one, and Use no icon clears it
+    m_mainWindow->findChild<QPushButton*>("databaseIconUse")->click();
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultDialog*>("databaseIconDialog"));
+    QCOMPARE(iconButton->property("iconIndex").toInt(), 3);
+    iconButton->click();
+    QTRY_VERIFY(m_mainWindow->findChild<VaultDialog*>("databaseIconDialog"));
+    m_mainWindow->findChild<QPushButton*>("databaseIconNone")->click();
+    QTRY_VERIFY(!m_mainWindow->findChild<VaultDialog*>("databaseIconDialog"));
+    QCOMPARE(iconButton->property("iconIndex").toInt(), -1);
+    QTest::keyClick(dbSettings, Qt::Key::Key_Escape);
+}
+
+void TestGui::testShortcutDialogCard()
+{
+    // Settings › Shortcuts › an action: a card over the settings, with the action's name as its title
+    triggerAction("actionSettings");
+    auto* settings = m_mainWindow->findChild<ApplicationSettingsWidget*>();
+    QVERIFY(settings->isVisible());
+    QTableView* table = nullptr;
+    for (auto* view : settings->findChildren<QTableView*>()) {
+        if (view->model() && view->model()->headerData(0, Qt::Horizontal).toString() == "Action") {
+            table = view;
+        }
+    }
+    QVERIFY(table);
+    QVERIFY(table->model()->rowCount() > 0);
+    bool checked = false;
+    QTimer::singleShot(0, this, [this, &checked] {
+        auto* dialog = m_mainWindow->findChild<VaultDialog*>("keySequenceDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->isVisible());
+        QVERIFY(dialog->isCard());
+        QVERIFY(!dialog->windowTitle().isEmpty());
+        QVERIFY(dialog->findChild<QWidget*>("keySequenceEdit"));
+        QVERIFY(!dialog->findChild<QWidget*>("keySequenceConflict")->isVisibleTo(dialog));
+        checked = true;
+        dialog->reject();
+    });
+    emit table->doubleClicked(table->model()->index(0, 0));
+    QVERIFY(checked);
+    QTest::keyClick(settings, Qt::Key::Key_Escape);
 }
 
 void TestGui::testCreateDatabase()
@@ -1155,9 +1217,10 @@ void TestGui::testTotp()
 
     // Test the QR code
     triggerAction("actionEntryTotpQRCode");
-    auto* qrCodeDialog = m_mainWindow->findChild<QDialog*>("entryQrCodeWidget");
+    auto* qrCodeDialog = m_mainWindow->findChild<VaultDialog*>("entryQrCodeWidget");
     QVERIFY(qrCodeDialog);
     QVERIFY(qrCodeDialog->isVisible());
+    QVERIFY(qrCodeDialog->isCard());
     auto* qrCodeWidget = qrCodeDialog->findChild<QWidget*>("squareSvgWidget");
     QVERIFY2(qrCodeWidget->geometry().width() == qrCodeWidget->geometry().height(), "Initial QR code is not square");
 

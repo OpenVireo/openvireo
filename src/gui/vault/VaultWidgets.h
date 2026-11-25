@@ -111,7 +111,9 @@ public:
     enum Fill
     {
         Inset,
-        Layer
+        Layer,
+        // The caution tint with no stroke, for something to sort out before going on
+        Caution
     };
 
     explicit VaultPanel(Fill fill, QWidget* parent = nullptr);
