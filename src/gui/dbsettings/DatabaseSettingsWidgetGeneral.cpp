@@ -18,7 +18,6 @@
 #include "DatabaseSettingsWidgetGeneral.h"
 #include "ui_DatabaseSettingsWidgetGeneral.h"
 
-#include <QColorDialog>
 #include <QDialogButtonBox>
 #include <QListView>
 
@@ -29,6 +28,7 @@
 #include "gui/IconModels.h"
 #include "gui/MessageBox.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultColorFlyout.h"
 #include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultMetrics.h"
 #include "gui/vault/VaultSettingsPage.h"
@@ -333,10 +333,11 @@ bool DatabaseSettingsWidgetGeneral::saveSettings()
 void DatabaseSettingsWidgetGeneral::pickPublicColor()
 {
     auto oldColor = QColor(m_ui->dbPublicColorButton->property("color").toString());
-    auto newColor = QColorDialog::getColor(oldColor);
-    if (newColor.isValid()) {
-        setupPublicColorButton(newColor);
-    }
+    VaultColorFlyout::open(m_ui->dbPublicColorButton,
+                           oldColor,
+                           VaultColorFlyout::TextColors,
+                           tr("Database color"),
+                           [this](const QColor& color) { setupPublicColorButton(color); });
 }
 
 void DatabaseSettingsWidgetGeneral::setupPublicColorButton(const QColor& color)

@@ -26,6 +26,7 @@
 #include "gui/account/OrgAdminWidgets.h"
 #include "gui/styles/FluentTheme.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <components/basicinput/Button.h>
@@ -2403,7 +2404,10 @@ void ServiceAccountsDialog::showToken(const QString& title, const QString& token
         return;
     }
 
-    auto* dialog = new QDialog(this);
+    // The window is hidden or minimized: a vault-styled window of its own, with the buttons in its command bar
+    auto* dialog = new VaultDialog(this);
+    dialog->setPresentation(VaultDialog::OwnWindow);
+    dialog->setMaximumDialogWidth(520);
     dialog->setObjectName("serviceAccountTokenDialog");
     dialog->setWindowTitle(title);
     dialog->setAttribute(Qt::WA_DeleteOnClose);

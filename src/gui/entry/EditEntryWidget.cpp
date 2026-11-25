@@ -26,18 +26,17 @@
 
 #include <functional>
 
-#include <QColorDialog>
+#include <QDesktopServices>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QTableView>
-#include <QToolButton>
-#include <QTreeView>
-#include <QVBoxLayout>
-#include <QDesktopServices>
 #include <QLineEdit>
 #include <QSortFilterProxyModel>
 #include <QStringListModel>
 #include <QStyledItemDelegate>
+#include <QTableView>
+#include <QToolButton>
+#include <QTreeView>
+#include <QVBoxLayout>
 
 #include "autotype/AutoType.h"
 #include "core/AutoTypeAssociations.h"
@@ -69,14 +68,15 @@
 #include "gui/GuiTools.h"
 #include "gui/Icons.h"
 #include "gui/MessageBox.h"
+#include "gui/entry/AutoTypeAssociationsModel.h"
+#include "gui/entry/EntryAttributesModel.h"
+#include "gui/entry/EntryHistoryModel.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultColorFlyout.h"
 #include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultSettingsPage.h"
 #include "gui/vault/VaultTable.h"
 #include "gui/vault/VaultWidgets.h"
-#include "gui/entry/AutoTypeAssociationsModel.h"
-#include "gui/entry/EntryAttributesModel.h"
-#include "gui/entry/EntryHistoryModel.h"
 
 namespace
 {
@@ -406,9 +406,8 @@ void EditEntryWidget::setupVaultAdvanced()
                             block);
     none->setObjectName("vaultNoAttributesLabel");
     none->setWordWrap(true);
-    Vault::followTheme(none, [none] {
-        Vault::styleLabel(none, Typography::FontRole::Body, FluentTheme::palette().textSecondary);
-    });
+    Vault::followTheme(
+        none, [none] { Vault::styleLabel(none, Typography::FontRole::Body, FluentTheme::palette().textSecondary); });
     blockLayout->addWidget(none);
     auto updateEmptyState = [ui, none, model = m_attributesModel] {
         const bool empty = model->rowCount() == 0;
@@ -2168,14 +2167,17 @@ void EditEntryWidget::setupColorButton(bool foreground, const QColor& color)
 void EditEntryWidget::pickColor()
 {
     bool isForeground = (sender() == m_advancedUi->fgColorButton);
-    QColor oldColor = QColor(m_advancedUi->fgColorButton->property("color").toString());
-    if (!isForeground) {
-        oldColor = QColor(m_advancedUi->bgColorButton->property("color").toString());
-    }
+    auto* button = isForeground ? m_advancedUi->fgColorButton : m_advancedUi->bgColorButton;
+    const QColor oldColor = QColor(button->property("color").toString());
 
-    QColor newColor = QColorDialog::getColor(oldColor);
-    if (newColor.isValid()) {
-        setupColorButton(isForeground, newColor);
-        setModified(true);
-    }
+    // A flyout of swatches under the button: strong colors for the title, light tints behind the entry. Each pick
+    // shows at once; Use default clears the color.
+    VaultColorFlyout::open(button,
+                           oldColor,
+                           isForeground ? VaultColorFlyout::TextColors : VaultColorFlyout::Tints,
+                           isForeground ? tr("Text color") : tr("Background color"),
+                           [this, isForeground](const QColor& color) {
+                               setupColorButton(isForeground, color);
+                               setModified(true);
+                           });
 }

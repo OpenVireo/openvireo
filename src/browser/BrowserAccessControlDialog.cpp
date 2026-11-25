@@ -187,6 +187,7 @@ void BrowserAccessControlDialog::setupVaultLayout()
     connect(deny, &QAbstractButton::clicked, this, &QDialog::reject);
     connect(this, &BrowserAccessControlDialog::vaultChoicesChanged, this, [this] {
         m_vaultAllow->setEnabled(hasVaultChoice());
+        m_vaultAllow->setText(vaultAllowText());
     });
 
     m_vaultTitle->hide();
@@ -238,14 +239,20 @@ void BrowserAccessControlDialog::addVaultEntryRow(int row, const Entry* entry)
     text->addWidget(username);
     layout->addLayout(text, 1);
 
+    auto disabledPill = new VaultPill(tr("Won't fill here"), rowWidget);
+    disabledPill->setObjectName(QStringLiteral("accessEntryDisabledPill%1").arg(row));
+    disabledPill->hide();
+    layout->addWidget(disabledPill);
+
+    // A labelled pill: Not here turns the entry off for this site, Undo brings it back
     auto disable = new VaultButton(rowWidget);
     disable->setObjectName(QStringLiteral("accessEntryDisable%1").arg(row));
-    disable->setFluentStyle(fluent::basicinput::Button::Subtle);
-    disable->setFluentLayout(fluent::basicinput::Button::IconOnly);
+    disable->setFluentLayout(fluent::basicinput::Button::IconBefore);
+    Vault::makePill(disable);
     layout->addWidget(disable);
 
     m_vaultEntries->addWidget(rowWidget);
-    m_vaultEntryRows.append({choice, title, username, disable});
+    m_vaultEntryRows.append({choice, title, username, disabledPill, disable});
 
     // Checking an entry selects its row of the table, which is what allowing goes by
     connect(choice, &QAbstractButton::toggled, this, [this, row](bool checked) {
@@ -288,11 +295,34 @@ void BrowserAccessControlDialog::syncVaultEntryRow(int row)
     style(vaultRow.title, Typography::FontRole::BodyStrong, disabled ? p.textDisabled : p.text);
     style(vaultRow.username, Typography::FontRole::Caption, disabled ? p.textDisabled : p.textSecondary);
 
-    // Disabled for the site, the button brings the entry back
-    auto button = qobject_cast<QAbstractButton*>(m_ui->itemsTable->cellWidget(row, 2));
-    vaultRow.disable->setIconGlyph(disabled ? Typography::Icons::Undo : Typography::Icons::Block);
-    vaultRow.disable->setToolTip(button->toolTip());
-    vaultRow.disable->setAccessibleName(button->toolTip());
+    // Disabled for the site, the row says so and the button brings the entry back
+    vaultRow.disabledPill->setVisible(disabled);
+    vaultRow.disabledPill->setFont(Vault::font(Typography::FontRole::Caption));
+    if (auto pill = qobject_cast<VaultPill*>(vaultRow.disabledPill)) {
+        pill->setColors(p.stroke, p.textSecondary);
+    }
+    vaultRow.disable->setText(disabled ? tr("Undo") : tr("Not here"));
+    vaultRow.disable->setIconGlyph(disabled ? Typography::Icons::Undo : Typography::Icons::Block,
+                                   Typography::IconSize::Compact);
+    const auto name = title->text().isEmpty() ? tr("this entry") : title->text();
+    const auto action =
+        disabled ? tr("Let %1 fill on this site again").arg(name) : tr("Don't fill %1 on this site").arg(name);
+    vaultRow.disable->setToolTip(action);
+    vaultRow.disable->setAccessibleName(action);
+}
+
+QString BrowserAccessControlDialog::vaultAllowText() const
+{
+    int checked = 0;
+    for (const auto& row : m_vaultEntryRows) {
+        if (row.choice->isEnabled() && row.choice->isChecked()) {
+            ++checked;
+        }
+    }
+    if (m_vaultEntryRows.size() <= 1 || checked == 0) {
+        return tr("Allow");
+    }
+    return checked == m_vaultEntryRows.size() ? tr("Allow all") : tr("Allow %n", "", checked);
 }
 
 bool BrowserAccessControlDialog::hasVaultChoice() const
@@ -350,7 +380,10 @@ int BrowserAccessControlDialog::execVaultDialog()
     if (auto button = qobject_cast<QPushButton*>(allow)) {
         button->setDefault(true);
     }
-    auto updateAllow = [this, allow] { allow->setEnabled(hasVaultChoice()); };
+    auto updateAllow = [this, allow] {
+        allow->setEnabled(hasVaultChoice());
+        allow->setText(vaultAllowText());
+    };
     auto choicesChanged = connect(this, &BrowserAccessControlDialog::vaultChoicesChanged, &dialog, updateAllow);
     updateAllow();
 
@@ -437,6 +470,7 @@ void BrowserAccessControlDialog::setEntries(const QList<Entry*>& entriesToConfir
         for (int i = 0; i < entriesToConfirm.count(); ++i) {
             addVaultEntryRow(i, entriesToConfirm.at(i));
         }
+        m_vaultAllow->setText(vaultAllowText());
     }
 }
 

@@ -1596,7 +1596,7 @@ void TestGuiVault::testAccessControlDialog()
             QTRY_VERIFY(content->isVisible());
             shown = true;
             QCOMPARE(content->title(), BrowserAccessControlDialog::tr("Allow access?"));
-            QCOMPARE(content->primaryButtonText(), BrowserAccessControlDialog::tr("Allow"));
+            QCOMPARE(content->primaryButtonText(), BrowserAccessControlDialog::tr("Allow all"));
             QCOMPARE(content->secondaryButtonText(), QString());
             QCOMPARE(content->defaultButton(), int(ContentDialog::Primary));
             QVERIFY(content->findChild<QLabel*>("accessMessage")->text().contains("https://example.com"));
@@ -1618,6 +1618,14 @@ void TestGuiVault::testAccessControlDialog()
             QVERIFY(!disabledChoice->isEnabled());
             QVERIFY(!disabledChoice->isChecked());
             QVERIFY(content->findChild<QLabel*>("accessEntryTitle2")->font().strikeOut());
+            // The row says it won't fill, its pill offers Undo, and Allow counts what's left
+            QVERIFY(content->findChild<QLabel*>("accessEntryDisabledPill2")->isVisible());
+            QCOMPARE(qobject_cast<QPushButton*>(disable)->text(), BrowserAccessControlDialog::tr("Undo"));
+            QVERIFY(!content->findChild<QLabel*>("accessEntryDisabledPill0")->isVisible());
+            if (!dir.isEmpty()) {
+                QTest::qWait(300);
+                m_mainWindow->grab().save(QDir(dir).absoluteFilePath("vault-access-control-disabled.png"));
+            }
             QCOMPARE(content->findChild<QLabel*>("accessEntryUsername0")->text(), QString("alice"));
             remember->setChecked(true);
             QTest::keyClick(content, Qt::Key_Return);

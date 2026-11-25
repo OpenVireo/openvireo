@@ -19,6 +19,7 @@
 
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <components/basicinput/Button.h>
@@ -328,7 +329,11 @@ OrgAdmin::Prompt::Prompt(QWidget* parent, const QString& title, const QString& a
         }
         m_dialog = dialog;
     } else {
-        m_dialog = new QDialog(parent);
+        // The window is hidden or minimized: a vault-styled window of its own, with the buttons in its command bar
+        auto* window = new VaultDialog(parent);
+        window->setPresentation(VaultDialog::OwnWindow);
+        window->setMaximumDialogWidth(PromptWidth);
+        m_dialog = window;
         m_dialog->setWindowTitle(title);
         auto layout = new QVBoxLayout(m_dialog);
         layout->addWidget(m_content);

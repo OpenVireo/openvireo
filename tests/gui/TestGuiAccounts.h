@@ -70,6 +70,7 @@ private slots:
     void testShareLinkDialogInTheVaultLayout();
     void testSharedLinksDialogInTheVaultLayout();
     void testDeletionDialogsInTheVaultLayout();
+    void testOrgPromptFallsBackToAVaultWindow();
 
 private:
     void createWindow(const QString& mode);

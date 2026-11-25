@@ -53,6 +53,7 @@
 #include "gui/SearchWidget.h"
 #include "gui/ShortcutSettingsPage.h"
 #include "gui/TotpDialog.h"
+#include "gui/vault/VaultColorFlyout.h"
 #include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/TotpSetupDialog.h"
@@ -791,8 +792,23 @@ void TestGui::testEditEntry()
     QTest::keyClick(tags, Qt::Key_Return);
     QCOMPARE(tags->tags().last(), QString("tag 2_is!awesome"));
 
-    // Test entry colors (simulate choosing a color)
+    // Test entry colors: the button opens a flyout of swatches, each pick shows at once, Use default clears it
     editEntryWidget->switchToPage(EditEntryWidget::Page::Advanced);
+    {
+        auto* fgButton = editEntryWidget->findChild<QPushButton*>("fgColorButton");
+        auto* fgCheck = editEntryWidget->findChild<QAbstractButton*>("fgColorCheckBox");
+        fgButton->click();
+        VaultColorFlyout* flyout = nullptr;
+        QTRY_VERIFY((flyout = qobject_cast<VaultColorFlyout*>(QApplication::activePopupWidget())));
+        const auto blue = VaultColorFlyout::swatchColors(VaultColorFlyout::TextColors).at(5);
+        flyout->findChild<QAbstractButton*>("colorSwatch-" + blue.name().mid(1))->click();
+        QCOMPARE(QColor(fgButton->property("color").toString()), blue);
+        QVERIFY(fgCheck->isChecked());
+        flyout->findChild<QAbstractButton*>("colorDefault")->click();
+        QVERIFY(!fgButton->property("color").isValid());
+        QVERIFY(!fgCheck->isChecked());
+        QTRY_VERIFY(!QApplication::activePopupWidget());
+    }
     auto fgColor = QColor(255, 0, 0);
     auto bgColor = QColor(0, 0, 255);
     // Set foreground color

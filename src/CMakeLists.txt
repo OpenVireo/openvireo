@@ -178,6 +178,7 @@ set(gui_SOURCES
         gui/account/SignUpWizard.cpp
         gui/vault/AccountVaults.cpp
         gui/vault/EntryDetailCard.cpp
+        gui/vault/VaultColorFlyout.cpp
         gui/vault/VaultControls.cpp
         gui/vault/VaultDialog.cpp
         gui/vault/VaultInfoBar.cpp

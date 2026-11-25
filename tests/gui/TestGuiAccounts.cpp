@@ -57,6 +57,7 @@
 #include "gui/remote/SyncTokenStore.h"
 #include "gui/vault/AccountVaults.h"
 #include "gui/vault/VaultControls.h"
+#include "gui/vault/VaultDialog.h"
 #include "gui/vault/VaultImportModal.h"
 #include "gui/vault/VaultModal.h"
 #include "gui/vault/VaultPanes.h"
@@ -2066,6 +2067,31 @@ void TestGuiAccounts::testShareLinkDialogInTheVaultLayout()
     QVERIFY(child<QWidget>(text, "shareLinkCommands")->isVisibleTo(text));
     text->reject();
     QTRY_VERIFY(!text);
+}
+
+void TestGuiAccounts::testOrgPromptFallsBackToAVaultWindow()
+{
+    // With the window hidden there is no card to show over: the prompt is a vault-styled window of its own
+    QWidget hidden;
+    OrgAdmin::Prompt prompt(&hidden, "Invite a member", "Send invite", "orgPromptFallback");
+    prompt.addText("They get an email to join as a member.");
+    bool checked = false;
+    QTimer::singleShot(0, this, [&] {
+        VaultDialog* window = nullptr;
+        for (auto* widget : QApplication::topLevelWidgets()) {
+            if (widget->objectName() == "orgPromptFallback") {
+                window = qobject_cast<VaultDialog*>(widget);
+            }
+        }
+        QVERIFY(window);
+        QTRY_VERIFY(window->isVisible());
+        QVERIFY(!window->isCard());
+        QCOMPARE(window->presentation(), VaultDialog::OwnWindow);
+        checked = true;
+        window->reject();
+    });
+    QVERIFY(!prompt.exec());
+    QVERIFY(checked);
 }
 
 void TestGuiAccounts::testDeletionDialogsInTheVaultLayout()

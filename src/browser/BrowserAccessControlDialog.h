@@ -79,6 +79,8 @@ private:
     void setupVaultLayout();
     void addVaultEntryRow(int row, const Entry* entry);
     void syncVaultEntryRow(int row);
+    // "Allow all", or "Allow 2" when only some entries are checked
+    QString vaultAllowText() const;
     bool hasVaultChoice() const;
     bool canShowOverWindow() const;
     int execVaultDialog();
@@ -95,6 +97,8 @@ private:
         QAbstractButton* choice;
         QLabel* title;
         QLabel* username;
+        // "Won't fill here" while the entry is disabled for the site
+        QLabel* disabledPill;
         VaultButton* disable;
     };
     QWidget* m_vaultCards = nullptr;
