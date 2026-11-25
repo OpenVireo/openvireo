@@ -39,12 +39,15 @@ private slots:
     void testCap();
     void testDismissLatestFrom();
     void testInfoBarKeepsApi();
+    void testSnackbar();
+    void testDatabaseMessagesFloat();
 
     // These share one main window of a nightly build, as the app can't create a second one in a process
     void testNightlyNotice();
     void testGlobalMessagesGoToBell();
     void testErrorPeeks();
     void testFlyoutMarksRead();
+    void testSyncResultHangsFromChip();
     void testYubiKeyPromptStaysInline();
     void testDismissNoticeForThisVersion();
     void testStableBuild();

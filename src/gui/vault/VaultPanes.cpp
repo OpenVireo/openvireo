@@ -564,6 +564,20 @@ void VaultSyncChip::setDatabaseWidget(DatabaseWidget* dbWidget)
         connect(m_dbWidget, &DatabaseWidget::databaseModified, this, &VaultSyncChip::refresh);
         connect(m_dbWidget, &DatabaseWidget::databaseUnlocked, this, &VaultSyncChip::refresh);
         connect(m_dbWidget, &DatabaseWidget::databaseLocked, this, &VaultSyncChip::refresh);
+        // The result shows next to the chip instead of in a message over the vault
+        connect(m_dbWidget, &DatabaseWidget::databaseSyncCompleted, this, [this](const QString& name) {
+            if (m_dbWidget && isVisible()) {
+                m_dbWidget->acknowledgeSyncResult();
+                emit syncSucceeded(name);
+            }
+        });
+        connect(
+            m_dbWidget, &DatabaseWidget::databaseSyncFailed, this, [this](const QString& name, const QString& error) {
+                if (m_dbWidget && isVisible()) {
+                    m_dbWidget->acknowledgeSyncResult();
+                    emit syncFailed(name, error);
+                }
+            });
     }
     refresh();
 }
@@ -609,8 +623,15 @@ void VaultSyncChip::refresh()
         setToolTip(tr("Syncing with %1").arg(name));
         break;
     case State::Synced: {
-        const auto minutes = status.lastSync.secsTo(QDateTime::currentDateTime()) / 60;
-        setText(tr("Synced"));
+        const auto seconds = status.lastSync.secsTo(QDateTime::currentDateTime());
+        const auto minutes = seconds / 60;
+        // "just now" for the first minute, then back to the short word
+        if (seconds >= 0 && seconds < 60) {
+            setText(tr("Synced · just now"));
+            QTimer::singleShot(int(60 - seconds) * 1000, this, &VaultSyncChip::refresh);
+        } else {
+            setText(tr("Synced"));
+        }
         setToolTip((minutes < 1 ? tr("Synced with %1 just now.").arg(name)
                                 : tr("Synced with %1 %n min ago.", "", int(minutes)).arg(name))
                    + "\n" + automatic + tr("Click to sync again."));

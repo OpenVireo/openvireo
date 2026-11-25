@@ -94,7 +94,7 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     , m_mainWidget(new QWidget(this))
     , m_mainSplitter(new QSplitter(m_mainWidget))
     , m_groupSplitter(new QSplitter(this))
-    , m_messageWidget(new VaultInfoBar(this))
+    , m_messageWidget(new VaultSnackbar(this))
     , m_previewSplitter(new QSplitter(m_mainWidget))
     , m_searchingLabel(new QLabel(this))
     , m_editEntryWidget(new EditEntryWidget(this))
@@ -117,8 +117,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
         m_db->open(nullptr);
     }
 
-    m_messageWidget->setHidden(true);
-
     auto mainLayout = new QVBoxLayout();
     m_mainWidget->setLayout(mainLayout);
     // The canvas carries the window background behind the navigation pane
@@ -128,7 +126,6 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
     auto contentLayout = new QVBoxLayout(canvas);
     contentLayout->setContentsMargins(0, 0, 0, 0);
     contentLayout->setSpacing(0);
-    contentLayout->addWidget(m_messageWidget);
     auto hbox = new QHBoxLayout();
     contentLayout->addLayout(hbox);
 
@@ -916,10 +913,10 @@ void DatabaseWidget::addToAgent()
     OpenSSHKey key;
     if (settings.toOpenSSHKey(currentEntry, key, true)) {
         if (!agent->addIdentity(key, settings, database()->uuid())) {
-            m_messageWidget->showMessage(agent->errorString(), VaultInfoBar::Error);
+            showErrorMessage(agent->errorString());
         }
     } else {
-        m_messageWidget->showMessage(settings.errorString(), VaultInfoBar::Error);
+        showErrorMessage(settings.errorString());
     }
 }
 
@@ -940,10 +937,10 @@ void DatabaseWidget::removeFromAgent()
     OpenSSHKey key;
     if (settings.toOpenSSHKey(currentEntry, key, false)) {
         if (!agent->removeIdentity(key)) {
-            m_messageWidget->showMessage(agent->errorString(), VaultInfoBar::Error);
+            showErrorMessage(agent->errorString());
         }
     } else {
-        m_messageWidget->showMessage(settings.errorString(), VaultInfoBar::Error);
+        showErrorMessage(settings.errorString());
     }
 }
 #endif
@@ -1547,15 +1544,30 @@ void DatabaseWidget::finishSync(const QString& syncName,
     m_syncInteractive = false;
     setDisabled(false);
     emit updateSyncProgress(-1, "");
+    // The header's sync chip shows the result next to itself (acknowledgeSyncResult); a database in a tab that isn't
+    // shown gets a message of its own instead
+    m_syncResultAcknowledged = false;
     if (result.success) {
         setSyncStatus(SyncStatus::State::Synced);
         emit databaseSyncCompleted(syncName);
-        showMessage(tr("Remote sync '%1' completed successfully!").arg(syncName), VaultInfoBar::Positive, false);
+        if (!m_syncResultAcknowledged) {
+            showMessage(tr("Synced with %1.").arg(syncName), VaultInfoBar::Positive, false);
+        }
     } else {
         setSyncStatus(failureState, result.errorMessage);
         emit databaseSyncFailed(syncName, result.errorMessage);
-        showErrorMessage(tr("Remote sync '%1' failed: %2").arg(syncName, result.errorMessage));
+        if (!m_syncResultAcknowledged) {
+            showMessage(tr("Remote sync '%1' failed: %2").arg(syncName, result.errorMessage),
+                        VaultInfoBar::Error,
+                        true,
+                        VaultInfoBar::LongAutoHideTimeout);
+        }
     }
+}
+
+void DatabaseWidget::acknowledgeSyncResult()
+{
+    m_syncResultAcknowledged = true;
 }
 
 DatabaseWidget::SyncStatus DatabaseWidget::syncStatus() const

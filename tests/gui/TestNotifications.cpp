@@ -20,14 +20,20 @@
 #include "config-keepassx.h"
 #include "core/BuildInfo.h"
 #include "core/Config.h"
+#include "core/Database.h"
 #include "crypto/Crypto.h"
 #include "gui/Application.h"
+#include "gui/DatabaseWidget.h"
 #include "gui/MainWindow.h"
 #include "gui/notifications/NotificationCenter.h"
 #include "gui/notifications/NotificationWidgets.h"
+#include "gui/vault/VaultPanes.h"
 #include "gui/vault/VaultResponsive.h"
+#include "gui/vault/VaultSnackbar.h"
 #include "util/TemporaryFile.h"
 
+#include <QAbstractButton>
+#include <QAction>
 #include <QDir>
 #include <QSignalSpy>
 #include <QTest>
@@ -409,4 +415,155 @@ void TestNotifications::testInfoBarKeepsApi()
     sheet.resize(640, 260);
     sheet.show();
     saveScreenshot(&sheet, "message-widgets.png");
+}
+
+void TestNotifications::testSnackbar()
+{
+    QWidget host;
+    host.resize(800, 500);
+    host.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&host));
+    auto* snackbar = new VaultSnackbar(&host);
+    snackbar->setAnimate(false);
+    QVERIFY(!snackbar->isVisible());
+
+    snackbar->showMessage("Successfully merged the selected database.", VaultInfoBar::Positive, 300);
+    QVERIFY(snackbar->isVisible());
+    QCOMPARE(snackbar->text(), QString("Successfully merged the selected database."));
+    QCOMPARE(snackbar->messageType(), VaultInfoBar::Positive);
+    QCOMPARE(snackbar->accessibleName(), QString("Successfully merged the selected database."));
+
+    // Floats over the bottom centre instead of taking room in a layout
+    auto geometry = snackbar->geometry();
+    QVERIFY(qAbs(geometry.center().x() - host.width() / 2) <= 1);
+    QCOMPARE(geometry.bottom() + 1 + VaultSnackbar::Margin, host.height());
+    QVERIFY(geometry.width() <= VaultSnackbar::MaximumWidth);
+
+    // Follows the parent's size, and never gets wider than it
+    host.resize(360, 400);
+    QTRY_COMPARE(snackbar->geometry().bottom() + 1 + VaultSnackbar::Margin, 400);
+    QVERIFY(snackbar->geometry().left() >= 0);
+    QVERIFY(snackbar->geometry().right() < 360);
+
+    // Hides itself after the timeout
+    QTRY_VERIFY(!snackbar->isVisible());
+
+    // Actions become buttons; pressing one runs it and hides the message
+    host.resize(800, 500);
+    QAction undo("Undo");
+    QSignalSpy triggered(&undo, &QAction::triggered);
+    snackbar->addAction(&undo);
+    snackbar->showMessage(
+        "Moved 1 entry to the Recycle Bin.", VaultInfoBar::Information, VaultInfoBar::DisableAutoHide);
+    QCOMPARE(snackbar->remainingFraction(), 1.0);
+    QAbstractButton* undoButton = nullptr;
+    for (auto* button : snackbar->findChildren<QAbstractButton*>()) {
+        if (button->text() == "Undo") {
+            undoButton = button;
+        }
+    }
+    QVERIFY(undoButton);
+    saveScreenshot(&host, "snackbar.png");
+    undoButton->click();
+    QCOMPARE(triggered.count(), 1);
+    QVERIFY(!snackbar->isVisible());
+    snackbar->removeAction(&undo);
+
+    // The close button, unless turned off
+    snackbar->showMessage("Writing the database failed.", VaultInfoBar::Error, VaultInfoBar::DisableAutoHide);
+    auto* close = snackbar->findChild<QAbstractButton*>("vaultSnackbarClose");
+    QVERIFY(close && close->isVisible());
+    close->click();
+    QVERIFY(!snackbar->isVisible());
+    snackbar->setCloseButtonVisible(false);
+    QVERIFY(!snackbar->isCloseButtonVisible());
+}
+
+void TestNotifications::testDatabaseMessagesFloat()
+{
+    auto db = QSharedPointer<Database>::create();
+    DatabaseWidget dbWidget(db);
+    dbWidget.resize(900, 600);
+    dbWidget.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&dbWidget));
+
+    // No bar in the layout above the vault any more
+    QVERIFY(dbWidget.findChildren<VaultInfoBar*>().isEmpty() || !dbWidget.findChild<VaultInfoBar*>()->isVisible());
+    auto* snackbar = dbWidget.findChild<VaultSnackbar*>("vaultSnackbar");
+    QVERIFY(snackbar);
+    QCOMPARE(snackbar->parentWidget(), &dbWidget);
+    snackbar->setAnimate(false);
+
+    dbWidget.showMessage("No changes were made by the merge operation.", VaultInfoBar::Information);
+    QVERIFY(snackbar->isVisible());
+    QCOMPARE(snackbar->text(), QString("No changes were made by the merge operation."));
+    QCOMPARE(snackbar->geometry().bottom() + 1 + VaultSnackbar::Margin, dbWidget.height());
+
+    dbWidget.showErrorMessage("Writing the database failed.");
+    QCOMPARE(snackbar->messageType(), VaultInfoBar::Error);
+    dbWidget.hideMessage();
+    QTRY_VERIFY(!snackbar->isVisible());
+}
+
+void TestNotifications::testSyncResultHangsFromChip()
+{
+    auto* center = window()->notificationCenter();
+    auto* peek = window()->findChild<SyncResultPeek*>("syncResultPeek");
+    auto* chip = window()->findChild<VaultSyncChip*>("vaultSyncChip");
+    auto* bellPeek = window()->findChild<NotificationPeek*>("notificationPeek");
+    QVERIFY(peek);
+    QVERIFY(chip);
+    const int before = center->notifications().size();
+    // The chip shows only with an unlocked database that syncs; show it and the header around it for the anchor, as
+    // the result closes when its anchor isn't on screen
+    QList<QWidget*> shown;
+    for (QWidget* widget = chip; widget && widget != window(); widget = widget->parentWidget()) {
+        if (widget->isHidden()) {
+            widget->show();
+            shown.prepend(widget);
+        }
+    }
+    QTRY_VERIFY(chip->isVisible());
+
+    // Success: a moment's note next to the chip, nothing filed behind the bell
+    emit chip->syncSucceeded("OpenVireo account");
+    QTRY_VERIFY(peek->isOpen());
+    QVERIFY(!peek->isFailure());
+    QCOMPARE(peek->title(), QString("Synced with OpenVireo account"));
+    QVERIFY(!peek->isAncestorOf(QApplication::focusWidget()));
+    QCOMPARE(center->notifications().size(), before);
+    saveScreenshot(window(), "sync-result.png");
+    QTRY_VERIFY_WITH_TIMEOUT(!peek->isOpen(), SyncResultPeek::SuccessDuration + 3000);
+
+    // Failure: stays with Retry, and is filed behind the bell without a second peek from there
+    emit chip->syncFailed("OpenVireo account", "Couldn't reach the server.");
+    QTRY_VERIFY(peek->isOpen());
+    QVERIFY(peek->isFailure());
+    QCOMPARE(peek->text(), QString("Couldn't reach the server."));
+    QCOMPARE(center->notifications().size(), before + 1);
+    bool filed = false;
+    for (const auto& notification : center->notifications()) {
+        filed |= notification.type == VaultInfoBar::Error && notification.title.contains("OpenVireo account");
+    }
+    QVERIFY(filed);
+    QVERIFY(!bellPeek->isOpen());
+    saveScreenshot(window(), "sync-result-failed.png");
+    QTest::qWait(SyncResultPeek::SuccessDuration + 500);
+    QVERIFY(peek->isOpen());
+
+    QSignalSpy retry(peek, &SyncResultPeek::retryRequested);
+    auto* retryButton = peek->findChild<QAbstractButton*>("syncResultRetry");
+    QVERIFY(retryButton && retryButton->isVisible());
+    retryButton->click();
+    QCOMPARE(retry.count(), 1);
+    QTRY_VERIFY(!peek->isOpen());
+
+    // A later success takes the failure back out of the list
+    emit chip->syncSucceeded("OpenVireo account");
+    QCOMPARE(center->notifications().size(), before);
+    peek->close();
+    QTRY_VERIFY(!peek->isOpen());
+    for (auto* widget : shown) {
+        widget->hide();
+    }
 }

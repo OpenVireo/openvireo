@@ -193,6 +193,15 @@ public:
     QSize sizeHint() const override;
     void onThemeUpdated() override;
 
+public slots:
+    // Sync the shown database with its remote now
+    void sync();
+
+signals:
+    // The user's own sync of the shown database finished, while the chip is on screen to show it
+    void syncSucceeded(const QString& remoteName);
+    void syncFailed(const QString& remoteName, const QString& error);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void enterEvent(QEnterEvent* event) override;
@@ -200,7 +209,6 @@ protected:
 
 private slots:
     void refresh();
-    void sync();
 
 private:
     QString remoteName() const;
@@ -233,7 +241,6 @@ signals:
     void databaseChosen();
 
 public:
-
     QSize sizeHint() const override;
     void onThemeUpdated() override;
 

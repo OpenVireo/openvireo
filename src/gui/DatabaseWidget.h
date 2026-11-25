@@ -25,8 +25,9 @@
 #include "core/Database.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
-#include "gui/vault/VaultInfoBar.h"
 #include "gui/entry/EntryModel.h"
+#include "gui/vault/VaultInfoBar.h"
+#include "gui/vault/VaultSnackbar.h"
 #include "remote/RemoteHandler.h"
 #include "remote/SyncEngine.h"
 
@@ -161,6 +162,9 @@ public:
         bool automatic = false;
     };
     SyncStatus syncStatus() const;
+    // Called from a databaseSyncCompleted or databaseSyncFailed handler that showed the result itself, so the
+    // database doesn't show its own message as well
+    void acknowledgeSyncResult();
     // The sync server remote that syncs automatically, if any
     const RemoteParams* autoSyncParams() const;
 
@@ -375,7 +379,8 @@ private:
     QPointer<QWidget> m_mainWidget;
     QPointer<QSplitter> m_mainSplitter;
     QPointer<QSplitter> m_groupSplitter;
-    QPointer<VaultInfoBar> m_messageWidget;
+    // Messages float over the bottom of the vault instead of pushing it down
+    QPointer<VaultSnackbar> m_messageWidget;
     QPointer<QSplitter> m_previewSplitter;
     QPointer<QLabel> m_searchingLabel;
     QPointer<EditEntryWidget> m_editEntryWidget;
@@ -424,6 +429,7 @@ private:
     SyncStatus m_syncStatus;
     // The running sync was started by the user, so it may show dialogs and messages
     bool m_syncInteractive = false;
+    bool m_syncResultAcknowledged = false;
     // A background sync was due while the user was busy
     bool m_autoSyncPending = false;
 

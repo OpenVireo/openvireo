@@ -20,6 +20,7 @@
 #include "core/BuildInfo.h"
 #include "core/Clock.h"
 #include "gui/styles/FluentTheme.h"
+#include "gui/vault/VaultControls.h"
 #include "gui/vault/VaultWidgets.h"
 
 #include <QApplication>
@@ -716,4 +717,116 @@ void NotificationPeek::peek(QWidget* anchor, const NotificationCenter::Notificat
     adjustSize();
     showAt(anchor);
     m_timer->start(Duration);
+}
+
+const int SyncResultPeek::SuccessDuration = 4000;
+
+SyncResultPeek::SyncResultPeek(QWidget* parent)
+    : Flyout(parent)
+    , m_timer(new QTimer(this))
+{
+    setObjectName("syncResultPeek");
+    setPlacement(Auto);
+    setAnchorOffset(6);
+    // Typing carries on and clicks elsewhere go through
+    setFocusOnOpenEnabled(false);
+    setLightDismissConsumesPress(false);
+
+    auto* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(contentsMargins() + QMargins(2, 0, 0, 0));
+    layout->setSpacing(12);
+    auto* badge = new StatusBadge(VaultInfoBar::Positive, this);
+    m_badge = badge;
+    layout->addWidget(badge, 0, Qt::AlignTop);
+
+    auto* column = new QVBoxLayout();
+    column->setSpacing(3);
+    m_title = themedLabel({}, Typography::FontRole::BodyStrong, false, this);
+    m_title->setObjectName("syncResultTitle");
+    m_title->setWordWrap(true);
+    column->addWidget(m_title);
+    m_text = messageLabel(themedLabel({}, Typography::FontRole::Body, true, this));
+    m_text->setObjectName("syncResultText");
+    m_text->setFixedWidth(260);
+    column->addWidget(m_text);
+
+    m_actions = new QWidget(this);
+    auto* actions = new QHBoxLayout(m_actions);
+    actions->setContentsMargins(0, 8, 0, 0);
+    actions->setSpacing(8);
+    auto* retry = new VaultButton(tr("Retry"), m_actions);
+    retry->setObjectName("syncResultRetry");
+    retry->setFluentStyle(fluent::basicinput::Button::Accent);
+    Vault::makePill(retry);
+    connect(retry, &QAbstractButton::clicked, this, [this] {
+        close();
+        emit retryRequested();
+    });
+    actions->addWidget(retry);
+    auto* details = new VaultButton(tr("Details"), m_actions);
+    details->setObjectName("syncResultDetails");
+    Vault::makePill(details);
+    connect(details, &QAbstractButton::clicked, this, [this] {
+        close();
+        emit detailsRequested();
+    });
+    actions->addWidget(details);
+    actions->addStretch();
+    column->addWidget(m_actions);
+    layout->addLayout(column, 1);
+
+    auto* dismiss = Vault::iconButton(Typography::Icons::Dismiss, tr("Dismiss"), this);
+    connect(dismiss, &QAbstractButton::clicked, this, [this] { close(); });
+    layout->addWidget(dismiss, 0, Qt::AlignTop);
+
+    m_timer->setSingleShot(true);
+    connect(m_timer, &QTimer::timeout, this, [this] { close(); });
+}
+
+void SyncResultPeek::showSuccess(QWidget* anchor, const QString& remoteName)
+{
+    m_failure = false;
+    static_cast<StatusBadge*>(m_badge)->setType(VaultInfoBar::Positive);
+    m_title->setText(tr("Synced with %1").arg(remoteName));
+    m_text->setText(tr("All changes are up to date."));
+    m_actions->setVisible(false);
+    showResult(anchor);
+    m_timer->start(SuccessDuration);
+}
+
+void SyncResultPeek::showFailure(QWidget* anchor, const QString& remoteName, const QString& error)
+{
+    m_failure = true;
+    static_cast<StatusBadge*>(m_badge)->setType(VaultInfoBar::Error);
+    m_title->setText(tr("Couldn't sync with %1").arg(remoteName));
+    m_text->setText(error.isEmpty() ? tr("Your changes are saved on this device.") : error);
+    m_actions->setVisible(true);
+    showResult(anchor);
+    // Stays until dismissed: the chip still says the sync failed after it closes
+    m_timer->stop();
+}
+
+void SyncResultPeek::showResult(QWidget* anchor)
+{
+    setAccessibleName(m_title->text());
+    adjustSize();
+    if (isOpen()) {
+        close();
+    }
+    showAt(anchor);
+}
+
+bool SyncResultPeek::isFailure() const
+{
+    return m_failure;
+}
+
+QString SyncResultPeek::title() const
+{
+    return m_title->text();
+}
+
+QString SyncResultPeek::text() const
+{
+    return m_text->text();
 }

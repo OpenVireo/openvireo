@@ -116,6 +116,9 @@ namespace
     {
         return sender ? QString::number(reinterpret_cast<quintptr>(sender), 16) : QString();
     }
+
+    // The source of the notification a failed sync leaves behind the bell
+    const QString SyncMessageSource = QStringLiteral("sync");
 } // namespace
 
 const QString MainWindow::BaseWindowTitle = "OpenVireo";
@@ -2485,6 +2488,37 @@ void MainWindow::setupNotifications()
     connect(m_notificationPeek, &NotificationPeek::showAllRequested, this, [this] { showNotifications(); });
     connect(m_ui->actionNotifications, &QAction::triggered, this, [this] { showNotifications(); });
 
+    // The result of the user's own sync hangs from the sync chip; a failure also goes in the list behind the bell
+    m_syncResultPeek = new SyncResultPeek(this);
+    auto* syncChip = m_vaultHeader->syncChip();
+    connect(m_syncResultPeek, &SyncResultPeek::retryRequested, syncChip, &VaultSyncChip::sync);
+    connect(m_syncResultPeek, &SyncResultPeek::detailsRequested, this, [this] {
+        const auto notifications = m_notifications->notifications();
+        for (const auto& notification : notifications) {
+            if (notification.source == SyncMessageSource) {
+                showNotifications(notification.id);
+                return;
+            }
+        }
+        showNotifications();
+    });
+    connect(syncChip, &VaultSyncChip::syncSucceeded, this, [this, syncChip](const QString& name) {
+        // A failure that no longer applies
+        m_notifications->dismissLatestFrom(SyncMessageSource);
+        m_syncResultPeek->showSuccess(syncChip, name);
+    });
+    connect(syncChip, &VaultSyncChip::syncFailed, this, [this, syncChip](const QString& name, const QString& error) {
+        m_notifications->dismissLatestFrom(SyncMessageSource);
+        m_syncResultPeek->showFailure(syncChip, name, error);
+        NotificationCenter::Notification notification;
+        notification.type = VaultInfoBar::Error;
+        notification.title = tr("Couldn't sync with %1").arg(name);
+        notification.text = error.isEmpty() ? tr("Your changes are saved on this device.") : error;
+        notification.source = SyncMessageSource;
+        notification.actions.append({tr("Retry"), [syncChip] { syncChip->sync(); }});
+        m_notifications->add(notification);
+    });
+
     // Build pill and bell in the header's status group, and in a bar of their own on screens without it
     auto* buildBadge = new BuildBadge();
     connect(buildBadge, &QAbstractButton::clicked, this, [this] { showNotifications(m_preReleaseNotice); });
@@ -2544,7 +2578,8 @@ void MainWindow::setupNotifications()
         QAccessible::updateAccessibility(&announcement);
 #endif
         // An error also peeks out from the bell for a moment, so it isn't missed behind it
-        if (notification->type == VaultInfoBar::Error && !m_notificationFlyout->isOpen()) {
+        if (notification->type == VaultInfoBar::Error && !m_notificationFlyout->isOpen()
+            && !(notification->source == SyncMessageSource && m_syncResultPeek->isOpen())) {
             if (auto* anchor = notificationAnchor()) {
                 m_notificationPeek->peek(anchor, *notification);
             }
@@ -2598,6 +2633,7 @@ void MainWindow::showNotifications(quint64 focusId)
     // Without a visible bell, such as with the toolbar hidden, the list opens in the middle of the window
     auto* anchor = notificationAnchor();
     m_notificationPeek->close();
+    m_syncResultPeek->close();
     m_notificationFlyout->setPlacement(anchor ? fluent::dialogs_flyouts::Flyout::Auto
                                               : fluent::dialogs_flyouts::Flyout::Full);
     m_notificationFlyout->showFor(anchor ? anchor : m_ui->centralwidget, focusId);

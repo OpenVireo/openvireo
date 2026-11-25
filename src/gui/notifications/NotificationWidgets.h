@@ -164,6 +164,40 @@ private:
     VaultInfoBar::MessageType m_type = VaultInfoBar::Error;
 };
 
+/**
+ * The result of the user's own sync, hanging from the header's sync chip: a moment's "Synced with …" that closes by
+ * itself, or a failure with Retry and Details that stays until dismissed. It doesn't take focus.
+ */
+class SyncResultPeek : public fluent::dialogs_flyouts::Flyout
+{
+    Q_OBJECT
+
+public:
+    explicit SyncResultPeek(QWidget* parent = nullptr);
+
+    static const int SuccessDuration;
+
+    void showSuccess(QWidget* anchor, const QString& remoteName);
+    void showFailure(QWidget* anchor, const QString& remoteName, const QString& error);
+    bool isFailure() const;
+    QString title() const;
+    QString text() const;
+
+signals:
+    void retryRequested();
+    void detailsRequested();
+
+private:
+    void showResult(QWidget* anchor);
+
+    QWidget* m_badge;
+    QLabel* m_title;
+    QLabel* m_text;
+    QWidget* m_actions;
+    QTimer* m_timer;
+    bool m_failure = false;
+};
+
 // "Just now", "5 min ago", or the time or date for older entries
 QString notificationRelativeTime(const QDateTime& time);
 

@@ -180,6 +180,7 @@ set(gui_SOURCES
         gui/vault/VaultControls.cpp
         gui/vault/VaultDialog.cpp
         gui/vault/VaultInfoBar.cpp
+        gui/vault/VaultSnackbar.cpp
         gui/vault/VaultInputDialog.cpp
         gui/vault/VaultEditShell.cpp
         gui/vault/VaultEntryEditCard.cpp

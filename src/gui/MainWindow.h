@@ -49,6 +49,7 @@ class NotificationButton;
 class NotificationCenter;
 class NotificationFlyout;
 class NotificationPeek;
+class SyncResultPeek;
 
 class MainWindow : public QMainWindow
 {
@@ -258,6 +259,7 @@ private:
     QPointer<NotificationButton> m_cornerNotificationButton;
     QPointer<NotificationFlyout> m_notificationFlyout;
     QPointer<NotificationPeek> m_notificationPeek;
+    QPointer<SyncResultPeek> m_syncResultPeek;
     QPointer<VaultInfoBar> m_promptBar;
     quint64 m_preReleaseNotice = 0;
     QPointer<AccountController> m_accountController;
