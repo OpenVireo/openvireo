@@ -168,6 +168,7 @@ set(gui_SOURCES
         gui/account/AccountStartWidget.cpp
         gui/account/EmergencyKit.cpp
         gui/account/EmergencyKitDialog.cpp
+        gui/account/NewVaultDialog.cpp
         gui/account/OrgAdminWidgets.cpp
         gui/account/ServiceAccountsDialog.cpp
         gui/account/ShareVaultDialog.cpp

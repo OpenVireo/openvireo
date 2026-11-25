@@ -42,6 +42,7 @@
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/EmergencyKit.h"
 #include "gui/account/EmergencyKitDialog.h"
+#include "gui/account/NewVaultDialog.h"
 #include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
@@ -1080,16 +1081,33 @@ void TestGuiAccounts::testCreatesAnOrgAndOrgVaults()
     QString carol;
     const auto carolKeys = m_server->addUser("carol@example.com", &carol);
     m_server->addOrgMember(orgId, "carol@example.com", "admin");
-    QTimer::singleShot(0, this, [this] {
-        auto* newVault = m_mainWindow->findChild<QDialog*>("newAccountVaultDialog");
-        QVERIFY(newVault);
-        child<QLineEdit>(newVault, "newVaultNameEdit")->setText("Deploy");
-        auto* owner = child<QComboBox>(newVault, "newVaultOwnerCombo");
-        QCOMPARE(owner->count(), 2);
-        owner->setCurrentIndex(owner->findData(m_server->orgs.constBegin()->id));
-        newVault->accept();
-    });
     m_mainWindow->createAccountVault();
+    {
+        // A card over the main window: the account and the org to pick from, the org picked to start with
+        auto* newVault = m_mainWindow->findChild<NewVaultDialog*>("newAccountVaultDialog");
+        QVERIFY(newVault);
+        QTRY_VERIFY(newVault->isVisible());
+        QVERIFY(m_mainWindow->findChild<QWidget*>("vaultNewVaultCard"));
+        const auto orgRow = QStringLiteral("newVaultOwner-%1").arg(orgId);
+        QVERIFY(child<QWidget>(newVault, "newVaultOwner-personal"));
+        QVERIFY(child<QWidget>(newVault, orgRow));
+        QCOMPARE(newVault->orgId(), orgId);
+        // Create waits for a name
+        auto* create = child<QPushButton>(m_mainWindow.data(), "newVaultCreate");
+        QVERIFY(!create->isEnabled());
+        child<QLineEdit>(newVault, "newVaultNameEdit")->setText("Mine");
+        QVERIFY(create->isEnabled());
+        // Picking the account says only the user can open it, and flags the name the account has already
+        child<QAbstractButton>(newVault, "newVaultOwner-personalRadio")->click();
+        QVERIFY(newVault->orgId().isEmpty());
+        QVERIFY(child<QLabel>(newVault, "newVaultWhoTitle")->text().startsWith("Only you"));
+        QVERIFY(child<QLabel>(newVault, "newVaultNameNote")->isVisibleTo(newVault));
+        child<QAbstractButton>(newVault, orgRow + "Radio")->click();
+        QVERIFY(child<QLabel>(newVault, "newVaultWhoTitle")->text().contains("Acme"));
+        QVERIFY(!child<QLabel>(newVault, "newVaultNameNote")->isVisibleTo(newVault));
+        child<QLineEdit>(newVault, "newVaultNameEdit")->setText("Deploy");
+        create->click();
+    }
     QTRY_COMPARE_WITH_TIMEOUT(tabs->count(), 2, 10000);
     QTRY_COMPARE(account->keyring().vaults().size(), 2);
     QString vaultId;

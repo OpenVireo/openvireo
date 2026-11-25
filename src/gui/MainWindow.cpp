@@ -57,6 +57,7 @@
 #include "gui/account/AccountStartWidget.h"
 #include "gui/account/DeleteAccountDialog.h"
 #include "gui/account/EmergencyKitDialog.h"
+#include "gui/account/NewVaultDialog.h"
 #include "gui/account/OrgAdminWidgets.h"
 #include "gui/account/ServiceAccountsDialog.h"
 #include "gui/account/ShareLinkDialog.h"
@@ -1099,43 +1100,12 @@ void MainWindow::createAccountVault()
             orgs << org;
         }
     }
-    if (orgs.isEmpty()) {
-        bool ok = false;
-        const auto name = VaultInputDialog::getText(this, tr("New vault"), tr("Name of the new vault:"), tr("Personal"), &ok);
-        if (ok && !name.trimmed().isEmpty()) {
-            m_accountController->createVault(name.trimmed());
-        }
-        return;
-    }
-
-    QDialog dialog(this);
-    dialog.setObjectName("newAccountVaultDialog");
-    dialog.setWindowTitle(tr("New vault"));
-    auto* nameEdit = new VaultLineEdit(&dialog);
-    nameEdit->setObjectName("newVaultNameEdit");
-    nameEdit->setText(tr("Personal"));
-    nameEdit->selectAll();
-    auto* ownerCombo = new VaultComboBox(&dialog);
-    ownerCombo->setObjectName("newVaultOwnerCombo");
-    ownerCombo->addItem(tr("Personal vault"), QString());
-    for (const auto& org : orgs) {
-        ownerCombo->addItem(org.name, org.id);
-    }
-    auto* hint = new QLabel(tr("A vault of an organization opens for all of its owners and admins; share it with "
-                               "other members afterwards."),
-                            &dialog);
-    hint->setWordWrap(true);
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    auto* form = new QFormLayout(&dialog);
-    form->addRow(tr("Name:"), nameEdit);
-    form->addRow(tr("Belongs to:"), ownerCombo);
-    form->addRow(hint);
-    form->addRow(buttons);
-    if (dialog.exec() == QDialog::Accepted && !nameEdit->text().trimmed().isEmpty()) {
-        m_accountController->createVault(nameEdit->text().trimmed(), ownerCombo->currentData().toString());
-    }
+    NewVaultDialog::present(m_accountController->account(),
+                            orgs,
+                            this,
+                            [this](const QString& name, const QString& orgId) {
+                                m_accountController->createVault(name, orgId);
+                            });
 }
 
 void MainWindow::acceptAccountInvitation()
