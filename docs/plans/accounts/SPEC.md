@@ -340,7 +340,7 @@ across writes.
 
 **`ov connect`** is a self-hosted REST server holding one SA token. It is not part of the auth or
 sync API. It is part of the native `ov` (openvireo-core `bins/ov/src/connect/`, from core 1.2.0) and
-runs as the image `ghcr.io/openvireo/openvireo-connect`; the TypeScript `@openvireo/connect` is deprecated.
+runs as the image `ghcr.io/openvireo/openvireo-connect`; the TypeScript `@openvireo/connect` was removed after SDK 1.2.0.
 
 - Its bearer tokens are `ov_ct_` + base64url(32 random bytes). Only their SHA-256 (hex, of the UTF-8
   token) is configured, as `{name, sha256, vaults, access}`: `vaults` lists vault ids or names, or
