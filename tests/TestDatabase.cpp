@@ -30,14 +30,29 @@
 #include "format/KeePass2Writer.h"
 #include "util/TemporaryFile.h"
 
-#ifdef Q_OS_WIN
 #include <QFileInfo>
+
+#ifdef Q_OS_WIN
 #include <Windows.h>
 #endif
 
 QTEST_GUILESS_MAIN(TestDatabase)
 
 static QString dbFileName = QStringLiteral(KEEPASSX_TEST_DATA_DIR).append("/NewDatabase.kdbx");
+
+// Overwrite a watched file the way another app would. Windows file times tick every ~15 ms and
+// Qt's Windows watcher only reports a change in the modification time, so an overwrite in the
+// same tick as the last save would go unnoticed: move the modification time on.
+static bool overwriteExternally(TemporaryFile& file, const QString& sourceFileName)
+{
+    const auto lastModified = QFileInfo(file.fileName()).lastModified();
+    if (!file.copyFromFile(sourceFileName)) {
+        return false;
+    }
+    QFile modified(file.fileName());
+    return modified.open(QFile::ReadWrite)
+           && modified.setFileTime(lastModified.addSecs(2), QFileDevice::FileModificationTime);
+}
 
 void TestDatabase::initTestCase()
 {
@@ -166,7 +181,7 @@ void TestDatabase::testSignals()
     Tools::wait(100);
 
     QSignalSpy spyFileChanged(db.data(), &Database::databaseFileChanged);
-    QVERIFY(tempFile.copyFromFile(dbFileName));
+    QVERIFY(overwriteExternally(tempFile, dbFileName));
     QTRY_COMPARE(spyFileChanged.count(), 1);
     QTRY_VERIFY(!db->isModified());
 
@@ -285,7 +300,7 @@ void TestDatabase::testExternallyModified()
     QVERIFY(db->save(Database::Atomic, {}, &error));
 
     QSignalSpy spyFileChanged(db.data(), &Database::databaseFileChanged);
-    QVERIFY(tempFile.copyFromFile(dbFileName));
+    QVERIFY(overwriteExternally(tempFile, dbFileName));
     QTRY_COMPARE(spyFileChanged.count(), 1);
     // the first argument of the databaseFileChanged signal (triggeredBySave) should be false
     QVERIFY(spyFileChanged.at(0).length() == 1);
