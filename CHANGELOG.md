@@ -1,17 +1,32 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (2026-11-27)
 
 ### New Features
 - High contrast theme, chosen automatically when Windows High Contrast, macOS Increase contrast or the Linux desktop's high-contrast setting is on. It replaces the switch to the Classic theme on Windows High Contrast.
+- Edit an entry in place in the details card, and create new entries there too, with entry types and Add field
+- The window reflows for narrow widths like the web app, down to 400 pixels wide
+- The entry details show additional attributes
 
 ### Changes
+- A lighter look closer to openvireo.com, with a split sign-in and unlock screen
+- Sync results show on the Synced pill and other messages in a snackbar, instead of a bar across the window
+- Progress shows in an activity chip next to the bell; the bottom status bar is gone
+- Dialogs open as cards over the window: Emergency Kit, Shared Links, New vault, share links, account deletion, TOTP QR code, database icon, keyboard shortcuts and more
+- Forms, tables, wizards and message boxes use Fluent controls throughout, with thin overlay scroll bars
 - Messages in windows and settings pages use the Fluent message bar: a severity icon and colour, an optional title and action buttons, and a solid outline in high contrast
 - The remaining standard controls (tooltips, menus, headers, scroll bars, date fields) follow the Fluent colours in every theme, with outlines in high contrast
+- Accounts run on the shared OpenVireo core, the same code as the iOS app, web app and SDK
+- The browser extension from the Chrome Web Store can connect
 
 ### Removed
 - The classic theme and the classic window layout (toolbar, preview panel and database tabs). If you used the Classic theme, OpenVireo now follows your system theme (Automatic).
 - KeeShare. Share vaults with an OpenVireo account instead. Files shared with KeeShare in KeePassXC open normally and keep their share settings, but OpenVireo no longer imports or exports the shared containers.
+
+### Fixes
+- Account vaults no longer keep syncing forever after an edit
+- Syncing keeps the location of the copy that was moved last when one device moves an entry and another edits it
+- A change made to a database file while it is being checked is no longer missed
 
 ## 1.0.0 (2026-11-11)
 

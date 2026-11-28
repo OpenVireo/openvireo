@@ -45,6 +45,30 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.1.0" date="2026-11-27" type="stable">
+        <description>
+            <ul>
+              <li>High contrast theme, chosen automatically when Windows High Contrast, macOS Increase contrast or the Linux desktop's high-contrast setting is on. It replaces the switch to the Classic theme on Windows High Contrast.</li>
+              <li>Edit an entry in place in the details card, and create new entries there too, with entry types and Add field</li>
+              <li>The window reflows for narrow widths like the web app, down to 400 pixels wide</li>
+              <li>The entry details show additional attributes</li>
+              <li>A lighter look closer to openvireo.com, with a split sign-in and unlock screen</li>
+              <li>Sync results show on the Synced pill and other messages in a snackbar, instead of a bar across the window</li>
+              <li>Progress shows in an activity chip next to the bell; the bottom status bar is gone</li>
+              <li>Dialogs open as cards over the window: Emergency Kit, Shared Links, New vault, share links, account deletion, TOTP QR code, database icon, keyboard shortcuts and more</li>
+              <li>Forms, tables, wizards and message boxes use Fluent controls throughout, with thin overlay scroll bars</li>
+              <li>Messages in windows and settings pages use the Fluent message bar: a severity icon and colour, an optional title and action buttons, and a solid outline in high contrast</li>
+              <li>The remaining standard controls (tooltips, menus, headers, scroll bars, date fields) follow the Fluent colours in every theme, with outlines in high contrast</li>
+              <li>Accounts run on the shared OpenVireo core, the same code as the iOS app, web app and SDK</li>
+              <li>The browser extension from the Chrome Web Store can connect</li>
+              <li>The classic theme and the classic window layout (toolbar, preview panel and database tabs). If you used the Classic theme, OpenVireo now follows your system theme (Automatic).</li>
+              <li>KeeShare. Share vaults with an OpenVireo account instead. Files shared with KeeShare in KeePassXC open normally and keep their share settings, but OpenVireo no longer imports or exports the shared containers.</li>
+              <li>Account vaults no longer keep syncing forever after an edit</li>
+              <li>Syncing keeps the location of the copy that was moved last when one device moves an entry and another edits it</li>
+              <li>A change made to a database file while it is being checked is no longer missed</li>
+            </ul>
+        </description>
+    </release>
     <release version="1.0.0" date="2026-11-11" type="stable">
         <description>
             <p>The first stable release of OpenVireo.</p>
