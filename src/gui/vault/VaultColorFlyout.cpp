@@ -226,13 +226,13 @@ VaultColorFlyout::VaultColorFlyout(QWidget* anchor,
     });
     connect(more, &QAbstractButton::clicked, this, [this] {
         // The popup closes first, as a modal dialog can't open over it
-        QPointer<QWidget> anchor = m_anchor;
+        QPointer<QWidget> owner = m_anchor;
         const auto start = m_color;
-        auto picked = m_picked;
+        auto onPicked = m_picked;
         close();
-        const auto color = QColorDialog::getColor(start, anchor ? anchor->window() : nullptr);
-        if (color.isValid() && picked) {
-            picked(color);
+        const auto color = QColorDialog::getColor(start, owner ? owner->window() : nullptr);
+        if (color.isValid() && onPicked) {
+            onPicked(color);
         }
     });
 
